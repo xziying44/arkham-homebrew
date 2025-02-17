@@ -1,0 +1,18 @@
+# 排除 build 目录
+/build/
+
+# 排除 dist 目录
+/dist/
+
+# 排除 output 目录
+/output/
+
+# 排除 temp 目录
+/temp/
+
+# 排除 venv 目录
+/venv/
+
+app.spec
+config.json
+output_card.png
