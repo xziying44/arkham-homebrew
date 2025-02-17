@@ -8,7 +8,8 @@ from datetime import datetime
 
 from flaskwebgui import FlaskUI
 from openai import OpenAI
-from create_card import process_card_json, create_investigators_card, create_investigators_card_back
+from create_card import process_card_json, create_investigators_card, create_investigators_card_back, \
+    process_card_json_to_tts_json
 from Card import FontManager, ImageManager
 
 app = Flask(__name__, static_folder='static', static_url_path='/static')
@@ -259,6 +260,36 @@ def serve_image(path):
         return create_response(404, "图片未找到", None, 404)
     except Exception as e:
         return create_response(500, "图片获取失败", str(e), 500)
+
+
+# 新增一个json参数接口，返回tts的对象json
+@app.route('/api/generate-ttsjson', methods=['POST'])
+def generate_ttsjson():
+    """生成tts的json"""
+    try:
+        # 参数校验
+        if 'json' not in request.form:
+            return create_response(400, "缺少json参数", None, 400)
+        # 需要两个参数，front_image_url和back_image_url
+        if 'front_image_url' not in request.form:
+            return create_response(400, "请输入卡牌正面地址", None, 400)
+        if 'back_image_url' not in request.form:
+            return create_response(400, "请输入卡牌背面地址", None, 400)
+        card_json = json.loads(request.form['json'])
+        front_image_url = request.form['front_image_url']
+        back_image_url = request.form['back_image_url']
+
+        tts_json = process_card_json_to_tts_json(
+            card_json=card_json,
+            front_image_url=front_image_url,
+            back_image_url=back_image_url
+        )
+        return create_response(data=tts_json)
+
+    except Exception as e:
+        app.logger.exception(f"JSON生成失败: {str(e)}")
+        app.logger.error(f"JSON生成失败: {str(e)}")
+        return create_response(500, "JSON生成失败：" + str(e), str(e), 500)
 
 
 @app.errorhandler(404)

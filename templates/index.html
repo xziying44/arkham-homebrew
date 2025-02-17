@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>阿卡姆DIY - by.小小银同学 v0.1</title>
+    <title>阿卡姆印牌姬 - by.小小银同学 v0.2</title>
     <link href="/static/bootstrap.min.css" rel="stylesheet">
     <link href="/static/style.css" rel="stylesheet">
     <link href="/static/bootstrap-icons.css" rel="stylesheet">
@@ -110,6 +110,25 @@
                             </div>
                             <button type="submit" class="btn btn-primary">生成卡牌</button>
                         </form>
+                        
+                        <!-- 添加 TTS 生成模块 -->
+                        <hr>
+                        <div class="mt-3">
+                            <h6>生成 TTS 对象</h6>
+                            <form id="ttsForm" class="mt-2">
+                                <div class="mb-3">
+                                    <label class="form-label">正面图片URL</label>
+                                    <input type="text" class="form-control" name="front_image_url" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">背面图片URL</label>
+                                    <input type="text" class="form-control" name="back_image_url" 
+                                        value="https://steamusercontent-a.akamaihd.net/ugc/2342503777940352139/A2D42E7E5C43D045D72CE5CFC907E4F886C8C690/"
+                                        required>
+                                </div>
+                                <button type="submit" class="btn btn-secondary">生成TTS对象</button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -157,6 +157,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 添加导入按钮事件监听
     document.getElementById('importJson').addEventListener('change', handleImportJson);
+    
+    // 添加 TTS 表单提交事件监听
+    document.getElementById('ttsForm').addEventListener('submit', handleTTSSubmit);
 });
 
 // 加载配置
@@ -1290,4 +1293,57 @@ async function handleImportJson(event) {
     
     // 清空文件输入，允许重复导入相同文件
     event.target.value = '';
+}
+
+// 处理 TTS 生成请求
+async function handleTTSSubmit(event) {
+    event.preventDefault();
+    const form = event.target;
+    const cardForm = document.getElementById('cardForm');
+    
+    try {
+        // 获取卡牌 JSON 数据
+        const jsonData = await getFormData(cardForm);
+        
+        // 移除无关字段
+        delete jsonData.localImage;
+        
+        // 设置默认背面图片地址
+        if (!jsonData.backUrl) {
+            jsonData.backUrl = 'https://steamusercontent-a.akamaihd.net/ugc/2342503777940352139/A2D42E7E5C43D045D72CE5CFC907E4F886C8C690/';
+        }
+        
+        // 创建请求数据
+        const formData = new FormData();
+        formData.append('json', JSON.stringify(jsonData));
+        formData.append('front_image_url', form.front_image_url.value);
+        formData.append('back_image_url', form.back_image_url.value);
+        
+        // 发送请求
+        const response = await fetch('/api/generate-ttsjson', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.code === 0) {
+            // 下载生成的 TTS JSON
+            const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `tts_${jsonData.name || 'unnamed'}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showToast('TTS对象生成成功！', '成功', 'success');
+        } else {
+            showToast('生成TTS对象失败: ' + data.msg, '错误', 'error');
+        }
+    } catch (error) {
+        showToast('生成TTS对象失败: ' + error.message, '错误', 'error');
+    }
 } 

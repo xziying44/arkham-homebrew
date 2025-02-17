@@ -1,6 +1,145 @@
+import json
+import random
+import re
+
 from PIL import Image
 
 from Card import Card, FontManager, ImageManager
+
+DEFAULT_CARD_JSON = {
+    "SaveName": "",
+    "Date": "",
+    "VersionNumber": "",
+    "GameMode": "",
+    "GameType": "",
+    "GameComplexity": "",
+    "Tags": [],
+    "Gravity": 0.5,
+    "PlayArea": 0.5,
+    "Table": "",
+    "Sky": "",
+    "Note": "",
+    "TabStates": {},
+    "LuaScript": "",
+    "LuaScriptState": "",
+    "XmlUI": "",
+    "ObjectStates": [
+
+    ]
+}
+DEFAULT_CARD_DEFAULT_JSON = {
+    "GUID": "8fd879",
+    "Name": "CardCustom",
+    "Transform": {
+        "posX": 19.1539841,
+        "posY": 1.49510384,
+        "posZ": 38.9961624,
+        "rotX": -9.754563E-08,
+        "rotY": 270.0,
+        "rotZ": 2.057618E-07,
+        "scaleX": 1.0,
+        "scaleY": 1.0,
+        "scaleZ": 1.0
+    },
+    "Nickname": "",
+    "Description": "",
+    "GMNotes": "",
+    "AltLookAngle": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "ColorDiffuse": {
+        "r": 0.713235259,
+        "g": 0.713235259,
+        "b": 0.713235259
+    },
+    "Tags": [
+
+    ],
+    "LayoutGroupSortIndex": 0,
+    "Value": 0,
+    "Locked": False,
+    "Grid": True,
+    "Snap": True,
+    "IgnoreFoW": False,
+    "MeasureMovement": False,
+    "DragSelectable": True,
+    "Autoraise": True,
+    "Sticky": True,
+    "Tooltip": True,
+    "GridProjection": False,
+    "HideWhenFaceDown": True,
+    "Hands": True,
+    "CardID": 0,
+    "SidewaysCard": False,
+    "CustomDeck": {
+    },
+    "LuaScript": "",
+    "LuaScriptState": "",
+    "XmlUI": ""
+}
+DEFAULT_CARD_INVESTIGATOR_JSON = {
+    "GUID": "89a2a6",
+    "Name": "CardCustom",
+    "Transform": {
+        "posX": -37.8683434,
+        "posY": 1.53360486,
+        "posZ": 11.4118834,
+        "rotX": 5.696528E-07,
+        "rotY": 270.000153,
+        "rotZ": -3.2847106E-07,
+        "scaleX": 0.8291292,
+        "scaleY": 1.0,
+        "scaleZ": 0.8291292
+    },
+    "Nickname": "",
+    "Description": "",
+    "GMNotes": "",
+    "AltLookAngle": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "ColorDiffuse": {
+        "r": 0.713235259,
+        "g": 0.713235259,
+        "b": 0.713235259
+    },
+    "LayoutGroupSortIndex": 0,
+    "Value": 0,
+    "Locked": False,
+    "Grid": True,
+    "Snap": True,
+    "IgnoreFoW": False,
+    "MeasureMovement": False,
+    "DragSelectable": True,
+    "Autoraise": True,
+    "Sticky": True,
+    "Tooltip": True,
+    "GridProjection": False,
+    "HideWhenFaceDown": True,
+    "Hands": True,
+    "CardID": 0,
+    "SidewaysCard": False,
+    "CustomDeck": {
+    },
+    "Tags": [
+
+    ],
+    "LuaScript": "",
+    "LuaScriptState": "",
+    "XmlUI": ""
+}
+DEFAULT_CARD_CUSTOM_DECK_JSON = {
+    "FaceURL": "",
+    "BackURL": "",
+    "NumWidth": 1,
+    "NumHeight": 1,
+    "BackIsHidden": True,
+    "UniqueBack": False,
+    "Type": 0
+}
 
 
 def create_upgrade_card(card_json, picture_path=None, font_manager=None, image_manager=None):
@@ -755,8 +894,106 @@ def process_card_json(card_json, picture_path=None, font_manager=None, image_man
         return create_player_cards(card_json, picture_path, font_manager, image_manager)
 
 
+card_type_transform = {
+    '技能卡': 'Asset',
+    '支援卡': 'Skill',
+    '事件卡': 'Event',
+    '诡计卡': 'Treachery',
+    '调查员卡': 'Investigator',
+}
+card_class_transform = {
+    '守护者': 'Guardian',
+    '探求者': 'Seeker',
+    '流浪者': 'Rogue',
+    '潜修者': 'Mystic',
+    '生存者': 'Survivor',
+    '中立': 'Neutral'
+}
+# 资源 子弹 赏金 充能 证据 秘密 补给 贡品
+card_token_transform = {
+    '资源': 'Resource',
+    '子弹': 'Ammo',
+    '赏金': 'Bounty',
+    '充能': 'Charge',
+    '证据': 'Evidence',
+    '秘密': 'Secret',
+    '补给': 'Supply',
+    '贡品': 'Offering'
+}
+
+
+def process_card_json_to_tts_json(card_json, front_image_url="", back_image_url=""):
+    """生成TTS卡牌JSON"""
+    print(card_json)
+    if front_image_url == "":
+        raise ValueError('正面图片URL不能为空')
+    if back_image_url == "":
+        raise ValueError('背面图片URL不能为空')
+    # 生成卡牌元数据
+    card_note = {
+        'id': str(random.randint(100001, 999999))
+    }
+    if card_json['type'] in card_type_transform:
+        card_note['type'] = card_type_transform[card_json['type']]
+    if card_json['class'] in card_class_transform:
+        card_note['class'] = card_class_transform[card_json['class']]
+    # 支援卡的token
+    if card_json['type'] == '支援卡':
+        # 查找card_json['body']是否有 使用(X标记)的字样，取回字样这个词，X是数字，X也要取回
+        match = re.search(r'使用[（(](\d+)([\u4e00-\u9fa5]+)[）)]', card_json['body'])
+        if match:
+            num, mark = match.groups()
+            card_note['uses'] = [
+                {
+                    "count": num,
+                    "type": card_token_transform[mark] if mark in card_token_transform else 'Resource',
+                    "token": "resource"
+                }
+            ]
+    # 调查员卡
+    if card_json['type'] == '调查员卡':
+        if len(card_json['attribute']) == 4:
+            card_note['willpowerIcons'] = card_json['attribute'][0]
+            card_note['intellectIcons'] = card_json['attribute'][1]
+            card_note['combatIcons'] = card_json['attribute'][2]
+            card_note['agilityIcons'] = card_json['attribute'][3]
+        # 查找card_json['body']是否有<免费> <反应>
+        if '<免费>' in card_json['body']:
+            card_note['extraToken'] = 'FreeTrigger'
+        elif '<反应>' in card_json['body']:
+            card_note['extraToken'] = 'Reaction'
+        pass
+
+    temp_card = json.loads(json.dumps(DEFAULT_CARD_DEFAULT_JSON))
+    if card_json['type'] == '调查员卡':
+        temp_card = json.loads(json.dumps(DEFAULT_CARD_INVESTIGATOR_JSON))
+    custom_deck = json.loads(json.dumps(DEFAULT_CARD_CUSTOM_DECK_JSON))
+    custom_deck['FaceURL'] = front_image_url
+    custom_deck['BackURL'] = back_image_url
+    temp_card['Nickname'] = card_json['name']
+    temp_card['GMNotes'] = json.dumps(card_note, indent=2)
+
+    if card_json['type'] in ['技能卡', '支援卡', '事件卡', '调查员卡'] or card_json['class'] == '弱点':
+        temp_card['Tags'].append('PlayerCard')
+    if card_json['type'] == '支援卡':
+        temp_card['Tags'].append('Asset')
+    if card_json['type'] == '调查员卡':
+        temp_card['Tags'].append('Investigator')
+    # 在temp_card['CustomDeck']加一个对象，对象的key是一个随机数，value是temp_info
+    card_id = str(random.randint(10000, 99999))
+    temp_card['CustomDeck'] = {
+        card_id: custom_deck
+    }
+    temp_card['CardID'] = int(card_id + '00')
+    # 生成最终JSON
+    tts_card_json = json.loads(json.dumps(DEFAULT_CARD_JSON))
+    tts_card_json['ObjectStates'].append(temp_card)
+    print(tts_card_json)
+    return tts_card_json
+
+
 if __name__ == '__main__':
-    json = {
+    json_data = {
         "type": "升级卡",
         "class": "",
         "subclass": [],
@@ -784,6 +1021,6 @@ if __name__ == '__main__':
     }
     fm = FontManager('fonts')
     im = ImageManager('images')
-    card = process_card_json(json, picture_path=r'C:\Users\xziyi\Desktop\java.png', font_manager=fm,
-                               image_manager=im)
+    card = process_card_json(json_data, picture_path=r'C:\Users\xziyi\Desktop\java.png', font_manager=fm,
+                             image_manager=im)
     card.image.save('output_card.png', quality=95)
