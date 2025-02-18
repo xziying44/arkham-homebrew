@@ -142,6 +142,75 @@ DEFAULT_CARD_CUSTOM_DECK_JSON = {
 }
 
 
+def create_treachery_card(card_json, picture_path=None, font_manager=None, image_manager=None):
+    """诡计卡"""
+    # 解析JSON字符串
+    data = card_json
+    if 'msg' in data and data['msg'] != '':
+        raise ValueError(data['msg'])
+    card = None
+    # 创建Card对象
+    card = Card(
+        width=739,
+        height=1049,
+        font_manager=font_manager,
+        image_manager=image_manager,
+        card_type='诡计卡'
+    )
+    # 贴底图
+    if picture_path is not None:
+        dp = Image.open(picture_path)
+        card.paste_image(dp, (0, 0, 739, 605), 'cover')
+    # 贴牌框
+    card.paste_image(image_manager.get_image(f'{data["type"]}'), (0, 0), 'contain')
+    # 写小字
+    card.draw_centered_text(
+        position=(370, 576),
+        text="诡计",
+        font_name="汉仪小隶书简",
+        font_size=24,
+        font_color=(0, 0, 0)
+    )
+    # 写标题
+    card.draw_centered_text(
+        position=(370, 630),
+        text=data['name'],
+        font_name="汉仪小隶书简",
+        font_size=48,
+        font_color=(0, 0, 0)
+    )
+    # 写特性
+    card.draw_centered_text(
+        position=(370, 690),
+        text='，'.join(data['traits']),
+        font_name="方正舒体",
+        font_size=32,
+        font_color=(0, 0, 0)
+    )
+    # 整合body和flavor
+    body = data['body']
+    if 'flavor' in data and data['flavor'] != '':
+        body += "\n<hr>\n"
+        flavor = data['flavor']
+        flavor_list = flavor.split('\n')
+        for i in range(len(flavor_list)):
+            flavor_list[i] = f"<relish>{flavor_list[i]}</relish>"
+        body += '\n'.join(flavor_list)
+    # 写正文和风味
+    card.draw_text(
+        text=body,
+        vertices=[
+            (38, 700), (704, 700),
+            (704, 980), (38, 980)
+        ],
+        default_font_name='simfang',
+        default_size=32,
+        padding=18,
+        draw_virtual_box=False
+    )
+    return card
+
+
 def create_enemy_card(card_json, picture_path=None, font_manager=None, image_manager=None):
     """敌人卡"""
     # 解析JSON字符串
@@ -1142,6 +1211,8 @@ def process_card_json(card_json, picture_path=None, font_manager=None, image_man
         return create_upgrade_card(card_json, picture_path, font_manager, image_manager)
     elif card_json['type'] == '敌人卡':
         return create_enemy_card(card_json, picture_path, font_manager, image_manager)
+    elif card_json['type'] == '诡计卡':
+        return create_treachery_card(card_json, picture_path, font_manager, image_manager)
     else:
         return create_player_cards(card_json, picture_path, font_manager, image_manager)
 
@@ -1246,7 +1317,7 @@ def process_card_json_to_tts_json(card_json, front_image_url="", back_image_url=
 
 if __name__ == '__main__':
     json_data = {
-        "type": "敌人卡",
+        "type": "诡计卡",
         "class": "",
         "subclass": [],
         "name": "CNO.107超银河眼时空龙皇",
@@ -1256,7 +1327,7 @@ if __name__ == '__main__':
         "cost": 0,
         "submit_icon": [],
         "level": -1,
-        "traits": ["混沌NO.", "银河眼", "时空", "古神", "精英"],
+        "traits": ["银河眼", "时空", "古神", "精英"],
         "body": "【猎物】 - 天城快斗。\n猎手。庞大。\n【强制】 -一名调查员在一轮中执行第四个行动及其之后的行动后，该调查员立即发疯。\n敌军阶段内，该敌人所在地点的调查员所有的非弱点支援卡的文本框视为空白({属性}除外)，不能打出卡牌，不能触发<快速>，不能触发<反应>能力，不能在技能检定中投入卡牌。",
         "flavor": "",
         "slots": "",
