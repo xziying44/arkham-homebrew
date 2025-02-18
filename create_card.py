@@ -895,8 +895,8 @@ def process_card_json(card_json, picture_path=None, font_manager=None, image_man
 
 
 card_type_transform = {
-    '技能卡': 'Asset',
-    '支援卡': 'Skill',
+    '支援卡': 'Asset',
+    '技能卡': 'Skill',
     '事件卡': 'Event',
     '诡计卡': 'Treachery',
     '调查员卡': 'Investigator',
@@ -945,7 +945,7 @@ def process_card_json_to_tts_json(card_json, front_image_url="", back_image_url=
             num, mark = match.groups()
             card_note['uses'] = [
                 {
-                    "count": num,
+                    "count": int(num),
                     "type": card_token_transform[mark] if mark in card_token_transform else 'Resource',
                     "token": "resource"
                 }
