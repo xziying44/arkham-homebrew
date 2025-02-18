@@ -147,7 +147,10 @@ def generate_json():
         )
 
         # 解析返回的JSON
-        card_json = json.loads(response.choices[0].message.content)
+        body = response.choices[0].message.content
+        print(body)
+
+        card_json = json.loads(body)
         return create_response(data=card_json)
 
     except Exception as e:

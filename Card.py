@@ -335,74 +335,84 @@ class Card:
 
         return 3, {'default': self._get_font(default_font_name, 1)}
 
-    def calculate_padding_x(self, vertices, y1, y2, padding):
+    def calculate_padding_x(self, vertices, line_y1, line_y2, padding):
         """
-        计算给定Y轴区间的左右边距
+        计算给定Y轴区间的左右边距（忽略水平边）
 
         :param vertices: 多边形顶点坐标列表
-        :param y1: Y轴起始位置
-        :param y2: Y轴结束位置
+        :param line_y1: Y轴起始位置
+        :param line_y2: Y轴结束位置
         :param padding: 内边距
         :return: (起始x坐标, 结束x坐标)
         """
-        y_low = min(y1, y2)
-        y_high = max(y1, y2)
+        y_low = min(line_y1, line_y2)
+        y_high = max(line_y1, line_y2)
         x_candidates = []
+        effective_vertices = []
+
+        # 检测线段在有效高度内的线段
         n = len(vertices)
-
         for i in range(n):
-            p1 = vertices[i]
-            p2 = vertices[(i + 1) % n]
-            x1, y_p1 = p1
-            x2, y_p2 = p2
+            _, _y1 = vertices[i]
+            _, _y2 = vertices[(i + 1) % n]
+            y1 = min(_y1, _y2)
+            y2 = max(_y1, _y2)
+            if y_low <= y1 <= y_high or y_low <= y2 <= y_high:
+                # 任意一点在区间内
+                effective_vertices.append((vertices[i], vertices[(i + 1) % n]))
+            elif y1 <= y_low and y2 >= y_high:
+                # 两端点在区间外
+                effective_vertices.append((vertices[i], vertices[(i + 1) % n]))
+            pass
 
-            if y_p1 == y_p2:
-                if y_low <= y_p1 <= y_high:
-                    x_min = min(x1, x2)
-                    x_max = max(x1, x2)
-                    x_candidates.extend([x_min, x_max])
+        for item in effective_vertices:
+            p1, p2 = item
+            x1, y1 = p1
+            x2, y2 = p2
+            item_y_low = min(y1, y2)
+            item_y_high = max(y1, y2)
+
+            # 跳过水平线段
+            if y1 == y2:
                 continue
 
-            y_min_edge = min(y_p1, y_p2)
-            y_max_edge = max(y_p1, y_p2)
+            # 计算交点
+            # 从line_y1遍历到line_y2
+            for y in range(int(line_y1), int(line_y2), 3):
+                if item_y_low < y < item_y_high:
+                    x = x1 + (x2 - x1) * (y - y1) / (y2 - y1)
+                    x_candidates.append(x)
 
-            if y_max_edge < y_low or y_min_edge > y_high:
-                continue
-
-            edge_x = []
-            if y_low <= y_p1 <= y_high:
-                edge_x.append(x1)
-            if y_low <= y_p2 <= y_high:
-                edge_x.append(x2)
-
-            if y_min_edge < y_low < y_max_edge:
-                t = (y_low - y_p1) / (y_p2 - y_p1)
-                if 0 <= t <= 1:
-                    x = x1 + t * (x2 - x1)
-                    edge_x.append(x)
-
-            if y_min_edge < y_high < y_max_edge:
-                t = (y_high - y_p1) / (y_p2 - y_p1)
-                if 0 <= t <= 1:
-                    x = x1 + t * (x2 - x1)
-                    edge_x.append(x)
-
-            if edge_x:
-                x_min_edge = min(edge_x)
-                x_max_edge = max(edge_x)
-                x_candidates.extend([x_min_edge, x_max_edge])
-
+        # 处理无交点情况
         if not x_candidates:
-            return min(v[0] for v in vertices), max(v[0] for v in vertices)
+            min_x = min(v[0] for v in vertices)
+            max_x = max(v[0] for v in vertices)
+            return min_x, max_x
+        # 计算有效区间
+        # 将x_candidates从小到大排序
+        x_candidates.sort()
+        x_min = 0
+        x_max = 0
+        w_max = 0
+        for i in range(len(x_candidates) - 1):
+            w = x_candidates[i + 1] - x_candidates[i]
+            if w > w_max:
+                w_max = w
+                x_min = x_candidates[i]
+                x_max = x_candidates[i + 1]
 
-        x_min = min(x_candidates)
-        x_max = max(x_candidates)
+        if x_min == 0 and x_max == 0:
+            x_min = min(x_candidates)
+            x_max = max(x_candidates)
 
-        start_x = x_min + padding + (padding / 3)
+        start_x = x_min + padding
         end_x = x_max - padding
 
+        # 处理无效padding情况
         if start_x > end_x:
-            return min(v[0] for v in vertices), max(v[0] for v in vertices)
+            min_x = min(v[0] for v in vertices)
+            max_x = max(v[0] for v in vertices)
+            return min_x, max_x
 
         return round(start_x), round(end_x)
 
@@ -514,6 +524,7 @@ class Card:
         current_y = min(v[1] for v in vertices) + padding
         line_start_x, line_end_x = self.calculate_padding_x(vertices, current_y, current_y + line_height, padding)
         current_x = line_start_x
+        print(f"calculate_padding_x: ({line_start_x}, {line_end_x})")
 
         for node in segments:
             font_name, content = node['attrs']['name'] if node['tag'] == 'fonts' else 'default', node['content']
@@ -771,6 +782,19 @@ class Card:
                 border_color=(1, 63, 114)
             )
             return
+        elif self.card_type == '敌人卡':
+            curve = [15, 6, 0, 4, 12]
+            if 0 < health < 6:
+                for i in range(health):
+                    img = self.image_manager.get_image('UI-伤害')
+                    self.paste_image(img, (260 - i * 45, 583 - i * 23 - curve[i]), 'contain')
+                pass
+            if 0 < horror < 6:
+                for i in range(horror):
+                    img = self.image_manager.get_image('UI-恐惧')
+                    self.paste_image(img, (440 + i * 45, 583 - i * 23 - curve[i] + 4), 'contain')
+                pass
+            return
         # 画底图
         img = self.image_manager.get_image('UI-生命恐惧')
         self.paste_image(img, (293, 925), 'contain')
@@ -822,6 +846,39 @@ class Card:
             )
         pass
 
+    def set_enemy_value(self, position, text, font_size=1):
+        """画敌人数值"""
+        font = self._get_font('Bolton', font_size)
+        # 取出text中的数字
+        number = ''
+        r = re.findall(r'\d+', text)
+        if r:
+            number = r[0]
+        if 'X' in text or 'x' in text:
+            number = 'X'
+        if '-' in text or '一' in text:
+            number = 'x'
+            font = self._get_font('arkham-icons', font_size)
+        # 计算数字
+        number_width, text_height = self._get_text_dimensions(number, font)
+        investigator_width = 0
+        investigator_font = None
+        # 画调查员标
+        if '<调查员>' in text:
+            investigator_font = self._get_font('arkham-icons', 24)
+            investigator_width, _ = self._get_text_dimensions('v', investigator_font)
+        # 画中间
+        x = position[0] - number_width // 2 - investigator_width // 2
+        y = position[1] - text_height // 2
+        if number == 'x':
+            y -= 4
+        self.draw.text((x, y), number, font=font, fill=(255, 255, 255), stroke_width=1, stroke_fill=(0, 0, 0))
+        # 画调查员
+        if investigator_font is not None:
+            x = position[0] + number_width // 2 - investigator_width // 2 + 4
+            self.draw.text((x, y + 3), 'v', font=investigator_font, fill=(255, 255, 255), stroke_width=1,
+                           stroke_fill=(0, 0, 0))
+
     def set_basic_weakness_icon(self):
         """添加基础弱点图标"""
         im = None
@@ -859,381 +916,379 @@ class Card:
             im = self.image_manager.get_image(f'多职阶-{item}')
             self.paste_image(im, (start_ps[0] - i * 89, start_ps[1]), 'contain')
 
+    class TestCard:
+        @staticmethod
+        def test():
+            fm = FontManager('fonts')
+            im = ImageManager('images')
+            card = Card(
+                width=739,
+                height=1049,
+                font_manager=fm,
+                image_manager=im,
+                card_type='技能卡'
+            )
 
-class TestCard:
-    @staticmethod
-    def test():
-        fm = FontManager('fonts')
-        im = ImageManager('images')
-        card = Card(
-            width=739,
-            height=1049,
-            font_manager=fm,
-            image_manager=im,
-            card_type='技能卡'
-        )
+            # 贴底图
+            dp = Image.open(r'C:\Users\xziyi\Desktop\java.png')
+            card.paste_image(dp, (0, 88, 739, 600), 'cover')
 
-        # 贴底图
-        dp = Image.open(r'C:\Users\xziyi\Desktop\java.png')
-        card.paste_image(dp, (0, 88, 739, 600), 'cover')
+            # 贴牌框
+            card.paste_image(im.get_image('技能卡-流浪者'), (0, 0), 'contain')
 
-        # 贴牌框
-        card.paste_image(im.get_image('技能卡-流浪者'), (0, 0), 'contain')
+            test_text = (
+                "<fonts name='思源黑体'>强制</fonts> - 检定<fonts name='arkham-icons'>.</fonts>(3)。你检定失败且每低于难度1点，受到1点恐惧。\n"
+                "<hr>\n"
+                "默认<fonts name='arkham-icons'>a</fonts>字体混合排版字体混合排版测试默认字体混合排版测试默认字体混合排版测试默认字体混合排版测试默认测试默认字体混合排版测试默认\n"
+                "<hr>\n"
+                "<relish>这是一段风味内容这是一段风味内容</relish>\n"
+                "<relish>这是一段风味内容这是一段风味内容字体混合排版</relish>"
+            )
+            card.draw_text(
+                test_text,
+                vertices=[
+                    (75, 735), (682, 735), (692, 770), (704, 838), (701, 914), (679, 986),
+                    (74, 986), (91, 920), (96, 844)
+                ],
+                default_font_name='simfang',
+                default_size=32,
+                padding=8,
+                draw_virtual_box=False
+            )
 
-        test_text = (
-            "<fonts name='思源黑体'>强制</fonts> - 检定<fonts name='arkham-icons'>.</fonts>(3)。你检定失败且每低于难度1点，受到1点恐惧。\n"
-            "<hr>\n"
-            "默认<fonts name='arkham-icons'>a</fonts>字体混合排版字体混合排版测试默认字体混合排版测试默认字体混合排版测试默认字体混合排版测试默认测试默认字体混合排版测试默认\n"
-            "<hr>\n"
-            "<relish>这是一段风味内容这是一段风味内容</relish>\n"
-            "<relish>这是一段风味内容这是一段风味内容字体混合排版</relish>"
-        )
-        card.draw_text(
-            test_text,
-            vertices=[
-                (75, 735), (682, 735), (692, 770), (704, 838), (701, 914), (679, 986),
-                (74, 986), (91, 920), (96, 844)
-            ],
-            default_font_name='simfang',
-            default_size=32,
-            padding=8,
-            draw_virtual_box=False
-        )
-
-        card.draw_centered_text(
-            position=(368, 713),
-            text="法术，勇气",
-            font_name="方正舒体",
-            font_size=28,
-            font_color=(0, 0, 0)
-        )
-
-        card.draw_left_text(
-            position=(140, 34),
-            text="测试卡名",
-            font_name="汉仪小隶书简",
-            font_size=48,
-            font_color=(0, 0, 0)
-        )
-
-        card.draw_centered_text(
-            position=(73, 132),
-            text="技能",
-            font_name="汉仪小隶书简",
-            font_size=24,
-            font_color=(0, 0, 0)
-        )
-
-        card.add_submit_icon('意志')
-        card.add_submit_icon('意志')
-        card.add_submit_icon('狂野')
-
-        card.set_card_level(-1)
-
-        card.image.save('output_card.png', quality=95)
-        print("卡牌生成完成")
-
-    @staticmethod
-    def test2():
-        """事件卡"""
-        fm = FontManager('fonts')
-        im = ImageManager('images')
-        card = Card(
-            width=739,
-            height=1046,
-            font_manager=fm,
-            image_manager=im,
-            card_type='事件卡',
-            card_class="潜修者"
-        )
-
-        # 贴底图
-        dp = Image.open(r'C:\Users\xziyi\Desktop\java.png')
-        card.paste_image(dp, (0, 0, 739, 589), 'cover')
-
-        # 贴牌框
-        card.paste_image(im.get_image('事件卡-潜修者'), (0, 0), 'contain')
-
-        # 写小字
-        card.draw_centered_text(
-            position=(73, 130),
-            text="事件",
-            font_name="汉仪小隶书简",
-            font_size=24,
-            font_color=(0, 0, 0)
-        )
-
-        # 写属性
-        card.draw_centered_text(
-            position=(368, 682),
-            text="法术，勇气",
-            font_name="方正舒体",
-            font_size=32,
-            font_color=(0, 0, 0)
-        )
-
-        test_text = """{公务员，表演者，社会名流}牌库专用。
-<hr>
-【谈判】。选择你所在地点的一名调查员。该调查员可以从手牌免费打出一张{盟友}支援。然后，该调查员可以触发该支援上的一个<启动>或<免费>能力，忽略其所有费用。
-风味文字：“没错，他们肯定信了。”"""
-        card.draw_text(
-            test_text,
-            vertices=[
-                (43, 700), (694, 700), (706, 757), (704, 817), (680, 887), (670, 952),
-                (598, 980), (135, 980), (77, 949), (61, 907), (31, 793)
-            ],
-            default_font_name='simfang',
-            default_size=32,
-            padding=15,
-            draw_virtual_box=True
-        )
-
-        card.draw_centered_text(
-            position=(370, 618),
-            text="<独特>测试卡名",
-            font_name="汉仪小隶书简",
-            font_size=48,
-            font_color=(0, 0, 0)
-        )
-
-        card.add_submit_icon('意志')
-        card.add_submit_icon('意志')
-        card.add_submit_icon('狂野')
-
-        card.set_card_level(0)
-
-        card.set_card_cost(-1)
-
-        card.image.save('output_card.png', quality=95)
-        print("卡牌生成完成")
-
-    @staticmethod
-    def test3():
-        """支援卡"""
-        fm = FontManager('fonts')
-        im = ImageManager('images')
-        card = Card(
-            width=739,
-            height=1049,
-            font_manager=fm,
-            image_manager=im,
-            card_type='支援卡',
-            card_class="守护者"
-        )
-
-        # 贴底图
-        dp = Image.open(r'C:\Users\xziyi\Desktop\java.png')
-        card.paste_image(dp, (0, 80, 739, 540), 'cover')
-
-        # 贴牌框
-        card.paste_image(im.get_image('支援卡-守护者-副标题'), (0, 0), 'contain')
-
-        # 写小字
-        card.draw_centered_text(
-            position=(73, 130),
-            text="支援",
-            font_name="汉仪小隶书简",
-            font_size=24,
-            font_color=(0, 0, 0)
-        )
-
-        # 写属性
-        card.draw_centered_text(
-            position=(375, 649),
-            text="法术，勇气",
-            font_name="方正舒体",
-            font_size=32,
-            font_color=(0, 0, 0)
-        )
-
-        test_text = """{公务员，表演者，社会名流}牌库专用。
-<hr>
-<启动>：【谈判】。选择你所在地点的一名调查员。该调查员可以从手牌免费打出一张{盟友}支援。然后，该调查员可以触发该支援上的一个<启动>或<免费>能力，忽略其所有费用。
-<relish>“没错，他们肯定信了。”</relish>"""
-        card.draw_text(
-            test_text,
-            vertices=[
-                (19, 662), (718, 662), (718, 910), (19, 910)
-            ],
-            default_font_name='simfang',
-            default_size=32,
-            padding=15,
-            draw_virtual_box=True
-        )
-
-        # 写标题
-        card.draw_centered_text(
-            position=(375, 48),
-            text="<独特>测试卡名",
-            font_name="汉仪小隶书简",
-            font_size=48,
-            font_color=(0, 0, 0)
-        )
-
-        # 写副标题
-        card.draw_centered_text(
-            position=(375, 101),
-            text="测试副标题",
-            font_name="汉仪小隶书简",
-            font_size=32,
-            font_color=(0, 0, 0)
-        )
-
-        card.add_submit_icon('意志')
-        card.add_submit_icon('意志')
-        card.add_submit_icon('狂野')
-
-        card.set_card_level(3)
-
-        card.set_card_cost(-2)
-
-        card.add_slots('双手')
-
-        card.set_health_and_horror(2, 2)
-
-        card.image.save('output_card.png', quality=95)
-        print("卡牌生成完成")
-
-    @staticmethod
-    def test4():
-        """调查员正面"""
-        fm = FontManager('fonts')
-        im = ImageManager('images')
-        card = Card(
-            width=1049,
-            height=739,
-            font_manager=fm,
-            image_manager=im,
-            card_type='调查员卡'
-        )
-        # 贴牌框-底
-        card.paste_image(im.get_image('调查员-守护者-底图'), (0, 0), 'contain')
-
-        # 贴底图
-        dp = Image.open(r'C:\Users\xziyi\Desktop\java2.png')
-        card.paste_image(dp, (0, 75, 579, 647), 'cover')
-
-        # 贴牌框-UI
-        card.paste_image(im.get_image('调查员-守护者-UI'), (0, 0), 'contain')
-
-        # 写标题
-        card.draw_centered_text(
-            position=(320, 38),
-            text="<独特>测试卡名",
-            font_name="汉仪小隶书简",
-            font_size=48,
-            font_color=(0, 0, 0)
-        )
-
-        # 写副标题
-        card.draw_centered_text(
-            position=(320, 90),
-            text="测试副标题",
-            font_name="汉仪小隶书简",
-            font_size=32,
-            font_color=(0, 0, 0)
-        )
-
-        # 写四维
-        attribute = (1, 2, 3, 4)
-        for i, attr in enumerate(attribute):
             card.draw_centered_text(
-                position=(600 + 120 * i, 57),
-                text=str(attr),
-                font_name="Bolton",
+                position=(368, 713),
+                text="法术，勇气",
+                font_name="方正舒体",
+                font_size=28,
+                font_color=(0, 0, 0)
+            )
+
+            card.draw_left_text(
+                position=(140, 34),
+                text="测试卡名",
+                font_name="汉仪小隶书简",
                 font_size=48,
                 font_color=(0, 0, 0)
             )
 
-        # 写属性
-        card.draw_centered_text(
-            position=(810, 168),
-            text="法术，勇气",
-            font_name="方正舒体",
-            font_size=32,
-            font_color=(0, 0, 0)
-        )
+            card.draw_centered_text(
+                position=(73, 132),
+                text="技能",
+                font_name="汉仪小隶书简",
+                font_size=24,
+                font_color=(0, 0, 0)
+            )
 
-        test_text = """你以通量稳定器(失活)面朝上开始游戏。
+            card.add_submit_icon('意志')
+            card.add_submit_icon('意志')
+            card.add_submit_icon('狂野')
+
+            card.set_card_level(-1)
+
+            card.image.save('output_card.png', quality=95)
+            print("卡牌生成完成")
+
+        @staticmethod
+        def test2():
+            """事件卡"""
+            fm = FontManager('fonts')
+            im = ImageManager('images')
+            card = Card(
+                width=739,
+                height=1046,
+                font_manager=fm,
+                image_manager=im,
+                card_type='事件卡',
+                card_class="潜修者"
+            )
+
+            # 贴底图
+            dp = Image.open(r'C:\Users\xziyi\Desktop\java.png')
+            card.paste_image(dp, (0, 0, 739, 589), 'cover')
+
+            # 贴牌框
+            card.paste_image(im.get_image('事件卡-潜修者'), (0, 0), 'contain')
+
+            # 写小字
+            card.draw_centered_text(
+                position=(73, 130),
+                text="事件",
+                font_name="汉仪小隶书简",
+                font_size=24,
+                font_color=(0, 0, 0)
+            )
+
+            # 写属性
+            card.draw_centered_text(
+                position=(368, 682),
+                text="法术，勇气",
+                font_name="方正舒体",
+                font_size=32,
+                font_color=(0, 0, 0)
+            )
+
+            test_text = """{公务员，表演者，社会名流}牌库专用。
+<hr>
+【谈判】。选择你所在地点的一名调查员。该调查员可以从手牌免费打出一张{盟友}支援。然后，该调查员可以触发该支援上的一个<启动>或<免费>能力，忽略其所有费用。
+风味文字：“没错，他们肯定信了。”"""
+            card.draw_text(
+                test_text,
+                vertices=[
+                    (43, 700), (694, 700), (706, 757), (704, 817), (680, 887), (670, 952),
+                    (598, 980), (135, 980), (77, 949), (61, 907), (31, 793)
+                ],
+                default_font_name='simfang',
+                default_size=32,
+                padding=15,
+                draw_virtual_box=True
+            )
+
+            card.draw_centered_text(
+                position=(370, 618),
+                text="<独特>测试卡名",
+                font_name="汉仪小隶书简",
+                font_size=48,
+                font_color=(0, 0, 0)
+            )
+
+            card.add_submit_icon('意志')
+            card.add_submit_icon('意志')
+            card.add_submit_icon('狂野')
+
+            card.set_card_level(0)
+
+            card.set_card_cost(-1)
+
+            card.image.save('output_card.png', quality=95)
+            print("卡牌生成完成")
+
+        @staticmethod
+        def test3():
+            """支援卡"""
+            fm = FontManager('fonts')
+            im = ImageManager('images')
+            card = Card(
+                width=739,
+                height=1049,
+                font_manager=fm,
+                image_manager=im,
+                card_type='支援卡',
+                card_class="守护者"
+            )
+
+            # 贴底图
+            dp = Image.open(r'C:\Users\xziyi\Desktop\java.png')
+            card.paste_image(dp, (0, 80, 739, 540), 'cover')
+
+            # 贴牌框
+            card.paste_image(im.get_image('支援卡-守护者-副标题'), (0, 0), 'contain')
+
+            # 写小字
+            card.draw_centered_text(
+                position=(73, 130),
+                text="支援",
+                font_name="汉仪小隶书简",
+                font_size=24,
+                font_color=(0, 0, 0)
+            )
+
+            # 写属性
+            card.draw_centered_text(
+                position=(375, 649),
+                text="法术，勇气",
+                font_name="方正舒体",
+                font_size=32,
+                font_color=(0, 0, 0)
+            )
+
+            test_text = """{公务员，表演者，社会名流}牌库专用。
+<hr>
+<启动>：【谈判】。选择你所在地点的一名调查员。该调查员可以从手牌免费打出一张{盟友}支援。然后，该调查员可以触发该支援上的一个<启动>或<免费>能力，忽略其所有费用。
+<relish>“没错，他们肯定信了。”</relish>"""
+            card.draw_text(
+                test_text,
+                vertices=[
+                    (19, 662), (718, 662), (718, 910), (19, 910)
+                ],
+                default_font_name='simfang',
+                default_size=32,
+                padding=15,
+                draw_virtual_box=True
+            )
+
+            # 写标题
+            card.draw_centered_text(
+                position=(375, 48),
+                text="<独特>测试卡名",
+                font_name="汉仪小隶书简",
+                font_size=48,
+                font_color=(0, 0, 0)
+            )
+
+            # 写副标题
+            card.draw_centered_text(
+                position=(375, 101),
+                text="测试副标题",
+                font_name="汉仪小隶书简",
+                font_size=32,
+                font_color=(0, 0, 0)
+            )
+
+            card.add_submit_icon('意志')
+            card.add_submit_icon('意志')
+            card.add_submit_icon('狂野')
+
+            card.set_card_level(3)
+
+            card.set_card_cost(-2)
+
+            card.add_slots('双手')
+
+            card.set_health_and_horror(2, 2)
+
+            card.image.save('output_card.png', quality=95)
+            print("卡牌生成完成")
+
+        @staticmethod
+        def test4():
+            """调查员正面"""
+            fm = FontManager('fonts')
+            im = ImageManager('images')
+            card = Card(
+                width=1049,
+                height=739,
+                font_manager=fm,
+                image_manager=im,
+                card_type='调查员卡'
+            )
+            # 贴牌框-底
+            card.paste_image(im.get_image('调查员-守护者-底图'), (0, 0), 'contain')
+
+            # 贴底图
+            dp = Image.open(r'C:\Users\xziyi\Desktop\java2.png')
+            card.paste_image(dp, (0, 75, 579, 647), 'cover')
+
+            # 贴牌框-UI
+            card.paste_image(im.get_image('调查员-守护者-UI'), (0, 0), 'contain')
+
+            # 写标题
+            card.draw_centered_text(
+                position=(320, 38),
+                text="<独特>测试卡名",
+                font_name="汉仪小隶书简",
+                font_size=48,
+                font_color=(0, 0, 0)
+            )
+
+            # 写副标题
+            card.draw_centered_text(
+                position=(320, 90),
+                text="测试副标题",
+                font_name="汉仪小隶书简",
+                font_size=32,
+                font_color=(0, 0, 0)
+            )
+
+            # 写四维
+            attribute = (1, 2, 3, 4)
+            for i, attr in enumerate(attribute):
+                card.draw_centered_text(
+                    position=(600 + 120 * i, 57),
+                    text=str(attr),
+                    font_name="Bolton",
+                    font_size=48,
+                    font_color=(0, 0, 0)
+                )
+
+            # 写属性
+            card.draw_centered_text(
+                position=(810, 168),
+                text="法术，勇气",
+                font_name="方正舒体",
+                font_size=32,
+                font_color=(0, 0, 0)
+            )
+
+            test_text = """你以通量稳定器(失活)面朝上开始游戏。
 <hr>
 <免费>：从凯特·温斯洛普上移动1个线索到一张你控制的上面没有线索的科学或工具支援。
 <hr>
 【强制】 - 当你控制的上面有线索的支援离场时：将其线索放在你所在地点上。
 <hr>
 <旧印>效果：+0。你可以从你控制的一张支援上移动1个线索返回到凯特·温斯洛普。"""
-        card.draw_text(
-            test_text,
-            vertices=[
-                (586, 178), (1026, 178), (1024, 600), (586, 600)
-            ],
-            default_font_name='simfang',
-            default_size=32,
-            padding=15,
-            draw_virtual_box=False
-        )
+            card.draw_text(
+                test_text,
+                vertices=[
+                    (586, 178), (1026, 178), (1024, 600), (586, 600)
+                ],
+                default_font_name='simfang',
+                default_size=32,
+                padding=15,
+                draw_virtual_box=False
+            )
 
-        card.set_health_and_horror(6, 8)
+            card.set_health_and_horror(6, 8)
 
-        card.image.save('output_card.png', quality=95)
-        print("卡牌生成完成")
+            card.image.save('output_card.png', quality=95)
+            print("卡牌生成完成")
 
-    @staticmethod
-    def test5():
-        """调查员卡背"""
-        fm = FontManager('fonts')
-        im = ImageManager('images')
-        card = Card(
-            width=1049,
-            height=739,
-            font_manager=fm,
-            image_manager=im,
-            card_type='调查员卡'
-        )
-        # 贴底图
-        dp = Image.open(r'C:\Users\xziyi\Desktop\java2.png')
-        card.paste_image(dp, (0, 0, 373, 405), 'cover')
+        @staticmethod
+        def test5():
+            """调查员卡背"""
+            fm = FontManager('fonts')
+            im = ImageManager('images')
+            card = Card(
+                width=1049,
+                height=739,
+                font_manager=fm,
+                image_manager=im,
+                card_type='调查员卡'
+            )
+            # 贴底图
+            dp = Image.open(r'C:\Users\xziyi\Desktop\java2.png')
+            card.paste_image(dp, (0, 0, 373, 405), 'cover')
 
-        # 贴牌框-UI
-        card.paste_image(im.get_image('调查员卡-潜修者-卡背'), (0, 0), 'contain')
+            # 贴牌框-UI
+            card.paste_image(im.get_image('调查员卡-潜修者-卡背'), (0, 0), 'contain')
 
-        # 写标题
-        card.draw_centered_text(
-            position=(750, 36),
-            text="<独特>测试冴卡名",
-            font_name="汉仪小隶书简",
-            font_size=48,
-            font_color=(0, 0, 0)
-        )
+            # 写标题
+            card.draw_centered_text(
+                position=(750, 36),
+                text="<独特>测试冴卡名",
+                font_name="汉仪小隶书简",
+                font_size=48,
+                font_color=(0, 0, 0)
+            )
 
-        # 写副标题
-        card.draw_centered_text(
-            position=(750, 88),
-            text="测试副标题",
-            font_name="汉仪小隶书简",
-            font_size=32,
-            font_color=(0, 0, 0)
-        )
+            # 写副标题
+            card.draw_centered_text(
+                position=(750, 88),
+                text="测试副标题",
+                font_name="汉仪小隶书简",
+                font_size=32,
+                font_color=(0, 0, 0)
+            )
 
-        test_text = """【牌库卡牌张数】: 30。
+            test_text = """【牌库卡牌张数】: 30。
 【牌库构筑选项】: 探求者卡牌(f)等级0-5，科学卡牌等级0-4，洞察卡牌等级0-1，中立卡牌等级0-5。
 【牌库构筑需求】(不计入卡牌张数)：通量稳定器、失败的实验、1张随机基础弱点。
 <hr>
 <relish center='false'>凯特·温斯洛普多年来一直卡托尼克大学科学楼的地下室卡托尼克大学科学楼的地下室卡托尼克大学科学楼的地下室在米斯卡托尼克大学科学楼的地下室里进行研究，为了追求进步，她放弃了资金和学术声望。她一心一意的专注终于得到了回报，她发明了通量稳定器：一种能够引导新形式能量的强大装置。然而，进步的代价是高昂的。这项突破性发明的第一次成功测试夺去了她的朋友兼导师杨教授的生命。从那以后，凯特不知疲倦地研究这些外星电流，希望能找到一种方法来扭转它们的影响。</relish>"""
-        card.draw_text(
-            test_text,
-            vertices=[
-                (385, 141), (1011, 141), (1011, 686), (36, 686),
-                (36, 500), (308, 500), (308, 450), (358, 450)
-            ],
-            default_font_name='simfang',
-            default_size=32,
-            padding=15,
-            draw_virtual_box=False
-        )
+            card.draw_text(
+                test_text,
+                vertices=[
+                    (385, 141), (1011, 141), (1011, 686), (36, 686),
+                    (36, 500), (308, 500), (308, 450), (358, 450)
+                ],
+                default_font_name='simfang',
+                default_size=32,
+                padding=15,
+                draw_virtual_box=False
+            )
 
-        card.image.save('output_card.png', quality=95)
-        print("卡牌生成完成")
+            card.image.save('output_card.png', quality=95)
+            print("卡牌生成完成")
 
-
-if __name__ == '__main__':
-    TestCard.test5()
+    if __name__ == '__main__':
+        TestCard.test5()

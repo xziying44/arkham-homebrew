@@ -142,6 +142,142 @@ DEFAULT_CARD_CUSTOM_DECK_JSON = {
 }
 
 
+def create_enemy_card(card_json, picture_path=None, font_manager=None, image_manager=None):
+    """敌人卡"""
+    # 解析JSON字符串
+    data = card_json
+    if 'msg' in data and data['msg'] != '':
+        raise ValueError(data['msg'])
+    card = None
+    # 创建Card对象
+    card = Card(
+        width=739,
+        height=1049,
+        font_manager=font_manager,
+        image_manager=image_manager,
+        card_type='敌人卡'
+    )
+    # 贴底图
+    if picture_path is not None:
+        dp = Image.open(picture_path)
+        card.paste_image(dp, (0, 456, 739, 593), 'cover')
+    # 贴牌框
+    if 'subtitle' in data and data['subtitle'] != '':
+        card.paste_image(image_manager.get_image(f'{data["type"]}-副标题'), (0, 0), 'contain')
+    else:
+        card.paste_image(image_manager.get_image(f'{data["type"]}'), (0, 0), 'contain')
+    # 写小字
+    card.draw_centered_text(
+        position=(364, 617),
+        text="敌人",
+        font_name="汉仪小隶书简",
+        font_size=24,
+        font_color=(0, 0, 0)
+    )
+    # 写标题
+    card.draw_centered_text(
+        position=(370, 28),
+        text=data['name'],
+        font_name="汉仪小隶书简",
+        font_size=48,
+        font_color=(0, 0, 0)
+    )
+    # 写副标题
+    if 'subtitle' in data and data['subtitle'] != '':
+        card.draw_centered_text(
+            position=(370, 78),
+            text=data['subtitle'],
+            font_name="汉仪小隶书简",
+            font_size=32,
+            font_color=(0, 0, 0)
+        )
+    # 写特性
+    card.draw_centered_text(
+        position=(370, 218),
+        text='，'.join(data['traits']),
+        font_name="方正舒体",
+        font_size=32,
+        font_color=(0, 0, 0)
+    )
+    # 整合body和flavor
+    body = data['body']
+    if 'flavor' in data and data['flavor'] != '':
+        body += "\n<hr>\n"
+        flavor = data['flavor']
+        flavor_list = flavor.split('\n')
+        for i in range(len(flavor_list)):
+            flavor_list[i] = f"<relish>{flavor_list[i]}</relish>"
+        body += '\n'.join(flavor_list)
+    # 写胜利点数和正文
+    if 'victory' in data and isinstance(data['victory'], int) and data['victory'] > 0:
+        card.draw_centered_text(
+            position=(380, 512),
+            text=f"胜利{data['victory']}。",
+            font_name="思源黑体",
+            font_size=28,
+            font_color=(0, 0, 0)
+        )
+        card.draw_text(
+            text=body,
+            vertices=[
+                (90, 230), (645, 230),
+                (699, 267), (727, 340), (688, 454),
+                (538, 504), (190, 504),
+                (47, 454), (5, 340), (32, 267)
+
+            ],
+            default_font_name='simfang',
+            default_size=32,
+            padding=15,
+            draw_virtual_box=False
+        )
+    else:
+        card.draw_text(
+            text=body,
+            vertices=[
+                (90, 230), (645, 230),
+                (699, 267), (727, 340), (688, 454),
+                (538, 540), (190, 540),
+                (47, 454), (5, 340), (32, 267)
+
+            ],
+            default_font_name='simfang',
+            default_size=32,
+            padding=15,
+            draw_virtual_box=False
+        )
+    # 画生命值恐惧值
+    health = 0
+    horror = 0
+    if 'enemy_damage' in data and isinstance(data['enemy_damage'], int):
+        health = data['enemy_damage']
+    if 'enemy_damage_horror' in data and isinstance(data['enemy_damage_horror'], int):
+        horror = data['enemy_damage_horror']
+    if health > 0 or horror > 0:
+        card.set_health_and_horror(health, horror)
+    # 画攻击生命躲避
+    attack = data['attack'] if 'attack' in data else ''
+    evade = data['evade'] if 'evade' in data else ''
+    enemy_health = data['enemy_health'] if 'enemy_health' in data else ''
+    card.set_enemy_value(
+        position=(370, 132),
+        text=enemy_health,
+        font_size=52
+    )
+    card.set_enemy_value(
+        position=(232, 136),
+        text=attack,
+        font_size=44
+    )
+    card.set_enemy_value(
+        position=(508, 136),
+        text=evade,
+        font_size=44
+    )
+
+    return card
+
+
 def create_upgrade_card(card_json, picture_path=None, font_manager=None, image_manager=None):
     """制作升级卡"""
     # 解析JSON字符串
@@ -200,7 +336,7 @@ def create_weakness_back(card_json, picture_path=None, font_manager=None, image_
         card_type=data['type'],
         card_class=data['class']
     )
-    if data['type'] not in ['事件卡', '支援卡', '技能卡', '诡计卡']:
+    if data['type'] not in ['事件卡', '支援卡', '技能卡', '诡计卡', '敌人卡']:
         raise ValueError('卡牌类型错误')
     # 整合body和flavor
     body = data['body']
@@ -465,6 +601,123 @@ def create_weakness_back(card_json, picture_path=None, font_manager=None, image_
             draw_virtual_box=False
         )
         pass
+    elif data['type'] == '敌人卡':
+        # 贴底图
+        if picture_path is not None:
+            dp = Image.open(picture_path)
+            card.paste_image(dp, (0, 456, 739, 593), 'cover')
+        # 贴牌框
+        card.paste_image(image_manager.get_image(f'{data["class"]}-{data["type"]}'), (0, 0), 'contain')
+        # 写小字
+        card.draw_centered_text(
+            position=(370, 620),
+            text="敌人",
+            font_name="汉仪小隶书简",
+            font_size=24,
+            font_color=(0, 0, 0)
+        )
+        # 写标题
+        card.draw_centered_text(
+            position=(370, 28),
+            text=data['name'],
+            font_name="汉仪小隶书简",
+            font_size=48,
+            font_color=(0, 0, 0)
+        )
+        # 写副标题
+        if 'subtitle' in data and data['subtitle'] != '':
+            card.draw_centered_text(
+                position=(370, 78),
+                text=data['subtitle'],
+                font_name="汉仪小隶书简",
+                font_size=32,
+                font_color=(0, 0, 0)
+            )
+        # 写特性
+        card.draw_centered_text(
+            position=(370, 218),
+            text='，'.join(data['traits']),
+            font_name="方正舒体",
+            font_size=32,
+            font_color=(0, 0, 0)
+        )
+        # 整合body和flavor
+        body = data['body']
+        if 'flavor' in data and data['flavor'] != '':
+            body += "\n<hr>\n"
+            flavor = data['flavor']
+            flavor_list = flavor.split('\n')
+            for i in range(len(flavor_list)):
+                flavor_list[i] = f"<relish>{flavor_list[i]}</relish>"
+            body += '\n'.join(flavor_list)
+        # 写胜利点数和正文
+        if 'victory' in data and isinstance(data['victory'], int) and data['victory'] > 0:
+            card.draw_centered_text(
+                position=(380, 512),
+                text=f"胜利{data['victory']}。",
+                font_name="思源黑体",
+                font_size=28,
+                font_color=(0, 0, 0)
+            )
+            card.draw_text(
+                text=body,
+                vertices=[
+                    (90, 230), (645, 230),
+                    (699, 267), (727, 340), (688, 454),
+                    (538, 504), (370, 504), (190, 504),
+                    (47, 454), (5, 340), (32, 267)
+
+                ],
+                default_font_name='simfang',
+                default_size=32,
+                padding=15,
+                draw_virtual_box=False
+            )
+        else:
+            card.draw_text(
+                text=body,
+                vertices=[
+                    (90, 230), (645, 230),
+                    (699, 267), (727, 340), (688, 454),
+                    (538, 540), (370, 540), (190, 540),
+                    (47, 454), (5, 340), (32, 267)
+
+                ],
+                default_font_name='simfang',
+                default_size=32,
+                padding=15,
+                draw_virtual_box=False
+            )
+        # 画生命值恐惧值
+        health = 0
+        horror = 0
+        if 'enemy_damage' in data and isinstance(data['enemy_damage'], int):
+            health = data['enemy_damage']
+        if 'enemy_damage_horror' in data and isinstance(data['enemy_damage_horror'], int):
+            horror = data['enemy_damage_horror']
+        if health > 0 or horror > 0:
+            card.set_health_and_horror(health, horror)
+            # 画攻击生命躲避
+            # 画攻击生命躲避
+            attack = data['attack'] if 'attack' in data else ''
+            evade = data['evade'] if 'evade' in data else ''
+            enemy_health = data['enemy_health'] if 'enemy_health' in data else ''
+            card.set_enemy_value(
+                position=(370, 132),
+                text=enemy_health,
+                font_size=52
+            )
+            card.set_enemy_value(
+                position=(232, 136),
+                text=attack,
+                font_size=44
+            )
+            card.set_enemy_value(
+                position=(508, 136),
+                text=evade,
+                font_size=44
+            )
+        pass
     if data['weakness_type'] == '基础弱点':
         card.set_basic_weakness_icon()
 
@@ -529,7 +782,7 @@ def create_investigators_card_back(card_json, picture_path=None, font_manager=No
         test_text,
         vertices=[
             (385, 141), (1011, 141), (1011, 686), (36, 686),
-            (36, 500), (308, 500), (308, 450), (358, 450)
+            (36, 500), (308, 450), (358, 450)
         ],
         default_font_name='simfang',
         default_size=32,
@@ -849,7 +1102,7 @@ def create_player_cards(card_json, picture_path=None, font_manager=None, image_m
         card.draw_text(
             text=body,
             vertices=[
-                (19, 662), (718, 662), (718, 910), (19, 910)
+                (19, 662), (718, 662), (718, 925), (19, 925)
             ],
             default_font_name='simfang',
             default_size=32,
@@ -882,14 +1135,13 @@ def process_card_json(card_json, picture_path=None, font_manager=None, image_man
     if 'type' not in card_json:
         raise ValueError('卡牌类型不能为空')
     if card_json['type'] == '调查员卡':
-        if 'card_back' in card_json and len(card_json['card_back']['option']) > 0:
-            return create_investigators_card_back(card_json, picture_path, font_manager, image_manager)
-        else:
-            return create_investigators_card(card_json, picture_path, font_manager, image_manager)
+        return create_investigators_card_back(card_json, picture_path, font_manager, image_manager)
     elif card_json['class'] == '弱点':
         return create_weakness_back(card_json, picture_path, font_manager, image_manager)
     elif card_json['type'] == '升级卡':
         return create_upgrade_card(card_json, picture_path, font_manager, image_manager)
+    elif card_json['type'] == '敌人卡':
+        return create_enemy_card(card_json, picture_path, font_manager, image_manager)
     else:
         return create_player_cards(card_json, picture_path, font_manager, image_manager)
 
@@ -994,22 +1246,28 @@ def process_card_json_to_tts_json(card_json, front_image_url="", back_image_url=
 
 if __name__ == '__main__':
     json_data = {
-        "type": "升级卡",
+        "type": "敌人卡",
         "class": "",
         "subclass": [],
-        "name": "忍一手",
+        "name": "CNO.107超银河眼时空龙皇",
         "weakness_type": "",
-        "subtitle": "",
+        "subtitle": "时空暴君",
         "attribute": [],
         "cost": 0,
         "submit_icon": [],
         "level": -1,
-        "traits": [],
-        "body": "□【升级选项】 测试升级正文测试升级正文测试升级正文\n□□□【升级选项】 测试升级正文测试升级正文测试升级正文\n□【升级选项】 测试升级正文测试升级正文测试升级正文",
+        "traits": ["混沌NO.", "银河眼", "时空", "古神", "精英"],
+        "body": "【猎物】 - 天城快斗。\n猎手。庞大。\n【强制】 -一名调查员在一轮中执行第四个行动及其之后的行动后，该调查员立即发疯。\n敌军阶段内，该敌人所在地点的调查员所有的非弱点支援卡的文本框视为空白({属性}除外)，不能打出卡牌，不能触发<快速>，不能触发<反应>能力，不能在技能检定中投入卡牌。",
         "flavor": "",
         "slots": "",
         "health": 0,
         "horror": 0,
+        "enemy_damage": 5,
+        "enemy_damage_horror": 5,
+        "attack": "45",
+        "evade": "30",
+        "enemy_health": "8<调查员>",
+        "victory": 5,
         "card_back": {
             "size": 30,
             "option": [],
