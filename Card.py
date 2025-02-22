@@ -29,7 +29,7 @@ def parse_html(text):
 
             tag_name = tag_match.group(1).lower()
             is_end = tag_part.startswith('</')
-            is_self_closing = tag_part.endswith('/>') or tag_name in {'hr', 'br', 'img'}
+            is_self_closing = tag_part.endswith('/>') or tag_name in {'hr', 'lr', 'br', 'img'}
             attrs_str = tag_match.group(3) or ''
             attrs = dict(attr_pattern.findall(attrs_str))
 
@@ -181,16 +181,18 @@ class Card:
         self.image_manager = image_manager if image_manager else ImageManager()
         self.default_font = ImageFont.load_default()
         self.submit_index = 0  # 投入图标索引
+        self.slots_index = 0  # 槽位索引
         self.card_type = card_type
         self.card_class = card_class
 
-    def paste_image(self, img, region, resize_mode='stretch'):
+    def paste_image(self, img, region, resize_mode='stretch', transparent=None):
         """
         在指定区域粘贴图片
 
         :param img: 图片
         :param region: 目标区域坐标和尺寸 (x, y, width, height)
         :param resize_mode: 调整模式，可选'stretch'(拉伸)/'contain'(适应)/'cover'(覆盖)
+        :param transparent: 透明区域圆，为(x, y, r)
         """
         try:
             target_w, target_h = img.width, img.height
@@ -207,6 +209,16 @@ class Card:
                     top = (img.height - target_h) // 2
                     img = img.crop((left, top, left + target_w, top + target_h))
 
+            if transparent is not None:
+                draw = ImageDraw.Draw(img)
+                # 定义圆形参数
+                x, y, r = transparent  # 圆心坐标半径
+
+                # 绘制透明圆形（RGBA中A=0表示完全透明）
+                draw.ellipse(
+                    [(x - r, y - r), (x + r, y + r)],  # 边界框坐标
+                    fill=(0, 0, 0, 0)  # 透明黑色
+                )
             if img.mode == 'RGBA':
                 self.image.paste(img, (region[0], region[1], region[0] + target_w, region[1] + target_h), img)
             else:
@@ -302,8 +314,11 @@ class Card:
 
                 font = temp_cache.get(font_name) or self._get_font(font_name, size)
                 temp_cache[font_name] = font
-                if node['tag'] == 'hr':
-                    current_y += line_height + line_height / 3
+                if node['tag'] == 'hr' or node['tag'] == 'lr':
+                    if node['tag'] == 'lr':
+                        current_y += line_height + line_height // 6
+                    else:
+                        current_y += line_height + line_height / 3
                     line_start_x, line_end_x = self.calculate_padding_x(vertices, current_y,
                                                                         current_y + line_height,
                                                                         padding)
@@ -406,7 +421,7 @@ class Card:
             x_max = max(x_candidates)
 
         start_x = x_min + padding
-        end_x = x_max - padding
+        end_x = x_max - padding // 3
 
         # 处理无效padding情况
         if start_x > end_x:
@@ -415,6 +430,12 @@ class Card:
             return min_x, max_x
 
         return round(start_x), round(end_x)
+
+    def unified_text_processing(self, text):
+        """统一文本处理"""
+        text = text.replace('·', "<fonts name='SourceHanSansSC-Regular' offset='-25'>\uff65</fonts>")
+        text = text.replace('】。', "】<fonts name='SourceHanSansSC-Bold' offset='-30'>\uff61</fonts>")
+        return text
 
     def draw_centered_text(self, position, text, font_name, font_size, font_color,
                            has_border=False, border_width=1, border_color=(0, 0, 0)):
@@ -430,9 +451,11 @@ class Card:
         :param border_width: 边框粗细
         :param border_color: 边框颜色
         """
+        text = self.unified_text_processing(text)
         font = self._get_font(font_name, font_size)
         _, text_height = self._get_text_dimensions(text, font)
         text_width = 0
+
         segments = self._parse_text_segments(text)
         for node in segments:
             if node['tag'] == 'text' or node['tag'] == 'fonts':
@@ -455,11 +478,14 @@ class Card:
                 font = self._get_font(font_name, font_size) if _font_name == 'default' else self._get_font(_font_name,
                                                                                                            font_size)
                 char_w, _ = self._get_text_dimensions(content, font)
+                offset = 0
+                if 'attrs' in node and 'offset' in node['attrs']:
+                    offset = int(int(node['attrs']['offset']) / 100 * font_size)
                 if has_border:
-                    self.draw.text((current_x, y), content, font=font, fill=font_color,
+                    self.draw.text((current_x, y + offset), content, font=font, fill=font_color,
                                    stroke_width=border_width, stroke_fill=border_color)
                 else:
-                    self.draw.text((current_x, y), content, font=font, fill=font_color)
+                    self.draw.text((current_x, y + offset), content, font=font, fill=font_color)
                 current_x += char_w
 
     def draw_left_text(self, position, text, font_name, font_size, font_color,
@@ -475,6 +501,7 @@ class Card:
         :param border_width: 边框粗细
         :param border_color: 边框颜色
         """
+        text = self.unified_text_processing(text)
         x = position[0]
         y = position[1]
         current_x = x
@@ -487,11 +514,15 @@ class Card:
                 font = self._get_font(font_name, font_size) if _font_name == 'default' else self._get_font(_font_name,
                                                                                                            font_size)
                 char_w, _ = self._get_text_dimensions(content, font)
+                offset = 0
+                if 'attrs' in node and 'offset' in node['attrs']:
+                    offset = int(int(node['attrs']['offset']) / 100 * font_size)
+
                 if has_border:
-                    self.draw.text((current_x, y), content, font=font, fill=font_color,
+                    self.draw.text((current_x, y + offset), content, font=font, fill=font_color,
                                    stroke_width=border_width, stroke_fill=border_color)
                 else:
-                    self.draw.text((current_x, y), content, font=font, fill=font_color)
+                    self.draw.text((current_x, y + offset), content, font=font, fill=font_color)
                 current_x += char_w
 
     def draw_text(self, text, vertices, default_font_name='simfang',
@@ -507,6 +538,7 @@ class Card:
         :param padding: 内边距
         :param draw_virtual_box: 是否绘制调试框线
         """
+        text = self.unified_text_processing(text)
         if draw_virtual_box:
             self.draw.polygon(vertices, outline="red", width=2)
 
@@ -518,13 +550,11 @@ class Card:
             default_font_name=default_font_name,
             default_size=default_size
         )
-        print(f"最佳字体大小: {size}")
 
         line_height = int(size * 1.2)
         current_y = min(v[1] for v in vertices) + padding
         line_start_x, line_end_x = self.calculate_padding_x(vertices, current_y, current_y + line_height, padding)
         current_x = line_start_x
-        print(f"calculate_padding_x: ({line_start_x}, {line_end_x})")
 
         for node in segments:
             font_name, content = node['attrs']['name'] if node['tag'] == 'fonts' else 'default', node['content']
@@ -534,8 +564,11 @@ class Card:
                                                                     padding)
                 current_x = line_start_x
                 continue
-            if node['tag'] == 'hr':
-                current_y += line_height + line_height / 3
+            if node['tag'] == 'hr' or node['tag'] == 'lr':
+                if node['tag'] == 'lr':
+                    current_y += line_height + line_height // 6
+                else:
+                    current_y += line_height + line_height / 3
                 line_start_x, line_end_x = self.calculate_padding_x(vertices, current_y, current_y + line_height,
                                                                     padding)
                 current_x = line_start_x
@@ -550,12 +583,15 @@ class Card:
                                                                             current_y + line_height,
                                                                             padding)
                         current_x = line_start_x
+                    offset = 0
+                    if 'attrs' in node and 'offset' in node['attrs']:
+                        offset = int(int(node['attrs']['offset']) / 100 * size)
                     if font_name == '方正舒体':
                         # 上升一点
-                        self.draw.text((current_x, current_y - size // 12), char, font=font, fill=color)
+                        self.draw.text((current_x, current_y - size // 12 + offset), char, font=font, fill=color)
                         pass
                     else:
-                        self.draw.text((current_x, current_y), char, font=font, fill=color)
+                        self.draw.text((current_x, current_y + offset), char, font=font, fill=color)
                         pass
                     current_x += char_w
             if node['tag'] == 'relish':
@@ -702,15 +738,15 @@ class Card:
 
         :param cost: 费用
         """
-        default_position = [(70, 50), (70, 48)]
+        default_position = [(70, 50), (70, 40)]
         if self.card_class == '弱点':
-            default_position = [(74, 50), (74, 48)]
+            default_position = [(74, 50), (74, 40)]
         if 0 <= cost < 100:
             self.draw_centered_text(
                 position=default_position[0],
                 text=str(cost),
                 font_name='Teutonic',
-                font_size=58,
+                font_size=62,
                 font_color=(255, 255, 255),
                 has_border=True,
                 border_width=2,
@@ -722,7 +758,7 @@ class Card:
                 position=default_position[0],
                 text='X',
                 font_name='Teutonic',
-                font_size=58,
+                font_size=62,
                 font_color=(255, 255, 255),
                 has_border=True,
                 border_width=2,
@@ -732,9 +768,9 @@ class Card:
             # 无费用
             self.draw_centered_text(
                 position=default_position[1],
-                text='x',
-                font_name='arkham-icons',
-                font_size=58,
+                text='—',
+                font_name='Teutonic',
+                font_size=68,
                 font_color=(255, 255, 255),
                 has_border=True,
                 border_width=2,
@@ -751,7 +787,8 @@ class Card:
         if slots not in ['双手', '双法术', '塔罗', '手部', '法术', '盟友', '身体', '饰品']:
             return
         img = self.image_manager.get_image(f'槽位-{slots}')
-        self.paste_image(img, (603, 900), 'contain')
+        self.paste_image(img, (603 - self.slots_index * 105, 900), 'contain')
+        self.slots_index += 1
 
     def set_health_and_horror(self, health, horror):
         """
@@ -909,386 +946,84 @@ class Card:
         if self.card_type == '支援卡':
             start_ps = (634, 4)
         elif self.card_type == '事件卡':
-            start_ps = (368, 498)
+            if len(subclass) == 3:
+                start_ps = (418, 498)
+            else:
+                start_ps = (368, 498)
         # 从右到左依次添加图标，倒序遍历数组
         for i in range(len(subclass)):
             item = subclass[len(subclass) - i - 1]
             im = self.image_manager.get_image(f'多职阶-{item}')
             self.paste_image(im, (start_ps[0] - i * 89, start_ps[1]), 'contain')
 
-    class TestCard:
-        @staticmethod
-        def test():
-            fm = FontManager('fonts')
-            im = ImageManager('images')
-            card = Card(
-                width=739,
-                height=1049,
-                font_manager=fm,
-                image_manager=im,
-                card_type='技能卡'
+    def set_bottom_information_by_picture(self, picture_path):
+        """根据图片设置底部信息"""
+        dp = Image.open(picture_path)
+        # 获取图片高度和宽度
+        width, height = dp.size
+        # 裁剪图片底标
+        dp = dp.crop((0, height - 30, width, height))
+        # 获取card的高度和宽度
+        card_width, card_height = self.image.size
+        # 粘贴到指定位置
+        self.paste_image(dp, (0, card_height - 30, card_width, 30), 'stretch')
+
+    def set_bottom_information_by_text(self, illustrator='', middle_text='', position=-1, pack_icon=None,
+                                       encounter_count=-1, encounter_position=1):
+        """写底部信息"""
+        card_width, card_height = self.image.size
+        # 艺术家
+        if illustrator != '':
+            self.draw_left_text(
+                position=(33, card_height - 30),
+                text=f'Illus. {illustrator}',
+                font_name='ArnoPro-Bold',
+                font_size=20,
+                font_color=(255, 255, 255)
             )
-
-            # 贴底图
-            dp = Image.open(r'C:\Users\xziyi\Desktop\java.png')
-            card.paste_image(dp, (0, 88, 739, 600), 'cover')
-
-            # 贴牌框
-            card.paste_image(im.get_image('技能卡-流浪者'), (0, 0), 'contain')
-
-            test_text = (
-                "<fonts name='思源黑体'>强制</fonts> - 检定<fonts name='arkham-icons'>.</fonts>(3)。你检定失败且每低于难度1点，受到1点恐惧。\n"
-                "<hr>\n"
-                "默认<fonts name='arkham-icons'>a</fonts>字体混合排版字体混合排版测试默认字体混合排版测试默认字体混合排版测试默认字体混合排版测试默认测试默认字体混合排版测试默认\n"
-                "<hr>\n"
-                "<relish>这是一段风味内容这是一段风味内容</relish>\n"
-                "<relish>这是一段风味内容这是一段风味内容字体混合排版</relish>"
+        # 写版权
+        if middle_text != '':
+            self.draw_centered_text(
+                position=(card_width // 2, card_height - 25),
+                text=middle_text,
+                font_name='ArnoPro-Bold',
+                font_size=20,
+                font_color=(255, 255, 255)
             )
-            card.draw_text(
-                test_text,
-                vertices=[
-                    (75, 735), (682, 735), (692, 770), (704, 838), (701, 914), (679, 986),
-                    (74, 986), (91, 920), (96, 844)
-                ],
-                default_font_name='simfang',
-                default_size=32,
-                padding=8,
-                draw_virtual_box=False
+        # 写序号
+        if position > 0:
+            self.draw_centered_text(
+                position=(card_width - 60, card_height - 25),
+                text=f'{position}',
+                font_name='ArnoPro-Bold',
+                font_size=20,
+                font_color=(255, 255, 255)
             )
-
-            card.draw_centered_text(
-                position=(368, 713),
-                text="法术，勇气",
-                font_name="方正舒体",
-                font_size=28,
-                font_color=(0, 0, 0)
+        # 画底标
+        if pack_icon is not None:
+            im = self.image_manager.get_image(f'底标图标-{pack_icon}')
+            self.paste_image(im, (card_width - 103, card_height - 34, 23, 23), 'stretch')
+        # 写遭遇组序号
+        if encounter_count > 0 \
+                and (self.card_type == '诡计卡'):
+            self.draw_centered_text(
+                position=(card_width - 140, card_height - 25),
+                text=f"{encounter_position}/{encounter_count}",
+                font_name='ArnoPro-Bold',
+                font_size=20,
+                font_color=(255, 255, 255)
             )
+            pass
+        pass
 
-            card.draw_left_text(
-                position=(140, 34),
-                text="测试卡名",
-                font_name="汉仪小隶书简",
-                font_size=48,
-                font_color=(0, 0, 0)
-            )
+    def set_ellipse_empty(self, position, r):
+        """
+        画圆形空洞
+        """
+        x, y = position
 
-            card.draw_centered_text(
-                position=(73, 132),
-                text="技能",
-                font_name="汉仪小隶书简",
-                font_size=24,
-                font_color=(0, 0, 0)
-            )
-
-            card.add_submit_icon('意志')
-            card.add_submit_icon('意志')
-            card.add_submit_icon('狂野')
-
-            card.set_card_level(-1)
-
-            card.image.save('output_card.png', quality=95)
-            print("卡牌生成完成")
-
-        @staticmethod
-        def test2():
-            """事件卡"""
-            fm = FontManager('fonts')
-            im = ImageManager('images')
-            card = Card(
-                width=739,
-                height=1046,
-                font_manager=fm,
-                image_manager=im,
-                card_type='事件卡',
-                card_class="潜修者"
-            )
-
-            # 贴底图
-            dp = Image.open(r'C:\Users\xziyi\Desktop\java.png')
-            card.paste_image(dp, (0, 0, 739, 589), 'cover')
-
-            # 贴牌框
-            card.paste_image(im.get_image('事件卡-潜修者'), (0, 0), 'contain')
-
-            # 写小字
-            card.draw_centered_text(
-                position=(73, 130),
-                text="事件",
-                font_name="汉仪小隶书简",
-                font_size=24,
-                font_color=(0, 0, 0)
-            )
-
-            # 写属性
-            card.draw_centered_text(
-                position=(368, 682),
-                text="法术，勇气",
-                font_name="方正舒体",
-                font_size=32,
-                font_color=(0, 0, 0)
-            )
-
-            test_text = """{公务员，表演者，社会名流}牌库专用。
-<hr>
-【谈判】。选择你所在地点的一名调查员。该调查员可以从手牌免费打出一张{盟友}支援。然后，该调查员可以触发该支援上的一个<启动>或<免费>能力，忽略其所有费用。
-风味文字：“没错，他们肯定信了。”"""
-            card.draw_text(
-                test_text,
-                vertices=[
-                    (43, 700), (694, 700), (706, 757), (704, 817), (680, 887), (670, 952),
-                    (598, 980), (135, 980), (77, 949), (61, 907), (31, 793)
-                ],
-                default_font_name='simfang',
-                default_size=32,
-                padding=15,
-                draw_virtual_box=True
-            )
-
-            card.draw_centered_text(
-                position=(370, 618),
-                text="<独特>测试卡名",
-                font_name="汉仪小隶书简",
-                font_size=48,
-                font_color=(0, 0, 0)
-            )
-
-            card.add_submit_icon('意志')
-            card.add_submit_icon('意志')
-            card.add_submit_icon('狂野')
-
-            card.set_card_level(0)
-
-            card.set_card_cost(-1)
-
-            card.image.save('output_card.png', quality=95)
-            print("卡牌生成完成")
-
-        @staticmethod
-        def test3():
-            """支援卡"""
-            fm = FontManager('fonts')
-            im = ImageManager('images')
-            card = Card(
-                width=739,
-                height=1049,
-                font_manager=fm,
-                image_manager=im,
-                card_type='支援卡',
-                card_class="守护者"
-            )
-
-            # 贴底图
-            dp = Image.open(r'C:\Users\xziyi\Desktop\java.png')
-            card.paste_image(dp, (0, 80, 739, 540), 'cover')
-
-            # 贴牌框
-            card.paste_image(im.get_image('支援卡-守护者-副标题'), (0, 0), 'contain')
-
-            # 写小字
-            card.draw_centered_text(
-                position=(73, 130),
-                text="支援",
-                font_name="汉仪小隶书简",
-                font_size=24,
-                font_color=(0, 0, 0)
-            )
-
-            # 写属性
-            card.draw_centered_text(
-                position=(375, 649),
-                text="法术，勇气",
-                font_name="方正舒体",
-                font_size=32,
-                font_color=(0, 0, 0)
-            )
-
-            test_text = """{公务员，表演者，社会名流}牌库专用。
-<hr>
-<启动>：【谈判】。选择你所在地点的一名调查员。该调查员可以从手牌免费打出一张{盟友}支援。然后，该调查员可以触发该支援上的一个<启动>或<免费>能力，忽略其所有费用。
-<relish>“没错，他们肯定信了。”</relish>"""
-            card.draw_text(
-                test_text,
-                vertices=[
-                    (19, 662), (718, 662), (718, 910), (19, 910)
-                ],
-                default_font_name='simfang',
-                default_size=32,
-                padding=15,
-                draw_virtual_box=True
-            )
-
-            # 写标题
-            card.draw_centered_text(
-                position=(375, 48),
-                text="<独特>测试卡名",
-                font_name="汉仪小隶书简",
-                font_size=48,
-                font_color=(0, 0, 0)
-            )
-
-            # 写副标题
-            card.draw_centered_text(
-                position=(375, 101),
-                text="测试副标题",
-                font_name="汉仪小隶书简",
-                font_size=32,
-                font_color=(0, 0, 0)
-            )
-
-            card.add_submit_icon('意志')
-            card.add_submit_icon('意志')
-            card.add_submit_icon('狂野')
-
-            card.set_card_level(3)
-
-            card.set_card_cost(-2)
-
-            card.add_slots('双手')
-
-            card.set_health_and_horror(2, 2)
-
-            card.image.save('output_card.png', quality=95)
-            print("卡牌生成完成")
-
-        @staticmethod
-        def test4():
-            """调查员正面"""
-            fm = FontManager('fonts')
-            im = ImageManager('images')
-            card = Card(
-                width=1049,
-                height=739,
-                font_manager=fm,
-                image_manager=im,
-                card_type='调查员卡'
-            )
-            # 贴牌框-底
-            card.paste_image(im.get_image('调查员-守护者-底图'), (0, 0), 'contain')
-
-            # 贴底图
-            dp = Image.open(r'C:\Users\xziyi\Desktop\java2.png')
-            card.paste_image(dp, (0, 75, 579, 647), 'cover')
-
-            # 贴牌框-UI
-            card.paste_image(im.get_image('调查员-守护者-UI'), (0, 0), 'contain')
-
-            # 写标题
-            card.draw_centered_text(
-                position=(320, 38),
-                text="<独特>测试卡名",
-                font_name="汉仪小隶书简",
-                font_size=48,
-                font_color=(0, 0, 0)
-            )
-
-            # 写副标题
-            card.draw_centered_text(
-                position=(320, 90),
-                text="测试副标题",
-                font_name="汉仪小隶书简",
-                font_size=32,
-                font_color=(0, 0, 0)
-            )
-
-            # 写四维
-            attribute = (1, 2, 3, 4)
-            for i, attr in enumerate(attribute):
-                card.draw_centered_text(
-                    position=(600 + 120 * i, 57),
-                    text=str(attr),
-                    font_name="Bolton",
-                    font_size=48,
-                    font_color=(0, 0, 0)
-                )
-
-            # 写属性
-            card.draw_centered_text(
-                position=(810, 168),
-                text="法术，勇气",
-                font_name="方正舒体",
-                font_size=32,
-                font_color=(0, 0, 0)
-            )
-
-            test_text = """你以通量稳定器(失活)面朝上开始游戏。
-<hr>
-<免费>：从凯特·温斯洛普上移动1个线索到一张你控制的上面没有线索的科学或工具支援。
-<hr>
-【强制】 - 当你控制的上面有线索的支援离场时：将其线索放在你所在地点上。
-<hr>
-<旧印>效果：+0。你可以从你控制的一张支援上移动1个线索返回到凯特·温斯洛普。"""
-            card.draw_text(
-                test_text,
-                vertices=[
-                    (586, 178), (1026, 178), (1024, 600), (586, 600)
-                ],
-                default_font_name='simfang',
-                default_size=32,
-                padding=15,
-                draw_virtual_box=False
-            )
-
-            card.set_health_and_horror(6, 8)
-
-            card.image.save('output_card.png', quality=95)
-            print("卡牌生成完成")
-
-        @staticmethod
-        def test5():
-            """调查员卡背"""
-            fm = FontManager('fonts')
-            im = ImageManager('images')
-            card = Card(
-                width=1049,
-                height=739,
-                font_manager=fm,
-                image_manager=im,
-                card_type='调查员卡'
-            )
-            # 贴底图
-            dp = Image.open(r'C:\Users\xziyi\Desktop\java2.png')
-            card.paste_image(dp, (0, 0, 373, 405), 'cover')
-
-            # 贴牌框-UI
-            card.paste_image(im.get_image('调查员卡-潜修者-卡背'), (0, 0), 'contain')
-
-            # 写标题
-            card.draw_centered_text(
-                position=(750, 36),
-                text="<独特>测试冴卡名",
-                font_name="汉仪小隶书简",
-                font_size=48,
-                font_color=(0, 0, 0)
-            )
-
-            # 写副标题
-            card.draw_centered_text(
-                position=(750, 88),
-                text="测试副标题",
-                font_name="汉仪小隶书简",
-                font_size=32,
-                font_color=(0, 0, 0)
-            )
-
-            test_text = """【牌库卡牌张数】: 30。
-【牌库构筑选项】: 探求者卡牌(f)等级0-5，科学卡牌等级0-4，洞察卡牌等级0-1，中立卡牌等级0-5。
-【牌库构筑需求】(不计入卡牌张数)：通量稳定器、失败的实验、1张随机基础弱点。
-<hr>
-<relish center='false'>凯特·温斯洛普多年来一直卡托尼克大学科学楼的地下室卡托尼克大学科学楼的地下室卡托尼克大学科学楼的地下室在米斯卡托尼克大学科学楼的地下室里进行研究，为了追求进步，她放弃了资金和学术声望。她一心一意的专注终于得到了回报，她发明了通量稳定器：一种能够引导新形式能量的强大装置。然而，进步的代价是高昂的。这项突破性发明的第一次成功测试夺去了她的朋友兼导师杨教授的生命。从那以后，凯特不知疲倦地研究这些外星电流，希望能找到一种方法来扭转它们的影响。</relish>"""
-            card.draw_text(
-                test_text,
-                vertices=[
-                    (385, 141), (1011, 141), (1011, 686), (36, 686),
-                    (36, 500), (308, 500), (308, 450), (358, 450)
-                ],
-                default_font_name='simfang',
-                default_size=32,
-                padding=15,
-                draw_virtual_box=False
-            )
-
-            card.image.save('output_card.png', quality=95)
-            print("卡牌生成完成")
-
-    if __name__ == '__main__':
-        TestCard.test5()
+        # 绘制透明圆形（RGBA中A=0表示完全透明）
+        self.draw.ellipse(
+            [(x - r, y - r), (x + r, y + r)],  # 边界框坐标
+            fill=(0, 0, 0, 0)  # 透明黑色
+        )
