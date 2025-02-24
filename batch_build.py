@@ -2,7 +2,8 @@ import json
 import re
 
 from Card import FontManager, ImageManager
-from create_card import create_player_cards, create_weakness_back, create_enemy_card, create_treachery_card
+from create_card import create_player_cards, create_weakness_back, create_enemy_card, create_treachery_card, \
+    create_location_card
 
 
 def build_submit_icon(json):
@@ -27,7 +28,8 @@ def build_submit_icon(json):
     return submit_icon
 
 
-def batch_build_card(card_json, font_manager=None, image_manager=None, picture_path=None, encounter_count=-1):
+def batch_build_card(card_json, font_manager=None, image_manager=None, picture_path=None, encounter_count=-1,
+                     is_back=False):
     """构建一张卡牌"""
     font_manager = font_manager
     image_manager = image_manager
@@ -62,8 +64,6 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
     text = re.sub(r'\[free]', r"<免费>", text)
     text = re.sub(r'\[fast]', r"<免费>", text)
 
-    text = re.sub(r'\\n-', r"\\n<点>", text)
-
     text = re.sub(r'\[combat]', r"<拳>", text)
     text = re.sub(r'\[intellect]', r"<书>", text)
     text = re.sub(r'\[willpower]', r"<脑>", text)
@@ -90,14 +90,16 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
     if 'text' in card_json and '[' in card_json['text']:
         # 报错
         raise ValueError('存在图标未处理 -> ' + text)
-    if card_json['name'] == card_json['real_name']:
+    if 'text' in card_json:
+        card_json['text'] = re.sub(r'\\n-', r"\\n<点>", card_json['text'])
+    if 'real_name' in card_json and card_json['name'] == card_json['real_name']:
         # 无中文
         return None
     # 解析成json输出
     build_json = {
         'type': '支援卡',
         'class': card_json['faction_name'],
-        'name': ('<独特>' if card_json['is_unique'] else '') + card_json['name'],
+        'name': ('<独特>' if card_json.get('is_unique', False) else '') + card_json['name'],
         'subtitle': card_json['subname'] if 'subname' in card_json else '',
         'cost': card_json['cost'] if 'cost' in card_json else -1,
         'slots': card_json['slot'] if 'slot' in card_json else '',
@@ -107,16 +109,18 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
         'flavor': card_json['flavor'] if 'flavor' in card_json else '',
         'health': card_json['health'] if 'health' in card_json else 0,
         'horror': card_json['sanity'] if 'sanity' in card_json else 0,
+        'victory': card_json['victory'] if 'victory' in card_json else -1,
         'submit_icon': build_submit_icon(card_json),
     }
     if card_json['type_name'] == '敌人':
         # 添加敌人相关
-        build_json['enemy_health'] = str(card_json['health'])
-        if card_json['health_per_investigator']:
+        print(f"正在导出敌人卡: {card_json}")
+        build_json['enemy_health'] = str(card_json.get('health', '-'))
+        if card_json.get('health_per_investigator', False):
             build_json['enemy_health'] += '<调查员>'
             pass
-        build_json['attack'] = str(card_json['enemy_fight'])
-        build_json['evade'] = str(card_json['enemy_evade'])
+        build_json['attack'] = str(card_json.get('enemy_fight', '-'))
+        build_json['evade'] = str(card_json.get('enemy_evade', '-'))
         build_json['enemy_damage'] = card_json['enemy_damage'] if 'enemy_damage' in card_json else 0
         build_json['enemy_damage_horror'] = card_json['enemy_horror'] if 'enemy_horror' in card_json else 0
 
@@ -128,7 +132,7 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
         # 构建支援卡json
         build_json['type'] = f"{card_json['type_name']}卡"
         build_json['class'] = '弱点'
-        build_json['weakness_type'] = card_json['subtype_name']
+        build_json['weakness_type'] = card_json.get('subtype_name', '')
         print(build_json)
         # 构建图片
         card = create_weakness_back(
@@ -213,6 +217,8 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
         # 构建支援卡json
         build_json['type'] = '敌人卡'
         print(build_json)
+        if is_back:
+            return None
         # 构建图片
         card = create_enemy_card(
             card_json=build_json,
@@ -237,6 +243,44 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
             image_mode=1,
             transparent_encounter=True
         )
+    elif card_json['type_name'] == '地点':
+        # 构建地点卡json
+        build_json['type'] = '地点卡'
+        # 隐藏值线索
+        build_json['shroud'] = f"{card_json.get('shroud', 0)}"
+        build_json['clues'] = f"{card_json.get('clues', '')}{'' if card_json.get('clues_fixed', False) else '<调查员>'}"
+
+        no_back = True
+        for key in card_json.keys():
+            if 'back_' in key and key != 'back_link':
+                no_back = False
+                break
+
+        if no_back or is_back:
+            print(f"正在导出地点卡已揭示面: {card_json['name']}")
+            # 已揭示面
+            build_json['location_type'] = '已揭示'
+            build_json['body'] = card_json.get('text', '')
+            build_json['name'] = card_json.get('name', '')
+            build_json['flavor'] = card_json.get('flavor', '')
+        else:
+            print(f"正在导出地点卡未揭示面: {card_json['name']}")
+            # 未揭示面
+            build_json['location_type'] = '未揭示'
+            build_json['body'] = card_json.get('back_text', '')
+            build_json['name'] = card_json.get('back_name', card_json.get('name'))
+            build_json['flavor'] = card_json.get('back_flavor', '')
+            build_json['victory'] = -1
+
+        # 构建图片
+        card = create_location_card(
+            card_json=build_json,
+            font_manager=font_manager,
+            image_manager=image_manager,
+            picture_path=picture_path,
+            image_mode=1,
+            transparent_encounter=True
+        )
 
     if card is not None:
         # 年份信息
@@ -249,8 +293,8 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
             '06': {'name': '食梦者', 'year': 2019},
             '07': {'name': '印斯茅斯的阴谋', 'year': 2020},
             '08': {'name': '暗与地球之界', 'year': 2021},
-            '09': {'name': None, 'year': 2022},
-            '10': {'name': None, 'year': 2023},
+            '09': {'name': '绯红密钥', 'year': 2022},
+            '10': {'name': '铁杉谷盛宴', 'year': 2023},
             '50': {'name': '重返基础', 'year': 2017},
             '51': {'name': '重返敦威治遗产', 'year': 2018},
             '52': {'name': '重返卡尔克萨之路', 'year': 2019},

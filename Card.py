@@ -185,15 +185,19 @@ class Card:
         self.card_type = card_type
         self.card_class = card_class
 
-    def paste_image(self, img, region, resize_mode='stretch', transparent=None):
+    def paste_image(self, img, region, resize_mode='stretch', transparent_list=None):
         """
         在指定区域粘贴图片
 
         :param img: 图片
         :param region: 目标区域坐标和尺寸 (x, y, width, height)
         :param resize_mode: 调整模式，可选'stretch'(拉伸)/'contain'(适应)/'cover'(覆盖)
-        :param transparent: 透明区域圆，为(x, y, r)
+        :param transparent_list: 透明区域圆，为(x, y, r)
         """
+        if transparent_list is None:
+            transparent_list = []
+        if transparent_list and not isinstance(transparent_list[0], tuple):
+            transparent_list = [transparent_list]
         try:
             target_w, target_h = img.width, img.height
             if len(region) == 4:
@@ -209,7 +213,7 @@ class Card:
                     top = (img.height - target_h) // 2
                     img = img.crop((left, top, left + target_w, top + target_h))
 
-            if transparent is not None:
+            for transparent in transparent_list:
                 draw = ImageDraw.Draw(img)
                 # 定义圆形参数
                 x, y, r = transparent  # 圆心坐标半径
@@ -883,8 +887,8 @@ class Card:
             )
         pass
 
-    def set_enemy_value(self, position, text, font_size=1):
-        """画敌人数值"""
+    def set_number_value(self, position, text, font_size=1, color=(255, 255, 255), stroke_color=(0, 0, 0)):
+        """画数值"""
         font = self._get_font('Bolton', font_size)
         # 取出text中的数字
         number = ''
@@ -893,6 +897,8 @@ class Card:
             number = r[0]
         if 'X' in text or 'x' in text:
             number = 'X'
+        if '?' in text or '？' in text:
+            number = '?'
         if '-' in text or '一' in text:
             number = 'x'
             font = self._get_font('arkham-icons', font_size)
@@ -902,19 +908,23 @@ class Card:
         investigator_font = None
         # 画调查员标
         if '<调查员>' in text:
-            investigator_font = self._get_font('arkham-icons', 24)
-            investigator_width, _ = self._get_text_dimensions('v', investigator_font)
+            try:
+                if int(number) > 0:
+                    investigator_font = self._get_font('arkham-icons', 24)
+                    investigator_width, _ = self._get_text_dimensions('v', investigator_font)
+            except:
+                pass
         # 画中间
         x = position[0] - number_width // 2 - investigator_width // 2
         y = position[1] - text_height // 2
         if number == 'x':
             y -= 4
-        self.draw.text((x, y), number, font=font, fill=(255, 255, 255), stroke_width=1, stroke_fill=(0, 0, 0))
+        self.draw.text((x, y), number, font=font, fill=color, stroke_width=1, stroke_fill=stroke_color)
         # 画调查员
         if investigator_font is not None:
             x = position[0] + number_width // 2 - investigator_width // 2 + 4
-            self.draw.text((x, y + 3), 'v', font=investigator_font, fill=(255, 255, 255), stroke_width=1,
-                           stroke_fill=(0, 0, 0))
+            self.draw.text((x, y + 3), 'v', font=investigator_font, fill=color, stroke_width=1,
+                           stroke_fill=stroke_color)
 
     def set_basic_weakness_icon(self):
         """添加基础弱点图标"""
@@ -1027,3 +1037,23 @@ class Card:
             [(x - r, y - r), (x + r, y + r)],  # 边界框坐标
             fill=(0, 0, 0, 0)  # 透明黑色
         )
+
+    def set_location_icon(self, index, icon):
+        """
+        设置地点图标
+        :param index 0为地点 1-6为连接符号
+        """
+        link_position = [
+            (129, 932),
+            (211, 917),
+            (293, 910),
+            (375, 910),
+            (457, 917),
+            (539, 932)
+        ]
+        im = self.image_manager.get_image(f'地点标识-{icon}')
+        if index == 0:
+            self.paste_image(self.image_manager.get_image(f'地点标识-标识底'), (15, 8), 'contain')
+            self.paste_image(im, (20, 13), 'contain')
+        elif 0 < index < 7:
+            self.paste_image(im, link_position[index - 1], 'contain')

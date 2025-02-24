@@ -1,6 +1,7 @@
 import glob
 import json
 import os
+import re
 import shutil
 
 import polib
@@ -11,11 +12,13 @@ from Card import FontManager, ImageManager
 from batch_build import batch_build_card
 
 # 准备工作 ----
-working_directory = r'D:\working_directory\剧本'
+working_directory = r'D:\working_directory\temp'
+
 cards_json_name = 'All Player Cards.json'
 picture_source = 'source'
 picture_processing = 'processing'
 picture_output = 'output'
+replace_the_directory = r'D:\working_directory\替换'
 # 加载必要文件 ----
 all_player_cards = []
 # with open(os.path.join(working_directory, cards_json_name), 'r', encoding='utf-8') as f:
@@ -42,6 +45,14 @@ def find_card_objects(directory, result_array):
         if isinstance(obj, dict):
             # 检查当前字典是否符合条件
             if obj.get('Name') == 'Card':
+                card_id = str(obj['CardID'])
+                card_deck_id = card_id[:-2]
+                if 'CustomDeck' not in obj:
+                    return
+                if card_deck_id not in obj['CustomDeck']:
+                    return
+                if 'GMNotes' not in obj or obj['GMNotes'] == '':
+                    return
                 result_array.append(obj)
             # 继续递归检查所有值
             for value in obj.values():
@@ -68,6 +79,28 @@ def find_card_objects(directory, result_array):
 # 写一个方法，传入str，取出str中的所有字母和数字并组成新的str返回
 def get_alnum_str(s):
     return ''.join([c for c in s if c.isalnum()])
+
+
+def split_image_by_index(cols, rows, index, image_path=None, image=None):
+    """将图片按指定行列数切割并返回指定序号的子图"""
+    # 打开原始图片
+    img = image if image is not None else Image.open(image_path)
+    width, height = img.size
+
+    # 计算每个子图的尺寸
+    block_width = width // cols
+    block_height = height // rows
+
+    # 计算裁剪区域坐标
+    i = index // cols
+    j = index % cols
+    left = j * block_width
+    upper = i * block_height
+    right = (j + 1) * block_width
+    lower = (i + 1) * block_height
+
+    # 截取子图并返回
+    return img.crop((left, upper, right, lower))
 
 
 def split_image(image_path, output_dir, cols, rows):
@@ -232,10 +265,10 @@ def sorting_images():
                     'id': card_deck_num,
                     'file_name': card_id[-2:] + '.' + file_suffix,
                     'GMNotes': json.loads(card['GMNotes']),
+                    'is_back': custom_deck['BackURL'] == file_name
                 })
                 deck_metadata['width'] = custom_deck['NumWidth']
                 deck_metadata['height'] = custom_deck['NumHeight']
-                pass
             pass
         if len(deck_metadata['cards']) > 0 and deck_metadata['width'] > 0 and deck_metadata['height'] > 0:
             # 将deck_metadata['cards']按id从小到大排序
@@ -313,7 +346,7 @@ def remake_player_cards():
         # # # 临时测试第一个文件夹
         # if index != 51:
         #     continue
-        # if folder != 'httpssteamusercontentaakamaihdnetugc775107869048626382DA1F5817A4067A74D883201F1AFAC096646A455B':
+        # if folder != 'httpssteamusercontentaakamaihdnetugc1697276706766471841DDE7120C72F6685DFFC382BC4F125124BEEA8207':
         #     continue
 
         print('folder', folder)
@@ -335,22 +368,36 @@ def remake_player_cards():
                     font_manager=font_manager,
                     image_manager=image_manager,
                     picture_path=os.path.join(working_directory, picture_processing, folder, card['file_name']),
-                    encounter_count=encounter_groups.get(find_db_player_card['encounter_code'], -1)
+                    encounter_count=encounter_groups.get(find_db_player_card.get('encounter_code', ''), -1),
+                    is_back=True if 'a' in find_db_player_card['code'] else card.get('is_back', False)
                 )
                 # 保存卡牌
                 card['output_file_name'] = card['file_name'].split('.')[0] + '.png'
                 print('正在保存卡牌', card['output_file_name'])
                 if output_card is not None:
-                    # output_card.set_bottom_information_by_picture(
-                    #     os.path.join(working_directory, picture_processing, folder, card['file_name']))
                     output_card.image.save(os.path.join(output_dir, card['output_file_name']), quality=95)
                 else:
                     print('不支持的卡牌类型', find_db_player_card['type_name'])
-                    # 粘贴原图
-                    shutil.copy2(
-                        os.path.join(working_directory, picture_processing, folder, card['file_name']),
-                        os.path.join(output_dir, card['output_file_name'])
-                    )
+                    # 在替换目录中查找代替翻译图
+                    replace_file_name = os.path.join(replace_the_directory, metadata['file_name'])
+                    if os.path.exists(replace_file_name):
+                        # 粘贴替换图
+                        print("替换翻译图")
+                        im = split_image_by_index(
+                            image_path=replace_file_name,
+                            cols=metadata['width'],
+                            rows=metadata['height'],
+                            index=card['id']
+                        )
+                        print(os.path.join(output_dir, card['output_file_name']))
+                        im.save(os.path.join(output_dir, card['output_file_name']), quality=95)
+                    else:
+                        print("替换原图")
+                        # 粘贴原图
+                        shutil.copy2(
+                            os.path.join(working_directory, picture_processing, folder, card['file_name']),
+                            os.path.join(output_dir, card['output_file_name'])
+                        )
             pass
         # 合并卡牌
         print('合并卡牌', json.dumps(metadata))
@@ -436,13 +483,14 @@ def download_cards():
     for card in all_player_cards:
         card_id = str(card['CardID'])
         card_deck_id = card_id[:-2]
+
         custom_deck = card['CustomDeck'][card_deck_id]
         GMNotes = json.loads(card['GMNotes'])
         for db_player_card in player_cards:
             if db_player_card['code'] == GMNotes['id']:
                 if 'The Drowned City Investigator Expansion' == db_player_card['pack_name']:
                     continue
-                if '调查员' == db_player_card['type_name']:
+                if db_player_card['type_name'] in ['调查员', '剧本', '密谋', '场景']:
                     continue
                 # 下载图片
                 FaceURL.add(custom_deck['FaceURL'])
@@ -542,7 +590,8 @@ def count_encounter_groups():
             continue
         GMNotes = json.loads(card['GMNotes'])
         find_db_player_card = find_db_player_card_by_id(GMNotes['id'], player_cards)
-        if find_db_player_card['code'] not in card_repetition and 'encounter_code' in find_db_player_card:
+        if find_db_player_card is not None \
+                and find_db_player_card['code'] not in card_repetition and 'encounter_code' in find_db_player_card:
             card_repetition.add(find_db_player_card['code'])
             encounter_code = find_db_player_card['encounter_code']
             if encounter_code in encounter_count:
@@ -552,10 +601,86 @@ def count_encounter_groups():
     return encounter_count
 
 
+def test1():
+    """测试1"""
+    # 随机从all_player_cards数组取200张卡
+    import random
+    # 读取player_cards.json
+    with open(os.path.join(working_directory, 'player_cards.json'), 'r', encoding='utf-8') as f:
+        def replace_bold(match):
+            content = match.group(1)
+            if "设计" in content:
+                return f""  # 如果包含“设计”，删除
+            else:
+                return f"【{content}】"  # 否则用【】包裹
+
+        def replace_italic(match):
+            content = match.group(1)
+            if "FAQ" in content:
+                return f""  # 如果包含“设计”，删除
+            else:
+                return f"{content}"
+
+        text = f.read()
+        text = re.sub(r'<b>(.*?)</b>', replace_bold, text)
+        text = re.sub(r'<i>(.*?)</i>', replace_italic, text)
+        text = re.sub(r'\[\[(.*?)]]', r"{\1}", text)
+        text = re.sub(r'\[action]', r"<启动>", text)
+        text = re.sub(r'\[Action]', r"<启动>", text)
+        text = re.sub(r'\[reaction]', r"<反应>", text)
+        text = re.sub(r'\[free]', r"<免费>", text)
+        text = re.sub(r'\[fast]', r"<免费>", text)
+
+        text = re.sub(r'\[combat]', r"<拳>", text)
+        text = re.sub(r'\[intellect]', r"<书>", text)
+        text = re.sub(r'\[willpower]', r"<脑>", text)
+        text = re.sub(r'\[agility]', r"<脚>", text)
+        text = re.sub(r'\[wild]', r"<?>", text)
+
+        text = re.sub(r'\[skull]', r"<骷髅>", text)
+        text = re.sub(r'\[cultist]', r"<异教徒>", text)
+        text = re.sub(r'\[elder_thing]', r"<古神>", text)
+        text = re.sub(r'\[tablet]', r"<石板>", text)
+        text = re.sub(r'\[auto_fail]', r"<触手>", text)
+        text = re.sub(r'\[elder_sign]', r"<旧印>", text)
+        text = re.sub(r'\[bless]', r"<祝福>", text)
+        text = re.sub(r'\[curse]', r"<诅咒>", text)
+
+        text = re.sub(r'\[per_investigator]', r"<调查员>", text)
+        text = re.sub(r'\[guardian]', r"<守护者>", text)
+        text = re.sub(r'\[seeker]', r"<探求者>", text)
+        text = re.sub(r'\[rogue]', r"<流浪者>", text)
+        text = re.sub(r'\[mystic]', r"<潜修者>", text)
+        text = re.sub(r'\[survivor]', r"<生存者>", text)
+        player_cards = json.loads(text)
+    random.shuffle(all_player_cards)
+    random_player_cards = all_player_cards[:200]
+    random_output_cards = []
+    for item in all_player_cards:
+        card_id = str(item['CardID'])
+        card_deck_id = card_id[:-2]
+        custom_deck = item['CustomDeck'][card_deck_id]
+        GMNotes = json.loads(item['GMNotes'])
+        find_db_player_card = find_db_player_card_by_id(GMNotes['id'], player_cards)
+        if find_db_player_card is not None:
+            if 'text' in find_db_player_card:
+                random_output_cards.append({
+                    'real_text': find_db_player_card['real_text'],
+                    'translate_text': find_db_player_card['text']
+                })
+            print('------------------')
+        pass
+
+    # 写出到random_player_cards
+    with open(os.path.join(working_directory, 'random_player_cards.json'), 'w', encoding='utf-8') as f:
+        json.dump(random_output_cards, f, ensure_ascii=False, indent=4)
+
+
 if __name__ == '__main__':
     # 搜索JSON卡牌对象
     find_card_objects(os.path.join(working_directory, 'source_json'), all_player_cards)
     # print(json.dumps(all_player_cards))
+    # test1()
     # 下载卡图
     # download_cards()
     # 分拣卡图

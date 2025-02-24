@@ -159,6 +159,132 @@ def tidy_body_flavor(data):
     return body
 
 
+def create_location_card(card_json, picture_path=None, font_manager=None, image_manager=None, image_mode=0,
+                         transparent_encounter=False):
+    """制作地点卡"""
+    # 解析JSON字符串
+    data = card_json
+    if 'msg' in data and data['msg'] != '':
+        raise ValueError(data['msg'])
+    card = None
+    # 创建Card对象
+    card = Card(
+        width=739,
+        height=1049,
+        font_manager=font_manager,
+        image_manager=image_manager,
+        card_type='地点卡'
+    )
+    # 贴底图
+    if picture_path is not None:
+        dp = Image.open(picture_path)
+        if image_mode == 1:
+            # 铺满
+            card.paste_image(dp, (0, 0, 739, 1049), 'cover')
+        else:
+            card.paste_image(dp, (0, 80, 739, 562), 'cover')
+    if 'location_type' not in data or data['location_type'] not in ['未揭示', '已揭示']:
+        raise ValueError('说明地点类型为未揭示或已揭示')
+    # 贴牌框 是否有副标题
+    transparent_list = [
+        (370, 518, 30),
+        (54, 46, 50),
+        (164, 968 + 12, 54),
+        (246, 952 + 12, 54),
+        (328, 945 + 12, 54),
+        (410, 945 + 12, 54),
+        (492, 952 + 12, 54),
+        (574, 968 + 12, 54),
+
+    ]
+    if 'subtitle' in data and data['subtitle'] != '':
+        card.paste_image(image_manager.get_image(f'{data["type"]}-{data["location_type"]}-副标题'), (0, 0), 'contain',
+                         transparent_list if transparent_encounter else None)
+    else:
+        card.paste_image(image_manager.get_image(f'{data["type"]}-{data["location_type"]}'), (0, 0), 'contain',
+                         transparent_list if transparent_encounter else None)
+    # 写小字
+    card.draw_centered_text(
+        position=(370, 562),
+        text="地点",
+        font_name="汉仪小隶书简",
+        font_size=26,
+        font_color=(0, 0, 0)
+    )
+    # 写标题
+    card.draw_centered_text(
+        position=(370, 32),
+        text=data['name'],
+        font_name="汉仪小隶书简",
+        font_size=48,
+        font_color=(0, 0, 0)
+    )
+    # 写副标题
+    if 'subtitle' in data and data['subtitle'] != '':
+        card.draw_centered_text(
+            position=(370, 88),
+            text=data['subtitle'],
+            font_name="汉仪小隶书简",
+            font_size=32,
+            font_color=(0, 0, 0)
+        )
+    # 写特性
+    card.draw_centered_text(
+        position=(370, 610),
+        text='，'.join(data['traits']),
+        font_name="方正舒体",
+        font_size=32,
+        font_color=(0, 0, 0)
+    )
+    # 整合body和flavor
+    body = tidy_body_flavor(data)
+    # 写正文和风味
+    card.draw_text(
+        text=body,
+        vertices=[
+            (38, 620), (704, 620),
+            (704, 900), (38, 900)
+        ],
+        default_font_name='simfang',
+        default_size=32,
+        padding=18,
+        draw_virtual_box=False
+    )
+    # 写隐藏值和线索值
+    if data['location_type'] == '已揭示':
+        shroud = data.get('shroud', '')
+        clues = data.get('clues', '')
+        card.set_number_value(
+            position=(62, 557),
+            text=shroud,
+            font_size=52
+        )
+        card.set_number_value(
+            position=(675, 557),
+            text=clues,
+            font_size=52,
+            color=(0, 0, 0),
+            stroke_color=(255, 255, 255)
+        )
+    # 写胜利点
+    victory = data.get('victory', -1)
+    if victory > -1:
+        card.draw_centered_text(
+            position=(675, 907),
+            text=f"胜利{data['victory']}。",
+            font_name="思源黑体",
+            font_size=28,
+            font_color=(0, 0, 0)
+        )
+    # 画地点符号和连接符号
+    if data.get('location_icon', '') != '':
+        card.set_location_icon(0, data['location_icon'])
+    if 'location_link' in data and isinstance(data['location_link'], list):
+        for i in range(len(data['location_link'])):
+            card.set_location_icon(i + 1, data['location_link'][i])
+    return card
+
+
 def create_treachery_card(card_json, picture_path=None, font_manager=None, image_manager=None, image_mode=0,
                           transparent_encounter=False):
     """诡计卡"""
@@ -296,7 +422,7 @@ def create_enemy_card(card_json, picture_path=None, font_manager=None, image_man
     # 整合body和flavor
     body = tidy_body_flavor(data)
     # 写胜利点数和正文
-    if 'victory' in data and isinstance(data['victory'], int) and data['victory'] > 0:
+    if 'victory' in data and isinstance(data['victory'], int) and data['victory'] > -1:
         card.draw_centered_text(
             position=(380, 512),
             text=f"胜利{data['victory']}。",
@@ -346,17 +472,17 @@ def create_enemy_card(card_json, picture_path=None, font_manager=None, image_man
     attack = data['attack'] if 'attack' in data else ''
     evade = data['evade'] if 'evade' in data else ''
     enemy_health = data['enemy_health'] if 'enemy_health' in data else ''
-    card.set_enemy_value(
+    card.set_number_value(
         position=(370, 132),
         text=enemy_health,
         font_size=52
     )
-    card.set_enemy_value(
+    card.set_number_value(
         position=(232, 136),
         text=attack,
         font_size=44
     )
-    card.set_enemy_value(
+    card.set_number_value(
         position=(508, 136),
         text=evade,
         font_size=44
@@ -794,17 +920,17 @@ def create_weakness_back(card_json, picture_path=None, font_manager=None, image_
         attack = data['attack'] if 'attack' in data else ''
         evade = data['evade'] if 'evade' in data else ''
         enemy_health = data['enemy_health'] if 'enemy_health' in data else ''
-        card.set_enemy_value(
+        card.set_number_value(
             position=(370, 132),
             text=enemy_health,
             font_size=52
         )
-        card.set_enemy_value(
+        card.set_number_value(
             position=(232, 136),
             text=attack,
             font_size=44
         )
-        card.set_enemy_value(
+        card.set_number_value(
             position=(508, 136),
             text=evade,
             font_size=44
@@ -1221,6 +1347,16 @@ def create_player_cards(card_json, picture_path=None, font_manager=None, image_m
             horror = data['horror']
         if health > 0 or horror > 0:
             card.set_health_and_horror(health, horror)
+        # 写胜利点
+        victory = data.get('victory', -1)
+        if victory > -1:
+            card.draw_centered_text(
+                position=(675, 938),
+                text=f"胜利{data['victory']}。",
+                font_name="思源黑体",
+                font_size=28,
+                font_color=(0, 0, 0)
+            )
         pass
     # 画多职介
     if data['class'] == '多职阶' and 'subclass' in data and isinstance(data['subclass'], list):
@@ -1233,7 +1369,7 @@ def process_card_json(card_json, picture_path=None, font_manager=None, image_man
         raise ValueError('卡牌类型不能为空')
     if card_json['type'] == '调查员卡':
         return create_investigators_card_back(card_json, picture_path, font_manager, image_manager)
-    elif card_json['class'] == '弱点':
+    elif card_json.get('class', '') == '弱点':
         return create_weakness_back(card_json, picture_path, font_manager, image_manager)
     elif card_json['type'] == '升级卡':
         return create_upgrade_card(card_json, picture_path, font_manager, image_manager)
@@ -1241,6 +1377,8 @@ def process_card_json(card_json, picture_path=None, font_manager=None, image_man
         return create_enemy_card(card_json, picture_path, font_manager, image_manager)
     elif card_json['type'] == '诡计卡':
         return create_treachery_card(card_json, picture_path, font_manager, image_manager)
+    elif card_json['type'] == '地点卡':
+        return create_location_card(card_json, picture_path, font_manager, image_manager)
     else:
         return create_player_cards(card_json, picture_path, font_manager, image_manager)
 
@@ -1344,17 +1482,23 @@ def process_card_json_to_tts_json(card_json, front_image_url="", back_image_url=
 
 
 if __name__ == '__main__':
-    json_data = {'type': '支援卡', 'class': '弱点',
-                 'weakness_type': '弱点',
-                 'subclass': ['守护者', '探求者', '流浪者'],
-                 'name': '<独特>特薇拉·凯瑟琳·普莱斯', 'subtitle': '追求志业',
-                 'cost': -1, 'slots': '盟友',
-                 'body': '你拥有额外1个手部槽位，只能用来携带{工具}支援卡。\n【攻击】。在你调查成功且超过难度正好1点或3点后，消耗医生查理斯·威斯特三世：对你所在地点的1名敌人造成1点伤害。',
-                 'traits': ['盟友', '科学'], 'level': 0, 'flavor': '', 'health': 1, 'horror': 2,
-                 'submit_icon': ['智力', '战力']}
+    json_data = {
+        "type": "地点卡",
+        "location_type": "已揭示",
+        "name": "测试地点",
+        "subtitle": "测试副标题",
+        "shroud": "3",
+        "clues": "1<调查员>",
+        "location_icon": "绿菱",
+        "location_link": ["浅褐水滴", "紫月", "红十"],
+        "traits": ["通道"],
+        "body": "【强制】 - 启动测试哈哈哈。",
+        "flavor": "测试风味内容",
+        "image_prompt": "一个已揭示的地点，图标为绿菱，连接图标为浅褐水滴、紫月和红十。地点特性为通道，效果为强制启动测试。"
+    }
 
     fm = FontManager('fonts')
     im = ImageManager('images')
-    card = process_card_json(json_data, picture_path=r'C:\Users\xziyi\Desktop\java.png', font_manager=fm,
-                             image_manager=im)
+    card = create_location_card(json_data, picture_path=r'C:\Users\xziyi\Desktop\java.png', font_manager=fm,
+                                image_manager=im)
     card.image.save('output_card.png', quality=95)
