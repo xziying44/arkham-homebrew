@@ -3,7 +3,7 @@ import re
 
 from Card import FontManager, ImageManager
 from create_card import create_player_cards, create_weakness_back, create_enemy_card, create_treachery_card, \
-    create_location_card
+    create_location_card, create_investigators_card, create_investigators_card_back
 
 
 def build_submit_icon(json):
@@ -85,16 +85,17 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
     text = re.sub(r'\[rogue]', r"<流浪者>", text)
     text = re.sub(r'\[mystic]', r"<潜修者>", text)
     text = re.sub(r'\[survivor]', r"<生存者>", text)
-    print(text)
+
     card_json = json.loads(text)
     if 'text' in card_json and '[' in card_json['text']:
         # 报错
         raise ValueError('存在图标未处理 -> ' + text)
     if 'text' in card_json:
-        card_json['text'] = re.sub(r'\\n-', r"\\n<点>", card_json['text'])
+        card_json['text'] = re.sub(r'\n-', r"\n<点>", card_json['text'])
     if 'real_name' in card_json and card_json['name'] == card_json['real_name']:
         # 无中文
         return None
+    print(card_json)
     # 解析成json输出
     build_json = {
         'type': '支援卡',
@@ -281,6 +282,40 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
             image_mode=1,
             transparent_encounter=True
         )
+    elif card_json['type_name'] == '调查员':
+        # 构建支援卡json
+        build_json['type'] = '调查员卡'
+        build_json['attribute'] = [card_json['skill_willpower'], card_json['skill_intellect'],
+                                   card_json['skill_combat'], card_json['skill_agility']]
+        # 构建图片
+        if is_back:
+            print(f"正在导出调查员卡背面: {card_json['name']}")
+            # 构造背面
+            build_json['card_back'] = {
+                "size": -1,
+                "option": [],
+                "requirement": "",
+                "other": "",
+                "story": ""
+            }
+            build_json['card_back']['other'] = card_json['back_text']
+            build_json['card_back']['story'] = card_json['back_flavor']
+
+            card = create_investigators_card_back(
+                card_json=build_json,
+                font_manager=font_manager,
+                image_manager=image_manager,
+                picture_path=picture_path
+            )
+        else:
+            # 构造正面
+            print(f"正在导出调查员卡正面: {card_json['name']}")
+            card = create_investigators_card(
+                card_json=build_json,
+                font_manager=font_manager,
+                image_manager=image_manager,
+                picture_path=picture_path
+            )
 
     if card is not None:
         # 年份信息

@@ -1,3 +1,4 @@
+import json
 import os
 import re
 
@@ -185,7 +186,20 @@ class Card:
         self.card_type = card_type
         self.card_class = card_class
 
-    def paste_image(self, img, region, resize_mode='stretch', transparent_list=None):
+    def _extend_image_right(self, source_img, extension=800):
+        # 截取右边5%的像素
+        right_crop = 15
+        img = source_img.crop((source_img.width - right_crop, 0, source_img.width, source_img.height))
+        # 计算新尺寸（宽度翻倍）
+        new_size = (img.width + extension, img.height)
+        img = img.resize(new_size, resample=Image.BILINEAR)
+        # 拼接source_img和img
+        result_img = Image.new('RGB', (source_img.width + extension, source_img.height))
+        result_img.paste(source_img, (0, 0))
+        result_img.paste(img, (source_img.width - 15, 0))
+        return result_img
+
+    def paste_image(self, img, region, resize_mode='stretch', transparent_list=None, extension=0):
         """
         在指定区域粘贴图片
 
@@ -223,10 +237,14 @@ class Card:
                     [(x - r, y - r), (x + r, y + r)],  # 边界框坐标
                     fill=(0, 0, 0, 0)  # 透明黑色
                 )
+
+            if extension > 0:
+                img = self._extend_image_right(img, extension)
             if img.mode == 'RGBA':
-                self.image.paste(img, (region[0], region[1], region[0] + target_w, region[1] + target_h), img)
+                self.image.paste(img, (region[0], region[1], region[0] + target_w + extension, region[1] + target_h),
+                                 img)
             else:
-                self.image.paste(img, (region[0], region[1], region[0] + target_w, region[1] + target_h))
+                self.image.paste(img, (region[0], region[1], region[0] + target_w + extension, region[1] + target_h))
         except Exception as e:
             print(f"贴图失败: {str(e)}")
 
@@ -234,7 +252,10 @@ class Card:
         """预处理文本并解析为带标签的段列表"""
         text = text.replace('\n<hr>\n', '<hr>')
         text = text.replace('\n<hr>', '<hr>')
-        text = text.replace('\n', '<br>')
+        text = text.replace('\n', '<lr>')
+
+        # 将全角符号转换为半角符号
+        text = text.replace('＜', '<').replace('＞', '>').replace('？', '?').replace('｛', '{').replace('｝', '}')
 
         text = re.sub(r'【(.*?)】', r"<fonts name='思源黑体'>\1</fonts>", text)
         text = re.sub(r'\{(.*?)}', r"<fonts name='方正舒体'>\1</fonts>", text)
@@ -242,10 +263,15 @@ class Card:
         # 字形替换
         text = text.replace('<强制>', "<fonts name='思源黑体'>强制</fonts> -")
         text = text.replace('<显现>', "<fonts name='思源黑体'>显现</fonts> -")
+        text = text.replace('<攻击>', "<fonts name='思源黑体'>攻击</fonts>")
+        text = text.replace('<躲避>', "<fonts name='思源黑体'>躲避</fonts>")
+        text = text.replace('<谈判>', "<fonts name='思源黑体'>躲避</fonts>")
+
         text = text.replace('<独特>', "<fonts name='arkham-icons'>w</fonts>")
         text = text.replace('<一>', "<fonts name='arkham-icons'>x</fonts>")
         text = text.replace('<反应>', "<fonts name='arkham-icons'>l</fonts>")
         text = text.replace('<启动>', "<fonts name='arkham-icons'>j</fonts>")
+        text = text.replace('<箭头>', "<fonts name='arkham-icons'>j</fonts>")
         text = text.replace('<免费>', "<fonts name='arkham-icons'>k</fonts>")
 
         text = text.replace('<骷髅>', "<fonts name='arkham-icons'>m</fonts>")
@@ -322,7 +348,7 @@ class Card:
                     if node['tag'] == 'lr':
                         current_y += line_height + line_height // 6
                     else:
-                        current_y += line_height + line_height / 3
+                        current_y += line_height + line_height // 6
                     line_start_x, line_end_x = self.calculate_padding_x(vertices, current_y,
                                                                         current_y + line_height,
                                                                         padding)
@@ -572,7 +598,7 @@ class Card:
                 if node['tag'] == 'lr':
                     current_y += line_height + line_height // 6
                 else:
-                    current_y += line_height + line_height / 3
+                    current_y += line_height + line_height // 6
                 line_start_x, line_end_x = self.calculate_padding_x(vertices, current_y, current_y + line_height,
                                                                     padding)
                 current_x = line_start_x

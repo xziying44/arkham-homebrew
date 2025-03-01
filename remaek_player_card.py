@@ -12,7 +12,7 @@ from Card import FontManager, ImageManager
 from batch_build import batch_build_card
 
 # 准备工作 ----
-working_directory = r'D:\working_directory\temp'
+working_directory = r'D:\working_directory'
 
 cards_json_name = 'All Player Cards.json'
 picture_source = 'source'
@@ -44,7 +44,7 @@ def find_card_objects(directory, result_array):
         """ 递归检查JSON对象 """
         if isinstance(obj, dict):
             # 检查当前字典是否符合条件
-            if obj.get('Name') == 'Card':
+            if obj.get('Name') == 'Card' or obj.get('Name') == 'CardCustom':
                 card_id = str(obj['CardID'])
                 card_deck_id = card_id[:-2]
                 if 'CustomDeck' not in obj:
@@ -210,6 +210,10 @@ def merge_images(metadata, input_dir, output_dir, source_dir):
                     print('未找到图片')
                 pass
 
+    # 检测metadata['file_name']后缀名，统一生成出jpg
+    file_suffix = metadata['file_name'].split('.')[-1]
+    if file_suffix == 'png':
+        metadata['file_name'] = metadata['file_name'].replace('.png', '.jpg')
     # 保存合并后的图片
     merged.save(os.path.join(output_dir, metadata['file_name']))
 
@@ -346,8 +350,8 @@ def remake_player_cards():
         # # # 临时测试第一个文件夹
         # if index != 51:
         #     continue
-        # if folder != 'httpssteamusercontentaakamaihdnetugc1697276706766471841DDE7120C72F6685DFFC382BC4F125124BEEA8207':
-        #     continue
+        if folder != 'httpssteamusercontentaakamaihdnetugc24246963744306322729A953338B599473C1631AA82F75004CE941DA8B0':
+            continue
 
         print('folder', folder)
         print(metadata)
@@ -440,33 +444,33 @@ sys_translations = load_translations(os.path.join(working_directory, 'translatio
 
 def replace_taboo_card(player_card):
     """替换Taboo卡牌"""
-    taboo_date = '2024-02-20'
-    taboo_card = None
+    taboo_date = '2024-10-23'
+    find_taboo_card = None
     print(player_card['name'], json.dumps(player_card))
     for taboo in taboos:
         if taboo['date_start'] == taboo_date:
             for taboo_card in taboo['cards']:
                 if player_card['code'] == taboo_card['code']:
-                    taboo_card = taboo_card
+                    find_taboo_card = taboo_card
                     break
             break
         pass
-    print('替换Taboo卡牌', taboo_card)
-    if taboo_card is None:
+    print('替换Taboo卡牌', find_taboo_card)
+    if find_taboo_card is None:
         print('未找到Taboo卡牌')
         return player_card
     # 替换player_card的内容
-    if 'replacement_text' in taboo_card:
-        original_text = taboo_card['replacement_text']
+    if 'replacement_text' in find_taboo_card:
+        original_text = find_taboo_card['replacement_text']
         print(player_card['name'], 'original_text', original_text)
         player_card['text'] = translate(original_text, sys_translations)
         player_card['text'] = player_card['text'].replace('\\', '')
-    if 'xp' in taboo_card:
-        print(player_card['name'], taboo_card['xp'])
-        if taboo_card['xp'] > 0:
-            player_card['text'] = f"束缚(+{taboo_card['xp']}经验)。" + player_card['text']
-        elif taboo_card['xp'] < 0:
-            player_card['text'] = f"释放({taboo_card['xp']}经验)。" + player_card['text']
+    if 'xp' in find_taboo_card:
+        print(player_card['name'], find_taboo_card['xp'])
+        if find_taboo_card['xp'] > 0:
+            player_card['text'] = f"束缚(+{find_taboo_card['xp']}经验)。" + player_card['text']
+        elif find_taboo_card['xp'] < 0:
+            player_card['text'] = f"释放({find_taboo_card['xp']}经验)。" + player_card['text']
     print('替换后', json.dumps(player_card))
     print('-------------')
     # 不改变上面部分继续续写，根据taboo_card的内容替换player_card的内容
@@ -676,10 +680,59 @@ def test1():
         json.dump(random_output_cards, f, ensure_ascii=False, indent=4)
 
 
+def remake_investigators_cards():
+    """充值调查员卡"""
+    # 读取player_cards.json
+    with open(os.path.join(working_directory, 'player_cards.json'), 'r', encoding='utf-8') as f:
+        player_cards = json.load(f)
+    # 遍历player_cards，筛选type_code=investigator的对象
+    investigators_cards = []
+    for card in player_cards:
+        if card['type_code'] == 'investigator':
+            investigators_cards.append(card)
+    # 重置调查员卡
+    font_manager = FontManager()
+    image_manager = ImageManager()
+    for investigator_card in investigators_cards:
+        # if investigator_card['name'] != '珍妮·巴恩斯':
+        #     continue
+        # 构建卡牌
+        output_card = batch_build_card(
+            card_json=investigator_card,
+            font_manager=font_manager,
+            image_manager=image_manager,
+            picture_path=None,
+            encounter_count=-1,
+            is_back=False
+        )
+        print(output_card)
+        # 保存卡牌
+        if output_card is not None:
+            output_card.image.save(os.path.join(working_directory, 'investigators', f"{investigator_card['code']}-a.png"),
+                                   quality=95)
+        #
+        # 构建卡牌
+        output_card_2 = batch_build_card(
+            card_json=investigator_card,
+            font_manager=font_manager,
+            image_manager=image_manager,
+            picture_path=None,
+            encounter_count=-1,
+            is_back=True
+        )
+        # 保存卡牌
+        if output_card_2 is not None:
+            output_card_2.image.save(os.path.join(working_directory, 'investigators', f"{investigator_card['code']}-b.png"),
+                                     quality=95)
+
+
 if __name__ == '__main__':
+    # 所有玩家卡
+    # with open(os.path.join(working_directory, cards_json_name), 'r', encoding='utf-8') as f:
+    #     temp = json.load(f)
+    #     all_player_cards = temp['ObjectStates'][0]['ContainedObjects']
     # 搜索JSON卡牌对象
-    find_card_objects(os.path.join(working_directory, 'source_json'), all_player_cards)
-    # print(json.dumps(all_player_cards))
+    # find_card_objects(os.path.join(working_directory, 'source_json'), all_player_cards)
     # test1()
     # 下载卡图
     # download_cards()
@@ -689,4 +742,7 @@ if __name__ == '__main__':
     # replace_translations()
     # 制作卡牌
     remake_player_cards()
+
+    # 制作调查员卡
+    # remake_investigators_cards()
     pass

@@ -144,11 +144,10 @@ DEFAULT_CARD_CUSTOM_DECK_JSON = {
 
 def tidy_body_flavor(data):
     """整理正文和风味"""
-    body = data['body']
+    body = data.get('body', '')
     # 删除body首尾换行
     body = body.strip()
     # 替换换行
-    body = body.replace('\n', '<lr>')
     if 'flavor' in data and data['flavor'] != '':
         body += "\n<hr>\n"
         flavor = data['flavor']
@@ -178,6 +177,8 @@ def create_location_card(card_json, picture_path=None, font_manager=None, image_
     # 贴底图
     if picture_path is not None:
         dp = Image.open(picture_path)
+        if abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
+            image_mode = 1
         if image_mode == 1:
             # 铺满
             card.paste_image(dp, (0, 0, 739, 1049), 'cover')
@@ -304,6 +305,8 @@ def create_treachery_card(card_json, picture_path=None, font_manager=None, image
     # 贴底图
     if picture_path is not None:
         dp = Image.open(picture_path)
+        if abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
+            image_mode = 1
         if image_mode == 1:
             # 铺满
             card.paste_image(dp, (0, 0, 739, 1049), 'cover')
@@ -373,6 +376,8 @@ def create_enemy_card(card_json, picture_path=None, font_manager=None, image_man
     # 贴底图
     if picture_path is not None:
         dp = Image.open(picture_path)
+        if abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
+            image_mode = 1
         if image_mode == 1:
             # 铺满
             card.paste_image(dp, (0, 0, 739, 1049), 'cover')
@@ -557,6 +562,8 @@ def create_weakness_back(card_json, picture_path=None, font_manager=None, image_
         # 贴底图
         if picture_path is not None:
             dp = Image.open(picture_path)
+            if abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
+                image_mode = 1
             if image_mode == 1:
                 # 铺满
                 card.paste_image(dp, (0, 0, 739, 1049), 'cover')
@@ -616,6 +623,8 @@ def create_weakness_back(card_json, picture_path=None, font_manager=None, image_
         # 贴底图
         if picture_path is not None:
             dp = Image.open(picture_path)
+            if abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
+                image_mode = 1
             if image_mode == 1:
                 # 铺满
                 card.paste_image(dp, (0, 0, 739, 1049), 'cover')
@@ -698,6 +707,8 @@ def create_weakness_back(card_json, picture_path=None, font_manager=None, image_
         # 贴底图
         if picture_path is not None:
             dp = Image.open(picture_path)
+            if abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
+                image_mode = 1
             if image_mode == 1:
                 # 铺满
                 card.paste_image(dp, (0, 0, 739, 1049), 'cover')
@@ -771,6 +782,8 @@ def create_weakness_back(card_json, picture_path=None, font_manager=None, image_
         # 贴底图
         if picture_path is not None:
             dp = Image.open(picture_path)
+            if abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
+                image_mode = 1
             if image_mode == 1:
                 # 铺满
                 card.paste_image(dp, (0, 0, 739, 1049), 'cover')
@@ -827,6 +840,8 @@ def create_weakness_back(card_json, picture_path=None, font_manager=None, image_
         # 贴底图
         if picture_path is not None:
             dp = Image.open(picture_path)
+            if abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
+                image_mode = 1
             if image_mode == 1:
                 # 铺满
                 card.paste_image(dp, (0, 0, 739, 1049), 'cover')
@@ -869,7 +884,7 @@ def create_weakness_back(card_json, picture_path=None, font_manager=None, image_
         # 整合body和flavor
         body = tidy_body_flavor(data)
         # 写胜利点数和正文
-        if 'victory' in data and isinstance(data['victory'], int) and data['victory'] > 0:
+        if 'victory' in data and isinstance(data['victory'], int) and data['victory'] > -1:
             card.draw_centered_text(
                 position=(380, 512),
                 text=f"胜利{data['victory']}。",
@@ -986,7 +1001,7 @@ def create_investigators_card_back(card_json, picture_path=None, font_manager=No
         font_color=(0, 0, 0)
     )
     test_text = ""
-    if 'size' in card_back:
+    if 'size' in card_back and card_back['size'] > 0:
         test_text += f"【牌库卡牌张数】：{card_back['size']}。\n"
     if 'option' in card_back and len(card_back['option']) > 0:
         test_text += '【牌库构筑选项】：' + '，'.join(card_back['option']) + '。\n'
@@ -1034,7 +1049,7 @@ def create_investigators_card(card_json, picture_path=None, font_manager=None, i
     # 贴底图
     if picture_path is not None:
         dp = Image.open(picture_path)
-        card.paste_image(dp, (0, 75, 579, 664), 'cover')
+        card.paste_image(dp, (0, 75, 579, 664), 'cover', extension=470)
     # 贴牌框-UI
     card.paste_image(image_manager.get_image(f'{data["type"]}-{data["class"]}-UI'), (0, 0), 'contain')
 
@@ -1127,6 +1142,8 @@ def create_player_cards(card_json, picture_path=None, font_manager=None, image_m
         # 贴底图
         if picture_path is not None:
             dp = Image.open(picture_path)
+            if abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
+                image_mode = 1
             if image_mode == 1:
                 # 铺满
                 card.paste_image(dp, (0, 0, 739, 1049), 'cover')
@@ -1155,6 +1172,9 @@ def create_player_cards(card_json, picture_path=None, font_manager=None, image_m
         # 贴底图
         if picture_path is not None:
             dp = Image.open(picture_path)
+
+            if abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
+                image_mode = 1
             if image_mode == 1:
                 # 铺满
                 card.paste_image(dp, (0, 0, 739, 1049), 'cover')
@@ -1260,8 +1280,15 @@ def create_player_cards(card_json, picture_path=None, font_manager=None, image_m
         pass
     elif data['type'] == '事件卡':
         # 画名称
+        offset = 0
+        if data.get('class', '') == '潜修者':
+            offset = -8
+        elif data.get('class', '') == '守护者':
+            offset = -3
+        elif data.get('class', '') == '中立':
+            offset = -5
         card.draw_centered_text(
-            position=(370, 625),
+            position=(370, 625 + offset),
             text=data['name'],
             font_name="汉仪小隶书简",
             font_size=48,
@@ -1291,6 +1318,16 @@ def create_player_cards(card_json, picture_path=None, font_manager=None, image_m
         # 画价格
         if 'cost' in data and isinstance(data['cost'], int):
             card.set_card_cost(data['cost'])
+        # 画胜利点
+        victory = data.get('victory', -1)
+        if victory > -1:
+            card.draw_centered_text(
+                position=(378, 960),
+                text=f"胜利{data['victory']}。",
+                font_name="思源黑体",
+                font_size=28,
+                font_color=(0, 0, 0)
+            )
         pass
     elif data['type'] == '支援卡':
         # 画名称
@@ -1365,9 +1402,13 @@ def create_player_cards(card_json, picture_path=None, font_manager=None, image_m
 
 
 def process_card_json(card_json, picture_path=None, font_manager=None, image_manager=None):
+    if 'msg' in card_json and card_json['msg'] != '':
+        raise ValueError(card_json['msg'])
     if 'type' not in card_json:
         raise ValueError('卡牌类型不能为空')
     if card_json['type'] == '调查员卡':
+        return create_investigators_card(card_json, picture_path, font_manager, image_manager)
+    elif card_json['type'] == '调查员卡背':
         return create_investigators_card_back(card_json, picture_path, font_manager, image_manager)
     elif card_json.get('class', '') == '弱点':
         return create_weakness_back(card_json, picture_path, font_manager, image_manager)
@@ -1483,22 +1524,12 @@ def process_card_json_to_tts_json(card_json, front_image_url="", back_image_url=
 
 if __name__ == '__main__':
     json_data = {
-        "type": "地点卡",
-        "location_type": "已揭示",
-        "name": "测试地点",
-        "subtitle": "测试副标题",
-        "shroud": "3",
-        "clues": "1<调查员>",
-        "location_icon": "绿菱",
-        "location_link": ["浅褐水滴", "紫月", "红十"],
-        "traits": ["通道"],
-        "body": "【强制】 - 启动测试哈哈哈。",
-        "flavor": "测试风味内容",
-        "image_prompt": "一个已揭示的地点，图标为绿菱，连接图标为浅褐水滴、紫月和红十。地点特性为通道，效果为强制启动测试。"
+        "msg": "升级卡的name和body字段为必选，请提供完整的卡牌标题和内容。"
     }
 
     fm = FontManager('fonts')
     im = ImageManager('images')
-    card = create_location_card(json_data, picture_path=r'C:\Users\xziyi\Desktop\java.png', font_manager=fm,
-                                image_manager=im)
+    card = process_card_json(json_data, picture_path=r'C:\Users\xziyi\Desktop\download.jpg',
+                             font_manager=fm,
+                             image_manager=im)
     card.image.save('output_card.png', quality=95)
