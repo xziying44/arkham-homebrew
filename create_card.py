@@ -981,7 +981,7 @@ def create_investigators_card_back(card_json, picture_path=None, font_manager=No
         card.paste_image(dp, (0, 0, 373, 405), 'cover')
 
     # 贴牌框-UI
-    card.paste_image(image_manager.get_image(f'{data["type"]}-{data["class"]}-卡背'), (0, 0), 'contain')
+    card.paste_image(image_manager.get_image(f'调查员卡-{data["class"]}-卡背'), (0, 0), 'contain')
 
     # 写标题
     card.draw_centered_text(
@@ -994,7 +994,7 @@ def create_investigators_card_back(card_json, picture_path=None, font_manager=No
 
     # 写副标题
     card.draw_centered_text(
-        position=(750, 88),
+        position=(750, 86),
         text=data['subtitle'],
         font_name="汉仪小隶书简",
         font_size=32,
@@ -1011,12 +1011,39 @@ def create_investigators_card_back(card_json, picture_path=None, font_manager=No
         test_text += card_back['other'] + '\n'
     if 'story' in card_back and card_back['story'] != '':
         test_text += f"<hr><relish center='false'>{card_back['story']}</relish>"
+    vertices = [
+        (385, 141), (1011, 141), (1011, 700), (36, 700),
+        (36, 470), (170, 470), (182, 430), (358, 430)
+    ]
+    if data.get('class') == '守护者':
+        vertices = [
+            (385, 141), (1011, 141), (1011, 700), (36, 700),
+            (36, 470), (220, 470), (220, 430), (366, 430)
+        ]
+    elif data.get('class') == '探求者':
+        vertices = [
+            (385, 141), (1011, 141), (1011, 700), (36, 700),
+            (36, 470), (340, 470)
+        ]
+    elif data.get('class') == '生存者':
+        vertices = [
+            (385, 141), (1011, 141), (1011, 700), (36, 700),
+            (36, 520), (114, 464), (340, 464)
+        ]
+    elif data.get('class') == '流浪者':
+        vertices = [
+            (385, 141), (1011, 141), (1011, 700), (36, 700),
+            (36, 450), (350, 450)
+        ]
+    elif data.get('class') == '中立':
+        vertices = [
+            (420, 141), (1011, 141), (1011, 700), (36, 700),
+            (36, 410), (380, 410)
+        ]
+
     card.draw_text(
         test_text,
-        vertices=[
-            (385, 141), (1011, 141), (1011, 686), (36, 686),
-            (36, 500), (308, 450), (358, 450)
-        ],
+        vertices=vertices,
         default_font_name='simfang',
         default_size=32,
         padding=15,
@@ -1524,7 +1551,44 @@ def process_card_json_to_tts_json(card_json, front_image_url="", back_image_url=
 
 if __name__ == '__main__':
     json_data = {
-        "msg": "升级卡的name和body字段为必选，请提供完整的卡牌标题和内容。"
+        "type": "调查员卡背",
+        "class": "中立",
+        "subclass": [],
+        "name": "<独特>珀古",
+        "weakness_type": "",
+        "subtitle": "狂人",
+        "attribute": [0, 0, 0, 0],
+        "cost": 0,
+        "submit_icon": [],
+        "level": -1,
+        "traits": [],
+        "body": "",
+        "flavor": "",
+        "slots": "",
+        "health": 0,
+        "horror": 0,
+        "enemy_damage": 0,
+        "enemy_damage_horror": 0,
+        "attack": "",
+        "evade": "",
+        "enemy_health": "",
+        "shroud": "",
+        "clues": "",
+        "victory": -1,
+        "location_icon": "",
+        "location_link": [],
+        "card_back": {
+            "size": 30,
+            "option": [
+                "潜修者卡牌(<潜修者>)等级0-5",
+                "中立卡牌等级0-5",
+                "占用法术槽位的支援卡牌等级0-5"
+            ],
+            "requirement": "3张心灵壁垒，真实世界，随机“疯狂”基础弱点",
+            "other": "额外设置：游戏开始构建卡组时，你可以额外抽取一张随机“疯狂”基础弱点加入牌组，然后你的牌组构筑选项增加“任意职业等级1-5最多1张”",
+            "story": "珀古是小镇上最好的心理医生，至少曾经是曾经。在数年之前的一次治疗中，他似乎被“传染”了某种心理疾病。在此之后，一种心灵瘟疫开始在小镇上蔓延。为了寻找治愈瘟疫的办法，珀古开始了他隐秘的研究。"
+        },
+        "msg": ""
     }
 
     fm = FontManager('fonts')

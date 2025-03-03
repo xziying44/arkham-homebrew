@@ -323,7 +323,7 @@ def find_db_player_card_by_id(card_id, player_cards):
     return find_db_player_card
 
 
-def remake_player_cards():
+def remake_player_cards(additional_exports=False):
     """汉化玩家卡"""
     font_manager = FontManager()
     image_manager = ImageManager()
@@ -350,8 +350,8 @@ def remake_player_cards():
         # # # 临时测试第一个文件夹
         # if index != 51:
         #     continue
-        if folder != 'httpssteamusercontentaakamaihdnetugc24246963744306322729A953338B599473C1631AA82F75004CE941DA8B0':
-            continue
+        # if folder != 'httpssteamusercontentaakamaihdnetugc24246963744306322729A953338B599473C1631AA82F75004CE941DA8B0':
+        #     continue
 
         print('folder', folder)
         print(metadata)
@@ -379,6 +379,21 @@ def remake_player_cards():
                 card['output_file_name'] = card['file_name'].split('.')[0] + '.png'
                 print('正在保存卡牌', card['output_file_name'])
                 if output_card is not None:
+                    if additional_exports:
+                        # 额外导出，按code命名
+                        if find_db_player_card['type_name'] in ['支援', '事件', '技能'] or \
+                                (find_db_player_card.get('subtype_code', '') == 'weakness' or
+                                 find_db_player_card.get('subtype_code', '') == 'basicweakness'):
+                            # 转成RGB
+                            temp = output_card.image.convert('RGB')
+                            # 将图片长宽缩小一半
+                            temp = temp.resize((int(temp.width / 1.5), int(temp.height / 1.5)))
+                            temp.save(
+                                os.path.join(working_directory, 'additional_exports',
+                                             f'{find_db_player_card["code"]}.jpg'),
+                                quality=75)
+                            pass
+
                     output_card.image.save(os.path.join(output_dir, card['output_file_name']), quality=95)
                 else:
                     print('不支持的卡牌类型', find_db_player_card['type_name'])
@@ -708,8 +723,9 @@ def remake_investigators_cards():
         print(output_card)
         # 保存卡牌
         if output_card is not None:
-            output_card.image.save(os.path.join(working_directory, 'investigators', f"{investigator_card['code']}-a.png"),
-                                   quality=95)
+            output_card.image.save(
+                os.path.join(working_directory, 'investigators', f"{investigator_card['code']}-a.png"),
+                quality=95)
         #
         # 构建卡牌
         output_card_2 = batch_build_card(
@@ -722,8 +738,9 @@ def remake_investigators_cards():
         )
         # 保存卡牌
         if output_card_2 is not None:
-            output_card_2.image.save(os.path.join(working_directory, 'investigators', f"{investigator_card['code']}-b.png"),
-                                     quality=95)
+            output_card_2.image.save(
+                os.path.join(working_directory, 'investigators', f"{investigator_card['code']}-b.png"),
+                quality=95)
 
 
 if __name__ == '__main__':
@@ -741,7 +758,7 @@ if __name__ == '__main__':
     # 替换翻译
     # replace_translations()
     # 制作卡牌
-    remake_player_cards()
+    remake_player_cards(additional_exports=True)
 
     # 制作调查员卡
     # remake_investigators_cards()

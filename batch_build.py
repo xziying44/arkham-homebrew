@@ -282,7 +282,7 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
             image_mode=1,
             transparent_encounter=True
         )
-    elif card_json['type_name'] == '调查员':
+    elif card_json['type_name'] == '调查员123 TODO':
         # 构建支援卡json
         build_json['type'] = '调查员卡'
         build_json['attribute'] = [card_json['skill_willpower'], card_json['skill_intellect'],
