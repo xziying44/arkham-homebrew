@@ -269,7 +269,7 @@ def create_location_card(card_json, picture_path=None, font_manager=None, image_
         )
     # 写胜利点
     victory = data.get('victory', -1)
-    if victory > -1:
+    if victory is not None and victory > -1:
         card.draw_centered_text(
             position=(675, 907),
             text=f"胜利{data['victory']}。",
@@ -957,7 +957,7 @@ def create_weakness_back(card_json, picture_path=None, font_manager=None, image_
     return card
 
 
-def create_investigators_card_back(card_json, picture_path=None, font_manager=None, image_manager=None):
+def create_investigators_card_back(card_json, picture_path=None, font_manager=None, image_manager=None, image_mode=0):
     """制作调查员卡背面"""
     # 解析JSON字符串
     data = card_json
@@ -978,7 +978,11 @@ def create_investigators_card_back(card_json, picture_path=None, font_manager=No
     # 贴底图
     if picture_path is not None:
         dp = Image.open(picture_path)
-        card.paste_image(dp, (0, 0, 373, 405), 'cover')
+        if image_mode == 1:
+            # 铺满
+            card.paste_image(dp, (0, 0, 1049, 739), 'cover')
+        else:
+            card.paste_image(dp, (0, 0, 373, 405), 'cover')
 
     # 贴牌框-UI
     card.paste_image(image_manager.get_image(f'调查员卡-{data["class"]}-卡背'), (0, 0), 'contain')
@@ -1053,7 +1057,7 @@ def create_investigators_card_back(card_json, picture_path=None, font_manager=No
     return card
 
 
-def create_investigators_card(card_json, picture_path=None, font_manager=None, image_manager=None):
+def create_investigators_card(card_json, picture_path=None, font_manager=None, image_manager=None, image_mode=0):
     """制作调查员卡正面"""
     # 解析JSON字符串
     data = card_json
@@ -1076,7 +1080,11 @@ def create_investigators_card(card_json, picture_path=None, font_manager=None, i
     # 贴底图
     if picture_path is not None:
         dp = Image.open(picture_path)
-        card.paste_image(dp, (0, 75, 579, 664), 'cover', extension=470)
+        if image_mode == 1:
+            # 铺满
+            card.paste_image(dp, (0, 0, 1049, 739), 'cover')
+        else:
+            card.paste_image(dp, (0, 75, 579, 664), 'cover', extension=470)
     # 贴牌框-UI
     card.paste_image(image_manager.get_image(f'{data["type"]}-{data["class"]}-UI'), (0, 0), 'contain')
 
@@ -1151,8 +1159,11 @@ def create_player_cards(card_json, picture_path=None, font_manager=None, image_m
         raise ValueError(data['msg'])
     if 'type' not in data or data['type'] not in ['技能卡', '支援卡', '事件卡']:
         raise ValueError('卡牌类型错误')
-    if 'class' not in data or data['class'] not in ['守护者', '探求者', '流浪者', '潜修者', '生存者', '中立', '多职阶']:
+    if 'class' not in data or data['class'] not in ['守护者', '探求者', '流浪者', '潜修者', '生存者', '中立', '多职阶',
+                                                    '神话']:
         raise ValueError('职业类型错误')
+    if data['class'] == '神话':
+        data['class'] = '中立'
     if data['type'] == '技能卡' and data['class'] == '多职阶':
         raise ValueError('技能卡暂时不支持多职阶')
     card = None
@@ -1199,7 +1210,6 @@ def create_player_cards(card_json, picture_path=None, font_manager=None, image_m
         # 贴底图
         if picture_path is not None:
             dp = Image.open(picture_path)
-
             if abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
                 image_mode = 1
             if image_mode == 1:
@@ -1231,6 +1241,8 @@ def create_player_cards(card_json, picture_path=None, font_manager=None, image_m
         # 贴底图
         if picture_path is not None:
             dp = Image.open(picture_path)
+            if abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
+                image_mode = 1
             if image_mode == 1:
                 # 铺满
                 card.paste_image(dp, (0, 0, 739, 1049), 'cover')
@@ -1413,7 +1425,7 @@ def create_player_cards(card_json, picture_path=None, font_manager=None, image_m
             card.set_health_and_horror(health, horror)
         # 写胜利点
         victory = data.get('victory', -1)
-        if victory > -1:
+        if victory is not None and victory > -1:
             card.draw_centered_text(
                 position=(675, 938),
                 text=f"胜利{data['victory']}。",
@@ -1551,22 +1563,22 @@ def process_card_json_to_tts_json(card_json, front_image_url="", back_image_url=
 
 if __name__ == '__main__':
     json_data = {
-        "type": "调查员卡背",
-        "class": "中立",
+        "type": "支援卡",
+        "class": "探求者",
         "subclass": [],
-        "name": "<独特>珀古",
+        "name": "<独特>阿黛尔三车子女士",
         "weakness_type": "",
-        "subtitle": "狂人",
-        "attribute": [0, 0, 0, 0],
-        "cost": 0,
-        "submit_icon": [],
-        "level": -1,
-        "traits": [],
-        "body": "",
-        "flavor": "",
-        "slots": "",
-        "health": 0,
-        "horror": 0,
+        "subtitle": "译者",
+        "attribute": [],
+        "cost": 4,
+        "submit_icon": ["意志", "智力"],
+        "level": 1,
+        "traits": ["盟友", "米斯卡塔尼克"],
+        "body": "你获得+1<书>\n<反应>在你成功调查后：直到本回合结束前，你的所在地点得到-1隐藏值。\n<反应>在你成功调查后：直到本回合结束前，你的所在地点得到-1隐藏值。",
+        "flavor": "“信，达，雅”",
+        "slots": "盟友",
+        "health": 2,
+        "horror": 2,
         "enemy_damage": 0,
         "enemy_damage_horror": 0,
         "attack": "",
@@ -1579,21 +1591,17 @@ if __name__ == '__main__':
         "location_link": [],
         "card_back": {
             "size": 30,
-            "option": [
-                "潜修者卡牌(<潜修者>)等级0-5",
-                "中立卡牌等级0-5",
-                "占用法术槽位的支援卡牌等级0-5"
-            ],
-            "requirement": "3张心灵壁垒，真实世界，随机“疯狂”基础弱点",
-            "other": "额外设置：游戏开始构建卡组时，你可以额外抽取一张随机“疯狂”基础弱点加入牌组，然后你的牌组构筑选项增加“任意职业等级1-5最多1张”",
-            "story": "珀古是小镇上最好的心理医生，至少曾经是曾经。在数年之前的一次治疗中，他似乎被“传染”了某种心理疾病。在此之后，一种心灵瘟疫开始在小镇上蔓延。为了寻找治愈瘟疫的办法，珀古开始了他隐秘的研究。"
+            "option": [],
+            "requirement": "",
+            "other": "",
+            "story": ""
         },
         "msg": ""
     }
 
     fm = FontManager('fonts')
     im = ImageManager('images')
-    card = process_card_json(json_data, picture_path=r'C:\Users\xziyi\Desktop\download.jpg',
+    card = process_card_json(json_data, picture_path=r'C:\Users\xziyi\Desktop\E5DF766DA43B43FBA8F24233FD7721E1.jpg',
                              font_manager=fm,
                              image_manager=im)
     card.image.save('output_card.png', quality=95)

@@ -30,7 +30,6 @@ source_files = os.listdir(source_dir)
 
 # -------------------------------------------------------------
 
-
 def find_card_objects(directory, result_array):
     """
     扫描指定目录下所有JSON文件，查找包含"name": "Card"的对象
@@ -44,19 +43,23 @@ def find_card_objects(directory, result_array):
         """ 递归检查JSON对象 """
         if isinstance(obj, dict):
             # 检查当前字典是否符合条件
-            if obj.get('Name') == 'Card' or obj.get('Name') == 'CardCustom':
-                card_id = str(obj['CardID'])
-                card_deck_id = card_id[:-2]
-                if 'CustomDeck' not in obj:
-                    return
-                if card_deck_id not in obj['CustomDeck']:
-                    return
-                if 'GMNotes' not in obj or obj['GMNotes'] == '':
-                    return
-                result_array.append(obj)
-            # 继续递归检查所有值
-            for value in obj.values():
-                check_object(value)
+            try:
+                if obj.get('Name') == 'Card' or obj.get('Name') == 'CardCustom':
+                    card_id = str(obj['CardID'])
+                    card_deck_id = card_id[:-2]
+                    if 'CustomDeck' not in obj:
+                        return
+                    if 'GMNotes' not in obj or obj['GMNotes'] == '':
+                        return
+                    if card_deck_id not in obj['CustomDeck']:
+                        # 获取obj第一个key
+                        key = list(obj['CustomDeck'].keys())[0]
+                        obj['CustomDeck'][card_deck_id] = obj['CustomDeck'][key]
+                    result_array.append(obj)
+            finally:
+                # 继续递归检查所有值
+                for value in obj.values():
+                    check_object(value)
         elif isinstance(obj, list):
             # 递归检查列表中的每个元素
             for item in obj:
@@ -218,6 +221,41 @@ def merge_images(metadata, input_dir, output_dir, source_dir):
     merged.save(os.path.join(output_dir, metadata['file_name']))
 
 
+def sorting_images_by_id():
+    """额外分拣所有图片到特定文件夹并以ID命名"""
+    sorting_images_output_dir = os.path.join(working_directory, 'sorting_images_output')
+    # 如果文件夹不存在则创建
+    if not os.path.exists(sorting_images_output_dir):
+        os.mkdir(sorting_images_output_dir)
+        pass
+    # 查找加工文件夹下的所有文件夹，除去未查找到信息的文件
+    processing_folders = [folder for folder in os.listdir(os.path.join(working_directory, picture_processing))
+                          if folder != '未查找到信息的文件']
+    processing_folders_len = len(processing_folders)
+    for index, folder in enumerate(processing_folders):
+        print(f'正在分拣第{index + 1}/{processing_folders_len}个文件夹')
+        # 读取metadata.json
+        with open(os.path.join(working_directory, picture_processing, folder, 'metadata.json'), 'r',
+                  encoding='utf-8') as f:
+            metadata = json.load(f)
+            pass
+        # 将metadata['cards']按id从小到大排序
+        metadata['cards'].sort(key=lambda x: x['id'])
+        for card in metadata['cards']:
+            card_id = card['GMNotes']['id']
+            file_name = card['file_name']
+            # 读取file_name图片，转成jpg后保存到sorting_images_output_dir，以card_id命名
+            # 读取图片
+            with Image.open(os.path.join(working_directory, picture_processing, folder, file_name)) as img:
+                # 如果图片不是jpg格式，转成jpg
+                if img.format != 'JPEG':
+                    img = img.convert('RGB')
+                # 将图片向左旋转90度
+                # img = img.transpose(Image.ROTATE_90)
+                # 保存图片
+                img.save(os.path.join(sorting_images_output_dir, f"{card_id}-{'a' if card['is_back'] else 'b'}.jpg"))
+
+
 def sorting_images():
     """分拣图片"""
     print('正在清理文件夹...')
@@ -246,6 +284,8 @@ def sorting_images():
     source_files_len = len(source_files)
     for index, file in enumerate(source_files):
         print(f'正在处理第{index + 1}/{source_files_len}张图片')
+        # if 'httpssteamusercontentaakamaihdnetugc1684870715280867313BFD2AF968EAC917D3B838DCB8B1656941CD8' not in file:
+        #     continue
         # 取file文件名不包含后缀
         file_name = file.split('.')[0]
         # 取file文件名后缀
@@ -263,7 +303,6 @@ def sorting_images():
             card_deck_id = card_id[:-2]
             card_deck_num = int(card_id[-2:])
             custom_deck = card['CustomDeck'][card_deck_id]
-
             if custom_deck['FaceURL'] == file_name or custom_deck['BackURL'] == file_name:
                 deck_metadata['cards'].append({
                     'id': card_deck_num,
@@ -323,7 +362,10 @@ def find_db_player_card_by_id(card_id, player_cards):
     return find_db_player_card
 
 
-def remake_player_cards(additional_exports=False):
+temp_taboo_list = {}
+
+
+def remake_player_cards(additional_exports=False, replace_investigators=False):
     """汉化玩家卡"""
     font_manager = FontManager()
     image_manager = ImageManager()
@@ -350,8 +392,8 @@ def remake_player_cards(additional_exports=False):
         # # # 临时测试第一个文件夹
         # if index != 51:
         #     continue
-        # if folder != 'httpssteamusercontentaakamaihdnetugc24246963744306322729A953338B599473C1631AA82F75004CE941DA8B0':
-        #     continue
+        if folder != 'httpssteamusercontentaakamaihdnetugc2424696374430578395F97B770FB90EA18B46F58614CCE0016406E3E777':
+            continue
 
         print('folder', folder)
         print(metadata)
@@ -367,13 +409,14 @@ def remake_player_cards(additional_exports=False):
             find_db_player_card = find_db_player_card_by_id(card_id, player_cards)
             if find_db_player_card is not None:
                 # 构建卡牌
+                print("构建卡牌", find_db_player_card['code'], find_db_player_card['name'])
                 output_card = batch_build_card(
                     card_json=find_db_player_card,
                     font_manager=font_manager,
                     image_manager=image_manager,
                     picture_path=os.path.join(working_directory, picture_processing, folder, card['file_name']),
                     encounter_count=encounter_groups.get(find_db_player_card.get('encounter_code', ''), -1),
-                    is_back=True if 'a' in find_db_player_card['code'] else card.get('is_back', False)
+                    is_back=card.get('is_back', False)
                 )
                 # 保存卡牌
                 card['output_file_name'] = card['file_name'].split('.')[0] + '.png'
@@ -390,8 +433,9 @@ def remake_player_cards(additional_exports=False):
                             temp = temp.resize((int(temp.width / 1.5), int(temp.height / 1.5)))
                             temp.save(
                                 os.path.join(working_directory, 'additional_exports',
-                                             f'{find_db_player_card["code"]}.jpg'),
+                                             f'{find_db_player_card["code"]}-t.jpg'),
                                 quality=75)
+                            temp_taboo_list[find_db_player_card["code"]] = find_db_player_card
                             pass
 
                     output_card.image.save(os.path.join(output_dir, card['output_file_name']), quality=95)
@@ -493,7 +537,7 @@ def replace_taboo_card(player_card):
     return player_card
 
 
-def download_cards():
+def download_cards(download_all=False):
     """下载卡图图片"""
     # 读取player_cards.json
     with open(os.path.join(working_directory, 'player_cards.json'), 'r', encoding='utf-8') as f:
@@ -505,31 +549,32 @@ def download_cards():
 
         custom_deck = card['CustomDeck'][card_deck_id]
         GMNotes = json.loads(card['GMNotes'])
-        for db_player_card in player_cards:
-            if db_player_card['code'] == GMNotes['id']:
-                if 'The Drowned City Investigator Expansion' == db_player_card['pack_name']:
-                    continue
-                if db_player_card['type_name'] in ['调查员', '剧本', '密谋', '场景']:
-                    continue
-                # 下载图片
-                FaceURL.add(custom_deck['FaceURL'])
-                # 下载背面
-                if 'UniqueBack' in custom_deck and custom_deck['UniqueBack'] == True:
-                    FaceURL.add(custom_deck['BackURL'])
-                pass
+        if download_all is False:
+            for db_player_card in player_cards:
+                if db_player_card['code'] == GMNotes['id']:
+                    if 'The Drowned City Investigator Expansion' == db_player_card['pack_name']:
+                        continue
+                    if db_player_card['type_name'] in ['调查员', '剧本', '密谋', '场景']:
+                        continue
+                    # 下载图片
+                    FaceURL.add(custom_deck['FaceURL'])
+                    # 下载背面
+                    if 'UniqueBack' in custom_deck and custom_deck['UniqueBack'] is True:
+                        FaceURL.add(custom_deck['BackURL'])
+                    pass
+        else:
+            # 下载所有
+            FaceURL.add(custom_deck['FaceURL'])
+            # 下载背面
+            if 'UniqueBack' in custom_deck and custom_deck['UniqueBack'] is True:
+                FaceURL.add(custom_deck['BackURL'])
+            pass
     # 下载图片
     print(len(FaceURL))
     count = 1
     # 下载所有唯一图片
     for url in FaceURL:
         try:
-            # 下载图片 使用代理
-            proxies = {
-                'http': 'http://127.0.0.1:7890',
-                'https': 'http://127.0.0.1:7890',
-            }
-            response = requests.get(url, stream=True, timeout=30, proxies=proxies)
-            response.raise_for_status()  # 检查HTTP状态码
             # 格式化文件名
             filename = get_alnum_str(url)
             # 检测文件是否存在 jpg或png都检查
@@ -537,6 +582,13 @@ def download_cards():
                     os.path.join(working_directory, picture_source, f"{filename}.png")):
                 print(f'已存在 {filename}')
                 continue
+            # 下载图片 使用代理
+            proxies = {
+                'http': 'http://127.0.0.1:7890',
+                'https': 'http://127.0.0.1:7890',
+            }
+            response = requests.get(url, stream=True, timeout=30, proxies=proxies)
+            response.raise_for_status()  # 检查HTTP状态码
 
             save_path = os.path.join(working_directory, picture_source, filename)
 
@@ -608,6 +660,8 @@ def count_encounter_groups():
         if 'GMNotes' not in card:
             continue
         GMNotes = json.loads(card['GMNotes'])
+        if 'id' not in GMNotes:
+            continue
         find_db_player_card = find_db_player_card_by_id(GMNotes['id'], player_cards)
         if find_db_player_card is not None \
                 and find_db_player_card['code'] not in card_repetition and 'encounter_code' in find_db_player_card:
@@ -709,38 +763,64 @@ def remake_investigators_cards():
     font_manager = FontManager()
     image_manager = ImageManager()
     for investigator_card in investigators_cards:
-        # if investigator_card['name'] != '珍妮·巴恩斯':
-        #     continue
+        if 'encounter_name' in investigator_card:
+            continue
+        if investigator_card['code'][:2] == '90':
+            continue
+        picture_path = os.path.join(working_directory, 'investigators', 'sorting_images_output',
+                                    f"{investigator_card['code']}-b.jpg")
+        if not os.path.exists(picture_path):
+            continue
         # 构建卡牌
         output_card = batch_build_card(
             card_json=investigator_card,
             font_manager=font_manager,
             image_manager=image_manager,
-            picture_path=None,
+            picture_path=picture_path,
             encounter_count=-1,
             is_back=False
         )
-        print(output_card)
         # 保存卡牌
         if output_card is not None:
+            print('正在保存卡牌', investigator_card)
             output_card.image.save(
                 os.path.join(working_directory, 'investigators', f"{investigator_card['code']}-a.png"),
                 quality=95)
+            # # 转成RGB
+            # temp_p = output_card.image.convert('RGB')
+            # # 将图片长宽缩小一半
+            # temp_p = temp_p.resize((int(temp_p.width / 1.5), int(temp_p.height / 1.5)))
+            # temp_p.save(
+            #     os.path.join(working_directory, 'investigators', f"{investigator_card['code']}-a.jpg"),
+            #     quality=75)
         #
+        picture_path_2 = os.path.join(working_directory, 'investigators', 'sorting_images_output',
+                                      f"{investigator_card['code']}-a.jpg")
+        if not os.path.exists(picture_path):
+            continue
         # 构建卡牌
         output_card_2 = batch_build_card(
             card_json=investigator_card,
             font_manager=font_manager,
             image_manager=image_manager,
-            picture_path=None,
+            picture_path=picture_path_2,
             encounter_count=-1,
             is_back=True
         )
         # 保存卡牌
         if output_card_2 is not None:
+            print('正在保存卡牌', investigator_card)
             output_card_2.image.save(
                 os.path.join(working_directory, 'investigators', f"{investigator_card['code']}-b.png"),
                 quality=95)
+
+            # # 转成RGB
+            # temp_p = output_card_2.image.convert('RGB')
+            # # 将图片长宽缩小一半
+            # temp_p = temp_p.resize((int(temp_p.width / 1.5), int(temp_p.height / 1.5)))
+            # temp_p.save(
+            #     os.path.join(working_directory, 'investigators', f"{investigator_card['code']}-b.jpg"),
+            #     quality=75)
 
 
 if __name__ == '__main__':
@@ -749,16 +829,20 @@ if __name__ == '__main__':
     #     temp = json.load(f)
     #     all_player_cards = temp['ObjectStates'][0]['ContainedObjects']
     # 搜索JSON卡牌对象
-    # find_card_objects(os.path.join(working_directory, 'source_json'), all_player_cards)
+    find_card_objects(os.path.join(working_directory, 'source_json'), all_player_cards)
+    # print(json.dumps(all_player_cards))
     # test1()
     # 下载卡图
-    # download_cards()
+    # download_cards(download_all=True)
     # 分拣卡图
     # sorting_images()
+    # 额外分拣成ID文件名
+    # sorting_images_by_id()
     # 替换翻译
     # replace_translations()
     # 制作卡牌
-    remake_player_cards(additional_exports=True)
+    remake_player_cards(additional_exports=False, replace_investigators=True)
+    # print(json.dumps(temp_taboo_list, ensure_ascii=False, indent=4))
 
     # 制作调查员卡
     # remake_investigators_cards()

@@ -10,19 +10,19 @@ def build_submit_icon(json):
     """构建投入图标"""
     # 构建投入图标
     submit_icon = []
-    if 'skill_willpower' in json:
+    if 'skill_willpower' in json and json['skill_willpower'] is not None:
         for i in range(json['skill_willpower']):
             submit_icon.append('意志')
-    if 'skill_intellect' in json:
+    if 'skill_intellect' in json and json['skill_intellect'] is not None:
         for i in range(json['skill_intellect']):
             submit_icon.append('智力')
-    if 'skill_combat' in json:
+    if 'skill_combat' in json and json['skill_combat'] is not None:
         for i in range(json['skill_combat']):
             submit_icon.append('战力')
-    if 'skill_agility' in json:
+    if 'skill_agility' in json and json['skill_agility'] is not None:
         for i in range(json['skill_agility']):
             submit_icon.append('敏捷')
-    if 'skill_wild' in json:
+    if 'skill_wild' in json and json['skill_wild'] is not None:
         for i in range(json['skill_wild']):
             submit_icon.append('狂野')
     return submit_icon
@@ -34,7 +34,12 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
     font_manager = font_manager
     image_manager = image_manager
 
+    if 'linked_card' in card_json and is_back:
+        print("使用背面 linked_card")
+        card_json = card_json['linked_card']
+
     text = json.dumps(card_json, ensure_ascii=False)
+
     text = re.sub(r'守卫者', r"守护者", text)
     text = re.sub(r'求生者', r"生存者", text)
 
@@ -86,6 +91,15 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
     text = re.sub(r'\[mystic]', r"<潜修者>", text)
     text = re.sub(r'\[survivor]', r"<生存者>", text)
 
+    text = re.sub(r'</p><p>', r"\\n", text)
+    text = re.sub(r'<p>', r"", text)
+    text = re.sub(r'</p>', r"", text)
+
+    text = re.sub(r'<span class=\\"icon-reaction\\" title=\\"Reaction\\">', r"<反应>", text)
+    text = re.sub(r'</span>', r"", text)
+
+    print('text', text)
+
     card_json = json.loads(text)
     if 'text' in card_json and '[' in card_json['text']:
         # 报错
@@ -95,7 +109,8 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
     if 'real_name' in card_json and card_json['name'] == card_json['real_name']:
         # 无中文
         return None
-    print(card_json)
+    print('-------- is_back:', is_back)
+    print(json.dumps(card_json))
     # 解析成json输出
     build_json = {
         'type': '支援卡',
@@ -134,7 +149,6 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
         build_json['type'] = f"{card_json['type_name']}卡"
         build_json['class'] = '弱点'
         build_json['weakness_type'] = card_json.get('subtype_name', '')
-        print(build_json)
         # 构建图片
         card = create_weakness_back(
             card_json=build_json,
@@ -155,15 +169,15 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
             build_json['class'] = '多职阶'
             build_json['subclass'] = [card_json['faction_name'], card_json['faction2_name']]
         # 判断是否多槽位
-        if build_json['slots'] != '' and len(build_json['slots'].split('.')) > 1:
+        if (build_json['slots'] != '' and build_json['slots'] is not None) and len(build_json['slots'].split('.')) > 1:
             temp = build_json['slots'].split('.')
             build_json['slots'] = temp[1].strip()
             build_json['slots2'] = temp[0].strip()
 
         if 'permanent' in card_json and card_json['permanent']:
             build_json['cost'] = -1
-        # 构建图片
         print(build_json)
+        # 构建图片
         card = create_player_cards(
             card_json=build_json,
             font_manager=font_manager,
@@ -282,11 +296,14 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
             image_mode=1,
             transparent_encounter=True
         )
-    elif card_json['type_name'] == '调查员123 TODO':
+    elif card_json['type_name'] == '调查员123':
         # 构建支援卡json
         build_json['type'] = '调查员卡'
         build_json['attribute'] = [card_json['skill_willpower'], card_json['skill_intellect'],
                                    card_json['skill_combat'], card_json['skill_agility']]
+        if card_json['code'][:2] == '90':
+            # 平行调查员
+            build_json['investigators_type'] = '平行'
         # 构建图片
         if is_back:
             print(f"正在导出调查员卡背面: {card_json['name']}")
@@ -305,6 +322,7 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
                 card_json=build_json,
                 font_manager=font_manager,
                 image_manager=image_manager,
+                image_mode=1,
                 picture_path=picture_path
             )
         else:
@@ -314,6 +332,7 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
                 card_json=build_json,
                 font_manager=font_manager,
                 image_manager=image_manager,
+                image_mode=1,
                 picture_path=picture_path
             )
 
@@ -329,7 +348,7 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
             '07': {'name': '印斯茅斯的阴谋', 'year': 2020},
             '08': {'name': '暗与地球之界', 'year': 2021},
             '09': {'name': '绯红密钥', 'year': 2022},
-            '10': {'name': '铁杉谷盛宴', 'year': 2023},
+            '10': {'name': '铁杉谷盛宴', 'year': 2024},
             '50': {'name': '重返基础', 'year': 2017},
             '51': {'name': '重返敦威治遗产', 'year': 2018},
             '52': {'name': '重返卡尔克萨之路', 'year': 2019},
@@ -343,7 +362,7 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
             '604': {'name': '调查员包-潜修者', 'year': 2020},
             '605': {'name': '调查员包-生存者', 'year': 2019},
         }
-        if build_json['type'] != '敌人卡':
+        if build_json['type'] != '敌人卡' and build_json['type'] != '调查员卡':
             # 写底部信息
             middle_text = ''
             pack_code = card_json['code'][:2]

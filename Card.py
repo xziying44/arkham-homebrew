@@ -346,9 +346,9 @@ class Card:
                 temp_cache[font_name] = font
                 if node['tag'] == 'hr' or node['tag'] == 'lr':
                     if node['tag'] == 'lr':
-                        current_y += line_height + line_height // 6
+                        current_y += line_height + line_height // 4
                     else:
-                        current_y += line_height + line_height // 6
+                        current_y += line_height + line_height // 4
                     line_start_x, line_end_x = self.calculate_padding_x(vertices, current_y,
                                                                         current_y + line_height,
                                                                         padding)
@@ -596,9 +596,9 @@ class Card:
                 continue
             if node['tag'] == 'hr' or node['tag'] == 'lr':
                 if node['tag'] == 'lr':
-                    current_y += line_height + line_height // 6
+                    current_y += line_height + line_height // 4
                 else:
-                    current_y += line_height + line_height // 6
+                    current_y += line_height + line_height // 4
                 line_start_x, line_end_x = self.calculate_padding_x(vertices, current_y, current_y + line_height,
                                                                     padding)
                 current_x = line_start_x
