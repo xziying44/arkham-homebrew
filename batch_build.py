@@ -5,6 +5,16 @@ from Card import FontManager, ImageManager
 from create_card import create_player_cards, create_weakness_back, create_enemy_card, create_treachery_card, \
     create_location_card, create_investigators_card, create_investigators_card_back
 
+class_replace_dict = {
+    'guardian': '守护者',
+    'survivor': '生存者',
+    'rogue': '流浪者',
+    'seeker': '探求者',
+    'mystic': '潜修者',
+    'neutral': '中立',
+    'mythos': '神话',
+}
+
 
 def build_submit_icon(json):
     """构建投入图标"""
@@ -35,13 +45,9 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
     image_manager = image_manager
 
     if 'linked_card' in card_json and is_back:
-        print("使用背面 linked_card")
         card_json = card_json['linked_card']
 
     text = json.dumps(card_json, ensure_ascii=False)
-
-    text = re.sub(r'守卫者', r"守护者", text)
-    text = re.sub(r'求生者', r"生存者", text)
 
     text = re.sub(r'手部 x2', r"双手", text)
     text = re.sub(r'服装', r"身体", text)
@@ -83,6 +89,7 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
     text = re.sub(r'\[elder_sign]', r"<旧印>", text)
     text = re.sub(r'\[bless]', r"<祝福>", text)
     text = re.sub(r'\[curse]', r"<诅咒>", text)
+    text = re.sub(r'\[frost]', r"<雪花>", text)
 
     text = re.sub(r'\[per_investigator]', r"<调查员>", text)
     text = re.sub(r'\[guardian]', r"<守护者>", text)
@@ -98,29 +105,22 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
     text = re.sub(r'<span class=\\"icon-reaction\\" title=\\"Reaction\\">', r"<反应>", text)
     text = re.sub(r'</span>', r"", text)
 
-    print('text', text)
-
     card_json = json.loads(text)
     if 'text' in card_json and '[' in card_json['text']:
         # 报错
         raise ValueError('存在图标未处理 -> ' + text)
     if 'text' in card_json:
         card_json['text'] = re.sub(r'\n-', r"\n<点>", card_json['text'])
-    if 'real_name' in card_json and card_json['name'] == card_json['real_name']:
-        # 无中文
-        return None
-    print('-------- is_back:', is_back)
-    print(json.dumps(card_json))
     # 解析成json输出
     build_json = {
         'type': '支援卡',
-        'class': card_json['faction_name'],
+        'class': class_replace_dict.get(card_json['faction_code'].lower(), card_json['faction_name']),
         'name': ('<独特>' if card_json.get('is_unique', False) else '') + card_json['name'],
         'subtitle': card_json['subname'] if 'subname' in card_json else '',
         'cost': card_json['cost'] if 'cost' in card_json else -1,
         'slots': card_json['slot'] if 'slot' in card_json else '',
         'body': card_json['text'] if 'text' in card_json else '<hr>',
-        'traits': [trait.strip() for trait in card_json['traits'].split('.')] if 'traits' in card_json else [],
+        'traits': [trait.strip() for trait in card_json['traits'].split('.')] if card_json.get('traits', None) else [],
         'level': card_json['xp'] if 'xp' in card_json else -1,
         'flavor': card_json['flavor'] if 'flavor' in card_json else '',
         'health': card_json['health'] if 'health' in card_json else 0,
@@ -128,9 +128,9 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
         'victory': card_json['victory'] if 'victory' in card_json else -1,
         'submit_icon': build_submit_icon(card_json),
     }
-    if card_json['type_name'] == '敌人':
+    print(f"正在导出卡牌: {card_json['name']} -> {build_json}")
+    if card_json['type_code'] == 'enemy':
         # 添加敌人相关
-        print(f"正在导出敌人卡: {card_json}")
         build_json['enemy_health'] = str(card_json.get('health', '-'))
         if card_json.get('health_per_investigator', False):
             build_json['enemy_health'] += '<调查员>'
@@ -144,9 +144,8 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
     card = None
     if 'subtype_code' in card_json and \
             (card_json['subtype_code'] == 'weakness' or card_json['subtype_code'] == 'basicweakness'):
-        print(f"正在导出弱点卡: {card_json['name']}")
         # 构建支援卡json
-        build_json['type'] = f"{card_json['type_name']}卡"
+        # build_json['type'] = build_json['class']
         build_json['class'] = '弱点'
         build_json['weakness_type'] = card_json.get('subtype_name', '')
         # 构建图片
@@ -157,8 +156,7 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
             picture_path=picture_path,
             image_mode=1
         )
-    elif card_json['type_name'] == '支援':
-        print(f"正在导出支援卡: {card_json['name']}")
+    elif card_json['type_code'] == 'asset':
         # 构建支援卡json
         build_json['type'] = '支援卡'
         # 判断是否为多职介
@@ -176,7 +174,6 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
 
         if 'permanent' in card_json and card_json['permanent']:
             build_json['cost'] = -1
-        print(build_json)
         # 构建图片
         card = create_player_cards(
             card_json=build_json,
@@ -184,10 +181,10 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
             image_manager=image_manager,
             picture_path=picture_path,
             image_mode=1,
-            transparent_encounter=True if 'encounter_code' in card_json else False
+            # transparent_encounter=True if 'encounter_code' in card_json else False
+            transparent_encounter=False
         )
-    elif card_json['type_name'] == '事件':
-        print(f"正在导出事件卡: {card_json['name']}")
+    elif card_json['type_code'] == 'event':
         # 构建支援卡json
         build_json['type'] = '事件卡'
         # 判断是否为多职介
@@ -199,7 +196,7 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
             build_json['subclass'] = [card_json['faction_name'], card_json['faction2_name']]
         if 'permanent' in card_json and card_json['permanent']:
             build_json['cost'] = -1
-        print(build_json)
+        # print(f"正在导出事件卡: {card_json['name']} -> {build_json}")
         # 构建图片
         card = create_player_cards(
             card_json=build_json,
@@ -208,8 +205,7 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
             picture_path=picture_path,
             image_mode=1
         )
-    elif card_json['type_name'] == '技能':
-        print(f"正在导出技能卡: {card_json['name']}")
+    elif card_json['type_code'] == 'skill':
         # 构建支援卡json
         build_json['type'] = '技能卡'
         # 判断是否为多职介
@@ -218,7 +214,6 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
             build_json['subclass'] = [card_json['faction_name'], card_json['faction2_name']]
         if 'permanent' in card_json and card_json['permanent']:
             build_json['cost'] = -1
-        print(build_json)
         # 构建图片
         card = create_player_cards(
             card_json=build_json,
@@ -227,11 +222,9 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
             picture_path=picture_path,
             image_mode=1
         )
-    elif card_json['type_name'] == '敌人':
-        print(f"正在导出敌人卡: {card_json['name']}")
+    elif card_json['type_code'] == 'enemy':
         # 构建支援卡json
         build_json['type'] = '敌人卡'
-        print(build_json)
         if is_back:
             return None
         # 构建图片
@@ -241,14 +234,12 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
             image_manager=image_manager,
             picture_path=picture_path,
             image_mode=1,
-            transparent_encounter=True
+            transparent_encounter=False
         )
-    elif card_json['type_name'] == '诡计':
-        print(f"正在导出诡计卡: {card_json['name']}")
+    elif card_json['type_code'] == 'treachery':
         # 构建支援卡json
         build_json['type'] = '诡计卡'
 
-        print(build_json)
         # 构建图片
         card = create_treachery_card(
             card_json=build_json,
@@ -256,9 +247,9 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
             image_manager=image_manager,
             picture_path=picture_path,
             image_mode=1,
-            transparent_encounter=True
+            transparent_encounter=False
         )
-    elif card_json['type_name'] == '地点':
+    elif card_json['type_code'] == 'location':
         # 构建地点卡json
         build_json['type'] = '地点卡'
         # 隐藏值线索
@@ -294,9 +285,9 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
             image_manager=image_manager,
             picture_path=picture_path,
             image_mode=1,
-            transparent_encounter=True
+            transparent_encounter=False
         )
-    elif card_json['type_name'] == '调查员123':
+    elif card_json['type_code'] == 'investigator+++++':
         # 构建支援卡json
         build_json['type'] = '调查员卡'
         build_json['attribute'] = [card_json['skill_willpower'], card_json['skill_intellect'],
@@ -337,6 +328,7 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
             )
 
     if card is not None:
+        return card
         # 年份信息
         copyright_dict = {
             '01': {'name': '基础', 'year': 2016},

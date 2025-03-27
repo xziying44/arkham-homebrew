@@ -129,15 +129,30 @@ class ImageManager:
 class FontManager:
     """字体管理器，用于预加载和管理字体文件"""
 
-    def __init__(self, font_folder='fonts'):
+    def __init__(self, font_folder='fonts', lang='zh'):
         """
         初始化字体管理器
 
         :param font_folder: 字体文件存放目录，默认为'fonts'
         """
+        if lang == 'en':
+            self.font_dict = {
+                '思源黑体': 'NimbusRomNo9L-Med',
+                '方正舒体': 'NimbusRomNo9L-MedIta',
+                'simfang': 'ArnoPro-Regular',
+                '汉仪小隶书简': 'Teutonic',
+                '副标题': 'ArnoPro-Smbd',
+                '小字': 'ArnoPro-Smbd'
+            }
+        else:
+            self.font_dict = {
+                '副标题': '汉仪小隶书简',
+                '小字': '汉仪小隶书简',
+            }
         self.font_map = {}
         self.font_folder = font_folder
         self._load_fonts()
+        self.lang = lang
 
     def _load_fonts(self):
         """加载字体目录下所有支持的字体文件"""
@@ -157,10 +172,48 @@ class FontManager:
         :param font_name: 字体名称（不带扩展名）
         :return: 字体文件完整路径，如果找不到返回None
         """
-        return self.font_map.get(font_name.lower())
+        return self.font_map.get(self.font_dict.get(font_name, font_name).lower())
+
+    def get_font_offset(self, font_name):
+        """
+        获取字体偏移量
+
+        :param font_name: 字体名称（不带扩展名）
+        :return: 字体偏移量，如果找不到返回0
+        """
+        if self.lang == 'en' and font_name == '汉仪小隶书简':
+            return 6
+        if self.lang == 'en' and font_name == '副标题':
+            return 3
+        if self.lang == 'en' and font_name == '小字':
+            return 5
+        return 0
+
+    def get_font_text(self, text):
+        """
+        获取字体文本
+
+        :param text: 文本
+        :return: 文本
+        """
+        if self.lang == 'en':
+            if text == '技能':
+                return 'SKILL'
+            elif text == '地点':
+                return 'LOCATION'
+            elif text == '事件':
+                return 'EVENT'
+            elif text == '支援':
+                return 'ASSET'
+            elif text == '诡计':
+                return 'TREACHERY'
+            elif text == '敌人':
+                return 'ENEMY'
+
+        return text
 
 
-symbol_list = ['，', '。', '：', ':', '“', '”']
+symbol_list = ['，', '。', '：', ':', '“', '”', '.']
 
 
 class Card:
@@ -173,6 +226,7 @@ class Card:
         :param font_manager: 字体管理器实例，如果未提供则新建默认实例
         :param image_manager: 图像管理器实例，如果未提供则新建默认实例
         :param card_type: 卡牌类型 技能卡、支援卡、事件卡
+        :param lang:语言 zh 中文 en 英文
         """
         self.width = width
         self.height = height
@@ -185,6 +239,7 @@ class Card:
         self.slots_index = 0  # 槽位索引
         self.card_type = card_type
         self.card_class = card_class
+        self.text_mark = []
 
     def _extend_image_right(self, source_img, extension=800):
         # 截取右边5%的像素
@@ -485,6 +540,9 @@ class Card:
         font = self._get_font(font_name, font_size)
         _, text_height = self._get_text_dimensions(text, font)
         text_width = 0
+        if self.font_manager.lang == 'en' and '胜利' in text:
+            text = text.replace('胜利', 'Victory')
+            text = text.replace('。', '.')
 
         segments = self._parse_text_segments(text)
         for node in segments:
@@ -507,15 +565,26 @@ class Card:
 
                 font = self._get_font(font_name, font_size) if _font_name == 'default' else self._get_font(_font_name,
                                                                                                            font_size)
-                char_w, _ = self._get_text_dimensions(content, font)
+                char_w, char_h = self._get_text_dimensions(content, font)
                 offset = 0
                 if 'attrs' in node and 'offset' in node['attrs']:
                     offset = int(int(node['attrs']['offset']) / 100 * font_size)
+                offset += self.font_manager.get_font_offset(font_name)
                 if has_border:
                     self.draw.text((current_x, y + offset), content, font=font, fill=font_color,
                                    stroke_width=border_width, stroke_fill=border_color)
                 else:
                     self.draw.text((current_x, y + offset), content, font=font, fill=font_color)
+                # 加入标记数据
+                self.optimization_mark({
+                    'points': [
+                        (current_x, y + offset),
+                        (current_x + char_w, y + offset),
+                        (current_x + char_w, y + offset + char_h),
+                        (current_x, y + offset + char_h)
+                    ],
+                    'text': self.get_font_text_emoji(font_name if _font_name == 'default' else _font_name, content)
+                }, font_name if _font_name == 'default' else _font_name)
                 current_x += char_w
 
     def draw_left_text(self, position, text, font_name, font_size, font_color,
@@ -543,17 +612,102 @@ class Card:
 
                 font = self._get_font(font_name, font_size) if _font_name == 'default' else self._get_font(_font_name,
                                                                                                            font_size)
-                char_w, _ = self._get_text_dimensions(content, font)
+                char_w, char_h = self._get_text_dimensions(content, font)
                 offset = 0
                 if 'attrs' in node and 'offset' in node['attrs']:
                     offset = int(int(node['attrs']['offset']) / 100 * font_size)
-
+                offset += self.font_manager.get_font_offset(font_name)
                 if has_border:
                     self.draw.text((current_x, y + offset), content, font=font, fill=font_color,
                                    stroke_width=border_width, stroke_fill=border_color)
                 else:
                     self.draw.text((current_x, y + offset), content, font=font, fill=font_color)
+                # 加入标记数据
+                self.optimization_mark({
+                    'points': [
+                        (current_x, y + offset),
+                        (current_x + char_w, y + offset),
+                        (current_x + char_w, y + offset + char_h),
+                        (current_x, y + offset + char_h)
+                    ],
+                    'text': self.get_font_text_emoji(font_name if _font_name == 'default' else _font_name, content)
+                }, font_name if _font_name == 'default' else _font_name)
                 current_x += char_w
+
+    def optimization_mark(self, mark_object, font_name=None):
+        # 微调部分字体
+        if font_name:
+            offset = 0
+            if font_name == 'arkham-icons' and mark_object['text'] == '🏅':
+                offset = 10
+            elif font_name == 'Bolton' or font_name == '汉仪小隶书简':
+                offset = 3
+            elif font_name == 'Teutonic':
+                offset = 6
+            if offset != 0:
+                for i, point in enumerate(mark_object['points']):
+                    mark_object['points'][i] = (point[0], point[1] + offset)
+        # 将mark_object的坐标都转为整数
+        mark_object['points'] = [(int(point[0]), int(point[1])) for point in mark_object['points']]
+        self.text_mark.append(mark_object)
+
+    @staticmethod
+    def get_font_text_emoji(font_name, text):
+        if font_name == 'arkham-icons':
+            if text == 'w':
+                return '🏅'
+            elif text == 'x':
+                return '-'
+            elif text == 'l':
+                return '⭕'
+            elif text == 'j':
+                return '➡️'
+            elif text == 'k':
+                return '⚡'
+            elif text == 'm':
+                return '💀'
+            elif text == 'n':
+                return '👤'
+            elif text == 'o':
+                return '📜'
+            elif text == 'p':
+                return '👹'
+            elif text == 'r':
+                return '🐙'
+            elif text == 'q':
+                return '⭐'
+            elif text == 'b':
+                return '👊'
+            elif text == 'a':
+                return '📚'
+            elif text == 'c':
+                return '🦶'
+            elif text == '.':
+                return '🧠'
+            elif text == 'd':
+                return '❓'
+            elif text == 'y':
+                return '🔵'
+            elif text == 't':
+                return '🌑'
+            elif text == 's':
+                return '🌟'
+            elif text == 'u':
+                return '❄️'
+            elif text == 'v':
+                return '🕵️'
+            elif text == 'g':
+                return '🚶'
+            elif text == 'i':
+                return '🏕️'
+            elif text == 'e':
+                return '🛡️'
+            elif text == 'h':
+                return '🧘'
+            elif text == 'f':
+                return '🔍'
+
+        return text
 
     def draw_text(self, text, vertices, default_font_name='simfang',
                   default_size=12, color=(0, 0, 0), padding=10, draw_virtual_box=False):
@@ -585,33 +739,65 @@ class Card:
         current_y = min(v[1] for v in vertices) + padding
         line_start_x, line_end_x = self.calculate_padding_x(vertices, current_y, current_y + line_height, padding)
         current_x = line_start_x
+        # 记录标记数据
+        last_line_start_x = line_start_x
+        last_line_end_x = line_end_x
+        last_current_y = current_y
+        last_text = ''
+        line_offset = int(line_height * 0.1)
+        eof_is_br = False  # 结尾是否是换行符
 
         for node in segments:
             font_name, content = node['attrs']['name'] if node['tag'] == 'fonts' else 'default', node['content']
-            if node['tag'] == 'br':
-                current_y += line_height
-                line_start_x, line_end_x = self.calculate_padding_x(vertices, current_y, current_y + line_height,
-                                                                    padding)
-                current_x = line_start_x
-                continue
             if node['tag'] == 'hr' or node['tag'] == 'lr':
+                last_current_y = current_y
                 if node['tag'] == 'lr':
                     current_y += line_height + line_height // 4
                 else:
                     current_y += line_height + line_height // 4
+                # 加入标记数据
+                self.optimization_mark({
+                    'points': [
+                        (last_line_start_x, last_current_y - line_offset),
+                        (current_x, last_current_y - line_offset),
+                        (current_x, last_current_y + size - line_offset),
+                        (last_line_start_x, last_current_y + size - line_offset)
+                    ],
+                    'text': last_text
+                })
+                last_text = ''
+                eof_is_br = True
+                # 计算新一行开始和结束
                 line_start_x, line_end_x = self.calculate_padding_x(vertices, current_y, current_y + line_height,
                                                                     padding)
+                last_line_start_x, last_line_end_x = line_start_x, line_end_x
                 current_x = line_start_x
+
                 continue
             if node['tag'] == 'text' or node['tag'] == 'fonts':
+                eof_is_br = False
                 font = fonts_cache.get(font_name, self.default_font)
                 for char in list(content):
+                    last_text += self.get_font_text_emoji(font_name, char)
+                    last_current_y = current_y
                     char_w, char_h = self._get_text_dimensions(char, font)
                     if current_x + char_w > line_end_x and char not in symbol_list:
                         current_y += line_height
+                        # 加入标记数据
+                        self.optimization_mark({
+                            'points': [
+                                (last_line_start_x, last_current_y - line_offset),
+                                (last_line_end_x, last_current_y - line_offset),
+                                (last_line_end_x, last_current_y + size - line_offset),
+                                (last_line_start_x, last_current_y + size - line_offset)
+                            ],
+                            'text': last_text
+                        })
+                        last_text = ''
                         line_start_x, line_end_x = self.calculate_padding_x(vertices, current_y,
                                                                             current_y + line_height,
                                                                             padding)
+                        last_line_start_x, last_line_end_x = line_start_x, line_end_x
                         current_x = line_start_x
                     offset = 0
                     if 'attrs' in node and 'offset' in node['attrs']:
@@ -622,9 +808,9 @@ class Card:
                         pass
                     else:
                         self.draw.text((current_x, current_y + offset), char, font=font, fill=color)
-                        pass
                     current_x += char_w
             if node['tag'] == 'relish':
+                eof_is_br = True
                 center = True
                 if 'center' in node['attrs'] and node['attrs']['center'] == 'false':
                     center = False
@@ -668,6 +854,19 @@ class Card:
                             font=relish_font,
                             fill=color
                         )
+        print(eof_is_br)
+        if eof_is_br is False:
+            # 加入标记数据
+            self.optimization_mark({
+                'points': [
+                    (last_line_start_x, last_current_y - line_offset),
+                    (current_x, last_current_y - line_offset),
+                    (current_x, last_current_y + size - line_offset),
+                    (last_line_start_x, last_current_y + size - line_offset)
+                ],
+                'text': last_text
+            })
+            pass
 
     def _draw_italic_text(self, text, font, fill, center_x=None, center_y=None, left_x=0, left_y=0, shear_factor=0.2):
         """
@@ -708,6 +907,18 @@ class Card:
         if center_x != None and center_y != None:
             paste_x = center_x - sheared_img.width // 2
             paste_y = center_y - sheared_img.height // 2
+        print(paste_x, paste_y)
+        img_w, img_h = sheared_img.size
+        # 加入标记数据
+        self.optimization_mark({
+            'points': [
+                (paste_x, paste_y),
+                (paste_x + img_w, paste_y),
+                (paste_x + img_w, paste_y + img_h),
+                (paste_x, paste_y + img_h)
+            ],
+            'text': text
+        })
         draw._image.alpha_composite(sheared_img, (int(paste_x), int(paste_y)))
 
     def _get_font(self, font_name, size):
@@ -738,7 +949,19 @@ class Card:
         if name not in ['意志', '战力', '敏捷', '智力', '狂野']:
             return
         img = self.image_manager.get_image(f'投入-{self.card_class}-{name}')
+        img_w, img_h = img.size
         self.paste_image(img, (0, 167 + self.submit_index * 85), 'contain')
+        # 加入标记数据
+        offset_x, offset_y = 20, 10
+        self.optimization_mark({
+            'points': [
+                (offset_x, 167 + self.submit_index * 85 + offset_y),
+                (img_w - offset_x - 3, 167 + self.submit_index * 85 + offset_y),
+                (img_w - offset_x - 3, 167 + self.submit_index * 85 + img_h - offset_y - 3),
+                (offset_x, 167 + self.submit_index * 85 + img_h - offset_y - 3)
+            ],
+            'text': name
+        })
         self.submit_index += 1
 
     def set_card_level(self, level=None):
@@ -855,11 +1078,31 @@ class Card:
                 for i in range(health):
                     img = self.image_manager.get_image('UI-伤害')
                     self.paste_image(img, (260 - i * 45, 583 - i * 23 - curve[i]), 'contain')
+                    # 加入标记数据
+                    self.optimization_mark({
+                        'points': [
+                            (260 - i * 45, 583 - i * 23 - curve[i]),
+                            (260 - i * 45 + 40, 583 - i * 23 - curve[i]),
+                            (260 - i * 45 + 40, 583 - i * 23 + 40 - curve[i]),
+                            (260 - i * 45, 583 - i * 23 + 40 - curve[i])
+                        ],
+                        'text': '🫀'
+                    })
                 pass
             if 0 < horror < 6:
                 for i in range(horror):
                     img = self.image_manager.get_image('UI-恐惧')
                     self.paste_image(img, (440 + i * 45, 583 - i * 23 - curve[i] + 4), 'contain')
+                    # 加入标记数据
+                    self.optimization_mark({
+                        'points': [
+                            (440 + i * 45, 583 - i * 23 - curve[i] + 4),
+                            (440 + i * 45 + 40, 583 - i * 23 - curve[i] + 4),
+                            (440 + i * 45 + 40, 583 - i * 23 + 40 - curve[i] + 4),
+                            (440 + i * 45, 583 - i * 23 + 40 - curve[i] + 4)
+                        ],
+                        'text': '💙'
+                    })
                 pass
             return
         # 画底图
@@ -946,11 +1189,31 @@ class Card:
         if number == 'x':
             y -= 4
         self.draw.text((x, y), number, font=font, fill=color, stroke_width=1, stroke_fill=stroke_color)
+        # 加入标记数据
+        self.optimization_mark({
+            'points': [
+                (x, y),
+                (x + number_width, y),
+                (x + number_width, y + text_height),
+                (x, y + text_height)
+            ],
+            'text': number
+        }, 'Bolton')
         # 画调查员
         if investigator_font is not None:
             x = position[0] + number_width // 2 - investigator_width // 2 + 4
             self.draw.text((x, y + 3), 'v', font=investigator_font, fill=color, stroke_width=1,
                            stroke_fill=stroke_color)
+            # 加入标记数据
+            self.optimization_mark({
+                'points': [
+                    (x, y + 3),
+                    (x + investigator_width, y + 3),
+                    (x + investigator_width, y + 3 + investigator_width),
+                    (x, y + 3 + investigator_width)
+                ],
+                'text': self.get_font_text_emoji('arkham-icons', 'v')
+            }, 'arkham-icons')
 
     def set_basic_weakness_icon(self):
         """添加基础弱点图标"""

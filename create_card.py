@@ -158,6 +158,17 @@ def tidy_body_flavor(data):
     return body
 
 
+def integrate_traits_text(font_manager, traits):
+    """整合特性文本"""
+    if traits is None:
+        return ''
+    delimiter = '，'
+    if font_manager.lang == 'en':
+        delimiter = '. '
+
+    return delimiter.join([font_manager.get_font_text(trait) for trait in traits])
+
+
 def create_location_card(card_json, picture_path=None, font_manager=None, image_manager=None, image_mode=0,
                          transparent_encounter=False):
     """制作地点卡"""
@@ -207,8 +218,8 @@ def create_location_card(card_json, picture_path=None, font_manager=None, image_
     # 写小字
     card.draw_centered_text(
         position=(370, 562),
-        text="地点",
-        font_name="汉仪小隶书简",
+        text=font_manager.get_font_text("地点"),
+        font_name="小字",
         font_size=26,
         font_color=(0, 0, 0)
     )
@@ -225,14 +236,14 @@ def create_location_card(card_json, picture_path=None, font_manager=None, image_
         card.draw_centered_text(
             position=(370, 88),
             text=data['subtitle'],
-            font_name="汉仪小隶书简",
+            font_name="副标题",
             font_size=32,
             font_color=(0, 0, 0)
         )
     # 写特性
     card.draw_centered_text(
         position=(370, 610),
-        text='，'.join(data['traits']),
+        text=integrate_traits_text(font_manager, data['traits']),
         font_name="方正舒体",
         font_size=32,
         font_color=(0, 0, 0)
@@ -319,8 +330,8 @@ def create_treachery_card(card_json, picture_path=None, font_manager=None, image
     # 写小字
     card.draw_centered_text(
         position=(370, 576),
-        text="诡计",
-        font_name="汉仪小隶书简",
+        text=font_manager.get_font_text("诡计"),
+        font_name="小字",
         font_size=24,
         font_color=(0, 0, 0)
     )
@@ -335,7 +346,7 @@ def create_treachery_card(card_json, picture_path=None, font_manager=None, image
     # 写特性
     card.draw_centered_text(
         position=(370, 690),
-        text='，'.join(data['traits']),
+        text=integrate_traits_text(font_manager, data['traits']),
         font_name="方正舒体",
         font_size=32,
         font_color=(0, 0, 0)
@@ -394,8 +405,8 @@ def create_enemy_card(card_json, picture_path=None, font_manager=None, image_man
     # 写小字
     card.draw_centered_text(
         position=(364, 617),
-        text="敌人",
-        font_name="汉仪小隶书简",
+        text=font_manager.get_font_text("敌人"),
+        font_name="小字",
         font_size=24,
         font_color=(0, 0, 0)
     )
@@ -412,14 +423,14 @@ def create_enemy_card(card_json, picture_path=None, font_manager=None, image_man
         card.draw_centered_text(
             position=(370, 78),
             text=data['subtitle'],
-            font_name="汉仪小隶书简",
+            font_name="副标题",
             font_size=32,
             font_color=(0, 0, 0)
         )
     # 写特性
     card.draw_centered_text(
         position=(370, 218),
-        text='，'.join(data['traits']),
+        text=integrate_traits_text(font_manager, data['traits']),
         font_name="方正舒体",
         font_size=32,
         font_color=(0, 0, 0)
@@ -554,6 +565,7 @@ def create_weakness_back(card_json, picture_path=None, font_manager=None, image_
         card_type=data['type'],
         card_class=data['class']
     )
+    print(data['type'])
     if data['type'] not in ['事件卡', '支援卡', '技能卡', '诡计卡', '敌人卡']:
         raise ValueError('卡牌类型错误')
     # 整合body和flavor
@@ -574,8 +586,8 @@ def create_weakness_back(card_json, picture_path=None, font_manager=None, image_
         # 写小字
         card.draw_centered_text(
             position=(76, 130),
-            text="事件",
-            font_name="汉仪小隶书简",
+            text=font_manager.get_font_text("事件"),
+            font_name="小字",
             font_size=24,
             font_color=(0, 0, 0)
         )
@@ -598,7 +610,7 @@ def create_weakness_back(card_json, picture_path=None, font_manager=None, image_
         # 写特性
         card.draw_centered_text(
             position=(370, 715),
-            text='，'.join(data['traits']),
+            text=integrate_traits_text(font_manager, data['traits']),
             font_name="方正舒体",
             font_size=32,
             font_color=(0, 0, 0)
@@ -638,8 +650,8 @@ def create_weakness_back(card_json, picture_path=None, font_manager=None, image_
         # 写小字
         card.draw_centered_text(
             position=(76, 130),
-            text="支援",
-            font_name="汉仪小隶书简",
+            text=font_manager.get_font_text("支援"),
+            font_name="小字",
             font_size=24,
             font_color=(0, 0, 0)
         )
@@ -656,7 +668,7 @@ def create_weakness_back(card_json, picture_path=None, font_manager=None, image_
             card.draw_centered_text(
                 position=(370, 101),
                 text=data['subtitle'],
-                font_name="汉仪小隶书简",
+                font_name="副标题",
                 font_size=32,
                 font_color=(0, 0, 0)
             )
@@ -671,7 +683,7 @@ def create_weakness_back(card_json, picture_path=None, font_manager=None, image_
         # 写特性
         card.draw_centered_text(
             position=(370, 649),
-            text='，'.join(data['traits']),
+            text=integrate_traits_text(font_manager, data['traits']),
             font_name="方正舒体",
             font_size=32,
             font_color=(0, 0, 0)
@@ -722,8 +734,8 @@ def create_weakness_back(card_json, picture_path=None, font_manager=None, image_
         # 写小字
         card.draw_centered_text(
             position=(76, 130),
-            text="技能",
-            font_name="汉仪小隶书简",
+            text=font_manager.get_font_text("技能"),
+            font_name="小字",
             font_size=24,
             font_color=(0, 0, 0)
         )
@@ -740,7 +752,7 @@ def create_weakness_back(card_json, picture_path=None, font_manager=None, image_
             card.draw_centered_text(
                 position=(378, 106),
                 text=data['subtitle'],
-                font_name="汉仪小隶书简",
+                font_name="副标题",
                 font_size=32,
                 font_color=(0, 0, 0)
             )
@@ -755,7 +767,7 @@ def create_weakness_back(card_json, picture_path=None, font_manager=None, image_
         # 写特性
         card.draw_centered_text(
             position=(368, 742),
-            text='，'.join(data['traits']),
+            text=integrate_traits_text(font_manager, data['traits']),
             font_name="方正舒体",
             font_size=32,
             font_color=(0, 0, 0)
@@ -794,8 +806,8 @@ def create_weakness_back(card_json, picture_path=None, font_manager=None, image_
         # 写小字
         card.draw_centered_text(
             position=(370, 576),
-            text="诡计",
-            font_name="汉仪小隶书简",
+            text=font_manager.get_font_text("诡计"),
+            font_name="小字",
             font_size=24,
             font_color=(0, 0, 0)
         )
@@ -818,7 +830,7 @@ def create_weakness_back(card_json, picture_path=None, font_manager=None, image_
         # 写特性
         card.draw_centered_text(
             position=(370, 715),
-            text='，'.join(data['traits']),
+            text=integrate_traits_text(font_manager, data['traits']),
             font_name="方正舒体",
             font_size=32,
             font_color=(0, 0, 0)
@@ -852,8 +864,8 @@ def create_weakness_back(card_json, picture_path=None, font_manager=None, image_
         # 写小字
         card.draw_centered_text(
             position=(370, 620),
-            text="敌人",
-            font_name="汉仪小隶书简",
+            text=font_manager.get_font_text("敌人"),
+            font_name="小字",
             font_size=24,
             font_color=(0, 0, 0)
         )
@@ -876,7 +888,7 @@ def create_weakness_back(card_json, picture_path=None, font_manager=None, image_
         # 写特性
         card.draw_centered_text(
             position=(370, 218),
-            text='，'.join(data['traits']),
+            text=integrate_traits_text(font_manager, data['traits']),
             font_name="方正舒体",
             font_size=32,
             font_color=(0, 0, 0)
@@ -1000,7 +1012,7 @@ def create_investigators_card_back(card_json, picture_path=None, font_manager=No
     card.draw_centered_text(
         position=(750, 86),
         text=data['subtitle'],
-        font_name="汉仪小隶书简",
+        font_name="副标题",
         font_size=32,
         font_color=(0, 0, 0)
     )
@@ -1101,7 +1113,7 @@ def create_investigators_card(card_json, picture_path=None, font_manager=None, i
     card.draw_centered_text(
         position=(320, 90),
         text=data['subtitle'],
-        font_name="汉仪小隶书简",
+        font_name="副标题",
         font_size=32,
         font_color=(0, 0, 0)
     )
@@ -1118,7 +1130,7 @@ def create_investigators_card(card_json, picture_path=None, font_manager=None, i
     # 写属性
     traits = ''
     if 'traits' in data and isinstance(data['traits'], list):
-        traits = '，'.join(data['traits'])
+        traits = integrate_traits_text(font_manager, data['traits'])
     card.draw_centered_text(
         position=(810, 168),
         text=traits,
@@ -1192,8 +1204,8 @@ def create_player_cards(card_json, picture_path=None, font_manager=None, image_m
         # 写小字
         card.draw_centered_text(
             position=(73, 132),
-            text="技能",
-            font_name="汉仪小隶书简",
+            text=font_manager.get_font_text("技能"),
+            font_name="小字",
             font_size=24,
             font_color=(0, 0, 0)
         )
@@ -1223,8 +1235,8 @@ def create_player_cards(card_json, picture_path=None, font_manager=None, image_m
         # 写小字
         card.draw_centered_text(
             position=(73, 130),
-            text="事件",
-            font_name="汉仪小隶书简",
+            text=font_manager.get_font_text("事件"),
+            font_name="小字",
             font_size=24,
             font_color=(0, 0, 0)
         )
@@ -1258,8 +1270,8 @@ def create_player_cards(card_json, picture_path=None, font_manager=None, image_m
         # 写小字
         card.draw_centered_text(
             position=(73, 130),
-            text="支援",
-            font_name="汉仪小隶书简",
+            text=font_manager.get_font_text("支援"),
+            font_name="小字",
             font_size=24,
             font_color=(0, 0, 0)
         )
@@ -1282,7 +1294,7 @@ def create_player_cards(card_json, picture_path=None, font_manager=None, image_m
         card.set_card_level(data['level'])
     traits = ''
     if 'traits' in data and isinstance(data['traits'], list):
-        traits = '，'.join(data['traits'])
+        traits = integrate_traits_text(font_manager, data['traits'])
     # 整理body和风味
     body = tidy_body_flavor(data)
     # 按不同类型画位置
@@ -1382,7 +1394,7 @@ def create_player_cards(card_json, picture_path=None, font_manager=None, image_m
             card.draw_centered_text(
                 position=(375, 101),
                 text=data['subtitle'],
-                font_name="汉仪小隶书简",
+                font_name="副标题",
                 font_size=32,
                 font_color=(0, 0, 0)
             )
