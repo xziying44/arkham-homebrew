@@ -640,6 +640,10 @@ class Card:
             offset = 0
             if font_name == 'arkham-icons' and mark_object['text'] == '🏅':
                 offset = 10
+            if font_name == 'arkham-icons' and mark_object['text'] == '—':
+                offset = 10
+            if font_name == 'Teutonic' and mark_object['text'] == '—':
+                offset = 15
             elif font_name == 'Bolton' or font_name == '汉仪小隶书简':
                 offset = 3
             elif font_name == 'Teutonic':
@@ -657,7 +661,7 @@ class Card:
             if text == 'w':
                 return '🏅'
             elif text == 'x':
-                return '-'
+                return '—'
             elif text == 'l':
                 return '⭕'
             elif text == 'j':
@@ -949,19 +953,7 @@ class Card:
         if name not in ['意志', '战力', '敏捷', '智力', '狂野']:
             return
         img = self.image_manager.get_image(f'投入-{self.card_class}-{name}')
-        img_w, img_h = img.size
         self.paste_image(img, (0, 167 + self.submit_index * 85), 'contain')
-        # 加入标记数据
-        offset_x, offset_y = 20, 10
-        self.optimization_mark({
-            'points': [
-                (offset_x, 167 + self.submit_index * 85 + offset_y),
-                (img_w - offset_x - 3, 167 + self.submit_index * 85 + offset_y),
-                (img_w - offset_x - 3, 167 + self.submit_index * 85 + img_h - offset_y - 3),
-                (offset_x, 167 + self.submit_index * 85 + img_h - offset_y - 3)
-            ],
-            'text': name
-        })
         self.submit_index += 1
 
     def set_card_level(self, level=None):

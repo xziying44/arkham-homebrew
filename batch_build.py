@@ -128,7 +128,7 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
         'victory': card_json['victory'] if 'victory' in card_json else -1,
         'submit_icon': build_submit_icon(card_json),
     }
-    print(f"正在导出卡牌: {card_json['name']} -> {build_json}")
+    # print(f"正在导出卡牌: {card_json['name']} -> {build_json}")
     if card_json['type_code'] == 'enemy':
         # 添加敌人相关
         build_json['enemy_health'] = str(card_json.get('health', '-'))
@@ -263,14 +263,14 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
                 break
 
         if no_back or is_back:
-            print(f"正在导出地点卡已揭示面: {card_json['name']}")
+            # print(f"正在导出地点卡已揭示面: {card_json['name']}")
             # 已揭示面
             build_json['location_type'] = '已揭示'
             build_json['body'] = card_json.get('text', '')
             build_json['name'] = card_json.get('name', '')
             build_json['flavor'] = card_json.get('flavor', '')
         else:
-            print(f"正在导出地点卡未揭示面: {card_json['name']}")
+            # print(f"正在导出地点卡未揭示面: {card_json['name']}")
             # 未揭示面
             build_json['location_type'] = '未揭示'
             build_json['body'] = card_json.get('back_text', '')
@@ -297,7 +297,7 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
             build_json['investigators_type'] = '平行'
         # 构建图片
         if is_back:
-            print(f"正在导出调查员卡背面: {card_json['name']}")
+            # print(f"正在导出调查员卡背面: {card_json['name']}")
             # 构造背面
             build_json['card_back'] = {
                 "size": -1,
@@ -318,7 +318,7 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
             )
         else:
             # 构造正面
-            print(f"正在导出调查员卡正面: {card_json['name']}")
+            # print(f"正在导出调查员卡正面: {card_json['name']}")
             card = create_investigators_card(
                 card_json=build_json,
                 font_manager=font_manager,
