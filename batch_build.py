@@ -1,4 +1,6 @@
 import json
+import os
+import random
 import re
 
 from Card import FontManager, ImageManager
@@ -13,6 +15,27 @@ class_replace_dict = {
     'mystic': '潜修者',
     'neutral': '中立',
     'mythos': '神话',
+}
+
+slot_replace_dict = {
+    'Ally': '盟友',
+    'Accessory': '饰品',
+    'Hand': '手部',
+    'Hand x2': '双手',
+    'Body': '身体',
+    'Arcane': '法术',
+    'Arcane x2': '双法术',
+    'Tarot': '塔罗'
+}
+
+type_code_dict = {
+    'asset': '支援卡',
+    'event': '事件卡',
+    'skill': '技能卡',
+    'enemy': '敌人卡',
+    'treachery': '诡计卡',
+    'location': '地点卡',
+    'investigator': '调查员卡',
 }
 
 
@@ -113,12 +136,12 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
         card_json['text'] = re.sub(r'\n-', r"\n<点>", card_json['text'])
     # 解析成json输出
     build_json = {
-        'type': '支援卡',
+        'type': type_code_dict.get(card_json['type_code'], ''),
         'class': class_replace_dict.get(card_json['faction_code'].lower(), card_json['faction_name']),
         'name': ('<独特>' if card_json.get('is_unique', False) else '') + card_json['name'],
         'subtitle': card_json['subname'] if 'subname' in card_json else '',
         'cost': card_json['cost'] if 'cost' in card_json else -1,
-        'slots': card_json['slot'] if 'slot' in card_json else '',
+        'slots': slot_replace_dict.get(card_json['real_slot'], '') if 'slot' in card_json else '',
         'body': card_json['text'] if 'text' in card_json else '<hr>',
         'traits': [trait.strip() for trait in card_json['traits'].split('.')] if card_json.get('traits', None) else [],
         'level': card_json['xp'] if 'xp' in card_json else -1,
@@ -162,10 +185,17 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
         # 判断是否为多职介
         if 'faction3_name' in card_json and card_json['faction3_name'] != '':
             build_json['class'] = '多职阶'
-            build_json['subclass'] = [card_json['faction_name'], card_json['faction2_name'], card_json['faction3_name']]
+            build_json['subclass'] = [
+                class_replace_dict.get(card_json['faction_code']),
+                class_replace_dict.get(card_json['faction2_code']),
+                class_replace_dict.get(card_json['faction3_code'])
+            ]
         elif 'faction2_name' in card_json and card_json['faction2_name'] != '':
             build_json['class'] = '多职阶'
-            build_json['subclass'] = [card_json['faction_name'], card_json['faction2_name']]
+            build_json['subclass'] = [
+                class_replace_dict.get(card_json['faction_code']),
+                class_replace_dict.get(card_json['faction2_code'])
+            ]
         # 判断是否多槽位
         if (build_json['slots'] != '' and build_json['slots'] is not None) and len(build_json['slots'].split('.')) > 1:
             temp = build_json['slots'].split('.')
@@ -190,10 +220,17 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
         # 判断是否为多职介
         if 'faction3_name' in card_json and card_json['faction3_name'] != '':
             build_json['class'] = '多职阶'
-            build_json['subclass'] = [card_json['faction_name'], card_json['faction2_name'], card_json['faction3_name']]
+            build_json['subclass'] = [
+                class_replace_dict.get(card_json['faction_code']),
+                class_replace_dict.get(card_json['faction2_code']),
+                class_replace_dict.get(card_json['faction3_code'])
+            ]
         elif 'faction2_name' in card_json and card_json['faction2_name'] != '':
             build_json['class'] = '多职阶'
-            build_json['subclass'] = [card_json['faction_name'], card_json['faction2_name']]
+            build_json['subclass'] = [
+                class_replace_dict.get(card_json['faction_code']),
+                class_replace_dict.get(card_json['faction2_code'])
+            ]
         if 'permanent' in card_json and card_json['permanent']:
             build_json['cost'] = -1
         # print(f"正在导出事件卡: {card_json['name']} -> {build_json}")
@@ -211,7 +248,10 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
         # 判断是否为多职介
         if 'faction2_name' in card_json and card_json['faction2_name'] != '':
             build_json['class'] = '多职阶'
-            build_json['subclass'] = [card_json['faction_name'], card_json['faction2_name']]
+            build_json['subclass'] = [
+                class_replace_dict.get(card_json['faction_code']),
+                class_replace_dict.get(card_json['faction2_code'])
+            ]
         if 'permanent' in card_json and card_json['permanent']:
             build_json['cost'] = -1
         # 构建图片
@@ -255,6 +295,19 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
         # 隐藏值线索
         build_json['shroud'] = f"{card_json.get('shroud', 0)}"
         build_json['clues'] = f"{card_json.get('clues', '')}{'' if card_json.get('clues_fixed', False) else '<调查员>'}"
+        # 是否为生成训练数据环境
+        if os.environ.get('CARD_TRAIN_DATA') == '1':
+            # 随机生成链接图标
+            # 绿菱、暗红漏斗、橙心、浅褐水滴、深紫星、深绿斜二、深蓝T、紫月、红十、红方、蓝三角、褐扭、青花、黄圆
+            local_icons = [
+                '绿菱', '暗红漏斗', '橙心', '浅褐水滴', '深紫星', '深绿斜二', '深蓝T', '紫月', '红十', '红方', '蓝三角',
+                '褐扭', '青花', '黄圆'
+            ]
+            # 从local_icons中随机选择一个
+            build_json['location_icon'] = build_json['location_icon'] = random.choice(local_icons)
+            # 随机选择 1-6 个不重复的图标作为 location_link
+            num_links = random.randint(1, 6)  # 随机决定要选多少个（1~6）
+            build_json['location_link'] = random.sample(local_icons, num_links)
 
         no_back = True
         for key in card_json.keys():

@@ -835,7 +835,7 @@ if __name__ == '__main__':
     # 下载卡图
     # download_cards(download_all=True)
     # 分拣卡图
-    # sorting_images()
+    sorting_images()
     # 额外分拣成ID文件名
     # sorting_images_by_id()
     # 替换翻译

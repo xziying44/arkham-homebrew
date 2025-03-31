@@ -200,14 +200,13 @@ def create_location_card(card_json, picture_path=None, font_manager=None, image_
     # 贴牌框 是否有副标题
     transparent_list = [
         (370, 518, 30),
-        (54, 46, 50),
-        (164, 968 + 12, 54),
-        (246, 952 + 12, 54),
-        (328, 945 + 12, 54),
-        (410, 945 + 12, 54),
-        (492, 952 + 12, 54),
-        (574, 968 + 12, 54),
-
+        # (54, 46, 50),
+        # (164, 968 + 12, 54),
+        # (246, 952 + 12, 54),
+        # (328, 945 + 12, 54),
+        # (410, 945 + 12, 54),
+        # (492, 952 + 12, 54),
+        # (574, 968 + 12, 54),
     ]
     if 'subtitle' in data and data['subtitle'] != '':
         card.paste_image(image_manager.get_image(f'{data["type"]}-{data["location_type"]}-副标题'), (0, 0), 'contain',
@@ -1452,27 +1451,38 @@ def create_player_cards(card_json, picture_path=None, font_manager=None, image_m
     return card
 
 
-def process_card_json(card_json, picture_path=None, font_manager=None, image_manager=None):
+def process_card_json(card_json, picture_path=None, font_manager=None, image_manager=None, image_mode=0,
+                      transparent_encounter=False):
     if 'msg' in card_json and card_json['msg'] != '':
         raise ValueError(card_json['msg'])
     if 'type' not in card_json:
         raise ValueError('卡牌类型不能为空')
     if card_json['type'] == '调查员卡':
-        return create_investigators_card(card_json, picture_path, font_manager, image_manager)
+        return create_investigators_card(card_json, picture_path, font_manager, image_manager, image_mode=image_mode)
     elif card_json['type'] == '调查员卡背':
         return create_investigators_card_back(card_json, picture_path, font_manager, image_manager)
     elif card_json.get('class', '') == '弱点':
-        return create_weakness_back(card_json, picture_path, font_manager, image_manager)
+        return create_weakness_back(card_json, picture_path, font_manager, image_manager, image_mode=image_mode)
     elif card_json['type'] == '升级卡':
         return create_upgrade_card(card_json, picture_path, font_manager, image_manager)
     elif card_json['type'] == '敌人卡':
-        return create_enemy_card(card_json, picture_path, font_manager, image_manager)
+        return create_enemy_card(card_json, picture_path, font_manager, image_manager, image_mode=image_mode,
+                                 transparent_encounter=transparent_encounter)
     elif card_json['type'] == '诡计卡':
-        return create_treachery_card(card_json, picture_path, font_manager, image_manager)
+        return create_treachery_card(card_json, picture_path, font_manager, image_manager, image_mode=image_mode,
+                                     transparent_encounter=transparent_encounter)
     elif card_json['type'] == '地点卡':
-        return create_location_card(card_json, picture_path, font_manager, image_manager)
+        return create_location_card(card_json, picture_path, font_manager, image_manager, image_mode=image_mode,
+                                    transparent_encounter=transparent_encounter)
     else:
-        return create_player_cards(card_json, picture_path, font_manager, image_manager)
+        if 'class' not in card_json:
+            # 默认为中立
+            card_json['class'] = '中立'
+            # 默认无等级
+            if 'level' not in card_json:
+                card_json['level'] = -1
+        return create_player_cards(card_json, picture_path, font_manager, image_manager, image_mode=image_mode,
+                                   transparent_encounter=transparent_encounter)
 
 
 card_type_transform = {
@@ -1574,42 +1584,10 @@ def process_card_json_to_tts_json(card_json, front_image_url="", back_image_url=
 
 
 if __name__ == '__main__':
-    json_data = {
-        "type": "支援卡",
-        "class": "探求者",
-        "subclass": [],
-        "name": "<独特>阿黛尔三车子女士",
-        "weakness_type": "",
-        "subtitle": "译者",
-        "attribute": [],
-        "cost": 4,
-        "submit_icon": ["意志", "智力"],
-        "level": 1,
-        "traits": ["盟友", "米斯卡塔尼克"],
-        "body": "你获得+1<书>\n<反应>在你成功调查后：直到本回合结束前，你的所在地点得到-1隐藏值。\n<反应>在你成功调查后：直到本回合结束前，你的所在地点得到-1隐藏值。",
-        "flavor": "“信，达，雅”",
-        "slots": "盟友",
-        "health": 2,
-        "horror": 2,
-        "enemy_damage": 0,
-        "enemy_damage_horror": 0,
-        "attack": "",
-        "evade": "",
-        "enemy_health": "",
-        "shroud": "",
-        "clues": "",
-        "victory": -1,
-        "location_icon": "",
-        "location_link": [],
-        "card_back": {
-            "size": 30,
-            "option": [],
-            "requirement": "",
-            "other": "",
-            "story": ""
-        },
-        "msg": ""
-    }
+    json_data = {"type": "敌人卡", "attack": "3", "enemy_health": "3", "evade": "4", "enemy_damage": 1,
+                 "enemy_damage_horror": 1,
+                 "body": "警戒。\n【生成】 - 鸟居枢纽。\n【强制】 - 当敌军阶段开始时：如果该敌人已准备且未交战，该敌人所在位置及每个连接位置的调查员各受到1点伤害。\n<relish>游侠是八月守护者们的第一道防线。大多数人在鬼川围攻中丧生，但有传言称一些人幸存了下来...</relish>",
+                 "name": "摩洛凯仲裁者", "subtitle": "", "traits": ["类人", "异教徒"]}
 
     fm = FontManager('fonts')
     im = ImageManager('images')

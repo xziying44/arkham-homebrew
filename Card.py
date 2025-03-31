@@ -126,6 +126,35 @@ class ImageManager:
         return self.image_map.get(image_name.lower())
 
 
+icon_dict = {
+    '🏅': '<独特>',
+    '⭕': '<反应>',
+    '➡️': '<启动>',
+    '⚡': '<免费>',
+    '💀': '<骷髅>',
+    '👤': '<异教徒>',
+    '📜': '<石板>',
+    '👹': '<古神>',
+    '🐙': '<触手>',
+    '⭐': '<旧印>',
+    '👊': '<拳>',
+    '📚': '<书>',
+    '🦶': '<脚>',
+    '🧠': '<脑>',
+    '❓': '<?>',
+    '🔵': '<点>',
+    '🌑': '<诅咒>',
+    '🌟': '<祝福>',
+    '❄️': '<雪花>',
+    '🕵️': '<调查员>',
+    '🚶': '<流浪者>',
+    '🏕️': '<生存者>',
+    '🛡️': '<守护者>',
+    '🧘': '<潜修者>',
+    '🔍': '<探求者>'
+}
+
+
 class FontManager:
     """字体管理器，用于预加载和管理字体文件"""
 
@@ -213,7 +242,7 @@ class FontManager:
         return text
 
 
-symbol_list = ['，', '。', '：', ':', '“', '”', '.']
+symbol_list = ['，', '。', '：', ':', '“', '”', '.', ')']
 
 
 class Card:
@@ -239,7 +268,29 @@ class Card:
         self.slots_index = 0  # 槽位索引
         self.card_type = card_type
         self.card_class = card_class
-        self.text_mark = []
+        self.text_mark = []  # 文字标记
+        self.icon_mark = []  # 图标标记
+        self.subclass_num = 0  # 子类数量
+
+    def final_processing(self):
+        """生成卡图后最后要处理的操作"""
+        if self.subclass_num == 0 and self.card_class in ['探求者', '潜修者', '生存者', '流浪者', '守护者']:
+            # 框选本身的职介
+            start_ps = (0, 0)
+            if self.card_type == '支援卡':
+                start_ps = (634, 4)
+            elif self.card_type == '事件卡':
+                start_ps = (324, 494)
+            if start_ps != (0, 0):
+                self.optimization_icon_mark({
+                    'points': [
+                        (start_ps[0], start_ps[1] + 10),
+                        (start_ps[0] + 89, start_ps[1] + 10),
+                        (start_ps[0] + 89, start_ps[1] + 89 + 10),
+                        (start_ps[0], start_ps[1] + 89 + 10)
+                    ],
+                    'text': self.card_class
+                }, True)
 
     def _extend_image_right(self, source_img, extension=800):
         # 截取右边5%的像素
@@ -518,6 +569,10 @@ class Card:
 
     def unified_text_processing(self, text):
         """统一文本处理"""
+        # 替换emoji
+        for emoji_item in icon_dict:
+            text = text.replace(emoji_item, icon_dict[emoji_item])
+
         text = text.replace('·', "<fonts name='SourceHanSansSC-Regular' offset='-25'>\uff65</fonts>")
         text = text.replace('】。', "】<fonts name='SourceHanSansSC-Bold' offset='-30'>\uff61</fonts>")
         return text
@@ -634,6 +689,18 @@ class Card:
                 }, font_name if _font_name == 'default' else _font_name)
                 current_x += char_w
 
+    def optimization_icon_mark(self, mark_object, join_directly=False):
+        text = mark_object.get('text', '')
+        if not join_directly and text not in [
+            '🏅', '⭕', '➡️', '⚡', '💀', '👤', '📜', '👹', '🐙',
+            '⭐', '👊', '📚', '🦶', '🧠', '❓', '🔵', '🌑', '🌟',
+            '❄️', '🕵️', '🚶', '🏕️', '🛡️', '🧘', '🔍'
+        ]:
+            return
+        # 将mark_object的坐标都转为整数
+        mark_object['points'] = [(int(point[0]), int(point[1])) for point in mark_object['points']]
+        self.icon_mark.append(mark_object)
+
     def optimization_mark(self, mark_object, font_name=None):
         # 微调部分字体
         if font_name:
@@ -654,6 +721,8 @@ class Card:
         # 将mark_object的坐标都转为整数
         mark_object['points'] = [(int(point[0]), int(point[1])) for point in mark_object['points']]
         self.text_mark.append(mark_object)
+        # 优化图标标记
+        self.optimization_icon_mark(mark_object)
 
     @staticmethod
     def get_font_text_emoji(font_name, text):
@@ -661,7 +730,7 @@ class Card:
             if text == 'w':
                 return '🏅'
             elif text == 'x':
-                return '—'
+                return '➖'
             elif text == 'l':
                 return '⭕'
             elif text == 'j':
@@ -803,6 +872,17 @@ class Card:
                                                                             padding)
                         last_line_start_x, last_line_end_x = line_start_x, line_end_x
                         current_x = line_start_x
+                        pass
+                    # 将单个字符加入标记数据
+                    self.optimization_icon_mark({
+                        'points': [
+                            (current_x, current_y),
+                            (current_x + char_w, current_y),
+                            (current_x + char_w, current_y + size),
+                            (current_x, current_y + size)
+                        ],
+                        'text': self.get_font_text_emoji(font_name, char)
+                    })
                     offset = 0
                     if 'attrs' in node and 'offset' in node['attrs']:
                         offset = int(int(node['attrs']['offset']) / 100 * size)
@@ -858,7 +938,6 @@ class Card:
                             font=relish_font,
                             fill=color
                         )
-        print(eof_is_br)
         if eof_is_br is False:
             # 加入标记数据
             self.optimization_mark({
@@ -908,10 +987,9 @@ class Card:
 
         paste_x = left_x
         paste_y = left_y
-        if center_x != None and center_y != None:
+        if center_x is not None and center_y is not None:
             paste_x = center_x - sheared_img.width // 2
             paste_y = center_y - sheared_img.height // 2
-        print(paste_x, paste_y)
         img_w, img_h = sheared_img.size
         # 加入标记数据
         self.optimization_mark({
@@ -954,6 +1032,16 @@ class Card:
             return
         img = self.image_manager.get_image(f'投入-{self.card_class}-{name}')
         self.paste_image(img, (0, 167 + self.submit_index * 85), 'contain')
+        # 加入标记数据
+        self.optimization_icon_mark({
+            'points': [
+                (20, 167 + self.submit_index * 85 + 11),
+                (72, 167 + self.submit_index * 85 + 11),
+                (72, 167 + self.submit_index * 85 + 65),
+                (20, 167 + self.submit_index * 85 + 65)
+            ],
+            'text': name
+        }, True)
         self.submit_index += 1
 
     def set_card_level(self, level=None):
@@ -976,6 +1064,17 @@ class Card:
             self.paste_image(img, position_level, 'contain')
         elif level != 0:
             self.paste_image(img, position_none, 'contain')
+        # 加入标记数据
+        level_text = str(level) if level is not None else '无'
+        self.optimization_icon_mark({
+            'points': [
+                (position_level[0] - 5, position_level[1] - 8),
+                (position_level[0] + 98, position_level[1] - 8),
+                (position_level[0] + 98, position_level[1] + 45),
+                (position_level[0] - 5, position_level[1] + 45)
+            ],
+            'text': f'等级-{level_text}'
+        }, True)
 
     def set_card_cost(self, cost=-1):
         """
@@ -1021,6 +1120,22 @@ class Card:
                 border_width=2,
                 border_color=(0, 0, 0)
             )
+        # 加入标记数据
+        cost_text = str(cost)
+        if cost == -2:
+            cost_text = 'X'
+        elif cost == -1:
+            cost_text = '无'
+
+        self.optimization_icon_mark({
+            'points': [
+                (default_position[0][0] - 30, default_position[0][1] - 20),
+                (default_position[0][0] + 30, default_position[0][1] - 20),
+                (default_position[0][0] + 30, default_position[0][1] + 30),
+                (default_position[0][0] - 30, default_position[0][1] + 30)
+            ],
+            'text': f'数字-{cost_text}'
+        }, True)
         pass
 
     def add_slots(self, slots):
@@ -1033,6 +1148,16 @@ class Card:
             return
         img = self.image_manager.get_image(f'槽位-{slots}')
         self.paste_image(img, (603 - self.slots_index * 105, 900), 'contain')
+        # 加入标记数据
+        self.optimization_icon_mark({
+            'points': [
+                (603 - self.slots_index * 105, 900),
+                (603 - self.slots_index * 105 + 112, 900),
+                (603 - self.slots_index * 105 + 112, 900 + 112),
+                (603 - self.slots_index * 105, 900 + 112)
+            ],
+            'text': slots
+        }, True)
         self.slots_index += 1
 
     def set_health_and_horror(self, health, horror):
@@ -1071,7 +1196,7 @@ class Card:
                     img = self.image_manager.get_image('UI-伤害')
                     self.paste_image(img, (260 - i * 45, 583 - i * 23 - curve[i]), 'contain')
                     # 加入标记数据
-                    self.optimization_mark({
+                    self.optimization_icon_mark({
                         'points': [
                             (260 - i * 45, 583 - i * 23 - curve[i]),
                             (260 - i * 45 + 40, 583 - i * 23 - curve[i]),
@@ -1079,14 +1204,14 @@ class Card:
                             (260 - i * 45, 583 - i * 23 + 40 - curve[i])
                         ],
                         'text': '🫀'
-                    })
+                    }, True)
                 pass
             if 0 < horror < 6:
                 for i in range(horror):
                     img = self.image_manager.get_image('UI-恐惧')
                     self.paste_image(img, (440 + i * 45, 583 - i * 23 - curve[i] + 4), 'contain')
                     # 加入标记数据
-                    self.optimization_mark({
+                    self.optimization_icon_mark({
                         'points': [
                             (440 + i * 45, 583 - i * 23 - curve[i] + 4),
                             (440 + i * 45 + 40, 583 - i * 23 - curve[i] + 4),
@@ -1094,7 +1219,7 @@ class Card:
                             (440 + i * 45, 583 - i * 23 + 40 - curve[i] + 4)
                         ],
                         'text': '💙'
-                    })
+                    }, True)
                 pass
             return
         # 画底图
@@ -1146,6 +1271,25 @@ class Card:
                 border_width=3,
                 border_color=(1, 63, 114)
             )
+        # 加入标记数据
+        self.optimization_icon_mark({
+            'points': [
+                (323 - 25, 930),
+                (323 + 25, 930),
+                (323 + 25, 963 + 40),
+                (323 - 25, 963 + 40)
+            ],
+            'text': f'数字-{health if health > 0 else "无"}'
+        }, True)
+        self.optimization_icon_mark({
+            'points': [
+                (430 - 25, 930),
+                (430 + 25, 930),
+                (430 + 25, 963 + 40),
+                (430 - 25, 963 + 40)
+            ],
+            'text': f'数字-{horror if horror > 0 else "无"}'
+        }, True)
         pass
 
     def set_number_value(self, position, text, font_size=1, color=(255, 255, 255), stroke_color=(0, 0, 0)):
@@ -1178,26 +1322,28 @@ class Card:
         # 画中间
         x = position[0] - number_width // 2 - investigator_width // 2
         y = position[1] - text_height // 2
-        if number == 'x':
+        if number == 'X':
             y -= 4
         self.draw.text((x, y), number, font=font, fill=color, stroke_width=1, stroke_fill=stroke_color)
         # 加入标记数据
-        self.optimization_mark({
+        if number == 'x':
+            number = '无'
+        self.optimization_icon_mark({
             'points': [
                 (x, y),
                 (x + number_width, y),
-                (x + number_width, y + text_height),
-                (x, y + text_height)
+                (x + number_width, y + text_height + 8),
+                (x, y + text_height + 8)
             ],
-            'text': number
-        }, 'Bolton')
+            'text': '数字-' + number
+        }, True)
         # 画调查员
         if investigator_font is not None:
             x = position[0] + number_width // 2 - investigator_width // 2 + 4
             self.draw.text((x, y + 3), 'v', font=investigator_font, fill=color, stroke_width=1,
                            stroke_fill=stroke_color)
             # 加入标记数据
-            self.optimization_mark({
+            self.optimization_icon_mark({
                 'points': [
                     (x, y + 3),
                     (x + investigator_width, y + 3),
@@ -1205,7 +1351,7 @@ class Card:
                     (x, y + 3 + investigator_width)
                 ],
                 'text': self.get_font_text_emoji('arkham-icons', 'v')
-            }, 'arkham-icons')
+            }, True)
 
     def set_basic_weakness_icon(self):
         """添加基础弱点图标"""
@@ -1233,6 +1379,7 @@ class Card:
         # 检查subclass是个数组并且长度不为0
         if not isinstance(subclass, list) or len(subclass) == 0:
             return
+        self.subclass_num = len(subclass)
         start_ps = (0, 0)
         if self.card_type == '支援卡':
             start_ps = (634, 4)
@@ -1246,6 +1393,16 @@ class Card:
             item = subclass[len(subclass) - i - 1]
             im = self.image_manager.get_image(f'多职阶-{item}')
             self.paste_image(im, (start_ps[0] - i * 89, start_ps[1]), 'contain')
+            # 加入标记数据
+            self.optimization_icon_mark({
+                'points': [
+                    (start_ps[0] - i * 89, start_ps[1] + 10),
+                    (start_ps[0] - i * 89 + 89, start_ps[1] + 10),
+                    (start_ps[0] - i * 89 + 89, start_ps[1] + 89 + 10),
+                    (start_ps[0] - i * 89, start_ps[1] + 89 + 10)
+                ],
+                'text': item
+            }, True)
 
     def set_bottom_information_by_picture(self, picture_path):
         """根据图片设置底部信息"""
@@ -1336,5 +1493,25 @@ class Card:
         if index == 0:
             self.paste_image(self.image_manager.get_image(f'地点标识-标识底'), (15, 8), 'contain')
             self.paste_image(im, (20, 13), 'contain')
+            # 加入标记数据
+            self.optimization_icon_mark({
+                'points': [
+                    (20, 13),
+                    (20 + 70, 13),
+                    (20 + 70, 13 + 70),
+                    (20, 13 + 70)
+                ],
+                'text': icon
+            }, True)
         elif 0 < index < 7:
             self.paste_image(im, link_position[index - 1], 'contain')
+            # 加入标记数据
+            self.optimization_icon_mark({
+                'points': [
+                    (link_position[index - 1][0], link_position[index - 1][1]),
+                    (link_position[index - 1][0] + 70, link_position[index - 1][1]),
+                    (link_position[index - 1][0] + 70, link_position[index - 1][1] + 70),
+                    (link_position[index - 1][0], link_position[index - 1][1] + 70)
+                ],
+                'text': icon
+            }, True)
