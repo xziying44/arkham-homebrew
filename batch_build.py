@@ -301,12 +301,13 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
             # 绿菱、暗红漏斗、橙心、浅褐水滴、深紫星、深绿斜二、深蓝T、紫月、红十、红方、蓝三角、褐扭、青花、黄圆
             local_icons = [
                 '绿菱', '暗红漏斗', '橙心', '浅褐水滴', '深紫星', '深绿斜二', '深蓝T', '紫月', '红十', '红方', '蓝三角',
-                '褐扭', '青花', '黄圆'
+                '褐扭', '青花', '黄圆', '粉桃', '粉心', '绿星', '橙圆', '红扭', '红斜二', '黄漏斗', '黄三角', '蓝菱',
+                '蓝月', '绿T', '斜十字', '紫方'
             ]
             # 从local_icons中随机选择一个
             build_json['location_icon'] = build_json['location_icon'] = random.choice(local_icons)
             # 随机选择 1-6 个不重复的图标作为 location_link
-            num_links = random.randint(1, 6)  # 随机决定要选多少个（1~6）
+            num_links = random.randint(4, 6)  # 随机决定要选多少个（4~6）
             build_json['location_link'] = random.sample(local_icons, num_links)
 
         no_back = True

@@ -60,7 +60,8 @@ icon_list = [
     '🧘',
     '🔍',
     '🫀',
-    '💙'
+    '💙',
+    '🌸'
 ]
 
 icon_dict = {
@@ -88,7 +89,8 @@ icon_dict = {
     '🏕️': '<生存者>',
     '🛡️': '<守护者>',
     '🧘': '<潜修者>',
-    '🔍': '<探求者>'
+    '🔍': '<探求者>',
+    '🌸': '<花>'
 }
 
 yolov5_dict = [
@@ -120,6 +122,7 @@ yolov5_dict = [
     '🫀',
     '💙',
     '➖',
+    '🌸',
     '投入-意志',
     '投入-战力',
     '投入-敏捷',
@@ -153,6 +156,20 @@ yolov5_dict = [
     '地点标识-褐扭',
     '地点标识-青花',
     '地点标识-黄圆',
+    '地点标识-粉桃',
+    '地点标识-粉心',
+    '地点标识-绿星',
+    '地点标识-橙圆',
+    '地点标识-红扭',
+    '地点标识-红斜二',
+    '地点标识-黄漏斗',
+    '地点标识-黄三角',
+    '地点标识-蓝菱',
+    '地点标识-蓝月',
+    '地点标识-绿T',
+    '地点标识-斜十字',
+    '地点标识-紫方',
+    '数字-?',
     '数字-X',
     '数字-无',
     '数字-0',
@@ -483,13 +500,23 @@ def augment_image(img):
 def card_data_enhancement(card_data):
     """对卡牌数据进行增强"""
     # 随机经验
-    card_data['xp'] = random.randint(0, 5)
+    card_data['xp'] = random.randint(-1, 5)
     # 随机费用
     card_data['cost'] = random.randint(-2, 15)
     if card_data.get('type_code', None) == 'asset':
         # 增加随机血量和san 随机 0到15
         card_data['health'] = random.randint(0, 15)
         card_data['horror'] = random.randint(0, 15)
+    if card_data.get('type_code', None) == 'enemy':
+        # 增加随机属性
+        random_list = ['?', 'X', '-', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+        card_data['enemy_fight'] = random.choice(random_list)
+        card_data['health'] = random.choice(random_list)
+        card_data['enemy_evade'] = random.choice(random_list)
+        # 随机True/False
+        if card_data['health'] not in ['?', 'X', '-']:
+            card_data['health_per_investigator'] = random.choice([True, False])
+
     print(card_data)
     return card_data
 

@@ -247,14 +247,16 @@ def create_location_card(card_json, picture_path=None, font_manager=None, image_
         font_size=32,
         font_color=(0, 0, 0)
     )
+
     # 整合body和flavor
     body = tidy_body_flavor(data)
     # 写正文和风味
     card.draw_text(
         text=body,
         vertices=[
-            (38, 620), (704, 620),
-            (704, 900), (38, 900)
+            (64, 620), (670, 620),
+            (712, 675), (712, 900),
+            (15, 900), (15, 675)
         ],
         default_font_name='simfang',
         default_size=32,
@@ -364,6 +366,16 @@ def create_treachery_card(card_json, picture_path=None, font_manager=None, image
         padding=18,
         draw_virtual_box=False
     )
+    # 画胜利点
+    victory = data.get('victory', -1)
+    if victory > -1:
+        card.draw_centered_text(
+            position=(378, 960),
+            text=f"胜利{data['victory']}。",
+            font_name="思源黑体",
+            font_size=28,
+            font_color=(0, 0, 0)
+        )
     return card
 
 
@@ -1451,6 +1463,171 @@ def create_player_cards(card_json, picture_path=None, font_manager=None, image_m
     return card
 
 
+def create_act_card(
+        card_json,
+        picture_path=None,
+        font_manager=None,
+        image_manager=None,
+        image_mode=0,
+        transparent_encounter=False
+):
+    """制作场景卡"""
+    # 解析JSON字符串
+    data = card_json
+    if 'msg' in data and data['msg'] != '':
+        raise ValueError(data['msg'])
+    if 'type' not in data or data['type'] not in ['场景卡', '密谋卡']:
+        raise ValueError('卡牌类型错误')
+    # 创建Card对象
+    card = Card(
+        width=1049,
+        height=739,
+        font_manager=font_manager,
+        image_manager=image_manager,
+        card_type=data['type']
+    )
+    # 贴底图
+    if picture_path is not None:
+        dp = Image.open(picture_path)
+        if abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
+            image_mode = 1
+        if image_mode == 1:
+            # 判断图片宽高，如果高大于宽，则需要将图片向左旋转90度
+            if dp.size[1] > dp.size[0]:
+                dp = dp.rotate(90, expand=True)
+            # 铺满
+            card.paste_image(dp, (0, 0, 1049, 739), 'cover')
+        else:
+            card.paste_image(dp, (0, 0, 373, 405), 'cover')
+    # 透明列表
+    encounter_list = [
+        (533, 628, 42),
+        (288, 74, 34)
+    ]
+    if data['type'] != '场景卡':
+        encounter_list = [
+            (512, 636, 44),
+            (288 + 473, 76, 34)
+        ]
+    # 贴牌框-UI
+    card.paste_image(image_manager.get_image(f'{data["type"]}'), (0, 0), 'contain',
+                     encounter_list if transparent_encounter else None)
+    # 写标题
+    card.draw_centered_text(
+        position=(285, 150) if data['type'] == '场景卡' else (765, 150),
+        text=data['name'],
+        font_name="汉仪小隶书简",
+        font_size=48,
+        font_color=(0, 0, 0)
+    )
+    vertices = [
+        (10, 185), (560, 185),
+        (560, 574), (470, 574), (470, 678),
+        (10, 678)
+    ]
+    if data['type'] != '场景卡':
+        vertices = [
+            (10 + 480, 185), (560 + 480, 185),
+            (560 + 480, 678), (10 + 480 + 80, 678), (10 + 480 + 80, 574),
+            (10 + 480, 574)
+        ]
+    # 写正文
+    body = tidy_body_flavor(data)
+    card.draw_text(
+        body,
+        vertices=vertices,
+        default_font_name='simfang',
+        default_size=32,
+        padding=15,
+        draw_virtual_box=False
+    )
+    return card
+
+
+def create_act_back_card(
+        card_json,
+        picture_path=None,
+        font_manager=None,
+        image_manager=None,
+        transparent_encounter=False
+):
+    """制作场景卡背面"""
+    # 解析JSON字符串
+    data = card_json
+    if 'msg' in data and data['msg'] != '':
+        raise ValueError(data['msg'])
+    if 'type' not in data or data['type'] not in ['场景卡', '密谋卡']:
+        raise ValueError('卡牌类型错误')
+    # 创建Card对象
+    card = Card(
+        width=1049,
+        height=739,
+        font_manager=font_manager,
+        image_manager=image_manager,
+        card_type=data['type'],
+        is_back=True
+    )
+    # 贴底图
+    if picture_path is not None and transparent_encounter:
+        dp = Image.open(picture_path)
+        # 判断图片宽高，如果高大于宽，则需要将图片向左旋转90度
+        if dp.size[1] > dp.size[0]:
+            dp = dp.rotate(90, expand=True)
+        # 铺满
+        card.paste_image(dp, (0, 0, 1049, 739), 'cover')
+    # 贴牌框-UI
+    card.paste_image(image_manager.get_image(f'{data["type"]}-卡背'), (0, 0), 'contain',
+                     [(97, 138, 42), (97, 138, 42)] if transparent_encounter else None)
+    # 写小字
+    card.draw_centered_text(
+        position=(96, 62),
+        text='场景' if data['type'] == '场景卡' else '密谋',
+        font_name="小字",
+        font_size=20,
+        font_color=(0, 0, 0)
+    )
+    # 写序列号
+    card.draw_centered_text(
+        position=(96, 77),
+        text=data.get('serial_number', ''),
+        font_name="小字",
+        font_size=20,
+        font_color=(0, 0, 0)
+    )
+    # 写标题
+    title = Card(
+        width=450,
+        height=100,
+        font_manager=font_manager,
+        image_manager=image_manager,
+    )
+    title.draw_centered_text(
+        position=(225, 50),
+        text=data['name'],
+        font_name="汉仪小隶书简",
+        font_size=48,
+        font_color=(0, 0, 0)
+    )
+    title_img = title.image
+    # 将表土向左旋转90度
+    title_img = title_img.rotate(90, expand=True)
+    card.paste_image(title_img, (40, 208), 'cover')
+    # 写正文
+    body = tidy_body_flavor(data)
+    card.draw_text(
+        body,
+        vertices=[
+            (210, 67), (977, 67),
+            (977, 652), (210, 652)
+        ],
+        default_font_name='simfang',
+        default_size=32,
+        padding=15,
+        draw_virtual_box=False
+    )
+    return card
+
+
 def process_card_json(card_json, picture_path=None, font_manager=None, image_manager=None, image_mode=0,
                       transparent_encounter=False):
     if 'msg' in card_json and card_json['msg'] != '':
@@ -1474,6 +1651,12 @@ def process_card_json(card_json, picture_path=None, font_manager=None, image_man
     elif card_json['type'] == '地点卡':
         return create_location_card(card_json, picture_path, font_manager, image_manager, image_mode=image_mode,
                                     transparent_encounter=transparent_encounter)
+    elif card_json['type'] in ['场景卡', '密谋卡']:
+        if card_json.get('is_back', False):
+            return create_act_back_card(card_json, picture_path, font_manager, image_manager,
+                                        transparent_encounter=transparent_encounter)
+        return create_act_card(card_json, picture_path, font_manager, image_manager, image_mode=image_mode,
+                               transparent_encounter=transparent_encounter)
     else:
         if 'class' not in card_json:
             # 默认为中立
@@ -1584,14 +1767,24 @@ def process_card_json_to_tts_json(card_json, front_image_url="", back_image_url=
 
 
 if __name__ == '__main__':
-    json_data = {"type": "敌人卡", "attack": "3", "enemy_health": "3", "evade": "4", "enemy_damage": 1,
-                 "enemy_damage_horror": 1,
-                 "body": "警戒。\n【生成】 - 鸟居枢纽。\n【强制】 - 当敌军阶段开始时：如果该敌人已准备且未交战，该敌人所在位置及每个连接位置的调查员各受到1点伤害。\n<relish>游侠是八月守护者们的第一道防线。大多数人在鬼川围攻中丧生，但有传言称一些人幸存了下来...</relish>",
-                 "name": "摩洛凯仲裁者", "subtitle": "", "traits": ["类人", "异教徒"]}
+    json_data = {
+    "type": "诡计卡",
+    "victory": 1,
+    "id": 95,
+    "body": "险境。\n【显现】 - 阅读战役指南中的插曲：黑水少女。\n<relish>肿胀、湿漉漉的手指从水面下伸出...</relish>\n",
+    "name": "🏅井中的女孩",
+    "subtitle": "",
+    "traits": [
+        "神秘"
+    ],
+    "picture_path": "D:\\BaiduSyncdisk\\PycharmProjects\\arkham_translate\\translation_space\\鬼河之魂\\factory\\000095-raw.jpg"
+}
 
     fm = FontManager('fonts')
     im = ImageManager('images')
-    card = process_card_json(json_data, picture_path=r'C:\Users\xziyi\Desktop\E5DF766DA43B43FBA8F24233FD7721E1.jpg',
+    card = process_card_json(json_data, picture_path=r'C:\Users\xziyi\Desktop\000013-raw.jpg',
                              font_manager=fm,
-                             image_manager=im)
+                             image_manager=im,
+                             image_mode=0,
+                             transparent_encounter=True)
     card.image.save('output_card.png', quality=95)

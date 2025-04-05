@@ -151,7 +151,8 @@ icon_dict = {
     '🏕️': '<生存者>',
     '🛡️': '<守护者>',
     '🧘': '<潜修者>',
-    '🔍': '<探求者>'
+    '🔍': '<探求者>',
+    '🌸': '<花>',
 }
 
 
@@ -246,7 +247,16 @@ symbol_list = ['，', '。', '：', ':', '“', '”', '.', ')']
 
 
 class Card:
-    def __init__(self, width, height, font_manager=None, image_manager=None, card_type='default', card_class='default'):
+    def __init__(
+            self,
+            width,
+            height,
+            font_manager=None,
+            image_manager=None,
+            card_type='default',
+            card_class='default',
+            is_back=False
+    ):
         """
         初始化卡牌对象
 
@@ -271,6 +281,7 @@ class Card:
         self.text_mark = []  # 文字标记
         self.icon_mark = []  # 图标标记
         self.subclass_num = 0  # 子类数量
+        self.is_back = is_back  # 是否背面
 
     def final_processing(self):
         """生成卡图后最后要处理的操作"""
@@ -406,6 +417,8 @@ class Card:
         text = text.replace('<守护者>', "<fonts name='arkham-icons'>e</fonts>")
         text = text.replace('<潜修者>', "<fonts name='arkham-icons'>h</fonts>")
         text = text.replace('<探求者>', "<fonts name='arkham-icons'>f</fonts>")
+
+        text = text.replace('<花>', "<fonts name='BODONI-ORNAMENTS'>\u00C6</fonts>")
 
         return parse_html(text)
 
@@ -694,7 +707,7 @@ class Card:
         if not join_directly and text not in [
             '🏅', '⭕', '➡️', '⚡', '💀', '👤', '📜', '👹', '🐙',
             '⭐', '👊', '📚', '🦶', '🧠', '❓', '🔵', '🌑', '🌟',
-            '❄️', '🕵️', '🚶', '🏕️', '🛡️', '🧘', '🔍'
+            '❄️', '🕵️', '🚶', '🏕️', '🛡️', '🧘', '🔍', '🌸'
         ]:
             return
         # 将mark_object的坐标都转为整数
@@ -726,6 +739,10 @@ class Card:
 
     @staticmethod
     def get_font_text_emoji(font_name, text):
+        if font_name == 'BODONI-ORNAMENTS':
+            if text == '\u00C6':
+                return '🌸'
+
         if font_name == 'arkham-icons':
             if text == 'w':
                 return '🏅'
@@ -898,16 +915,33 @@ class Card:
                 center = True
                 if 'center' in node['attrs'] and node['attrs']['center'] == 'false':
                     center = False
-                pass
+                    pass
+                if self.card_type in ['场景卡', '密谋卡']:
+                    center = False
                 relish_font = self._get_font(default_font_name, size - 2)
 
                 line_str = ''
                 for char in list(content):
                     char_w, char_h = self._get_text_dimensions(char, relish_font)
                     if current_x + char_w > line_end_x and char not in symbol_list:
+                        # 靠左对齐
+                        temp_line_start_x = line_start_x
+                        if self.card_type in ['场景卡', '密谋卡'] and self.is_back:
+                            temp_line_start_x = line_start_x + 20
+                            # 在行行前画双竖线
+                            self.draw.line(
+                                [(line_start_x, current_y - 7), (line_start_x, current_y + size + 7)],
+                                fill=color,
+                                width=2
+                            )
+                            self.draw.line(
+                                [(line_start_x + 6, current_y - 7), (line_start_x + 6, current_y + size + 7)],
+                                fill=color,
+                                width=2
+                            )
                         self._draw_italic_text(
                             text=line_str,
-                            left_x=line_start_x,
+                            left_x=temp_line_start_x,
                             left_y=current_y,
                             font=relish_font,
                             fill=color
@@ -931,9 +965,24 @@ class Card:
                             fill=color
                         )
                     else:
+                        # 靠左对齐
+                        temp_line_start_x = line_start_x
+                        if self.card_type in ['场景卡', '密谋卡'] and self.is_back:
+                            temp_line_start_x = line_start_x + 20
+                            # 在行行前画双竖线
+                            self.draw.line(
+                                [(line_start_x, current_y - 7), (line_start_x, current_y + size + 7)],
+                                fill=color,
+                                width=2
+                            )
+                            self.draw.line(
+                                [(line_start_x + 6, current_y - 7), (line_start_x + 6, current_y + size + 7)],
+                                fill=color,
+                                width=2
+                            )
                         self._draw_italic_text(
                             text=line_str,
-                            left_x=line_start_x,
+                            left_x=temp_line_start_x,
                             left_y=current_y,
                             font=relish_font,
                             fill=color
@@ -1059,13 +1108,14 @@ class Card:
             position_level = (25, 77)
             position_none = (12, 12)
         img = self.image_manager.get_image(f'{self.card_type}-无等级')
+        level_text = str(level)
         if level is not None and 0 < level < 6:
             img = self.image_manager.get_image(f'{self.card_type}-等级{level}')
             self.paste_image(img, position_level, 'contain')
         elif level != 0:
             self.paste_image(img, position_none, 'contain')
+            level_text = '无'
         # 加入标记数据
-        level_text = str(level) if level is not None else '无'
         self.optimization_icon_mark({
             'points': [
                 (position_level[0] - 5, position_level[1] - 8),
@@ -1304,7 +1354,7 @@ class Card:
             number = 'X'
         if '?' in text or '？' in text:
             number = '?'
-        if '-' in text or '一' in text:
+        if '-' in text or '一' in text or '无' in text:
             number = 'x'
             font = self._get_font('arkham-icons', font_size)
         # 计算数字
