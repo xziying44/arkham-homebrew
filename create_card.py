@@ -576,7 +576,6 @@ def create_weakness_back(card_json, picture_path=None, font_manager=None, image_
         card_type=data['type'],
         card_class=data['class']
     )
-    print(data['type'])
     if data['type'] not in ['事件卡', '支援卡', '技能卡', '诡计卡', '敌人卡']:
         raise ValueError('卡牌类型错误')
     # 整合body和flavor
@@ -1303,6 +1302,8 @@ def create_player_cards(card_json, picture_path=None, font_manager=None, image_m
     # 画等级
     if 'level' in data and isinstance(data['level'], int):
         card.set_card_level(data['level'])
+    else:
+        card.set_card_level(-1)
     traits = ''
     if 'traits' in data and isinstance(data['traits'], list):
         traits = integrate_traits_text(font_manager, data['traits'])
@@ -1628,8 +1629,90 @@ def create_act_back_card(
     return card
 
 
+def create_story_card(
+        card_json,
+        picture_path=None,
+        font_manager=None,
+        image_manager=None,
+        transparent_encounter=False
+):
+    """制作故事卡"""
+    # 解析JSON字符串
+    data = card_json
+    if 'msg' in data and data['msg'] != '':
+        raise ValueError(data['msg'])
+    if 'type' not in data or data['type'] != '故事卡':
+        raise ValueError('卡牌类型错误')
+    # 创建Card对象
+    card = Card(
+        width=747,
+        height=1043,
+        font_manager=font_manager,
+        image_manager=image_manager,
+        card_type=data['type'],
+        is_back=True
+    )
+    # 贴底图
+    if picture_path is not None:
+        dp = Image.open(picture_path)
+        card.paste_image(dp, (0, 0, 747, 1043), 'cover')
+    # 贴牌框-UI
+    card.paste_image(image_manager.get_image(f'{data["type"]}'), (0, 0), 'contain',
+                     [(643, 92, 42)] if transparent_encounter else None)
+    # 写标题
+    card.draw_centered_text(
+        position=(313, 90),
+        text=data['name'],
+        font_name="汉仪小隶书简",
+        font_size=48,
+        font_color=(0, 0, 0)
+    )
+    # 写正文
+    body = tidy_body_flavor(data)
+    card.draw_text(
+        body,
+        vertices=[
+            (56, 207), (685, 207),
+            (685, 960), (56, 960)
+        ],
+        default_font_name='simfang',
+        default_size=32,
+        padding=15,
+        draw_virtual_box=False
+    )
+    return card
+
+
+def preprocessing_json(card_json):
+    """预处理json信息"""
+
+    def replace_bracketed_content(match):
+        content = match.group(1)  # 获取括号内的内容
+        # 移除大括号
+        content = content.replace('{', '').replace('}', '')
+        # 分割成多行
+        lines = content.split('\n')
+        # 每行用<relish>标签包裹
+        tagged_lines = [f'<relish>{line}</relish>' for line in lines if line.strip()]
+        # 用换行符连接
+        return '\n'.join(tagged_lines)
+
+    if 'level' in card_json and card_json['level'] == '无':
+        card_json['level'] = -1
+    if 'body' in card_json and card_json['body'] != '':
+        text = card_json['body']
+        # 使用正则表达式匹配[XXX]格式的内容
+        text = re.sub(r'\[([^]]+)]', replace_bracketed_content, text)
+        # 确保所有的<relish>都在行首，如果不是则加上换行
+        text = re.sub(r'(?<!\n)<relish>', '\n<relish>', text)
+        card_json['body'] = text
+
+
 def process_card_json(card_json, picture_path=None, font_manager=None, image_manager=None, image_mode=0,
                       transparent_encounter=False):
+    """生成卡牌"""
+    # 预处理
+    preprocessing_json(card_json)
     if 'msg' in card_json and card_json['msg'] != '':
         raise ValueError(card_json['msg'])
     if 'type' not in card_json:
@@ -1642,6 +1725,9 @@ def process_card_json(card_json, picture_path=None, font_manager=None, image_man
         return create_weakness_back(card_json, picture_path, font_manager, image_manager, image_mode=image_mode)
     elif card_json['type'] == '升级卡':
         return create_upgrade_card(card_json, picture_path, font_manager, image_manager)
+    elif card_json['type'] == '故事卡':
+        return create_story_card(card_json, picture_path, font_manager, image_manager,
+                                 transparent_encounter=transparent_encounter)
     elif card_json['type'] == '敌人卡':
         return create_enemy_card(card_json, picture_path, font_manager, image_manager, image_mode=image_mode,
                                  transparent_encounter=transparent_encounter)
@@ -1768,21 +1854,18 @@ def process_card_json_to_tts_json(card_json, front_image_url="", back_image_url=
 
 if __name__ == '__main__':
     json_data = {
-    "type": "诡计卡",
-    "victory": 1,
-    "id": 95,
-    "body": "险境。\n【显现】 - 阅读战役指南中的插曲：黑水少女。\n<relish>肿胀、湿漉漉的手指从水面下伸出...</relish>\n",
-    "name": "🏅井中的女孩",
-    "subtitle": "",
-    "traits": [
-        "神秘"
-    ],
-    "picture_path": "D:\\BaiduSyncdisk\\PycharmProjects\\arkham_translate\\translation_space\\鬼河之魂\\factory\\000095-raw.jpg"
-}
+        "type": "故事卡",
+        "id": 39,
+        "body": "\n<relish>你向虚空中呼喊，感到一丝愚蠢。但他们似乎总能知道何时你需要帮助。</relish>\n<relish>沉默持续了片刻，然后...</relish>\n在战役记录中标记1个奇异援助。选择一个你本场景中尚未选择过的效果，然后将此卡牌放在一边，移出游戏。\n<relish>你的一个同伴呼喊——他们发现了什么！</relish>\n🔵每位调查员可以查找其牌库顶部的9张卡牌中的一张并抽取它。\n<relish>你的目光捕捉到一个之前忽略的小铭文，零散的想法开始串联起来。</relish>\n🔵从你的地点发现1🕵️个线索。\n<relish>一阵枪火击中了你面前敌人的胸膛，似乎来自虚无。</relish>\n🔵击败一个你地点的非{精英}敌人，或对1个你地点的{精英}敌人造成1🕵️点伤害并横置它。",
+        "name": "遥援",
+        "subtitle": "",
+        "traits": [],
+        "picture_path": "D:\\BaiduSyncdisk\\PycharmProjects\\arkham_translate\\translation_space\\时轮缠劫\\factory\\000039-raw.jpg"
+    }
 
     fm = FontManager('fonts')
     im = ImageManager('images')
-    card = process_card_json(json_data, picture_path=r'C:\Users\xziyi\Desktop\000013-raw.jpg',
+    card = process_card_json(json_data, picture_path=json_data['picture_path'],
                              font_manager=fm,
                              image_manager=im,
                              image_mode=0,

@@ -552,6 +552,6 @@ if __name__ == '__main__':
     # 设置环境变量 设置训练数据
     os.environ['CARD_TRAIN_DATA'] = '1'
 
-    generate(generate_type='yolov5')
+    # generate(generate_type='yolov5')
     # generate()
-    # test_generate_card_image()
+    test_generate_card_image()
