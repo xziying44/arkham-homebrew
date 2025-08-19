@@ -258,6 +258,16 @@ class FontManager:
         except Exception as e:
             print(f"字体加载失败: {str(e)}")
 
+    def get_font(self, font_name, font_size):
+        """
+        获取字体对象
+        :param font_name:
+        :param font_size:
+        :return:
+        """
+        font_path = self.get_font_path(font_name)
+        return ImageFont.truetype(font_path, font_size)
+
     def get_font_path(self, font_name):
         """
         获取字体文件路径
@@ -345,6 +355,57 @@ class Card:
         self.icon_mark = []  # 图标标记
         self.subclass_num = 0  # 子类数量
         self.is_back = is_back  # 是否背面
+
+    def copy_circle_to_image(self, reference_image: Image, source_params, target_params):
+        """
+        从参考图复制圆形区域到底图
+
+        Args:
+            reference_image (PIL.Image): 参考图
+            source_params (tuple): 源圆形参数 (x, y, 半径)
+            target_params (tuple): 目标圆形参数 (x, y, 半径)
+
+        Returns:
+            PIL.Image: 处理后的图像
+        """
+        # 复制参考图并拉伸到和card图片大小一致
+        reference_copy = reference_image.copy()
+        reference_copy = reference_copy.resize((self.width, self.height), Image.Resampling.LANCZOS)
+
+        # 解析参数
+        src_x, src_y, src_radius = source_params
+        tgt_x, tgt_y, tgt_radius = target_params
+
+        result_image = self.image
+
+        # 计算源圆形的边界框
+        src_left = src_x - src_radius
+        src_top = src_y - src_radius
+        src_right = src_x + src_radius
+        src_bottom = src_y + src_radius
+
+        # 从调整大小后的参考图中裁剪出包含圆形的矩形区域
+        cropped_reference = reference_copy.crop((src_left, src_top, src_right, src_bottom))
+
+        # 如果目标半径与源半径不同，需要调整大小
+        if tgt_radius != src_radius:
+            new_size = tgt_radius * 2  # 直径
+            cropped_reference = cropped_reference.resize((new_size, new_size), Image.Resampling.LANCZOS)
+
+        # 创建圆形蒙版
+        mask_size = tgt_radius * 2  # 直径
+        mask = Image.new('L', (mask_size, mask_size), 0)
+        mask_draw = ImageDraw.Draw(mask)
+        mask_draw.ellipse([0, 0, mask_size, mask_size], fill=255)
+
+        # 计算目标位置
+        tgt_left = tgt_x - tgt_radius
+        tgt_top = tgt_y - tgt_radius
+
+        # 将圆形区域粘贴到底图上
+        result_image.paste(cropped_reference, (tgt_left, tgt_top), mask)
+
+        return result_image
 
     def final_processing(self):
         """生成卡图后最后要处理的操作"""
@@ -648,6 +709,8 @@ class Card:
 
     def unified_text_processing(self, text):
         """统一文本处理"""
+        if text is None:
+            return ''
         # 替换emoji
         for emoji_item in icon_dict:
             text = text.replace(emoji_item, icon_dict[emoji_item])
@@ -1770,7 +1833,7 @@ class Card:
         }, True)
         pass
 
-    def set_number_value(self, position, text, font_size=1, color=(255, 255, 255), stroke_color=(0, 0, 0)):
+    def set_number_value(self, position, text, font_size=1, color='#f8f1e4', stroke_color='#060001'):
         """画数值"""
         font = self._get_font('Bolton', font_size)
         # 取出text中的数字
@@ -1815,7 +1878,9 @@ class Card:
         y = position[1] - text_height // 2
         if number == 'X':
             y -= 4
-        self.draw.text((x, y), number, font=font, fill=color, stroke_width=1, stroke_fill=stroke_color)
+        if number == 'x' and self.card_type in ['场景卡', '密谋卡']:
+            y -= 4
+        self.draw.text((x, y), number, font=font, fill=color, stroke_width=2, stroke_fill=stroke_color)
         # 加入标记数据
         if number == 'x':
             number = '无'
@@ -2007,26 +2072,93 @@ class Card:
                 'text': icon
             }, True)
 
-    def set_encounter_icon(self, icon_name):
-        """画遭遇组"""
+    def set_encounter_icon(self, icon_name: str | Image.Image, size=None):
+        """
+        画遭遇组
+
+        :param icon_name: 图标名称或PIL图像对象
+        :param size: 图标大小，格式为(width, height)或单个数值(正方形)，None表示使用默认大小
+        """
         if icon_name is None:
             return
-        im = self.image_manager.get_image(f'{icon_name}')
+
+        if isinstance(icon_name, Image.Image):
+            im = icon_name
+        else:
+            im = self.image_manager.get_image(f'{icon_name}')
+
+        # 定义每种卡牌类型的中心点坐标和默认大小
+        icon_configs = {
+            '地点卡': {'center': (370, 518), 'default_size': (60, 60)},
+            '敌人卡': {'center': (369, 574), 'default_size': (60, 60)},
+            '诡计卡': {'center': (372, 536), 'default_size': (60, 60)},
+            '故事卡': {'center': (600, 98), 'default_size': (60, 60)},
+            '冒险参考卡': {'center': (372, 152), 'default_size': (60, 60)},
+            '密谋卡_正面': {'center': (742, 78), 'default_size': (60, 60)},
+            '场景卡_正面': {'center': (282, 76), 'default_size': (60, 60)},
+            '密谋卡_背面': {'center': (98, 140), 'default_size': (68, 68)},
+            '场景卡_背面': {'center': (98, 140), 'default_size': (68, 68)},
+            '密谋卡-大画': {'center': (106, 448), 'default_size': (72, 72)},
+            '场景卡-大画': {'center': (106, 503), 'default_size': (82, 82)},
+            '支援卡_中立': {'center': (672, 40), 'default_size': (60, 60)}
+        }
+
+        # 确定当前卡牌类型的配置键
+        config_key = None
         if self.card_type == '地点卡':
-            self.paste_image(im, (340, 487, 60, 60), 'contain')
+            config_key = '地点卡'
         elif self.card_type == '敌人卡':
-            self.paste_image(im, (338, 542, 60, 60), 'contain')
+            config_key = '敌人卡'
         elif self.card_type == '诡计卡':
-            self.paste_image(im, (340, 502, 60, 60), 'contain')
+            config_key = '诡计卡'
+            # 特殊处理弱点诡计卡的UI
+            if self.card_class == '弱点':
+                encounter_group_ui = self.image_manager.get_image('弱点-诡计卡-遭遇组')
+                self._paste_by_center(encounter_group_ui, (346, 527), (70, 70))
         elif self.card_type == '故事卡':
-            self.paste_image(im, (608, 54, 72, 72), 'contain')
+            config_key = '故事卡'
         elif self.card_type == '冒险参考卡':
-            self.paste_image(im, (339, 120, 60, 60), 'contain')
-        elif self.card_type == '密谋卡' and self.is_back is False:
-            self.paste_image(im, (731, 48, 60, 60), 'contain')
-        elif self.card_type == '场景卡' and self.is_back is False:
-            self.paste_image(im, (259, 48, 60, 60), 'contain')
-        elif self.card_type == '密谋卡' and self.is_back is True:
-            self.paste_image(im, (62, 103, 72, 72), 'contain')
-        elif self.card_type == '场景卡' and self.is_back is True:
-            self.paste_image(im, (62, 103, 72, 72), 'contain')
+            config_key = '冒险参考卡'
+        elif self.card_type == '密谋卡':
+            config_key = '密谋卡_背面' if self.is_back else '密谋卡_正面'
+        elif self.card_type == '场景卡':
+            config_key = '场景卡_背面' if self.is_back else '场景卡_正面'
+        elif self.card_type == '密谋卡-大画':
+            config_key = '密谋卡-大画'
+        elif self.card_type == '场景卡-大画':
+            config_key = '场景卡-大画'
+        elif self.card_type == '支援卡' and self.card_class == '中立':
+            config_key = '支援卡_中立'
+            # 特殊处理支援卡的UI
+            encounter_group_ui = self.image_manager.get_image('支援卡-遭遇组')
+            self._paste_by_center(encounter_group_ui, (671, 44), (88, 88))
+
+        # 如果找到了配置，则粘贴图标
+        if config_key and config_key in icon_configs:
+            config = icon_configs[config_key]
+            center = config['center']
+            actual_size = size if size is not None else config['default_size']
+
+            # 确保size格式正确
+            if isinstance(actual_size, (int, float)):
+                actual_size = (actual_size, actual_size)
+
+            self._paste_by_center(im, center, actual_size)
+
+    def _paste_by_center(self, image, center_point, size):
+        """
+        根据中心点坐标粘贴图片
+
+        :param image: 要粘贴的图片
+        :param center_point: 中心点坐标 (center_x, center_y)
+        :param size: 图片大小 (width, height)
+        """
+        center_x, center_y = center_point
+        width, height = size
+
+        # 计算左上角坐标
+        x = center_x - width // 2
+        y = center_y - height // 2
+
+        # 粘贴图片
+        self.paste_image(image, (x, y, width, height), 'contain')

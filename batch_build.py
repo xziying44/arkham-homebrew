@@ -382,7 +382,6 @@ def batch_build_card(card_json, font_manager=None, image_manager=None, picture_p
             )
 
     if card is not None:
-        return card
         # 年份信息
         copyright_dict = {
             '01': {'name': '基础', 'year': 2016},

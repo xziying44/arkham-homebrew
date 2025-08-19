@@ -288,7 +288,7 @@ def open_picture(card_json, path):
 
 
 def create_location_card(card_json, picture_path=None, font_manager=None, image_manager=None, image_mode=0,
-                         transparent_encounter=False):
+                         transparent_encounter=False, transparent_background=False):
     """制作地点卡"""
     # 解析JSON字符串
     data = card_json
@@ -303,55 +303,50 @@ def create_location_card(card_json, picture_path=None, font_manager=None, image_
         image_manager=image_manager,
         card_type='地点卡'
     )
-    # 贴底图
-    if picture_path is not None:
-        dp = open_picture(card_json, picture_path)
-        if abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
-            image_mode = 1
-        if image_mode == 1:
-            # 铺满
-            card.paste_image(dp, (0, 0, 739, 1049), 'cover')
-        else:
-            card.paste_image(dp, (0, 80, 739, 562), 'cover')
-    if 'location_type' not in data or data['location_type'] not in ['未揭示', '已揭示']:
-        raise ValueError('说明地点类型为未揭示或已揭示')
-    # 贴牌框 是否有副标题
-    transparent_list = [
-        (370, 518, 30),
-        # (54, 46, 50),
-        # (164, 968 + 12, 54),
-        # (246, 952 + 12, 54),
-        # (328, 945 + 12, 54),
-        # (410, 945 + 12, 54),
-        # (492, 952 + 12, 54),
-        # (574, 968 + 12, 54),
-    ]
+    dp = open_picture(card_json, picture_path)
     is_enemy = False
     if data.get('enemy_health', '') != '':
         # 是否为敌人地点
         is_enemy = True
-        if 'subtitle' in data and data['subtitle'] != '':
-            card.paste_image(image_manager.get_image(f'{data["type"]}-{data["location_type"]}-敌人-副标题'), (0, 0),
-                             'contain',
-                             transparent_list if transparent_encounter else None)
+    if transparent_background is False:
+        # 贴底图
+        if picture_path is not None:
+            if abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
+                image_mode = 1
+            if image_mode == 1:
+                # 铺满
+                card.paste_image(dp, (0, 0, 739, 1049), 'cover')
+            else:
+                card.paste_image(dp, (0, 80, 739, 562), 'cover')
+        if 'location_type' not in data or data['location_type'] not in ['未揭示', '已揭示']:
+            raise ValueError('说明地点类型为未揭示或已揭示')
+        # 贴牌框 是否有副标题
+        is_enemy = False
+        if data.get('enemy_health', '') != '':
+            # 是否为敌人地点
+            is_enemy = True
+            if 'subtitle' in data and data['subtitle'] != '':
+                card.paste_image(image_manager.get_image(f'{data["type"]}-{data["location_type"]}-敌人-副标题'), (0, 0),
+                                 'contain')
+            else:
+                card.paste_image(image_manager.get_image(f'{data["type"]}-{data["location_type"]}-敌人'), (0, 0),
+                                 'contain')
+            pass
         else:
-            card.paste_image(image_manager.get_image(f'{data["type"]}-{data["location_type"]}-敌人'), (0, 0), 'contain',
-                             transparent_list if transparent_encounter else None)
-        pass
-    else:
-        if 'subtitle' in data and data['subtitle'] != '':
-            card.paste_image(image_manager.get_image(
-                f'{data["type"]}-{data["location_type"]}-副标题{"-虚拟" if card_json.get("virtual", False) else ""}'),
-                (0, 0),
-                'contain',
-                transparent_list if transparent_encounter else None)
-        else:
-            card.paste_image(image_manager.get_image(
-                f'{data["type"]}-{data["location_type"]}'
-                f'{"-半" if card_json.get("virtual", False) == "半" else ""}'
-                f'{"-虚拟" if card_json.get("virtual", False) else ""}'), (0, 0),
-                'contain',
-                transparent_list if transparent_encounter else None)
+            if 'subtitle' in data and data['subtitle'] != '':
+                card.paste_image(image_manager.get_image(
+                    f'{data["type"]}-{data["location_type"]}-副标题{"-虚拟" if card_json.get("virtual", False) else ""}'),
+                    (0, 0),
+                    'contain')
+            else:
+                card.paste_image(image_manager.get_image(
+                    f'{data["type"]}-{data["location_type"]}'
+                    f'{"-半" if card_json.get("virtual", False) == "半" else ""}'
+                    f'{"-虚拟" if card_json.get("virtual", False) else ""}'), (0, 0),
+                    'contain')
+    # 贴遭遇组
+    if transparent_encounter:
+        card.copy_circle_to_image(dp, (370, 518, 30), (370, 518, 30))
     # 写小字
     card.draw_centered_text(
         position=(370, 562),
@@ -470,7 +465,7 @@ def create_location_card(card_json, picture_path=None, font_manager=None, image_
 
 
 def create_treachery_card(card_json, picture_path=None, font_manager=None, image_manager=None, image_mode=0,
-                          transparent_encounter=False):
+                          transparent_encounter=False, transparent_background=False):
     """诡计卡"""
     # 解析JSON字符串
     data = card_json
@@ -485,20 +480,23 @@ def create_treachery_card(card_json, picture_path=None, font_manager=None, image
         image_manager=image_manager,
         card_type='诡计卡'
     )
-    # 贴底图
-    if picture_path is not None:
-        dp = open_picture(card_json, picture_path)
-        if abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
-            image_mode = 1
-        if image_mode == 1:
-            # 铺满
-            card.paste_image(dp, (0, 0, 739, 1049), 'cover')
-        else:
-            card.paste_image(dp, (0, 0, 739, 605), 'cover')
+    dp = open_picture(card_json, picture_path)
+    if transparent_background is False:
+        # 贴底图
+        if picture_path is not None:
+            if abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
+                image_mode = 1
+            if image_mode == 1:
+                # 铺满
+                card.paste_image(dp, (0, 0, 739, 1049), 'cover')
+            else:
+                card.paste_image(dp, (0, 0, 739, 605), 'cover')
 
-    # 贴牌框
-    card.paste_image(image_manager.get_image(f'{data["type"]}'), (0, 0), 'contain',
-                     (370, 534, 24) if transparent_encounter else None)
+        # 贴牌框
+        card.paste_image(image_manager.get_image(f'{data["type"]}'), (0, 0), 'contain')
+    # 贴遭遇组
+    if transparent_encounter:
+        card.copy_circle_to_image(dp, (370, 534, 32), (370, 534, 32))
     # 写小字
     card.draw_centered_text(
         position=(370, 576),
@@ -551,7 +549,7 @@ def create_treachery_card(card_json, picture_path=None, font_manager=None, image
 
 
 def create_enemy_card(card_json, picture_path=None, font_manager=None, image_manager=None, image_mode=0,
-                      transparent_encounter=False):
+                      transparent_encounter=False, transparent_background=False):
     """敌人卡"""
     # 解析JSON字符串
     data = card_json
@@ -566,26 +564,29 @@ def create_enemy_card(card_json, picture_path=None, font_manager=None, image_man
         image_manager=image_manager,
         card_type='敌人卡'
     )
-    # 贴底图
-    if picture_path is not None:
-        dp = open_picture(card_json, picture_path)
-        if abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
-            image_mode = 1
-        if image_mode == 1:
-            # 铺满
-            card.paste_image(dp, (0, 0, 739, 1049), 'cover')
+    dp = open_picture(card_json, picture_path)
+    if transparent_background is False:
+        # 贴底图
+        if picture_path is not None:
+            if abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
+                image_mode = 1
+            if image_mode == 1:
+                # 铺满
+                card.paste_image(dp, (0, 0, 739, 1049), 'cover')
+            else:
+                card.paste_image(dp, (0, 456, 739, 593), 'cover')
+        # 贴牌框
+        if 'subtitle' in data and data['subtitle'] != '':
+            card.paste_image(
+                image_manager.get_image(f'{data["type"]}-副标题{"-虚拟" if card_json.get("virtual", False) else ""}'),
+                (0, 0))
         else:
-            card.paste_image(dp, (0, 456, 739, 593), 'cover')
-    # 贴牌框
-    if 'subtitle' in data and data['subtitle'] != '':
-        card.paste_image(
-            image_manager.get_image(f'{data["type"]}-副标题{"-虚拟" if card_json.get("virtual", False) else ""}'),
-            (0, 0),
-            'contain', (370, 568, 24) if transparent_encounter else None)
-    else:
-        card.paste_image(image_manager.get_image(f'{data["type"]}{"-虚拟" if card_json.get("virtual", False) else ""}'),
-                         (0, 0), 'contain',
-                         (370, 568, 24) if transparent_encounter else None)
+            card.paste_image(
+                image_manager.get_image(f'{data["type"]}{"-虚拟" if card_json.get("virtual", False) else ""}'),
+                (0, 0), 'contain')
+    # 贴遭遇组
+    if transparent_encounter:
+        card.copy_circle_to_image(dp, (370, 570, 32), (370, 570, 32))
 
     # 写小字
     card.draw_centered_text(
@@ -1158,6 +1159,14 @@ def create_investigators_card_back(card_json, picture_path=None, font_manager=No
         raise ValueError(data['msg'])
     if 'class' not in data or data['class'] not in ['守护者', '探求者', '流浪者', '潜修者', '生存者', '中立']:
         raise ValueError('职业类型错误')
+    if 'card_back' not in data:
+        data['card_back'] = {
+            "size": 30,
+            "option": [],
+            "requirement": "",
+            "other": data.get('body', ''),
+            "story": ""
+        }
     card_back = data['card_back']
     # 创建Card对象
     card = Card(
@@ -1172,6 +1181,9 @@ def create_investigators_card_back(card_json, picture_path=None, font_manager=No
     if picture_path is not None:
         dp = open_picture(card_json, picture_path)
         if image_mode == 1:
+            # 检查是否高大于宽，如果是旋转90度
+            if dp.size[0] < dp.size[1]:
+                dp = dp.rotate(90, expand=True)
             # 铺满
             card.paste_image(dp, (0, 0, 1049, 739), 'cover')
         else:
@@ -1197,6 +1209,8 @@ def create_investigators_card_back(card_json, picture_path=None, font_manager=No
         font_size=32,
         font_color=(0, 0, 0)
     )
+    if card_json['body'] is not None and card_json['body'] != '':
+        card_back['other'] = card_json['body']
     test_text = ""
     if 'size' in card_back and card_back['size'] > 0:
         test_text += f"【牌库卡牌张数】：{card_back['size']}。\n"
@@ -1237,7 +1251,6 @@ def create_investigators_card_back(card_json, picture_path=None, font_manager=No
             (420, 141), (1011, 141), (1011, 700), (36, 700),
             (36, 410), (380, 410)
         ]
-    print(test_text)
     card.draw_text(
         test_text,
         vertices=vertices,
@@ -1480,7 +1493,6 @@ def create_player_cards(card_json, picture_path=None, font_manager=None, image_m
         traits = integrate_traits_text(font_manager, data['traits'])
     # 整理body和风味
     body = tidy_body_flavor(data)
-    print(body)
     # 按不同类型画位置
     if data['type'] == '技能卡':
         # 画名称
@@ -1668,12 +1680,12 @@ def create_large_picture(
         card.paste_image(dp, (0, 0, 1049, 739), 'cover')
     # 透明列表
     encounter_list = [
-        (105, 505, 42)
+        (105, 499, 42)
 
     ]
-    if data['type'] != '场景卡':
+    if data['type'] != '场景卡-大画':
         encounter_list = [
-            (105, 499, 42),
+            (105, 459, 42),
             (953, 447, 52)
         ]
     # 贴牌框-UI
@@ -1704,6 +1716,13 @@ def create_large_picture(
         padding=15,
         draw_virtual_box=False
     )
+    # 写阈值
+    if 'threshold' in data and data['type'] == '密谋卡-大画':
+        card.set_number_value(
+            position=(953, 447),
+            text=data['threshold'],
+            font_size=54
+        )
     return card
 
 
@@ -1730,9 +1749,9 @@ def create_act_card(
         image_manager=image_manager,
         card_type=data['type']
     )
+    dp = open_picture(card_json, picture_path)
     # 贴底图
     if picture_path is not None:
-        dp = open_picture(card_json, picture_path)
         if abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
             image_mode = 1
         if image_mode == 1:
@@ -1749,24 +1768,27 @@ def create_act_card(
             )
     # 透明列表
     encounter_list = [
-        (533, 628, 42),
-        (288, 74, 34)
+        [(533, 628, 42), (528, 622, 42)],
+        [(270, 74, 34), (288, 74, 34)]
     ]
     if data['type'] != '场景卡':
         encounter_list = [
-            (512, 636, 44),
-            (288 + 473, 76, 34)
+            [(520, 636, 44), (500, 630, 44)],
+            [(288 + 473, 76, 34), (288 + 473, 76, 34)]
         ]
     # 贴牌框-UI
-    card.paste_image(image_manager.get_image(f'{data["type"]}'), (0, 0), 'contain',
-                     encounter_list if transparent_encounter else None)
+    card.paste_image(image_manager.get_image(f'{data["type"]}'), (0, 0), 'contain')
+    # 贴遭遇组
+    if transparent_encounter:
+        for item in encounter_list:
+            card.copy_circle_to_image(dp, item[0], item[1])
     # 写序列号
     if data['type'] == '场景卡':
         card.draw_centered_text(
             position=(287, 25),
             text=f"场景{data.get('serial_number', '')}",
             font_name="小字",
-            font_size=20,
+            font_size=28,
             font_color=(0, 0, 0)
         )
     else:
@@ -1774,7 +1796,7 @@ def create_act_card(
             position=(758, 25),
             text=f"密谋{data.get('serial_number', '')}",
             font_name="小字",
-            font_size=20,
+            font_size=28,
             font_color=(0, 0, 0)
         )
     # 写标题
@@ -1790,11 +1812,12 @@ def create_act_card(
         (560, 574), (470, 574), (470, 678),
         (10, 678)
     ]
+    offset_x = -20
     if data['type'] != '场景卡':
         vertices = [
-            (10 + 480, 185), (560 + 480, 185),
-            (560 + 480, 678), (10 + 480 + 80, 678), (10 + 480 + 80, 574),
-            (10 + 480, 574)
+            (10 + 480 + offset_x, 185), (560 + 480 + offset_x, 185),
+            (560 + 480 + offset_x, 678), (10 + 480 + 80 + offset_x, 678), (10 + 480 + 80 + offset_x, 574),
+            (10 + 480 + offset_x, 574)
         ]
     # 写正文
     body = tidy_body_flavor(data, flavor_type=1)
@@ -1809,9 +1832,9 @@ def create_act_card(
     # 写阈值
     if 'threshold' in data:
         card.set_number_value(
-            position=(535, 624) if data['type'] == '场景卡' else (512, 636),
+            position=(523, 618) if data['type'] == '场景卡' else (498, 624),
             text=data['threshold'],
-            font_size=52
+            font_size=54
         )
     return card
 
@@ -1839,31 +1862,27 @@ def create_act_back_card(
         card_type=data['type'],
         is_back=True
     )
+    dp = open_picture(card_json, picture_path)
     # 贴底图
     if picture_path is not None and transparent_encounter:
-        dp = open_picture(card_json, picture_path)
         # 判断图片宽高，如果高大于宽，则需要将图片向左旋转90度
         if dp.size[1] > dp.size[0]:
             dp = dp.rotate(90, expand=True)
         # 铺满
         card.paste_image(dp, (0, 0, 1049, 739), 'cover')
     # 贴牌框-UI
-    card.paste_image(image_manager.get_image(f'{data["type"]}-卡背'), (0, 0), 'contain',
-                     [(97, 138, 42), (97, 138, 42)] if transparent_encounter else None)
-    # 写小字
-    card.draw_centered_text(
-        position=(96, 62),
-        text='场景' if data['type'] == '场景卡' else '密谋',
-        font_name="小字",
-        font_size=20,
-        font_color=(0, 0, 0)
-    )
+    card.paste_image(image_manager.get_image(f'{data["type"]}-卡背'), (0, 0), 'contain')
+    # 贴遭遇组
+    if transparent_encounter:
+        card.copy_circle_to_image(dp, (90, 144, 42), (97, 138, 42))
     # 写序列号
+    small_words = '场景' if data['type'] == '场景卡' else '密谋'
+    small_words += data.get('serial_number', '')
     card.draw_centered_text(
-        position=(96, 77),
-        text=data.get('serial_number', ''),
+        position=(96, 68),
+        text=small_words,
         font_name="小字",
-        font_size=20,
+        font_size=28,
         font_color=(0, 0, 0)
     )
     # 写标题
@@ -1886,11 +1905,12 @@ def create_act_back_card(
     card.paste_image(title_img, (40, 208), 'cover')
     # 写正文
     body = tidy_body_flavor(data, flavor_type=1)
+    offset = -8
     card.draw_text(
         body,
         vertices=[
-            (210, 67), (977, 67),
-            (977, 652), (210, 652)
+            (210 + offset, 67), (977 + offset, 67),
+            (977 + offset, 672), (210 + offset, 672)
         ],
         default_font_name='simfang',
         default_size=32,
@@ -1916,7 +1936,8 @@ def create_story_card(
         picture_path=None,
         font_manager=None,
         image_manager=None,
-        transparent_encounter=False
+        transparent_encounter=False,
+        transparent_background=False
 ):
     """制作故事卡"""
     # 解析JSON字符串
@@ -1927,20 +1948,23 @@ def create_story_card(
         raise ValueError('卡牌类型错误')
     # 创建Card对象
     card = Card(
-        width=747,
-        height=1043,
+        width=739,
+        height=1049,
         font_manager=font_manager,
         image_manager=image_manager,
         card_type=data['type'],
         is_back=True
     )
-    # 贴底图
-    if picture_path is not None:
-        dp = open_picture(card_json, picture_path)
-        card.paste_image(dp, (0, 0, 747, 1043), 'cover')
-    # 贴牌框-UI
-    card.paste_image(image_manager.get_image(f'{data["type"]}'), (0, 0), 'contain',
-                     [(643, 92, 42)] if transparent_encounter else None)
+    dp = open_picture(card_json, picture_path)
+    if transparent_background is False:
+        # 贴底图
+        if picture_path is not None:
+            card.paste_image(dp, (0, 0, 739, 1049), 'cover')
+        # 贴牌框-UI
+        card.paste_image(image_manager.get_image(f'{data["type"]}'), (0, 0), 'contain')
+    # 贴遭遇组
+    if transparent_encounter:
+        card.copy_circle_to_image(dp, (643, 92, 42), (600, 99, 42))
     # 写标题
     card.draw_centered_text(
         position=(313, 90),
@@ -1951,10 +1975,10 @@ def create_story_card(
     )
     # 写小字
     card.draw_centered_text(
-        position=(372, 1008),
+        position=(370, 1008),
         text='剧情',
         font_name="小字",
-        font_size=24,
+        font_size=30,
         font_color=(0, 0, 0)
     )
     # 写正文
@@ -1962,8 +1986,8 @@ def create_story_card(
     card.draw_text(
         body,
         vertices=[
-            (56, 207), (685, 207),
-            (685, 960), (56, 960)
+            (50, 207), (685, 207),
+            (685, 960), (50, 960)
         ],
         default_font_name='simfang',
         default_size=32,
@@ -2093,18 +2117,19 @@ def create_scenario_card(
         card_type=data['type'],
         is_back=True
     )
-    if transparent_background is None:
+    dp = open_picture(card_json, picture_path)
+    if transparent_background is False:
         # 贴底图
         if picture_path is not None:
-            dp = open_picture(card_json, picture_path)
             card.paste_image(dp, (0, 0, 739, 1049), 'cover')
         # 贴牌框-UI
         if data.get('scenario_type', 0) == 1:
-            card.paste_image(image_manager.get_image(f'{data["type"]}-资源区'), (0, 0), 'contain',
-                             [(368, 147, 34)] if transparent_encounter else None)
+            card.paste_image(image_manager.get_image(f'{data["type"]}-资源区'), (0, 0), 'contain')
         else:
-            card.paste_image(image_manager.get_image(f'{data["type"]}'), (0, 0), 'contain',
-                             [(368, 147, 34)] if transparent_encounter else None)
+            card.paste_image(image_manager.get_image(f'{data["type"]}'), (0, 0), 'contain')
+    # 贴遭遇组
+    if transparent_encounter:
+        card.copy_circle_to_image(dp, (368, 144, 34), (368, 147, 34))
     # 写标题
     card.draw_centered_text(
         position=(369, 210),
@@ -2145,8 +2170,44 @@ def create_scenario_card(
     return card
 
 
+def sort_submit_icons(card_json):
+    """
+    对卡牌JSON中的submit_icon按指定顺序排序
+
+    Args:
+        card_json (dict): 卡牌JSON对象
+
+    Returns:
+        dict: 排序后的卡牌JSON对象
+    """
+    # 定义图标的优先级顺序
+    icon_order = {
+        "意志": 1,
+        "智力": 2,
+        "战力": 3,
+        "敏捷": 4,
+        "狂野": 5
+    }
+
+    # 复制原JSON对象以避免修改原对象
+    result_json = card_json.copy()
+
+    # 检查是否存在submit_icon字段
+    if "submit_icon" in result_json and isinstance(result_json["submit_icon"], list):
+        # 对submit_icon列表进行排序
+        # 使用icon_order字典中的值作为排序键，如果图标不在字典中则放到最后
+        result_json["submit_icon"] = sorted(
+            result_json["submit_icon"],
+            key=lambda x: icon_order.get(x, 999)
+        )
+
+    return result_json
+
+
 def preprocessing_json(card_json):
     """预处理json信息"""
+
+    card_json = sort_submit_icons(card_json)
 
     def replace_bracketed_content(match):
         content = match.group(1)  # 获取括号内的内容
@@ -2198,7 +2259,6 @@ def process_card_json(card_json, picture_path=None, font_manager=None, image_man
     """生成卡牌"""
     # 预处理
     card_json = preprocessing_json(card_json)
-    print(card_json)
     if 'msg' in card_json and card_json['msg'] != '':
         raise ValueError(card_json['msg'])
     if 'type' not in card_json:
@@ -2206,29 +2266,35 @@ def process_card_json(card_json, picture_path=None, font_manager=None, image_man
     if card_json['type'] == '调查员卡':
         return create_investigators_card(card_json, picture_path, font_manager, image_manager, image_mode=image_mode)
     elif card_json['type'] == '调查员卡背':
-        return create_investigators_card_back(card_json, picture_path, font_manager, image_manager)
+        return create_investigators_card_back(card_json, picture_path, font_manager, image_manager,
+                                              image_mode=image_mode)
     elif card_json.get('class', '') == '弱点':
         return create_weakness_back(card_json, picture_path, font_manager, image_manager, image_mode=image_mode)
     elif card_json['type'] == '升级卡':
         return create_upgrade_card(card_json, picture_path, font_manager, image_manager)
     elif card_json['type'] == '故事卡':
         return create_story_card(card_json, picture_path, font_manager, image_manager,
-                                 transparent_encounter=transparent_encounter)
+                                 transparent_encounter=transparent_encounter,
+                                 transparent_background=transparent_background)
     elif card_json['type'] == '行动卡':
         return create_action_card(card_json, picture_path, font_manager, image_manager,
                                   transparent_encounter=transparent_encounter)
     elif card_json['type'] == '冒险参考卡':
         return create_scenario_card(card_json, picture_path, font_manager, image_manager,
-                                    transparent_encounter=transparent_encounter)
+                                    transparent_encounter=transparent_encounter,
+                                    transparent_background=transparent_background)
     elif card_json['type'] == '敌人卡':
         return create_enemy_card(card_json, picture_path, font_manager, image_manager, image_mode=image_mode,
-                                 transparent_encounter=transparent_encounter)
+                                 transparent_encounter=transparent_encounter,
+                                 transparent_background=transparent_background)
     elif card_json['type'] == '诡计卡':
         return create_treachery_card(card_json, picture_path, font_manager, image_manager, image_mode=image_mode,
-                                     transparent_encounter=transparent_encounter)
+                                     transparent_encounter=transparent_encounter,
+                                     transparent_background=transparent_background)
     elif card_json['type'] == '地点卡':
         return create_location_card(card_json, picture_path, font_manager, image_manager, image_mode=image_mode,
-                                    transparent_encounter=transparent_encounter)
+                                    transparent_encounter=transparent_encounter,
+                                    transparent_background=transparent_background)
     elif card_json['type'] in ['场景卡-大画', '密谋卡-大画']:
         return create_large_picture(card_json, picture_path, font_manager, image_manager,
                                     transparent_encounter=transparent_encounter)
@@ -2357,21 +2423,22 @@ def process_card_json_to_tts_json(card_json, front_image_url="", back_image_url=
 
 if __name__ == '__main__':
     json_data = {
-        "type": "冒险参考卡",
-        "scenario_type": 1,
-        "scenario_card": {
-            "resource_name": "追踪八九寺真宵",
-            "skull": "-X。X是已揭示的{外围}地点数量。\n【哨兵：】上、右、下、左。",
-            "cultist": "-5。如果你失败，在最近的{爪牙}敌人上放置1个毁灭标记。    【哨兵：】右、下、左、上。",
-            "tablet": "-5。如果你失败，失去1个行动。【哨兵：】下、左、上、右。",
-            "elder_thing": "-5。如果你失败，治愈场上离你最近的敌人1点生命。        【哨兵：】左、上、右、下。"
-        },
-        "id": 26,
-        "body": "-X。X是已揭示的{外围}地点数量。\n警戒：上、右、下、左。\n-5。如果你失败，在最近的{爪牙}敌人上放置1个毁灭标记。\n警戒：右、下、左、上。\n-5。如果你失败，失去1个行动。\n警戒：下、左、上、右。\n-5。如果你失败，从游戏中最近的敌人身上治愈1点伤害。\n警戒：左、上、右、下。",
-        "name": "崩坏物语",
-        "subtitle": "困难/专家",
-        "traits": [],
-        "picture_path": "D:\\BaiduSyncdisk\\PycharmProjects\\arkham_translate\\translation_space\\怪物语\\factory\\000026-raw.jpg",
+        "type": "地点卡",
+        "location_icon": "绿菱",
+        "location_link": [
+            "褐扭"
+        ],
+        "shroud": "3",
+        "clues": "1<调查员>",
+        "location_type": "已揭示",
+        "id": 91,
+        "body": "➡️：【谈判】。检定📚(4)。如果你成功，获得1个线索(从供应堆)。(团队每场游戏限制成功1🕵️次。)\n➡️花费2资源：从你的调查员身上治愈共计至多2点伤害和/或恐惧。(每场游戏限制一次。)\n<relish>驻扎在堡垒的一名警官向你吐露，他的几名手下在荒野中搜寻纳德曼一行人的踪迹时失踪了。自审判以来，他们现在认为此案已结，并相信那些学生是死于纳德曼之手。</relish>\n",
+        "name": "麦克唐纳堡",
+        "traits": [
+            "已开拓",
+            "堡垒"
+        ],
+        "picture_path": "D:\\BaiduSyncdisk\\PycharmProjects\\arkham_translate\\translation_space\\两个POD\\factory\\000091-raw.jpg",
         "class": "中立"
     }
     fm = FontManager('fonts')
@@ -2381,6 +2448,6 @@ if __name__ == '__main__':
                              font_manager=fm,
                              image_manager=im,
                              image_mode=1,
-                             transparent_encounter=True,
-                             transparent_background=True)
+                             transparent_encounter=False,
+                             transparent_background=False)
     card.image.show()

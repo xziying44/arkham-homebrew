@@ -392,8 +392,8 @@ def remake_player_cards(additional_exports=False, replace_investigators=False):
         # # # 临时测试第一个文件夹
         # if index != 51:
         #     continue
-        if folder != 'httpssteamusercontentaakamaihdnetugc2424696374430578395F97B770FB90EA18B46F58614CCE0016406E3E777':
-            continue
+        # if folder != 'httpssteamusercontentaakamaihdnetugc2424696374430578395F97B770FB90EA18B46F58614CCE0016406E3E777':
+        #     continue
 
         print('folder', folder)
         print(metadata)
@@ -839,7 +839,7 @@ if __name__ == '__main__':
     # 额外分拣成ID文件名
     # sorting_images_by_id()
     # 替换翻译
-    # replace_translations()
+    replace_translations()
     # 制作卡牌
     remake_player_cards(additional_exports=False, replace_investigators=True)
     # print(json.dumps(temp_taboo_list, ensure_ascii=False, indent=4))
