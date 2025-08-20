@@ -820,6 +820,11 @@ const handleDelete = async () => {
 onMounted(() => {
   loadFileTree();
 });
+
+// 导出方法供父组件调用
+defineExpose({
+  refreshFileTree
+});
 </script>
 
 <style scoped>

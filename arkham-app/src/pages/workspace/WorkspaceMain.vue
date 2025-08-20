@@ -4,6 +4,7 @@
     <FileTreePanel 
       v-if="showFileTree"
       :width="fileTreeWidth"
+      ref="fileTreeRef"
       @toggle="toggleFileTree"
       @go-back="goBack"
       @file-select="handleFileSelect"
@@ -24,6 +25,8 @@
       :selected-file="selectedFile"
       @toggle-file-tree="toggleFileTree"
       @toggle-image-preview="toggleImagePreview"
+      @update-preview-image="updatePreviewImage"
+      @refresh-file-tree="refreshFileTree"
     />
 
     <!-- 右侧分割条 -->
@@ -50,11 +53,13 @@
 
 <script setup lang="ts">
 import { ref, onUnmounted } from 'vue';
+import { useMessage } from 'naive-ui';
 import type { TreeOption } from 'naive-ui';
 import FileTreePanel from '@/components/FileTreePanel.vue';
 import FormEditPanel from '@/components/FormEditPanel.vue';
 import ImagePreviewPanel from '@/components/ImagePreviewPanel.vue';
 import ResizeSplitter from '@/components/ResizeSplitter.vue';
+import { WorkspaceService } from '@/api';
 
 // Props
 defineProps<{
@@ -68,6 +73,8 @@ const emit = defineEmits<{
   'go-back': [];
 }>();
 
+const message = useMessage();
+
 // 布局控制
 const showFileTree = ref(true);
 const showImagePreview = ref(true);
@@ -80,6 +87,7 @@ const selectedFile = ref<TreeOption | null>(null);
 // 图片预览
 const currentImage = ref('');
 const imagePreviewRef = ref();
+const fileTreeRef = ref();
 
 const toggleFileTree = () => {
   showFileTree.value = !showFileTree.value;
@@ -93,17 +101,71 @@ const goBack = () => {
   emit('go-back');
 };
 
-const handleFileSelect = (keys: Array<string | number>, option?: TreeOption) => {
+// 检查是否是图片文件
+const isImageFile = (option: TreeOption): boolean => {
+  if (option.type === 'image') return true;
+  
+  if (typeof option.key === 'string' && option.path) {
+    const extension = option.path.split('.').pop()?.toLowerCase() || '';
+    return ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'tiff', 'ico'].includes(extension);
+  }
+  
+  return false;
+};
+
+// 从文件路径加载图片
+const loadImageFromPath = async (imagePath: string): Promise<string | null> => {
+  try {
+    // 首先检查文件信息，确认是否为图片文件
+    const fileInfo = await WorkspaceService.getFileInfo(imagePath);
+    
+    if (!fileInfo.is_image) {
+      console.warn('选中的文件不是图片格式');
+      return null;
+    }
+    
+    // 调用新的图片内容API
+    const imageContent = await WorkspaceService.getImageContent(imagePath);
+    return imageContent;
+    
+  } catch (error) {
+    console.error('加载图片失败:', error);
+    message.error('加载图片失败');
+    return null;
+  }
+};
+
+
+
+const handleFileSelect = async (keys: Array<string | number>, option?: TreeOption) => {
   // 保存选中的文件信息
   selectedFile.value = option || null;
   
-  // 如果选中的是图片文件，更新图片预览
-  if (option && (option.type === 'image' || 
-      (typeof option.key === 'string' && 
-       (option.key.includes('image') || option.key === 'bg1' || option.key === 'portrait1' || 
-        option.key === 'icons' || option.key === 'logo' || option.key === 'texture')))) {
-    currentImage.value = `https://picsum.photos/600/400?random=${option.key}`;
-    imagePreviewRef.value?.resetImageView();
+  // 如果选中的是图片文件，加载并显示图片
+  if (option && isImageFile(option)) {
+    if (option.path) {
+      const imageData = await loadImageFromPath(option.path);
+      if (imageData) {
+        currentImage.value = imageData;
+        imagePreviewRef.value?.fitToContainer();
+      }
+    }
+  } else {
+    // 如果不是图片文件，清空当前图片预览
+    currentImage.value = '';
+  }
+};
+
+// 更新预览图片（来自表单编辑器的卡图生成）
+const updatePreviewImage = (imageBase64: string) => {
+  currentImage.value = imageBase64;
+  imagePreviewRef.value?.fitToContainer();
+};
+
+// 刷新文件树
+const refreshFileTree = () => {
+  if (fileTreeRef.value && typeof fileTreeRef.value.refreshFileTree === 'function') {
+    fileTreeRef.value.refreshFileTree();
   }
 };
 

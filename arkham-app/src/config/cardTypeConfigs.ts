@@ -10,7 +10,7 @@ export interface ShowCondition {
 export interface FormField {
   key: string;
   name: string;
-  type: 'text' | 'textarea' | 'number' | 'select' | 'multi-select' | 'string-array';
+  type: 'text' | 'textarea' | 'number' | 'select' | 'multi-select' | 'string-array' | 'image';
   layout?: 'full' | 'half' | 'third' | 'quarter';
   min?: number;
   max?: number;
@@ -19,6 +19,7 @@ export interface FormField {
   options?: FieldOption[];
   showCondition?: ShowCondition;  // 新增：显示条件
   index?: number;  // 新增：数组索引，表示绑定到 key[index]
+  maxSize?: number; // 图片最大文件大小（字节）
 }
 export interface CardTypeConfig {
   fields: FormField[];
@@ -175,7 +176,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         options: [
           { label: '🚫 无等级', value: null },
           { label: '0️⃣ 等级-0', value: 0 },
-          ...Array.from({ length: 5 }, (_, i) => ({ label: `${['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣'][i]} 等级-${i + 1}`, value: i + 1 }))
+          ...Array.from({ length: 5 }, (_, i) => ({ label: `${['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][i]} 等级-${i + 1}`, value: i + 1 }))
         ]
       },
       {
@@ -225,6 +226,13 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         name: '🏆 胜利点',
         type: 'number',
         layout: 'full'
+      },
+      {
+        key: 'picture_base64',
+        name: '🖼️ 插画',
+        type: 'image',
+        layout: 'half',
+        maxSize: 50 * 1024 * 1024, // 50MB
       },
     ]
   },
@@ -316,7 +324,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         options: [
           { label: '🚫 无等级', value: null },
           { label: '0️⃣ 等级-0', value: 0 },
-          ...Array.from({ length: 5 }, (_, i) => ({ label: `${['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣'][i]} 等级-${i + 1}`, value: i + 1 }))
+          ...Array.from({ length: 5 }, (_, i) => ({ label: `${['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][i]} 等级-${i + 1}`, value: i + 1 }))
         ]
       },
       {
@@ -400,7 +408,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         options: [
           { label: '🚫 无等级', value: null },
           { label: '0️⃣ 等级-0', value: 0 },
-          ...Array.from({ length: 5 }, (_, i) => ({ label: `${['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣'][i]} 等级-${i + 1}`, value: i + 1 }))
+          ...Array.from({ length: 5 }, (_, i) => ({ label: `${['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][i]} 等级-${i + 1}`, value: i + 1 }))
         ]
       },
       {

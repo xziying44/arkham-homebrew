@@ -2209,6 +2209,9 @@ def preprocessing_json(card_json):
 
     card_json = sort_submit_icons(card_json)
 
+    if card_json.get('type','') == '调查员':
+        card_json['type'] = '调查员卡'
+
     def replace_bracketed_content(match):
         content = match.group(1)  # 获取括号内的内容
         # 移除大括号

@@ -1,13 +1,14 @@
 import os
 import json
 import time
+import base64
+import mimetypes
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 
 # 导入卡牌生成相关模块
 try:
     from create_card import process_card_json, FontManager, ImageManager
-
     CARD_GENERATION_AVAILABLE = True
 except ImportError:
     CARD_GENERATION_AVAILABLE = False
@@ -158,6 +159,8 @@ class WorkspaceManager:
             '.svg': 'image',
             '.bmp': 'image',
             '.webp': 'image',
+            '.tiff': 'image',
+            '.ico': 'image',
             '.json': 'config',
             '.xml': 'data',
             '.css': 'style',
@@ -168,6 +171,10 @@ class WorkspaceManager:
         }
 
         return type_mapping.get(ext, 'file')
+
+    def _is_image_file(self, file_path: str) -> bool:
+        """检查是否是图片文件"""
+        return self._get_file_type(file_path) == 'image'
 
     def _get_type_priority(self, item_type: str) -> int:
         """获取类型优先级，数字越小优先级越高"""
@@ -353,7 +360,7 @@ class WorkspaceManager:
             return False
 
     def get_file_content(self, file_path: str) -> Optional[str]:
-        """获取文件内容"""
+        """获取文本文件内容"""
         try:
             # 确保路径在工作目录内
             abs_file_path = os.path.abspath(file_path)
@@ -368,6 +375,85 @@ class WorkspaceManager:
 
         except Exception as e:
             print(f"读取文件内容失败: {e}")
+            return None
+
+    def get_image_as_base64(self, image_path: str) -> Optional[str]:
+        """
+        获取图片文件并转换为base64格式
+
+        Args:
+            image_path: 图片文件路径
+
+        Returns:
+            str: base64格式的图片数据（包含data URL前缀），失败时返回None
+        """
+        try:
+            # 确保路径在工作目录内
+            abs_image_path = os.path.abspath(image_path)
+            if not abs_image_path.startswith(self.workspace_path):
+                return None
+
+            if not os.path.isfile(abs_image_path):
+                return None
+
+            # 检查是否是图片文件
+            if not self._is_image_file(abs_image_path):
+                return None
+
+            # 获取MIME类型
+            mime_type, _ = mimetypes.guess_type(abs_image_path)
+            if not mime_type or not mime_type.startswith('image/'):
+                mime_type = 'image/png'  # 默认MIME类型
+
+            # 读取图片文件的二进制数据
+            with open(abs_image_path, 'rb') as f:
+                image_data = f.read()
+
+            # 转换为base64
+            base64_data = base64.b64encode(image_data).decode('utf-8')
+
+            # 返回完整的data URL
+            return f"data:{mime_type};base64,{base64_data}"
+
+        except Exception as e:
+            print(f"读取图片文件失败: {e}")
+            return None
+
+    def get_file_info(self, file_path: str) -> Optional[Dict[str, Any]]:
+        """
+        获取文件信息
+
+        Args:
+            file_path: 文件路径
+
+        Returns:
+            dict: 文件信息，包含type、size、modified等
+        """
+        try:
+            # 确保路径在工作目录内
+            abs_file_path = os.path.abspath(file_path)
+            if not abs_file_path.startswith(self.workspace_path):
+                return None
+
+            if not os.path.exists(abs_file_path):
+                return None
+
+            stat_info = os.stat(abs_file_path)
+            file_type = self._get_file_type(abs_file_path)
+
+            return {
+                'path': abs_file_path,
+                'type': file_type,
+                'is_file': os.path.isfile(abs_file_path),
+                'is_directory': os.path.isdir(abs_file_path),
+                'is_image': self._is_image_file(abs_file_path),
+                'size': stat_info.st_size,
+                'modified': stat_info.st_mtime,
+                'modified_formatted': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(stat_info.st_mtime))
+            }
+
+        except Exception as e:
+            print(f"获取文件信息失败: {e}")
             return None
 
     def save_file_content(self, file_path: str, content: str) -> bool:
@@ -410,6 +496,12 @@ class WorkspaceManager:
         try:
             # 获取图片路径
             picture_path = json_data.get('picture_path', None)
+
+            # 如果picture_path是相对路径，尝试在工作目录中查找
+            if picture_path and not os.path.isabs(picture_path):
+                full_picture_path = os.path.join(self.workspace_path, picture_path)
+                if os.path.exists(full_picture_path):
+                    picture_path = full_picture_path
 
             # 调用process_card_json生成卡牌
             card = process_card_json(

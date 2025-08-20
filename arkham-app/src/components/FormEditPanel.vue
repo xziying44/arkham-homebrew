@@ -3,14 +3,17 @@
         <div class="pane-header">
             <n-space align="center" justify="space-between">
                 <n-space align="center" size="small">
-                    <n-button v-if="!showFileTree" size="tiny" quaternary @click="$emit('toggle-file-tree')" class="header-button">
+                    <n-button v-if="!showFileTree" size="tiny" quaternary @click="$emit('toggle-file-tree')"
+                        class="header-button">
                         <n-icon :component="FolderOpenOutline" />
                     </n-button>
                     <span class="pane-title">{{ selectedFile?.label || '卡牌编辑器' }}</span>
                 </n-space>
                 <n-space size="small">
-                    <n-button size="tiny" @click="showJsonModal = true" class="header-button" v-if="selectedFile">查看JSON</n-button>
-                    <n-button v-if="!showImagePreview" size="tiny" quaternary @click="$emit('toggle-image-preview')" class="header-button">
+                    <n-button size="tiny" @click="showJsonModal = true" class="header-button"
+                        v-if="selectedFile">查看JSON</n-button>
+                    <n-button v-if="!showImagePreview" size="tiny" quaternary @click="$emit('toggle-image-preview')"
+                        class="header-button">
                         <n-icon :component="ImageOutline" />
                     </n-button>
                 </n-space>
@@ -38,16 +41,17 @@
                     <n-card v-if="currentCardType && currentFormConfig" title="卡牌属性" size="small" class="form-card">
                         <n-form ref="dynamicFormRef" :model="currentCardData" label-placement="top" size="small">
                             <div v-for="(row, rowIndex) in formFieldRows" :key="rowIndex" class="form-row">
-                                <div v-for="field in row" :key="field.key + (field.index !== undefined ? `_${field.index}` : '')" class="form-field"
-                                    :class="getFieldLayoutClass(field.layout)">
+                                <div v-for="field in row"
+                                    :key="field.key + (field.index !== undefined ? `_${field.index}` : '')"
+                                    class="form-field" :class="getFieldLayoutClass(field.layout)">
                                     <FormFieldComponent :field="field" :value="getFieldValue(field)"
-                                        :new-string-value="newStringValue"
-                                        @update:value="setFieldValue(field, $event)"
+                                        :new-string-value="newStringValue" @update:value="setFieldValue(field, $event)"
                                         @update:new-string-value="newStringValue = $event"
                                         @add-multi-select-item="addMultiSelectItem(field, $event)"
                                         @remove-multi-select-item="removeMultiSelectItem(field, $event)"
                                         @add-string-array-item="addStringArrayItem(field)"
-                                        @remove-string-array-item="removeStringArrayItem(field, $event)" />
+                                        @remove-string-array-item="removeStringArrayItem(field, $event)"
+                                        @remove-image="removeImage(field)" />
                                 </div>
                             </div>
                         </n-form>
@@ -57,7 +61,9 @@
                     <div class="form-actions">
                         <n-space>
                             <n-button type="primary" @click="saveCard" :loading="saving">保存卡牌</n-button>
-                            <n-button @click="previewCard">预览卡图</n-button>
+                            <n-button @click="previewCard" :loading="generating">预览卡图</n-button>
+                            <n-button @click="exportCard" :loading="exporting"
+                                :disabled="!hasValidCardData">导出图片</n-button>
                             <n-button @click="resetForm">重置</n-button>
                         </n-space>
                     </div>
@@ -82,7 +88,8 @@ import { useMessage } from 'naive-ui';
 import type { TreeOption } from 'naive-ui';
 import { cardTypeConfigs, cardTypeOptions, type FormField, type CardTypeConfig, type ShowCondition } from '@/config/cardTypeConfigs';
 import FormFieldComponent from './FormField.vue';
-import { WorkspaceService } from '@/api';
+import { WorkspaceService, CardService } from '@/api';
+import type { CardData } from '@/api/types';
 
 interface Props {
     showFileTree: boolean;
@@ -95,6 +102,8 @@ const props = defineProps<Props>();
 const emit = defineEmits<{
     'toggle-file-tree': [];
     'toggle-image-preview': [];
+    'update-preview-image': [image: string];
+    'refresh-file-tree': [];
 }>();
 
 const message = useMessage();
@@ -112,6 +121,14 @@ const currentCardType = ref('');
 const newStringValue = ref('');
 const showJsonModal = ref(false);
 const saving = ref(false);
+const generating = ref(false);
+const exporting = ref(false);
+
+// 检查是否有有效的卡牌数据
+const hasValidCardData = computed(() => {
+    return currentCardData.name && currentCardData.name.trim() !== '' &&
+        currentCardData.type && currentCardData.type.trim() !== '';
+});
 
 const currentFormConfig = computed((): CardTypeConfig | null => {
     return currentCardType.value ? cardTypeConfigs[currentCardType.value] : null;
@@ -140,7 +157,7 @@ const checkShowCondition = (condition: ShowCondition): boolean => {
 // 过滤显示的字段
 const visibleFields = computed(() => {
     if (!currentFormConfig.value) return [];
-    
+
     return currentFormConfig.value.fields.filter(field => {
         if (!field.showCondition) return true;
         return checkShowCondition(field.showCondition);
@@ -260,12 +277,12 @@ const setArrayValue = (arrayPath: string, index: number, value: any) => {
         array = [];
         setDeepValue(currentCardData, arrayPath, array);
     }
-    
+
     // 确保数组长度足够
     while (array.length <= index) {
         array.push(undefined);
     }
-    
+
     array[index] = value;
 };
 
@@ -328,6 +345,23 @@ const onCardTypeChange = (newType: string) => {
     Object.assign(currentCardData, newData);
 };
 
+// 自动生成卡图（如果数据有效的话）
+const autoGeneratePreview = async () => {
+    // 只有当卡牌名称和类型都有值时才自动生成
+    if (currentCardData.name && currentCardData.name.trim() &&
+        currentCardData.type && currentCardData.type.trim()) {
+        try {
+            const imageBase64 = await CardService.generateCard(currentCardData as CardData);
+            if (imageBase64) {
+                emit('update-preview-image', imageBase64);
+            }
+        } catch (error) {
+            // 自动生成失败不显示错误消息，避免打扰用户
+            console.warn('自动生成卡图失败:', error);
+        }
+    }
+};
+
 // 加载卡牌数据
 const loadCardData = async () => {
     if (!props.selectedFile || props.selectedFile.type !== 'card' || !props.selectedFile.path) {
@@ -337,12 +371,12 @@ const loadCardData = async () => {
     try {
         const content = await WorkspaceService.getFileContent(props.selectedFile.path);
         const cardData = JSON.parse(content || '{}');
-        
+
         // 清空当前数据
         Object.keys(currentCardData).forEach(key => {
             delete currentCardData[key];
         });
-        
+
         // 加载新数据
         Object.assign(currentCardData, {
             type: '',
@@ -352,16 +386,41 @@ const loadCardData = async () => {
             version: '1.0',
             ...cardData
         });
-        
+
         currentCardType.value = cardData.type || '';
         message.success('卡牌数据加载成功');
+
+        // 加载完成后自动生成预览
+        setTimeout(() => {
+            autoGeneratePreview();
+        }, 100); // 给一点时间让数据完全加载
+
     } catch (error) {
         console.error('加载卡牌数据失败:', error);
         message.error('加载卡牌数据失败');
     }
 };
 
-// 保存卡牌
+// 生成卡图的通用方法
+const generateCardImage = async (): Promise<string | null> => {
+    // 验证卡牌数据
+    const validation = CardService.validateCardData(currentCardData as CardData);
+    if (!validation.isValid) {
+        message.error('卡牌数据验证失败: ' + validation.errors.join(', '));
+        return null;
+    }
+
+    try {
+        const imageBase64 = await CardService.generateCard(currentCardData as CardData);
+        return imageBase64;
+    } catch (error) {
+        console.error('生成卡图失败:', error);
+        message.error(`生成卡图失败: ${error.message || '未知错误'}`);
+        return null;
+    }
+};
+
+// 保存卡牌并生成预览
 const saveCard = async () => {
     if (!props.selectedFile || !props.selectedFile.path) {
         message.warning('未选择文件');
@@ -370,8 +429,17 @@ const saveCard = async () => {
 
     try {
         saving.value = true;
+
+        // 保存JSON文件
         const jsonContent = JSON.stringify(currentCardData, null, 2);
         await WorkspaceService.saveFileContent(props.selectedFile.path, jsonContent);
+
+        // 生成并显示卡图
+        const imageBase64 = await generateCardImage();
+        if (imageBase64) {
+            emit('update-preview-image', imageBase64);
+        }
+
         message.success('卡牌保存成功');
     } catch (error) {
         console.error('保存卡牌失败:', error);
@@ -382,10 +450,65 @@ const saveCard = async () => {
 };
 
 // 预览卡图
-const previewCard = () => {
-    // TODO: 待开发预览卡图功能
-    message.info('预览卡图功能开发中...');
+const previewCard = async () => {
+    if (!hasValidCardData.value) {
+        message.warning('请先填写卡牌名称和类型');
+        return;
+    }
+
+    try {
+        generating.value = true;
+        const imageBase64 = await generateCardImage();
+        if (imageBase64) {
+            emit('update-preview-image', imageBase64);
+            message.success('卡图预览生成成功');
+        }
+    } catch (error) {
+        console.error('预览卡图失败:', error);
+    } finally {
+        generating.value = false;
+    }
 };
+
+// 导出图片
+const exportCard = async () => {
+    if (!hasValidCardData.value) {
+        message.warning('请先填写卡牌名称和类型');
+        return;
+    }
+
+    if (!props.selectedFile || !props.selectedFile.path) {
+        message.warning('未选择卡牌文件');
+        return;
+    }
+
+    try {
+        exporting.value = true;
+
+        // 获取卡牌文件所在的目录
+        const filePath = props.selectedFile.path;
+        const parentPath = filePath.substring(0, filePath.lastIndexOf('/'));
+
+        // 使用文件名作为导出的图片文件名，去掉.card扩展名
+        const cardFileName = props.selectedFile.label?.replace('.card', '') || 'untitled';
+        const filename = `${cardFileName}.png`;
+
+        console.log('使用文件名作为导出文件名:', filename);
+
+        await CardService.saveCard(currentCardData as CardData, filename, parentPath);
+
+        // 刷新文件树以显示新生成的图片文件
+        emit('refresh-file-tree');
+
+        message.success(`图片已导出: ${filename}`);
+    } catch (error) {
+        console.error('导出图片失败:', error);
+        message.error(`导出图片失败: ${error.message || '未知错误'}`);
+    } finally {
+        exporting.value = false;
+    }
+};
+
 
 const resetForm = () => {
     const hiddenFields = ['id', 'created_at', 'version'];
@@ -425,7 +548,14 @@ watch(() => props.selectedFile, (newFile) => {
         currentCardType.value = '';
     }
 }, { immediate: true });
+
+// 在 script 中添加删除图片的方法
+const removeImage = (field: FormField) => {
+  setFieldValue(field, '');
+};
 </script>
+
+
 
 <style scoped>
 .form-pane {

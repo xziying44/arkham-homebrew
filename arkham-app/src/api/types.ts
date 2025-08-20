@@ -1,3 +1,4 @@
+// src/api/types.ts
 // API响应基础类型
 export interface BaseResponse<T = any> {
   code: number;
@@ -29,6 +30,13 @@ export enum ErrorCode {
   CARD_MISSING_DATA_AND_FILENAME = 4004,
   CARD_SAVE_ERROR = 4005,
   CARD_SAVE_DETAILED_ERROR = 4006,
+  // 图片和文件信息相关错误 (5001-5006)
+  IMAGE_MISSING_PATH = 5001,
+  IMAGE_NOT_FOUND = 5002,
+  IMAGE_READ_ERROR = 5003,
+  FILE_INFO_MISSING_PATH = 5004,
+  FILE_INFO_NOT_FOUND = 5005,
+  FILE_INFO_READ_ERROR = 5006,
   // 系统错误
   NOT_FOUND = 9001,
   METHOD_NOT_ALLOWED = 9002,
@@ -57,19 +65,41 @@ export interface RecentDirectoriesData {
 export interface TreeOption {
   label: string;
   key: string;
-  type: 'directory' | 'folder' | 'card-category' | 'image-category' | 'other-category' | 'card' | 'image' | 'config' | 'text' | 'style' | 'data';
+  type: 'directory' | 'folder' | 'card-category' | 'image-category' | 'other-category' | 'card' | 'image' | 'config' | 'text' | 'style' | 'data' | 'workspace' | 'error';
   path?: string;
   children?: TreeOption[];
 }
 
 // 文件树响应数据类型
 export interface FileTreeData {
-  fileTree: TreeOption[];
+  fileTree: TreeOption;
 }
 
 // 文件内容响应数据类型
 export interface FileContentData {
   content: string;
+}
+
+// 图片内容响应数据类型
+export interface ImageContentData {
+  content: string; // base64编码的图片数据，包含data URL前缀
+}
+
+// 文件信息类型
+export interface FileInfo {
+  path: string;
+  type: string;
+  is_file: boolean;
+  is_directory: boolean;
+  is_image: boolean;
+  size: number;
+  modified: number;
+  modified_formatted: string;
+}
+
+// 文件信息响应数据类型
+export interface FileInfoData {
+  fileInfo: FileInfo;
 }
 
 // 服务状态响应数据类型
@@ -156,6 +186,8 @@ export type DirectorySelectResponse = BaseResponse<DirectorySelectData>;
 export type RecentDirectoriesResponse = BaseResponse<RecentDirectoriesData>;
 export type FileTreeResponse = BaseResponse<FileTreeData>;
 export type FileContentResponse = BaseResponse<FileContentData>;
+export type ImageContentResponse = BaseResponse<ImageContentData>;
+export type FileInfoResponse = BaseResponse<FileInfoData>;
 export type ServiceStatusResponse = BaseResponse<ServiceStatusData>;
 export type GenerateCardResponse = BaseResponse<GenerateCardData>;
 export type SaveCardResponse = BaseResponse<null>;

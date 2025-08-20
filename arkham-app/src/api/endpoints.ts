@@ -87,6 +87,19 @@ export const API_ENDPOINTS = {
     timeout: 10000
   } as ApiConfig,
 
+  // 图片和文件信息相关接口
+  GET_IMAGE_CONTENT: {
+    url: '/api/image-content',
+    method: HttpMethod.GET,
+    timeout: 15000 // 图片加载可能需要较长时间
+  } as ApiConfig,
+
+  GET_FILE_INFO: {
+    url: '/api/file-info',
+    method: HttpMethod.GET,
+    timeout: 5000
+  } as ApiConfig,
+
   // 卡牌生成相关接口
   GENERATE_CARD: {
     url: '/api/generate-card',

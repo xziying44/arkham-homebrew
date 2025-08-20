@@ -460,7 +460,77 @@ def save_file_content():
         )), 500
 
 
-# ================= 系统接口 =================
+# 在server.py中添加以下接口
+
+@app.route('/api/image-content', methods=['GET'])
+def get_image_content():
+    """获取图片内容（base64格式）"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    try:
+        image_path = request.args.get('path')
+        if not image_path:
+            return jsonify(create_response(
+                code=5001,
+                msg="请提供图片路径"
+            )), 400
+
+        image_base64 = current_workspace.get_image_as_base64(image_path)
+
+        if image_base64 is not None:
+            return jsonify(create_response(
+                msg="获取图片内容成功",
+                data={"content": image_base64}
+            ))
+        else:
+            return jsonify(create_response(
+                code=5002,
+                msg="图片文件不存在或无法读取"
+            )), 404
+
+    except Exception as e:
+        return jsonify(create_response(
+            code=5003,
+            msg=f"获取图片内容失败: {str(e)}"
+        )), 500
+
+
+@app.route('/api/file-info', methods=['GET'])
+def get_file_info():
+    """获取文件信息"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    try:
+        file_path = request.args.get('path')
+        if not file_path:
+            return jsonify(create_response(
+                code=5004,
+                msg="请提供文件路径"
+            )), 400
+
+        file_info = current_workspace.get_file_info(file_path)
+
+        if file_info is not None:
+            return jsonify(create_response(
+                msg="获取文件信息成功",
+                data={"fileInfo": file_info}
+            ))
+        else:
+            return jsonify(create_response(
+                code=5005,
+                msg="文件不存在或无法访问"
+            )), 404
+
+    except Exception as e:
+        return jsonify(create_response(
+            code=5006,
+            msg=f"获取文件信息失败: {str(e)}"
+        )), 500
+
 
 @app.route('/api/status', methods=['GET'])
 def get_status():

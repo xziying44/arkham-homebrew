@@ -25,7 +25,8 @@
             transformOrigin: 'center center'
           }" 
           draggable="false" 
-          class="preview-image" 
+          class="preview-image"
+          @load="onImageLoad"
         />
       </div>
 
@@ -49,6 +50,9 @@
           <n-button @click="zoomOut">
             <n-icon :component="RemoveOutline" />
           </n-button>
+          <n-button @click="fitToContainer">
+            适应窗口
+          </n-button>
         </n-button-group>
       </div>
     </div>
@@ -56,7 +60,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted } from 'vue';
+import { ref, onUnmounted, watch, nextTick } from 'vue';
 import { ImageOutline, Close, AddOutline, RemoveOutline } from '@vicons/ionicons5';
 
 interface Props {
@@ -64,7 +68,7 @@ interface Props {
   currentImage: string;
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
 const emit = defineEmits<{
   'toggle': [];
@@ -82,6 +86,47 @@ let dragStartY = 0;
 let dragStartOffsetX = 0;
 let dragStartOffsetY = 0;
 let dragAnimationFrameId: number;
+
+// 计算图片的适应缩放比例
+const calculateFitScale = (imageElement: HTMLImageElement) => {
+  if (!imageContainer.value) return 1;
+
+  const containerRect = imageContainer.value.getBoundingClientRect();
+  const containerWidth = containerRect.width - 40; // 留一些边距
+  const containerHeight = containerRect.height - 80; // 留一些边距给工具栏
+
+  const imageWidth = imageElement.naturalWidth;
+  const imageHeight = imageElement.naturalHeight;
+
+  // 计算适应容器的缩放比例
+  const scaleX = containerWidth / imageWidth;
+  const scaleY = containerHeight / imageHeight;
+  
+  // 取较小的缩放比例以保持图片完整显示，并限制最大缩放比例
+  return Math.min(scaleX, scaleY, 1);
+};
+
+// 图片加载完成时的处理
+const onImageLoad = (event: Event) => {
+  const img = event.target as HTMLImageElement;
+  nextTick(() => {
+    const fitScale = calculateFitScale(img);
+    imageScale.value = fitScale;
+    imageOffsetX.value = 0;
+    imageOffsetY.value = 0;
+  });
+};
+
+// 适应窗口
+const fitToContainer = () => {
+  const imageElement = document.querySelector('.preview-image') as HTMLImageElement;
+  if (imageElement) {
+    const fitScale = calculateFitScale(imageElement);
+    imageScale.value = fitScale;
+    imageOffsetX.value = 0;
+    imageOffsetY.value = 0;
+  }
+};
 
 const handleImageWheel = (event: WheelEvent) => {
   event.preventDefault();
@@ -141,9 +186,19 @@ const stopImageDrag = () => {
   }
 };
 
+// 监听图片变化，自动适应窗口
+watch(() => props.currentImage, () => {
+  if (props.currentImage) {
+    // 重置位置，等待图片加载完成后自动调整缩放
+    imageOffsetX.value = 0;
+    imageOffsetY.value = 0;
+  }
+});
+
 // 导出方法供父组件调用
 defineExpose({
-  resetImageView
+  resetImageView,
+  fitToContainer
 });
 
 // 清理事件监听器

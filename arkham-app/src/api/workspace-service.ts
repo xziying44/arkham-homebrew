@@ -4,6 +4,9 @@ import { API_ENDPOINTS } from './endpoints';
 import type {
     FileTreeData,
     FileContentData,
+    ImageContentData,
+    FileInfoData,
+    FileInfo,
     CreateDirectoryRequest,
     CreateFileRequest,
     RenameItemRequest,
@@ -168,6 +171,48 @@ export class WorkspaceService {
     }
 
     /**
+     * 获取图片内容（base64格式）
+     * @param path 图片文件路径
+     * @returns base64编码的图片数据，包含data URL前缀
+     * @throws {ApiError} 当获取失败时抛出错误
+     */
+    public static async getImageContent(path: string): Promise<string> {
+        try {
+            const url = `${API_ENDPOINTS.GET_IMAGE_CONTENT.url}?path=${encodeURIComponent(path)}`;
+            const response = await httpClient.get<ImageContentData>(url, {
+                timeout: API_ENDPOINTS.GET_IMAGE_CONTENT.timeout
+            });
+            return response.data.data!.content;
+        } catch (error) {
+            if (error instanceof ApiError) {
+                throw error;
+            }
+            throw new ApiError(5003, '获取图片内容失败', error);
+        }
+    }
+
+    /**
+     * 获取文件信息
+     * @param path 文件路径
+     * @returns 文件详细信息
+     * @throws {ApiError} 当获取失败时抛出错误
+     */
+    public static async getFileInfo(path: string): Promise<FileInfo> {
+        try {
+            const url = `${API_ENDPOINTS.GET_FILE_INFO.url}?path=${encodeURIComponent(path)}`;
+            const response = await httpClient.get<FileInfoData>(url, {
+                timeout: API_ENDPOINTS.GET_FILE_INFO.timeout
+            });
+            return response.data.data!.fileInfo;
+        } catch (error) {
+            if (error instanceof ApiError) {
+                throw error;
+            }
+            throw new ApiError(5006, '获取文件信息失败', error);
+        }
+    }
+
+    /**
      * 保存文件内容
      * @param path 文件路径
      * @param content 文件内容
@@ -204,6 +249,8 @@ export const {
     renameItem,
     deleteItem,
     getFileContent,
+    getImageContent,
+    getFileInfo,
     saveFileContent
 } = WorkspaceService;
 

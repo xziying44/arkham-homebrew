@@ -92,9 +92,66 @@
       </div>
     </div>
   </n-form-item>
+
+  <!-- 图片上传 -->
+  <n-form-item v-else-if="field.type === 'image'" :label="field.name" :path="field.key">
+    <div class="image-upload-container">
+      <!-- 图片预览 -->
+      <div v-if="value && value.startsWith('data:image')" class="image-preview">
+        <img 
+          :src="value" 
+          :alt="getCleanFieldName(field.name)"
+          class="preview-image"
+        />
+        <div class="image-actions">
+          <n-button size="small" @click="$emit('remove-image')" quaternary type="error">
+            <template #icon>
+              <n-icon :component="TrashOutline" />
+            </template>
+            删除
+          </n-button>
+        </div>
+      </div>
+
+      <!-- 上传按钮 -->
+      <div v-else class="upload-area">
+        <n-upload
+          :file-list="[]"
+          :show-file-list="false"
+          accept="image/*"
+          @change="handleFileChange"
+          :max="1"
+        >
+          <n-upload-dragger>
+            <div class="upload-content">
+              <n-icon size="48" :depth="3">
+                <ImageOutline />
+              </n-icon>
+              <n-text style="font-size: 16px">
+                点击或者拖拽图片到该区域来上传
+              </n-text>
+              <n-p depth="3" style="margin: 8px 0 0 0">
+                支持 JPG、PNG、GIF、WebP 等格式，大小不超过 {{ formatFileSize(field.maxSize || 5 * 1024 * 1024) }}
+              </n-p>
+            </div>
+          </n-upload-dragger>
+        </n-upload>
+      </div>
+
+      <!-- 错误信息 -->
+      <div v-if="imageError" class="error-message">
+        <n-alert type="error" :show-icon="false">
+          {{ imageError }}
+        </n-alert>
+      </div>
+    </div>
+  </n-form-item>
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue';
+import type { UploadFileInfo } from 'naive-ui';
+import { TrashOutline, ImageOutline } from '@vicons/ionicons5';
 import type { FormField } from '@/config/cardTypeConfigs';
 
 interface Props {
@@ -103,16 +160,20 @@ interface Props {
   newStringValue: string;
 }
 
-defineProps<Props>();
+// 正确接收 props
+const props = defineProps<Props>();
 
-defineEmits<{
+const emit = defineEmits<{
   'update:value': [value: any];
   'update:new-string-value': [value: string];
   'add-multi-select-item': [value: string];
   'remove-multi-select-item': [index: number];
   'add-string-array-item': [];
   'remove-string-array-item': [index: number];
+  'remove-image': [];
 }>();
+
+const imageError = ref('');
 
 // 去掉emoji和空格，获取纯净的字段名
 // 只保留中文、英文字母和数字，移除其他所有字符
@@ -120,11 +181,82 @@ const getCleanFieldName = (fieldName: string): string => {
   return fieldName.replace(/[^\u4e00-\u9fffa-zA-Z0-9]/g, '').trim();
 };
 
+// 格式化文件大小
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+// 验证图片文件
+const validateImageFile = (file: File, field: FormField): string | null => {
+  // 检查文件类型
+  const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+  if (!validTypes.includes(file.type)) {
+    return '不支持的图片格式，请选择 JPG、PNG、GIF、WebP 或 SVG 文件';
+  }
+
+  // 检查文件大小
+  const maxSize = field.maxSize || 5 * 1024 * 1024; // 默认5MB
+  if (file.size > maxSize) {
+    return `文件大小超过限制，最大支持 ${formatFileSize(maxSize)}`;
+  }
+
+  return null;
+};
+
+// 将文件转换为 base64
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve(result);
+    };
+    reader.onerror = () => {
+      reject(new Error('文件读取失败'));
+    };
+    reader.readAsDataURL(file);
+  });
+};
+
+// 处理文件选择
+const handleFileChange = async (data: { file: UploadFileInfo; fileList: UploadFileInfo[] }) => {
+  const { file } = data;
+  
+  if (!file.file) {
+    return;
+  }
+
+  try {
+    imageError.value = '';
+    
+    // 验证文件 - 现在可以正确访问 props.field
+    const error = validateImageFile(file.file, props.field);
+    if (error) {
+      imageError.value = error;
+      return;
+    }
+
+    // 转换为 base64
+    const base64 = await fileToBase64(file.file);
+    
+    // 更新值
+    emit('update:value', base64);
+    
+  } catch (error) {
+    console.error('处理图片文件失败:', error);
+    imageError.value = '图片处理失败，请重试';
+  }
+};
 </script>
 
 <style scoped>
 .multi-select-container,
-.string-array-container {
+.string-array-container,
+.image-upload-container {
   width: 100%;
 }
 
@@ -139,6 +271,43 @@ const getCleanFieldName = (fieldName: string): string => {
   margin: 0;
 }
 
+/* 图片上传相关样式 */
+.image-preview {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.preview-image {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  object-fit: contain;
+}
+
+.image-actions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
+  padding: 4px;
+}
+
+.upload-area {
+  width: 100%;
+}
+
+.upload-content {
+  text-align: center;
+  padding: 20px;
+}
+
+.error-message {
+  margin-top: 12px;
+}
+
 /* 长文本框样式优化 */
 :deep(.n-input--textarea) {
   min-height: auto;
@@ -147,5 +316,21 @@ const getCleanFieldName = (fieldName: string): string => {
 :deep(.n-input--textarea .n-input__input-el) {
   line-height: 1.5;
   font-family: inherit;
+}
+
+/* 上传组件样式优化 */
+:deep(.n-upload-dragger) {
+  border: 2px dashed #d9d9d9;
+  border-radius: 8px;
+  transition: border-color 0.3s ease;
+}
+
+:deep(.n-upload-dragger:hover) {
+  border-color: #40a9ff;
+}
+
+:deep(.n-upload-dragger.n-upload-dragger--drag-over) {
+  border-color: #1890ff;
+  background: rgba(24, 144, 255, 0.02);
 }
 </style>
