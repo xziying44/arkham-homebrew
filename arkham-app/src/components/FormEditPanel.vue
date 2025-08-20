@@ -33,16 +33,16 @@
                     <n-card v-if="currentCardType && currentFormConfig" title="卡牌属性" size="small" class="form-card">
                         <n-form ref="dynamicFormRef" :model="currentCardData" label-placement="top" size="small">
                             <div v-for="(row, rowIndex) in formFieldRows" :key="rowIndex" class="form-row">
-                                <div v-for="field in row" :key="field.key" class="form-field"
+                                <div v-for="field in row" :key="field.key + (field.index !== undefined ? `_${field.index}` : '')" class="form-field"
                                     :class="getFieldLayoutClass(field.layout)">
-                                    <FormFieldComponent :field="field" :value="getFieldValue(field.key)"
+                                    <FormFieldComponent :field="field" :value="getFieldValue(field)"
                                         :new-string-value="newStringValue"
-                                        @update:value="setFieldValue(field.key, $event)"
+                                        @update:value="setFieldValue(field, $event)"
                                         @update:new-string-value="newStringValue = $event"
-                                        @add-multi-select-item="addMultiSelectItem(field.key, $event)"
-                                        @remove-multi-select-item="removeMultiSelectItem(field.key, $event)"
-                                        @add-string-array-item="addStringArrayItem(field.key)"
-                                        @remove-string-array-item="removeStringArrayItem(field.key, $event)" />
+                                        @add-multi-select-item="addMultiSelectItem(field, $event)"
+                                        @remove-multi-select-item="removeMultiSelectItem(field, $event)"
+                                        @add-string-array-item="addStringArrayItem(field)"
+                                        @remove-string-array-item="removeStringArrayItem(field, $event)" />
                                 </div>
                             </div>
                         </n-form>
@@ -75,8 +75,9 @@
 import { ref, computed, reactive } from 'vue';
 import { FolderOpenOutline, ImageOutline } from '@vicons/ionicons5';
 import { useMessage } from 'naive-ui';
-import { cardTypeConfigs, cardTypeOptions, type FormField, type CardTypeConfig } from '@/config/cardTypeConfigs';
-import FormFieldComponent from './FormField.vue'; // 重命名组件导入
+import { cardTypeConfigs, cardTypeOptions, type FormField, type CardTypeConfig, type ShowCondition } from '@/config/cardTypeConfigs';
+import FormFieldComponent from './FormField.vue';
+
 interface Props {
     showFileTree: boolean;
     showImagePreview: boolean;
@@ -108,11 +109,39 @@ const currentFormConfig = computed((): CardTypeConfig | null => {
     return currentCardType.value ? cardTypeConfigs[currentCardType.value] : null;
 });
 
-// 布局系统
-const formFieldRows = computed(() => {
-    if (!currentFormConfig.value) return [];
+// 检查显示条件
+const checkShowCondition = (condition: ShowCondition): boolean => {
+    const fieldValue = getFieldValue({ key: condition.field } as FormField);
+    const targetValue = condition.value;
+    const operator = condition.operator || 'equals';
 
-    const fields = currentFormConfig.value.fields;
+    switch (operator) {
+        case 'equals':
+            return fieldValue === targetValue;
+        case 'not-equals':
+            return fieldValue !== targetValue;
+        case 'includes':
+            return Array.isArray(fieldValue) ? fieldValue.includes(targetValue) : false;
+        case 'not-includes':
+            return Array.isArray(fieldValue) ? !fieldValue.includes(targetValue) : true;
+        default:
+            return fieldValue === targetValue;
+    }
+};
+
+// 过滤显示的字段
+const visibleFields = computed(() => {
+    if (!currentFormConfig.value) return [];
+    
+    return currentFormConfig.value.fields.filter(field => {
+        if (!field.showCondition) return true;
+        return checkShowCondition(field.showCondition);
+    });
+});
+
+// 布局系统 - 基于可见字段
+const formFieldRows = computed(() => {
+    const fields = visibleFields.value;
     const rows = [];
     let currentRow = [];
     let currentRowWidth = 0;
@@ -163,10 +192,26 @@ const getFieldLayoutClass = (layout: string = 'full') => {
     return classMap[layout] || 'layout-full';
 };
 
+// 获取字段路径（支持数组索引）
+const getFieldPath = (field: FormField): string => {
+    if (field.index !== undefined) {
+        return `${field.key}[${field.index}]`;
+    }
+    return field.key;
+};
+
 // 表单操作方法
-const getFieldValue = (fieldPath: string) => {
-    const keys = fieldPath.split('.');
-    let value = currentCardData;
+const getFieldValue = (field: FormField) => {
+    if (field.index !== undefined) {
+        const array = getDeepValue(currentCardData, field.key);
+        return Array.isArray(array) ? array[field.index] : undefined;
+    }
+    return getDeepValue(currentCardData, field.key);
+};
+
+const getDeepValue = (obj: any, path: string) => {
+    const keys = path.split('.');
+    let value = obj;
     for (const key of keys) {
         if (value && typeof value === 'object' && key in value) {
             value = value[key];
@@ -177,9 +222,17 @@ const getFieldValue = (fieldPath: string) => {
     return value;
 };
 
-const setFieldValue = (fieldPath: string, value: any) => {
-    const keys = fieldPath.split('.');
-    let target = currentCardData;
+const setFieldValue = (field: FormField, value: any) => {
+    if (field.index !== undefined) {
+        setArrayValue(field.key, field.index, value);
+    } else {
+        setDeepValue(currentCardData, field.key, value);
+    }
+};
+
+const setDeepValue = (obj: any, path: string, value: any) => {
+    const keys = path.split('.');
+    let target = obj;
 
     for (let i = 0; i < keys.length - 1; i++) {
         const key = keys[i];
@@ -193,40 +246,55 @@ const setFieldValue = (fieldPath: string, value: any) => {
     target[finalKey] = value;
 };
 
-const addMultiSelectItem = (fieldPath: string, value: string) => {
+const setArrayValue = (arrayPath: string, index: number, value: any) => {
+    let array = getDeepValue(currentCardData, arrayPath);
+    if (!Array.isArray(array)) {
+        array = [];
+        setDeepValue(currentCardData, arrayPath, array);
+    }
+    
+    // 确保数组长度足够
+    while (array.length <= index) {
+        array.push(undefined);
+    }
+    
+    array[index] = value;
+};
+
+const addMultiSelectItem = (field: FormField, value: string) => {
     if (!value) return;
-    let currentArray = getFieldValue(fieldPath);
+    let currentArray = getFieldValue(field);
     if (!Array.isArray(currentArray)) {
         currentArray = [];
     }
     currentArray.push(value);
-    setFieldValue(fieldPath, currentArray);
+    setFieldValue(field, currentArray);
 };
 
-const removeMultiSelectItem = (fieldPath: string, index: number) => {
-    const currentArray = getFieldValue(fieldPath);
+const removeMultiSelectItem = (field: FormField, index: number) => {
+    const currentArray = getFieldValue(field);
     if (Array.isArray(currentArray)) {
         currentArray.splice(index, 1);
-        setFieldValue(fieldPath, currentArray);
+        setFieldValue(field, currentArray);
     }
 };
 
-const addStringArrayItem = (fieldPath: string) => {
+const addStringArrayItem = (field: FormField) => {
     if (!newStringValue.value.trim()) return;
-    let currentArray = getFieldValue(fieldPath);
+    let currentArray = getFieldValue(field);
     if (!Array.isArray(currentArray)) {
         currentArray = [];
     }
     currentArray.push(newStringValue.value.trim());
-    setFieldValue(fieldPath, currentArray);
+    setFieldValue(field, currentArray);
     newStringValue.value = '';
 };
 
-const removeStringArrayItem = (fieldPath: string, index: number) => {
-    const currentArray = getFieldValue(fieldPath);
+const removeStringArrayItem = (field: FormField, index: number) => {
+    const currentArray = getFieldValue(field);
     if (Array.isArray(currentArray)) {
         currentArray.splice(index, 1);
-        setFieldValue(fieldPath, currentArray);
+        setFieldValue(field, currentArray);
     }
 };
 
@@ -257,14 +325,16 @@ const loadTestData = () => {
     Object.assign(currentCardData, {
         type: '支援卡',
         name: '医疗包',
-        class: '守护者',
+        class: '多职阶',
+        subclass: ['守护者', '探求者'],
         submit_icon: ['意志', '战力', '战力'],
         traits: ['道具', '供给'],
         level: 0,
         cost: 2,
         id: 'med_kit_001',
         created_at: '2024-01-15T10:30:00Z',
-        version: '1.0'
+        version: '1.0',
+        description: '这是一个测试描述'
     });
     currentCardType.value = '支援卡';
     message.success('测试数据已加载');
@@ -372,12 +442,11 @@ const importJson = () => {
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
+    transition: box-shadow 0.2s ease;
 }
 
 .form-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
 }
 
 .form-row {

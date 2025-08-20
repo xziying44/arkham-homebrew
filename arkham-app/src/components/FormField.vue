@@ -8,6 +8,20 @@
     />
   </n-form-item>
 
+  <!-- 长文本输入 -->
+  <n-form-item v-else-if="field.type === 'textarea'" :label="field.name" :path="field.key">
+    <n-input 
+      :value="value" 
+      @update:value="$emit('update:value', $event)"
+      type="textarea"
+      :rows="field.rows || 3"
+      :maxlength="field.maxlength"
+      :placeholder="`请输入${field.name}`"
+      show-count
+      :autosize="{ minRows: field.rows || 3, maxRows: (field.rows || 3) + 2 }"
+    />
+  </n-form-item>
+
   <!-- 数字输入 -->
   <n-form-item v-else-if="field.type === 'number'" :label="field.name" :path="field.key">
     <n-input-number 
@@ -116,5 +130,15 @@ defineEmits<{
 
 .item-tag {
   margin: 0;
+}
+
+/* 长文本框样式优化 */
+:deep(.n-input--textarea) {
+  min-height: auto;
+}
+
+:deep(.n-input--textarea .n-input__input-el) {
+  line-height: 1.5;
+  font-family: inherit;
 }
 </style>

@@ -57,5 +57,6 @@ declare module 'vue' {
     SettingsPage: typeof import('./src/components/SettingsPage.vue')['default']
     WorkspaceLayout: typeof import('./src/components/workspace/WorkspaceLayout.vue')['default']
     WorkspacePage: typeof import('./src/components/WorkspacePage.vue')['default']
+    WorkspaceSidebar: typeof import('./src/components/WorkspaceSidebar.vue')['default']
   }
 }
