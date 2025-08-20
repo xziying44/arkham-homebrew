@@ -2452,11 +2452,7 @@ if __name__ == '__main__':
     }
     fm = FontManager('fonts')
     im = ImageManager('images')
-    im.load_images('icons')
     card = process_card_json(json_data, picture_path=json_data.get('picture_path', None),
                              font_manager=fm,
-                             image_manager=im,
-                             image_mode=1,
-                             transparent_encounter=False,
-                             transparent_background=False)
+                             image_manager=im)
     card.image.show()

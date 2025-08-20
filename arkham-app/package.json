@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@vicons/ionicons5": "^0.13.0",
+    "axios": "^1.11.0",
     "date-fns-tz": "^3.2.0",
     "naive-ui": "^2.42.0",
     "vfonts": "^0.0.3",

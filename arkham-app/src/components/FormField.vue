@@ -4,7 +4,7 @@
     <n-input 
       :value="value" 
       @update:value="$emit('update:value', $event)"
-      :placeholder="`请输入${field.name}`" 
+      :placeholder="`请输入${getCleanFieldName(field.name)}`" 
     />
   </n-form-item>
 
@@ -16,7 +16,7 @@
       type="textarea"
       :rows="field.rows || 3"
       :maxlength="field.maxlength"
-      :placeholder="`请输入${field.name}`"
+      :placeholder="`请输入${getCleanFieldName(field.name)}`"
       show-count
       :autosize="{ minRows: field.rows || 3, maxRows: (field.rows || 3) + 2 }"
     />
@@ -29,7 +29,7 @@
       @update:value="$emit('update:value', $event)"
       :min="field.min" 
       :max="field.max" 
-      :placeholder="`请输入${field.name}`" 
+      :placeholder="`请输入${getCleanFieldName(field.name)}`" 
     />
   </n-form-item>
 
@@ -39,7 +39,7 @@
       :value="value" 
       @update:value="$emit('update:value', $event)"
       :options="field.options" 
-      :placeholder="`请选择${field.name}`" 
+      :placeholder="`请选择${getCleanFieldName(field.name)}`" 
     />
   </n-form-item>
 
@@ -49,7 +49,7 @@
       <n-select 
         :value="null" 
         :options="field.options" 
-        :placeholder="`添加${field.name}`"
+        :placeholder="`添加${getCleanFieldName(field.name)}`"
         @update:value="$emit('add-multi-select-item', $event)" 
         clearable 
       />
@@ -74,7 +74,7 @@
         <n-input 
           :value="newStringValue" 
           @update:value="$emit('update:new-string-value', $event)"
-          :placeholder="`输入${field.name}`"
+          :placeholder="`输入${getCleanFieldName(field.name)}`"
           @keyup.enter="$emit('add-string-array-item')" 
         />
         <n-button @click="$emit('add-string-array-item')" size="small">添加</n-button>
@@ -113,6 +113,13 @@ defineEmits<{
   'add-string-array-item': [];
   'remove-string-array-item': [index: number];
 }>();
+
+// 去掉emoji和空格，获取纯净的字段名
+// 只保留中文、英文字母和数字，移除其他所有字符
+const getCleanFieldName = (fieldName: string): string => {
+  return fieldName.replace(/[^\u4e00-\u9fffa-zA-Z0-9]/g, '').trim();
+};
+
 </script>
 
 <style scoped>

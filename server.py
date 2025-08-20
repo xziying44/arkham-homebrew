@@ -1,282 +1,617 @@
-import json
+from flask import Flask, jsonify, request
+import tkinter as tk
+from tkinter import filedialog
+import threading
+import queue
 import os
-from datetime import datetime
+from file_manager import QuickStart, WorkspaceManager
 
-from flask import Flask, request, jsonify, send_from_directory, render_template
-from openai import OpenAI
+app = Flask(__name__)
 
-from Card import FontManager, ImageManager
-from create_card import process_card_json, create_investigators_card, create_investigators_card_back
+# 全局状态锁，防止同时打开多个选择对话框
+selection_lock = threading.Lock()
+is_selecting = False
 
-app = Flask(__name__, static_folder='static', static_url_path='/static')
-
-basedir = os.path.dirname(__file__)
-
-# 初始化配置
-CONFIG_FILE = 'config.json'
-DEFAULT_CONFIG = {
-    "openai": {
-        "base_url": "https://api.deepseek.com",
-        "api_key": "",
-        "model": "deepseek-chat"
-    }
-}
-
-# 全局对象
-openai_client = None
-font_manager = FontManager('fonts')
-image_manager = ImageManager('images')
+# 全局实例
+quick_start = QuickStart()
+current_workspace = None
 
 
-def create_response(code=0, msg="成功", data=None, status=200):
-    """创建标准响应"""
-    return jsonify({
+def create_response(code=0, msg="操作成功", data=None):
+    """创建统一的响应格式"""
+    return {
         "code": code,
         "msg": msg,
         "data": data
-    }), status
+    }
 
 
-def load_config():
-    """加载配置文件"""
+def select_directory():
+    """打开目录选择对话框"""
+    root = tk.Tk()
+    root.withdraw()
+    root.lift()
+    root.attributes("-topmost", True)
+
     try:
-        if not os.path.exists(CONFIG_FILE):
-            with open(CONFIG_FILE, 'w') as f:
-                json.dump(DEFAULT_CONFIG, f, indent=2)
-        with open(CONFIG_FILE) as f:
-            return json.load(f)
-    except Exception as e:
-        raise RuntimeError(f"配置文件加载失败: {str(e)}")
-
-
-def save_config(new_config):
-    """保存配置文件"""
-    try:
-        with open(CONFIG_FILE, 'w') as f:
-            json.dump(new_config, f, indent=2)
-    except Exception as e:
-        raise RuntimeError(f"配置文件保存失败: {str(e)}")
-
-
-def init_openai():
-    """初始化OpenAI客户端"""
-    global openai_client
-    try:
-        config = load_config()
-        openai_config = config['openai']
-        openai_client = OpenAI(
-            base_url=openai_config['base_url'],
-            api_key=openai_config['api_key']
+        selected_directory = filedialog.askdirectory(
+            title="请选择目录",
+            initialdir=os.getcwd()
         )
-    except Exception as e:
-        raise RuntimeError(f"OpenAI初始化失败: {str(e)}")
-
-
-# 初始化服务
-try:
-    init_openai()
-except Exception as e:
-    app.logger.error(f"服务初始化失败: {str(e)}")
-
-
-@app.route('/favicon.ico')  # 设置icon
-def favicon():
-    return send_from_directory(os.path.join(app.root_path, 'static'),  # 对于当前文件所在路径,比如这里是static下的favicon.ico
-                               'favicon.ico', mimetype='image/vnd.microsoft.icon')
-
-
-@app.route('/api/config', methods=['GET'])
-def get_openai_config():
-    """获取当前OpenAI配置"""
-    try:
-        config = load_config()
-        return create_response(data=config['openai'])
-    except Exception as e:
-        return create_response(500, str(e), None, 500)
-
-
-@app.route('/api/config', methods=['POST'])
-def update_openai_config():
-    """更新OpenAI配置"""
-    try:
-        new_config = request.json
-        if not new_config or not all(key in new_config for key in ['base_url', 'api_key', 'model']):
-            return create_response(400, "缺少必要参数", None, 400)
-
-        config = load_config()
-        config['openai'] = new_config
-        save_config(config)
-        init_openai()  # 重新初始化客户端
-        return create_response()
-    except Exception as e:
-        return create_response(500, str(e), None, 500)
-
-
-# 新增生成JSON的接口
-@app.route('/api/generate-json', methods=['POST'])
-def generate_json():
-    """生成卡牌JSON"""
-    try:
-        # 参数校验
-        if 'text' not in request.json:
-            return create_response(400, "缺少text参数", None, 400)
-        user_input = request.json['text']
-
-        # 读取提示词文件
-        with open('prompt/player_card.txt', encoding='utf-8') as f:
-            prompt = f.read()
-
-        # 调用OpenAI接口
-        response = openai_client.chat.completions.create(
-            model=load_config()['openai']['model'],
-            messages=[
-                {"role": "system", "content": prompt},
-                {"role": "user", "content": user_input}
-            ],
-            temperature=0.1,
-            stream=False
-        )
-
-        # 解析返回的JSON
-        card_json = json.loads(response.choices[0].message.content)
-        return create_response(data=card_json)
-
-    except Exception as e:
-        app.logger.exception(f"JSON生成失败: {str(e)}")
-        app.logger.error(f"JSON生成失败: {str(e)}")
-        return create_response(500, "JSON生成失败：" + str(e), str(e), 500)
-
-
-# 新增生成图片的接口
-@app.route('/api/generate-image', methods=['POST'])
-def generate_image():
-    """根据JSON生成卡牌图片"""
-    picture_path = None
-    try:
-        # 参数校验
-        if 'json' not in request.form:
-            return create_response(400, "缺少json参数", None, 400)
-
-        # 解析JSON
-        card_json = json.loads(request.form['json'])
-
-        # 处理图片上传
-        if 'image' in request.files:
-            image_file = request.files['image']
-            if image_file.filename != '':
-                # 创建临时目录
-                temp_dir = os.path.join(app.root_path, 'temp')
-                os.makedirs(temp_dir, exist_ok=True)
-
-                # 生成唯一文件名
-                timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-                ext = os.path.splitext(image_file.filename)[1]
-                filename = f"upload_{timestamp}{ext}"
-                filepath = os.path.join(temp_dir, filename)
-
-                # 保存文件
-                image_file.save(filepath)
-                picture_path = filepath
-
-        # 创建输出目录
-        today = datetime.now().strftime("%Y-%m-%d")
-        output_dir = os.path.join(os.path.join(basedir, 'output'), today)
-        os.makedirs(output_dir, exist_ok=True)
-        # 生成卡牌图片
-        if 'type' in card_json and card_json['type'] == '调查员卡':
-            # 调查员卡特殊处理
-            data = {}
-            # 生成正面
-            card = create_investigators_card(
-                card_json,
-                font_manager=font_manager,
-                image_manager=image_manager,
-                picture_path=picture_path
-            )
-            # 生成自增文件名
-            existing = [f for f in os.listdir(output_dir) if f.endswith('.png')]
-            next_num = len(existing) + 1
-            filename = f"{next_num:04d}.png"
-            filepath = os.path.join(output_dir, filename)
-
-            # 保存图片
-            card.image.save(filepath, quality=95)
-            data['url'] = f"/images/{today}/{filename}"
-
-            # 生成背面，如果有的话
-            if 'card_back' in card_json and len(card_json['card_back']['option']) > 0:
-                card_back = create_investigators_card_back(
-                    card_json,
-                    font_manager=font_manager,
-                    image_manager=image_manager,
-                    picture_path=picture_path
-                )
-                # 生成自增文件名
-                existing = [f for f in os.listdir(output_dir) if f.endswith('.png')]
-                next_num = len(existing) + 1
-                filename = f"{next_num:04d}.png"
-                filepath = os.path.join(output_dir, filename)
-
-                # 保存图片
-                card_back.image.save(filepath, quality=95)
-                data['back_url'] = f"/images/{today}/{filename}"
-
-            return create_response(data=data)
-        else:
-            card = process_card_json(
-                card_json,
-                font_manager=font_manager,
-                image_manager=image_manager,
-                picture_path=picture_path
-            )
-            # 生成自增文件名
-            existing = [f for f in os.listdir(output_dir) if f.endswith('.png')]
-            next_num = len(existing) + 1
-            filename = f"{next_num:04d}.png"
-            filepath = os.path.join(output_dir, filename)
-
-            # 保存图片
-            card.image.save(filepath, quality=95)
-
-            return create_response(data={"url": f"/images/{today}/{filename}"})
-
-    except json.JSONDecodeError:
-        return create_response(400, "JSON格式错误", None, 400)
-    except Exception as e:
-        app.logger.exception(e)
-        app.logger.error(f"图片生成失败: {str(e)}")
-        return create_response(500, "图片生成失败", str(e), 500)
+        return selected_directory
     finally:
-        # 清理picture_path
-        if picture_path is not None and os.path.exists(picture_path):
-            os.remove(picture_path)
+        root.destroy()
 
 
-@app.route('/images/<path:path>')
-def serve_image(path):
-    """提供生成的图片访问"""
+# ================= 快速开始相关接口 =================
+
+@app.route('/api/select-directory', methods=['GET'])
+def api_select_directory():
+    """API接口：打开目录选择对话框"""
+    global is_selecting, current_workspace
+
+    if not selection_lock.acquire(blocking=False):
+        return jsonify(create_response(
+            code=1001,
+            msg="目录选择操作正在进行中，请稍后再试"
+        )), 409
+
     try:
-        return send_from_directory('output', path)
-    except FileNotFoundError:
-        return create_response(404, "图片未找到", None, 404)
+        is_selecting = True
+        result_queue = queue.Queue()
+
+        def worker():
+            try:
+                directory = select_directory()
+                result_queue.put(('success', directory))
+            except Exception as e:
+                result_queue.put(('error', str(e)))
+
+        thread = threading.Thread(target=worker, daemon=True)
+        thread.start()
+        thread.join(timeout=300)
+
+        if thread.is_alive():
+            return jsonify(create_response(
+                code=1002,
+                msg="操作超时，请重试"
+            )), 408
+
+        try:
+            status, result = result_queue.get_nowait()
+            if status == 'success':
+                if result:
+                    # 添加到最近记录
+                    quick_start.add_recent_directory(result)
+
+                    # 创建工作空间实例
+                    try:
+                        current_workspace = WorkspaceManager(result)
+                        return jsonify(create_response(
+                            msg="目录选择成功",
+                            data={"directory": result}
+                        ))
+                    except Exception as e:
+                        return jsonify(create_response(
+                            code=1007,
+                            msg=f"创建工作空间失败: {str(e)}"
+                        )), 500
+                else:
+                    return jsonify(create_response(
+                        code=1003,
+                        msg="用户取消了选择"
+                    ))
+            else:
+                return jsonify(create_response(
+                    code=1004,
+                    msg=f"选择目录时出错: {result}"
+                )), 500
+
+        except queue.Empty:
+            return jsonify(create_response(
+                code=1005,
+                msg="未能获取选择结果"
+            )), 500
+
     except Exception as e:
-        return create_response(500, "图片获取失败", str(e), 500)
+        return jsonify(create_response(
+            code=1006,
+            msg=f"服务器错误: {str(e)}"
+        )), 500
+    finally:
+        is_selecting = False
+        selection_lock.release()
 
 
+@app.route('/api/recent-directories', methods=['GET'])
+def get_recent_directories():
+    """获取最近打开的目录列表"""
+    try:
+        records = quick_start.get_recent_directories()
+        return jsonify(create_response(
+            msg="获取最近目录成功",
+            data={"directories": records}
+        ))
+    except Exception as e:
+        return jsonify(create_response(
+            code=2001,
+            msg=f"获取最近目录失败: {str(e)}"
+        )), 500
+
+
+@app.route('/api/recent-directories', methods=['DELETE'])
+def clear_recent_directories():
+    """清空最近目录记录"""
+    try:
+        success = quick_start.clear_recent_directories()
+        if success:
+            return jsonify(create_response(msg="清空最近目录成功"))
+        else:
+            return jsonify(create_response(
+                code=2002,
+                msg="清空最近目录失败"
+            )), 500
+    except Exception as e:
+        return jsonify(create_response(
+            code=2003,
+            msg=f"清空最近目录失败: {str(e)}"
+        )), 500
+
+
+@app.route('/api/recent-directories/<path:directory_path>', methods=['DELETE'])
+def remove_recent_directory(directory_path):
+    """移除指定的最近目录"""
+    try:
+        success = quick_start.remove_recent_directory(directory_path)
+        if success:
+            return jsonify(create_response(msg="移除目录成功"))
+        else:
+            return jsonify(create_response(
+                code=2004,
+                msg="目录不存在或移除失败"
+            )), 404
+    except Exception as e:
+        return jsonify(create_response(
+            code=2005,
+            msg=f"移除目录失败: {str(e)}"
+        )), 500
+
+
+@app.route('/api/open-workspace', methods=['POST'])
+def open_workspace():
+    """打开指定的工作空间"""
+    global current_workspace
+
+    try:
+        data = request.get_json()
+        if not data or 'directory' not in data:
+            return jsonify(create_response(
+                code=2006,
+                msg="请提供目录路径"
+            )), 400
+
+        directory = data['directory']
+
+        if not os.path.exists(directory):
+            return jsonify(create_response(
+                code=2007,
+                msg="目录不存在"
+            )), 404
+
+        # 创建工作空间实例
+        current_workspace = WorkspaceManager(directory)
+
+        # 添加到最近记录
+        quick_start.add_recent_directory(directory)
+
+        return jsonify(create_response(
+            msg="工作空间打开成功",
+            data={"directory": directory}
+        ))
+
+    except Exception as e:
+        return jsonify(create_response(
+            code=2008,
+            msg=f"打开工作空间失败: {str(e)}"
+        )), 500
+
+
+# ================= 工作空间相关接口 =================
+
+def check_workspace():
+    """检查工作空间是否已初始化"""
+    if current_workspace is None:
+        return jsonify(create_response(
+            code=3001,
+            msg="请先选择或打开工作目录"
+        )), 400
+    return None
+
+
+@app.route('/api/file-tree', methods=['GET'])
+def get_file_tree():
+    """获取文件树"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    try:
+        include_hidden = request.args.get('include_hidden', 'false').lower() == 'true'
+        file_tree = current_workspace.get_file_tree(include_hidden)
+
+        return jsonify(create_response(
+            msg="获取文件树成功",
+            data={"fileTree": file_tree}
+        ))
+    except Exception as e:
+        return jsonify(create_response(
+            code=3002,
+            msg=f"获取文件树失败: {str(e)}"
+        )), 500
+
+
+@app.route('/api/create-directory', methods=['POST'])
+def create_directory():
+    """创建目录"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    try:
+        data = request.get_json()
+        if not data or 'name' not in data:
+            return jsonify(create_response(
+                code=3003,
+                msg="请提供目录名称"
+            )), 400
+
+        dir_name = data['name']
+        parent_path = data.get('parent_path')
+
+        success = current_workspace.create_directory(dir_name, parent_path)
+
+        if success:
+            return jsonify(create_response(msg="目录创建成功"))
+        else:
+            return jsonify(create_response(
+                code=3004,
+                msg="目录创建失败"
+            )), 500
+
+    except Exception as e:
+        return jsonify(create_response(
+            code=3005,
+            msg=f"创建目录失败: {str(e)}"
+        )), 500
+
+
+@app.route('/api/create-file', methods=['POST'])
+def create_file():
+    """创建文件"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    try:
+        data = request.get_json()
+        if not data or 'name' not in data:
+            return jsonify(create_response(
+                code=3006,
+                msg="请提供文件名称"
+            )), 400
+
+        file_name = data['name']
+        content = data.get('content', '')
+        parent_path = data.get('parent_path')
+
+        success = current_workspace.create_file(file_name, content, parent_path)
+
+        if success:
+            return jsonify(create_response(msg="文件创建成功"))
+        else:
+            return jsonify(create_response(
+                code=3007,
+                msg="文件创建失败"
+            )), 500
+
+    except Exception as e:
+        return jsonify(create_response(
+            code=3008,
+            msg=f"创建文件失败: {str(e)}"
+        )), 500
+
+
+@app.route('/api/rename-item', methods=['PUT'])
+def rename_item():
+    """重命名文件或目录"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    try:
+        data = request.get_json()
+        if not data or 'old_path' not in data or 'new_name' not in data:
+            return jsonify(create_response(
+                code=3009,
+                msg="请提供原路径和新名称"
+            )), 400
+
+        old_path = data['old_path']
+        new_name = data['new_name']
+
+        success = current_workspace.rename_item(old_path, new_name)
+
+        if success:
+            return jsonify(create_response(msg="重命名成功"))
+        else:
+            return jsonify(create_response(
+                code=3010,
+                msg="重命名失败，可能是目标名称已存在或路径无效"
+            )), 400
+
+    except Exception as e:
+        return jsonify(create_response(
+            code=3011,
+            msg=f"重命名失败: {str(e)}"
+        )), 500
+
+
+@app.route('/api/delete-item', methods=['DELETE'])
+def delete_item():
+    """删除文件或目录"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    try:
+        data = request.get_json()
+        if not data or 'path' not in data:
+            return jsonify(create_response(
+                code=3012,
+                msg="请提供要删除的路径"
+            )), 400
+
+        item_path = data['path']
+
+        success = current_workspace.delete_item(item_path)
+
+        if success:
+            return jsonify(create_response(msg="删除成功"))
+        else:
+            return jsonify(create_response(
+                code=3013,
+                msg="删除失败，路径可能无效或不存在"
+            )), 400
+
+    except Exception as e:
+        return jsonify(create_response(
+            code=3014,
+            msg=f"删除失败: {str(e)}"
+        )), 500
+
+
+@app.route('/api/file-content', methods=['GET'])
+def get_file_content():
+    """获取文件内容"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    try:
+        file_path = request.args.get('path')
+        if not file_path:
+            return jsonify(create_response(
+                code=3015,
+                msg="请提供文件路径"
+            )), 400
+
+        content = current_workspace.get_file_content(file_path)
+
+        if content is not None:
+            return jsonify(create_response(
+                msg="获取文件内容成功",
+                data={"content": content}
+            ))
+        else:
+            return jsonify(create_response(
+                code=3016,
+                msg="文件不存在或无法读取"
+            )), 404
+
+    except Exception as e:
+        return jsonify(create_response(
+            code=3017,
+            msg=f"获取文件内容失败: {str(e)}"
+        )), 500
+
+
+@app.route('/api/file-content', methods=['PUT'])
+def save_file_content():
+    """保存文件内容"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    try:
+        data = request.get_json()
+        if not data or 'path' not in data or 'content' not in data:
+            return jsonify(create_response(
+                code=3018,
+                msg="请提供文件路径和内容"
+            )), 400
+
+        file_path = data['path']
+        content = data['content']
+
+        success = current_workspace.save_file_content(file_path, content)
+
+        if success:
+            return jsonify(create_response(msg="保存文件成功"))
+        else:
+            return jsonify(create_response(
+                code=3019,
+                msg="保存文件失败"
+            )), 500
+
+    except Exception as e:
+        return jsonify(create_response(
+            code=3020,
+            msg=f"保存文件失败: {str(e)}"
+        )), 500
+
+
+# ================= 系统接口 =================
+
+@app.route('/api/status', methods=['GET'])
+def get_status():
+    """获取服务状态"""
+    return jsonify(create_response(
+        msg="服务正常运行",
+        data={
+            "service": "file-manager",
+            "version": "2.0.0",
+            "is_selecting": is_selecting,
+            "has_workspace": current_workspace is not None,
+            "workspace_path": current_workspace.workspace_path if current_workspace else None
+        }
+    ))
+
+
+# 错误处理
 @app.errorhandler(404)
-def handle_404(e):
-    return create_response(404, "资源未找到", None, 404)
+def not_found(error):
+    return jsonify(create_response(
+        code=9001,
+        msg="接口不存在"
+    )), 404
+
+
+@app.errorhandler(405)
+def method_not_allowed(error):
+    return jsonify(create_response(
+        code=9002,
+        msg="请求方法不支持"
+    )), 405
 
 
 @app.errorhandler(500)
-def handle_500(e):
-    return create_response(500, "服务器内部错误", None, 500)
+def internal_error(error):
+    return jsonify(create_response(
+        code=9003,
+        msg="服务器内部错误"
+    )), 500
 
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+# 在server.py中添加以下接口
+
+@app.route('/api/generate-card', methods=['POST'])
+def generate_card():
+    """生成卡图"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    try:
+        data = request.get_json()
+        if not data or 'json_data' not in data:
+            return jsonify(create_response(
+                code=4001,
+                msg="请提供卡牌JSON数据"
+            )), 400
+
+        json_data = data['json_data']
+
+        # 生成卡图
+        card_image = current_workspace.generate_card_image(json_data)
+
+        if card_image is None:
+            return jsonify(create_response(
+                code=4002,
+                msg="生成卡图失败"
+            )), 500
+
+        # 将图片转换为base64返回
+        import io
+        import base64
+
+        img_buffer = io.BytesIO()
+        card_image.save(img_buffer, format='PNG')
+        img_str = base64.b64encode(img_buffer.getvalue()).decode()
+
+        return jsonify(create_response(
+            msg="生成卡图成功",
+            data={"image": f"data:image/png;base64,{img_str}"}
+        ))
+
+    except Exception as e:
+        return jsonify(create_response(
+            code=4003,
+            msg=f"生成卡图失败: {str(e)}"
+        )), 500
+
+
+@app.route('/api/save-card', methods=['POST'])
+def save_card():
+    """保存卡图到文件"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    try:
+        data = request.get_json()
+        if not data or 'json_data' not in data or 'filename' not in data:
+            return jsonify(create_response(
+                code=4004,
+                msg="请提供卡牌JSON数据和文件名"
+            )), 400
+
+        json_data = data['json_data']
+        filename = data['filename']
+        parent_path = data.get('parent_path')
+
+        # 保存卡图
+        success = current_workspace.save_card_image(json_data, filename, parent_path)
+
+        if success:
+            return jsonify(create_response(msg="保存卡图成功"))
+        else:
+            return jsonify(create_response(
+                code=4005,
+                msg="保存卡图失败"
+            )), 500
+
+    except Exception as e:
+        return jsonify(create_response(
+            code=4006,
+            msg=f"保存卡图失败: {str(e)}"
+        )), 500
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    print("=" * 60)
+    print("文件管理服务启动")
+    print("服务地址: http://localhost:5000")
+    print("")
+    print("快速开始接口:")
+    print("  选择目录: GET /api/select-directory")
+    print("  最近目录: GET /api/recent-directories")
+    print("  打开工作空间: POST /api/open-workspace")
+    print("")
+    print("工作空间接口:")
+    print("  文件树: GET /api/file-tree")
+    print("  创建目录: POST /api/create-directory")
+    print("  创建文件: POST /api/create-file")
+    print("  重命名: PUT /api/rename-item")
+    print("  删除: DELETE /api/delete-item")
+    print("  文件内容: GET/PUT /api/file-content")
+    print("")
+    print("系统接口:")
+    print("  服务状态: GET /api/status")
+    print("=" * 60)
+
+    app.run(
+        host='127.0.0.1',
+        port=5000,
+        debug=False,
+        threaded=True
+    )

@@ -27,18 +27,36 @@
 
         <!-- 主要操作按钮 -->
         <div class="primary-action">
-          <button class="open-folder-btn" @click="handleOpenFolder">
+          <button 
+            class="open-folder-btn" 
+            @click="handleOpenFolder"
+            :disabled="isSelecting"
+          >
             <div class="btn-icon">
               <n-icon size="28" :component="FolderOpenOutline" />
             </div>
             <div class="btn-content">
               <span class="btn-title">打开项目文件夹</span>
-              <span class="btn-desc">选择包含卡牌文件的文件夹开始工作</span>
+              <span class="btn-desc">
+                {{ isSelecting ? '正在选择文件夹...' : '选择包含卡牌文件的文件夹开始工作' }}
+              </span>
             </div>
             <div class="btn-arrow">
               <n-icon size="20" :component="ArrowForwardOutline" />
             </div>
           </button>
+        </div>
+
+        <!-- 服务状态指示器 -->
+        <div class="service-status">
+          <div class="status-item" :class="{ 'online': serviceOnline, 'offline': !serviceOnline }">
+            <n-icon :component="serviceOnline ? CheckmarkCircle : AlertCircle" />
+            <span>{{ serviceOnline ? '后端服务已连接' : '后端服务离线' }}</span>
+          </div>
+          <div v-if="serviceOnline && hasWorkspace" class="status-item workspace-info">
+            <n-icon :component="FolderOpenOutline" />
+            <span>工作空间: {{ workspaceName }}</span>
+          </div>
         </div>
 
         <!-- 快捷说明 -->
@@ -65,18 +83,62 @@
     <div class="right-pane">
       <div class="content-wrapper">
         <header class="content-header">
-          <h2>最近项目</h2>
-          <p class="subtitle">选择一个最近使用的项目继续编辑</p>
+          <div class="header-with-actions">
+            <div>
+              <h2>最近项目</h2>
+              <p class="subtitle">选择一个最近使用的项目继续编辑</p>
+            </div>
+            <div class="header-actions" v-if="recentDirectories.length > 0">
+              <n-button 
+                size="small" 
+                quaternary 
+                @click="handleClearRecent"
+                :loading="clearingRecent"
+              >
+                <template #icon>
+                  <n-icon :component="TrashOutline" />
+                </template>
+                清空记录
+              </n-button>
+            </div>
+          </div>
         </header>
 
         <!-- 最近项目列表容器 -->
         <div class="recent-list-container">
-          <n-list v-if="recentItems.length > 0" hoverable clickable>
-            <n-list-item v-for="item in recentItems" :key="item.id" @click="handleOpenRecent(item)">
+          <!-- 加载状态 -->
+          <div v-if="loadingRecent" class="loading-state">
+            <n-spin size="large" />
+            <p>正在加载最近项目...</p>
+          </div>
+
+          <!-- 最近目录列表 -->
+          <n-list v-else-if="recentDirectories.length > 0" hoverable clickable>
+            <n-list-item 
+              v-for="directory in recentDirectories" 
+              :key="directory.path" 
+              @click="handleOpenRecent(directory)"
+            >
               <n-thing>
-                <template #header>{{ item.name }}</template>
+                <template #header>{{ directory.name }}</template>
                 <template #description>
-                  <span class="recent-item-path">{{ item.path }}</span>
+                  <div class="recent-item-details">
+                    <span class="recent-item-path">{{ directory.path }}</span>
+                    <span class="recent-item-time">{{ directory.formatted_time }}</span>
+                  </div>
+                </template>
+                <template #action>
+                  <n-button 
+                    size="small" 
+                    quaternary 
+                    circle 
+                    @click.stop="handleRemoveRecent(directory)"
+                    :loading="removingRecentPath === directory.path"
+                  >
+                    <template #icon>
+                      <n-icon :component="CloseOutline" />
+                    </template>
+                  </n-button>
                 </template>
                 <template #header-extra>
                   <n-icon class="hover-arrow" :component="ArrowForwardOutline" />
@@ -95,6 +157,11 @@
             <template #icon>
               <n-icon :component="CubeOutline" />
             </template>
+            <template #extra>
+              <n-button @click="handleOpenFolder" :disabled="isSelecting || !serviceOnline">
+                打开项目文件夹
+              </n-button>
+            </template>
           </n-empty>
         </div>
       </div>
@@ -103,7 +170,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import {
   FolderOpenOutline,
   ArrowForwardOutline,
@@ -111,9 +178,32 @@ import {
   CubeOutline,
   FileTrayFullOutline,
   LayersOutline,
-  ImageOutline
+  ImageOutline,
+  CheckmarkCircle,
+  AlertCircle,
+  TrashOutline,
+  CloseOutline
 } from '@vicons/ionicons5';
 import { useMessage } from 'naive-ui';
+
+import { DirectoryService } from '@/api/directory-service';
+import { ApiError } from '@/api/http-client';
+
+// ----------- Types -----------
+interface RecentDirectory {
+  path: string;
+  name: string;
+  timestamp: number;
+  formatted_time: string;
+}
+
+interface ServiceStatus {
+  service: string;
+  version: string;
+  is_selecting: boolean;
+  has_workspace: boolean;
+  workspace_path: string | null;
+}
 
 // ----------- Props 和 Emits -----------
 const emit = defineEmits<{
@@ -128,93 +218,249 @@ const emit = defineEmits<{
 const folderInput = ref<HTMLInputElement>();
 const message = useMessage();
 
-// ----------- 数据和状态 -----------
-interface RecentItem {
-  id: number;
-  name: string;
-  path: string;
-}
+// ----------- 状态管理 -----------
+const isSelecting = ref(false);
+const serviceOnline = ref(false);
+const hasWorkspace = ref(false);
+const workspaceName = ref<string>('');
+let statusCheckInterval: NodeJS.Timeout | null = null;
 
-// 阿卡姆印牌姬相关的最近项目
-const recentItems = ref<RecentItem[]>([
-  { id: 1, name: '调查员卡牌组-罗兰', path: 'D:/ArkhamCards/Investigators/Roland.card' },
-  { id: 2, name: '恐怖遭遇卡组-古神', path: 'C:/Projects/ArkhamHorror/Ancient-Ones.card' },
-  { id: 3, name: '资产卡牌设计稿', path: '~/Documents/Asset-Cards-Draft.card' },
-  { id: 4, name: '技能卡牌模板', path: 'D:/Templates/Skill-Cards.card' },
-  { id: 5, name: '场景卡组-敦威治', path: 'D:/Scenarios/Dunwich-Horror.card' },
-  { id: 6, name: '自制调查员-艾米丽', path: 'C:/Custom/Investigators/Emily.card' },
-  { id: 7, name: '事件卡牌合集', path: '~/Documents/Event-Cards-Collection.card' },
-  { id: 8, name: '神话卡组-印斯茅斯', path: 'D:/Mythos/Innsmouth.card' },
-  { id: 9, name: '弱点卡牌库', path: 'D:/Cards/Weaknesses/Library.card' },
-]);
+// ----------- 最近目录数据 -----------
+const recentDirectories = ref<RecentDirectory[]>([]);
+const loadingRecent = ref(false);
+const clearingRecent = ref(false);
+const removingRecentPath = ref<string | null>(null);
 
-// ----------- 模拟后端API调用 -----------
+// ----------- 服务状态检查 -----------
 
 /**
- * 模拟发送文件夹路径到后端
+ * 检查服务状态
  */
-const sendFolderPathToBackend = async (folderPath: string) => {
-  console.log('🚀 [前端->后端] 发送文件夹路径:', folderPath);
-  
+const checkServiceStatus = async () => {
   try {
-    const response = await mockBackendCall('open_folder', { path: folderPath });
-    console.log('✅ [后端->前端] 响应:', response);
-    return response;
+    const status: ServiceStatus = await DirectoryService.getServiceStatus();
+    serviceOnline.value = true;
+    isSelecting.value = status.is_selecting;
+    hasWorkspace.value = status.has_workspace;
+    
+    if (status.workspace_path) {
+      workspaceName.value = status.workspace_path.split(/[/\\]/).pop() || status.workspace_path;
+    } else {
+      workspaceName.value = '';
+    }
   } catch (error) {
-    console.error('❌ [后端->前端] 错误:', error);
-    throw error;
+    serviceOnline.value = false;
+    isSelecting.value = false;
+    hasWorkspace.value = false;
+    workspaceName.value = '';
+    console.warn('服务状态检查失败:', error);
   }
 };
 
 /**
- * 模拟发送文件路径到后端
+ * 启动定期状态检查
  */
-const sendFilePathToBackend = async (filePath: string) => {
-  console.log('🚀 [前端->后端] 发送文件路径:', filePath);
+const startStatusCheck = () => {
+  // 立即检查一次
+  checkServiceStatus();
+  // 每5秒检查一次状态
+  statusCheckInterval = setInterval(checkServiceStatus, 5000);
+};
+
+/**
+ * 停止状态检查
+ */
+const stopStatusCheck = () => {
+  if (statusCheckInterval) {
+    clearInterval(statusCheckInterval);
+    statusCheckInterval = null;
+  }
+};
+
+// ----------- 最近目录管理 -----------
+
+/**
+ * 加载最近目录列表
+ */
+const loadRecentDirectories = async () => {
+  if (!serviceOnline.value) return;
   
+  loadingRecent.value = true;
   try {
-    const response = await mockBackendCall('open_file', { path: filePath });
-    console.log('✅ [后端->前端] 响应:', response);
-    return response;
+    const result = await DirectoryService.getRecentDirectories();
+    recentDirectories.value = result.directories || [];
+    console.log('✅ [获取最近目录] 成功加载', recentDirectories.value.length, '条记录');
   } catch (error) {
-    console.error('❌ [后端->前端] 错误:', error);
-    throw error;
+    console.error('❌ [获取最近目录] 失败:', error);
+    if (error instanceof ApiError) {
+      message.error(`获取最近目录失败: ${error.message}`);
+    } else {
+      message.error('获取最近目录失败');
+    }
+  } finally {
+    loadingRecent.value = false;
   }
 };
 
 /**
- * 模拟后端API调用
+ * 清空最近目录
  */
-const mockBackendCall = (action: string, params: any): Promise<any> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        success: true,
-        action,
-        params,
-        timestamp: new Date().toISOString(),
-        message: `${action} executed successfully`
-      });
-    }, 500);
-  });
+const handleClearRecent = async () => {
+  if (!serviceOnline.value) {
+    message.error('后端服务未连接');
+    return;
+  }
+
+  clearingRecent.value = true;
+  try {
+    await DirectoryService.clearRecentDirectories();
+    recentDirectories.value = [];
+    message.success('已清空最近项目记录');
+    console.log('✅ [清空最近目录] 操作成功');
+  } catch (error) {
+    console.error('❌ [清空最近目录] 失败:', error);
+    if (error instanceof ApiError) {
+      message.error(`清空失败: ${error.message}`);
+    } else {
+      message.error('清空最近项目失败');
+    }
+  } finally {
+    clearingRecent.value = false;
+  }
+};
+
+/**
+ * 移除指定最近目录
+ */
+const handleRemoveRecent = async (directory: RecentDirectory) => {
+  if (!serviceOnline.value) {
+    message.error('后端服务未连接');
+    return;
+  }
+
+  removingRecentPath.value = directory.path;
+  try {
+    await DirectoryService.removeRecentDirectory(directory.path);
+    
+    // 从本地列表中移除
+    const index = recentDirectories.value.findIndex(d => d.path === directory.path);
+    if (index > -1) {
+      recentDirectories.value.splice(index, 1);
+    }
+    
+    message.success(`已移除: ${directory.name}`);
+    console.log('✅ [移除最近目录] 操作成功:', directory.path);
+  } catch (error) {
+    console.error('❌ [移除最近目录] 失败:', error);
+    if (error instanceof ApiError) {
+      message.error(`移除失败: ${error.message}`);
+    } else {
+      message.error('移除最近项目失败');
+    }
+  } finally {
+    removingRecentPath.value = null;
+  }
+};
+
+// ----------- API调用函数 -----------
+
+/**
+ * 调用后端目录选择API
+ */
+const selectDirectoryFromBackend = async (): Promise<string | null> => {
+  try {
+    console.log('🚀 [前端->后端] 请求选择目录');
+    
+    const result = await DirectoryService.selectDirectory();
+    
+    if (result && result.directory) {
+      console.log('✅ [后端->前端] 目录选择成功:', result.directory);
+      return result.directory;
+    } else {
+      console.log('ℹ️ [后端->前端] 未选择目录');
+      return null;
+    }
+  } catch (error) {
+    console.error('❌ [后端->前端] 目录选择失败:', error);
+    throw error;
+  }
 };
 
 // ----------- 事件处理函数 -----------
 
 /**
- * 打开文件夹
+ * 打开文件夹 - 使用系统目录选择对话框
  */
-const handleOpenFolder = () => {
+const handleOpenFolder = async () => {
+  if (isSelecting.value) {
+    message.warning('目录选择正在进行中，请稍候...');
+    return;
+  }
+
+  if (!serviceOnline.value) {
+    message.error('后端服务未连接，请确保服务正在运行');
+    return;
+  }
+
   console.log('📁 [阿卡姆印牌姬] 用户点击：打开文件夹');
-  message.info('请选择一个项目文件夹...');
   
-  if (folderInput.value) {
-    folderInput.value.click();
+  const loadingMessage = message.loading('正在打开目录选择对话框...', {
+    duration: 0 // 持续显示直到手动关闭
+  });
+
+  try {
+    const selectedPath = await selectDirectoryFromBackend();
+    
+    loadingMessage.destroy();
+    
+    if (selectedPath) {
+      const folderName = selectedPath.split(/[/\\]/).pop() || selectedPath;
+      message.success(`文件夹 "${folderName}" 已成功打开！`);
+      
+      // 重新加载最近目录列表（因为选择目录会自动添加到最近记录）
+      await loadRecentDirectories();
+      
+      // 导航到工作空间
+      emit('navigate-to-workspace', {
+        mode: 'folder',
+        projectPath: selectedPath,
+        projectName: folderName
+      });
+    } else {
+      message.info('未选择文件夹');
+    }
+  } catch (error) {
+    loadingMessage.destroy();
+    
+    if (error instanceof ApiError) {
+      // 处理特定的API错误
+      switch (error.code) {
+        case 1001:
+          message.warning('目录选择正在进行中，请稍后再试');
+          break;
+        case 1002:
+          message.error('操作超时，请重试');
+          break;
+        case 1003:
+          message.info('用户取消了选择');
+          break;
+        case 1004:
+          message.error('选择目录时出错，请重试');
+          break;
+        case 1006:
+          message.error('服务器错误，请检查后端服务');
+          break;
+        default:
+          message.error(`选择目录失败: ${error.message}`);
+      }
+    } else {
+      message.error('选择目录时发生未知错误');
+    }
   }
 };
 
 /**
- * 处理文件夹选择
+ * 处理浏览器文件夹选择（备用方案）
  */
 const handleFolderSelected = async (event: Event) => {
   const target = event.target as HTMLInputElement;
@@ -225,27 +471,16 @@ const handleFolderSelected = async (event: Event) => {
     const relativePath = firstFile.webkitRelativePath;
     const folderName = relativePath.split('/')[0];
     
-    console.log('📁 [文件夹选择] 已选择文件夹:', folderName);
+    console.log('📁 [浏览器文件夹选择] 已选择文件夹:', folderName);
     console.log('📁 [文件夹选择] 文件夹内包含文件数量:', files.length);
     
-    message.loading(`正在打开文件夹: ${folderName}...`);
+    message.success(`文件夹 "${folderName}" 已成功打开！包含 ${files.length} 个文件`);
     
-    try {
-      await sendFolderPathToBackend(folderName);
-      
-      message.destroyAll();
-      message.success(`文件夹 "${folderName}" 已成功打开！包含 ${files.length} 个文件`);
-      
-      emit('navigate-to-workspace', {
-        mode: 'folder',
-        projectPath: folderName,
-        projectName: folderName
-      });
-      
-    } catch (error) {
-      message.destroyAll();
-      message.error(`打开文件夹失败: ${folderName}`);
-    }
+    emit('navigate-to-workspace', {
+      mode: 'folder',
+      projectPath: folderName,
+      projectName: folderName
+    });
   }
   
   target.value = '';
@@ -254,30 +489,76 @@ const handleFolderSelected = async (event: Event) => {
 /**
  * 打开最近项目
  */
-const handleOpenRecent = async (item: RecentItem) => {
-  console.log('🔄 [阿卡姆印牌姬] 用户点击最近项目:', item.name);
-  console.log('🔄 [最近项目] 文件路径:', item.path);
+const handleOpenRecent = async (directory: RecentDirectory) => {
+  if (!serviceOnline.value) {
+    message.error('后端服务未连接');
+    return;
+  }
+
+  console.log('🔄 [阿卡姆印牌姬] 用户点击最近项目:', directory.name);
+  console.log('🔄 [最近项目] 目录路径:', directory.path);
   
-  message.loading(`正在打开: ${item.name}...`);
+  const loadingMessage = message.loading(`正在打开: ${directory.name}...`, {
+    duration: 0
+  });
   
   try {
-    await sendFilePathToBackend(item.path);
+    // 调用后端API打开工作空间
+    await DirectoryService.openWorkspace(directory.path);
     
-    message.destroyAll();
-    message.success(`已打开: ${item.name}`);
+    loadingMessage.destroy();
+    message.success(`已打开: ${directory.name}`);
     
-    const isFolder = !item.path.includes('.');
+    // 导航到工作空间
     emit('navigate-to-workspace', {
-      mode: isFolder ? 'folder' : 'file',
-      projectPath: item.path,
-      projectName: item.name
+      mode: 'folder',
+      projectPath: directory.path,
+      projectName: directory.name
     });
     
   } catch (error) {
-    message.destroyAll();
-    message.error(`打开失败: ${item.name}`);
+    loadingMessage.destroy();
+    console.error('❌ [打开最近项目] 失败:', error);
+    
+    if (error instanceof ApiError) {
+      switch (error.code) {
+        case 3001:
+          message.error('工作目录不存在，请重新选择');
+          // 可以考虑从最近记录中移除这个无效路径
+          break;
+        case 3002:
+          message.error('无法访问该目录，请检查权限');
+          break;
+        default:
+          message.error(`打开失败: ${error.message}`);
+      }
+    } else {
+      message.error(`打开失败: ${directory.name}`);
+    }
   }
 };
+
+// ----------- 生命周期钩子 -----------
+
+onMounted(async () => {
+  console.log('🎯 [阿卡姆印牌姬] Welcome组件已挂载');
+  startStatusCheck();
+  
+  // 等待服务连接后加载最近目录
+  const checkAndLoad = async () => {
+    await checkServiceStatus();
+    if (serviceOnline.value) {
+      await loadRecentDirectories();
+    }
+  };
+  
+  await checkAndLoad();
+});
+
+onUnmounted(() => {
+  console.log('🎯 [阿卡姆印牌姬] Welcome组件已卸载');
+  stopStatusCheck();
+});
 </script>
 
 <style scoped>
@@ -342,7 +623,7 @@ const handleOpenRecent = async (item: RecentItem) => {
 }
 
 .primary-action {
-  margin-bottom: 50px;
+  margin-bottom: 30px;
 }
 
 .open-folder-btn {
@@ -363,6 +644,11 @@ const handleOpenRecent = async (item: RecentItem) => {
   overflow: hidden;
 }
 
+.open-folder-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .open-folder-btn::before {
   content: '';
   position: absolute;
@@ -374,14 +660,14 @@ const handleOpenRecent = async (item: RecentItem) => {
   transition: left 0.6s ease;
 }
 
-.open-folder-btn:hover {
+.open-folder-btn:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.25);
   border-color: rgba(255, 255, 255, 0.4);
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
-.open-folder-btn:hover::before {
+.open-folder-btn:hover:not(:disabled)::before {
   left: 100%;
 }
 
@@ -420,9 +706,44 @@ const handleOpenRecent = async (item: RecentItem) => {
   transition: all 0.3s ease;
 }
 
-.open-folder-btn:hover .btn-arrow {
+.open-folder-btn:hover:not(:disabled) .btn-arrow {
   opacity: 1;
   transform: translateX(4px);
+}
+
+/* 服务状态 */
+.service-status {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.status-item.online {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.status-item.offline {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.status-item.workspace-info {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
 }
 
 .quick-info {
@@ -468,6 +789,13 @@ const handleOpenRecent = async (item: RecentItem) => {
   flex-shrink: 0;
 }
 
+.header-with-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 30px;
+}
+
 .right-pane h2 {
   font-size: 32px;
   font-weight: 600;
@@ -478,7 +806,13 @@ const handleOpenRecent = async (item: RecentItem) => {
 .right-pane .subtitle {
   font-size: 16px;
   color: #64748b;
-  margin-bottom: 30px;
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
 .recent-list-container {
@@ -487,6 +821,17 @@ const handleOpenRecent = async (item: RecentItem) => {
   min-height: 0;
   padding-right: 10px;
   margin-right: -10px;
+}
+
+/* 加载状态 */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  gap: 16px;
+  color: #64748b;
 }
 
 /* 美化滚动条 */
@@ -525,10 +870,21 @@ const handleOpenRecent = async (item: RecentItem) => {
   color: #1e293b;
 }
 
+.recent-item-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .recent-item-path {
   font-size: 13px;
   color: #64748b;
   opacity: 0.8;
+}
+
+.recent-item-time {
+  font-size: 12px;
+  color: #9ca3af;
 }
 
 .hover-arrow {
@@ -585,6 +941,12 @@ const handleOpenRecent = async (item: RecentItem) => {
   
   .btn-desc {
     font-size: 13px;
+  }
+
+  .header-with-actions {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
   }
 }
 </style>

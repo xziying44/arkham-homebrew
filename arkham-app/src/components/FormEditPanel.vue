@@ -3,15 +3,14 @@
         <div class="pane-header">
             <n-space align="center" justify="space-between">
                 <n-space align="center" size="small">
-                    <n-button v-if="!showFileTree" size="tiny" quaternary @click="$emit('toggle-file-tree')">
+                    <n-button v-if="!showFileTree" size="tiny" quaternary @click="$emit('toggle-file-tree')" class="header-button">
                         <n-icon :component="FolderOpenOutline" />
                     </n-button>
-                    <span class="pane-title">{{ currentCardData?.name || '卡牌编辑器' }}</span>
+                    <span class="pane-title">{{ selectedFile?.label || '卡牌编辑器' }}</span>
                 </n-space>
                 <n-space size="small">
-                    <n-button size="tiny" @click="loadTestData">加载测试数据</n-button>
-                    <n-button size="tiny" @click="showJsonModal = true">查看JSON</n-button>
-                    <n-button v-if="!showImagePreview" size="tiny" quaternary @click="$emit('toggle-image-preview')">
+                    <n-button size="tiny" @click="showJsonModal = true" class="header-button" v-if="selectedFile">查看JSON</n-button>
+                    <n-button v-if="!showImagePreview" size="tiny" quaternary @click="$emit('toggle-image-preview')" class="header-button">
                         <n-icon :component="ImageOutline" />
                     </n-button>
                 </n-space>
@@ -19,7 +18,13 @@
         </div>
 
         <div class="form-content">
-            <n-scrollbar>
+            <!-- 未选择卡牌文件时的提示 -->
+            <div v-if="!selectedFile || selectedFile.type !== 'card'" class="empty-state">
+                <n-empty description="请在文件管理器中选择一个卡牌文件(.card)进行编辑" />
+            </div>
+
+            <!-- 卡牌编辑器内容 -->
+            <n-scrollbar v-else>
                 <div class="form-wrapper">
                     <!-- 卡牌类型选择 -->
                     <n-card title="卡牌类型" size="small" class="form-card">
@@ -51,10 +56,9 @@
                     <!-- 操作按钮 -->
                     <div class="form-actions">
                         <n-space>
-                            <n-button type="primary" @click="saveCard">保存卡牌</n-button>
+                            <n-button type="primary" @click="saveCard" :loading="saving">保存卡牌</n-button>
+                            <n-button @click="previewCard">预览卡图</n-button>
                             <n-button @click="resetForm">重置</n-button>
-                            <n-button @click="exportJson">导出JSON</n-button>
-                            <n-button @click="importJson">导入JSON</n-button>
                         </n-space>
                     </div>
                 </div>
@@ -72,18 +76,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive } from 'vue';
+import { ref, computed, reactive, watch, onMounted } from 'vue';
 import { FolderOpenOutline, ImageOutline } from '@vicons/ionicons5';
 import { useMessage } from 'naive-ui';
+import type { TreeOption } from 'naive-ui';
 import { cardTypeConfigs, cardTypeOptions, type FormField, type CardTypeConfig, type ShowCondition } from '@/config/cardTypeConfigs';
 import FormFieldComponent from './FormField.vue';
+import { WorkspaceService } from '@/api';
 
 interface Props {
     showFileTree: boolean;
     showImagePreview: boolean;
+    selectedFile?: TreeOption | null;
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
 const emit = defineEmits<{
     'toggle-file-tree': [];
@@ -104,6 +111,7 @@ const currentCardData = reactive({
 const currentCardType = ref('');
 const newStringValue = ref('');
 const showJsonModal = ref(false);
+const saving = ref(false);
 
 const currentFormConfig = computed((): CardTypeConfig | null => {
     return currentCardType.value ? cardTypeConfigs[currentCardType.value] : null;
@@ -320,29 +328,63 @@ const onCardTypeChange = (newType: string) => {
     Object.assign(currentCardData, newData);
 };
 
-// 其他方法
-const loadTestData = () => {
-    Object.assign(currentCardData, {
-        type: '支援卡',
-        name: '医疗包',
-        class: '多职阶',
-        subclass: ['守护者', '探求者'],
-        submit_icon: ['意志', '战力', '战力'],
-        traits: ['道具', '供给'],
-        level: 0,
-        cost: 2,
-        id: 'med_kit_001',
-        created_at: '2024-01-15T10:30:00Z',
-        version: '1.0',
-        description: '这是一个测试描述'
-    });
-    currentCardType.value = '支援卡';
-    message.success('测试数据已加载');
+// 加载卡牌数据
+const loadCardData = async () => {
+    if (!props.selectedFile || props.selectedFile.type !== 'card' || !props.selectedFile.path) {
+        return;
+    }
+
+    try {
+        const content = await WorkspaceService.getFileContent(props.selectedFile.path);
+        const cardData = JSON.parse(content || '{}');
+        
+        // 清空当前数据
+        Object.keys(currentCardData).forEach(key => {
+            delete currentCardData[key];
+        });
+        
+        // 加载新数据
+        Object.assign(currentCardData, {
+            type: '',
+            name: '',
+            id: '',
+            created_at: '',
+            version: '1.0',
+            ...cardData
+        });
+        
+        currentCardType.value = cardData.type || '';
+        message.success('卡牌数据加载成功');
+    } catch (error) {
+        console.error('加载卡牌数据失败:', error);
+        message.error('加载卡牌数据失败');
+    }
 };
 
-const saveCard = () => {
-    message.success('卡牌已保存');
-    console.log('保存的数据:', currentCardData);
+// 保存卡牌
+const saveCard = async () => {
+    if (!props.selectedFile || !props.selectedFile.path) {
+        message.warning('未选择文件');
+        return;
+    }
+
+    try {
+        saving.value = true;
+        const jsonContent = JSON.stringify(currentCardData, null, 2);
+        await WorkspaceService.saveFileContent(props.selectedFile.path, jsonContent);
+        message.success('卡牌保存成功');
+    } catch (error) {
+        console.error('保存卡牌失败:', error);
+        message.error('保存卡牌失败');
+    } finally {
+        saving.value = false;
+    }
+};
+
+// 预览卡图
+const previewCard = () => {
+    // TODO: 待开发预览卡图功能
+    message.info('预览卡图功能开发中...');
 };
 
 const resetForm = () => {
@@ -364,41 +406,25 @@ const resetForm = () => {
     message.info('表单已重置');
 };
 
-const exportJson = () => {
-    const dataStr = JSON.stringify(currentCardData, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${currentCardData.name || 'card'}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-    message.success('JSON文件已导出');
-};
-
-const importJson = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = (e) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                try {
-                    const jsonData = JSON.parse(event.target?.result as string);
-                    Object.assign(currentCardData, jsonData);
-                    currentCardType.value = jsonData.type || '';
-                    message.success('JSON文件已导入');
-                } catch (error) {
-                    message.error('JSON文件格式错误');
-                }
-            };
-            reader.readAsText(file);
-        }
-    };
-    input.click();
-};
+// 监听选中文件变化
+watch(() => props.selectedFile, (newFile) => {
+    if (newFile && newFile.type === 'card') {
+        loadCardData();
+    } else {
+        // 清空表单数据
+        Object.keys(currentCardData).forEach(key => {
+            delete currentCardData[key];
+        });
+        Object.assign(currentCardData, {
+            type: '',
+            name: '',
+            id: '',
+            created_at: '',
+            version: '1.0',
+        });
+        currentCardType.value = '';
+    }
+}, { immediate: true });
 </script>
 
 <style scoped>
@@ -426,10 +452,38 @@ const importJson = () => {
     color: white;
 }
 
+/* 头部按钮样式统一 */
+.header-button {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    transition: all 0.2s ease;
+}
+
+.header-button:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.header-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
 .form-content {
     flex: 1;
     overflow: hidden;
     background: linear-gradient(145deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.empty-state {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .form-wrapper {
