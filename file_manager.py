@@ -2,6 +2,7 @@ import os
 import json
 import time
 import base64
+import tempfile  # 添加这个导入
 import mimetypes
 from typing import List, Dict, Any, Optional
 from pathlib import Path
@@ -493,12 +494,41 @@ class WorkspaceManager:
             print("字体或图像管理器未初始化")
             return None
 
+        temp_image_path = None  # 用于跟踪临时文件
+
         try:
             # 获取图片路径
             picture_path = json_data.get('picture_path', None)
 
+            # 检查 picture_base64 字段
+            picture_base64 = json_data.get('picture_base64', '')
+
+            if picture_base64 and picture_base64.strip():
+                # 如果有base64数据，转换为临时图片文件
+                try:
+                    # 解码base64数据
+                    if picture_base64.startswith('data:image/'):
+                        # 去掉data URL前缀
+                        base64_data = picture_base64.split(',', 1)[1]
+                    else:
+                        base64_data = picture_base64
+
+                    image_data = base64.b64decode(base64_data)
+
+                    # 创建临时文件
+                    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
+                        temp_file.write(image_data)
+                        temp_image_path = temp_file.name
+                        picture_path = temp_image_path
+
+                    print(f"已将base64图片数据保存到临时文件: {temp_image_path}")
+
+                except Exception as e:
+                    print(f"解码base64图片数据失败: {e}")
+                    return None
+
             # 如果picture_path是相对路径，尝试在工作目录中查找
-            if picture_path and not os.path.isabs(picture_path):
+            elif picture_path and not os.path.isabs(picture_path):
                 full_picture_path = os.path.join(self.workspace_path, picture_path)
                 if os.path.exists(full_picture_path):
                     picture_path = full_picture_path
@@ -516,6 +546,15 @@ class WorkspaceManager:
         except Exception as e:
             print(f"生成卡图失败: {e}")
             return None
+
+        finally:
+            # 清理临时文件
+            if temp_image_path and os.path.exists(temp_image_path):
+                try:
+                    os.unlink(temp_image_path)
+                    print(f"已删除临时文件: {temp_image_path}")
+                except Exception as e:
+                    print(f"删除临时文件失败: {e}")
 
     def save_card_image(self, json_data: Dict[str, Any], filename: str, parent_path: Optional[str] = None) -> bool:
         """

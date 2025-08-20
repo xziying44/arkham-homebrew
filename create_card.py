@@ -2211,6 +2211,10 @@ def preprocessing_json(card_json):
 
     if card_json.get('type','') == '调查员':
         card_json['type'] = '调查员卡'
+    if card_json.get('type','') == '调查员背面':
+        card_json['type'] = '调查员卡背'
+    if card_json.get('type','') == '定制卡':
+        card_json['type'] = '升级卡'
 
     def replace_bracketed_content(match):
         content = match.group(1)  # 获取括号内的内容

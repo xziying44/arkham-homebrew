@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 import tkinter as tk
 from tkinter import filedialog
 import threading
@@ -655,6 +655,23 @@ def save_card():
             code=4006,
             msg=f"保存卡图失败: {str(e)}"
         )), 500
+
+
+@app.route('/')
+def index():
+    """服务Vue应用的入口文件"""
+    return send_from_directory(app.static_folder, 'index.html')
+
+
+@app.route('/<path:path>')
+def serve_static_files(path):
+    """服务Vue应用的静态文件"""
+    # 首先尝试提供静态文件
+    try:
+        return send_from_directory(app.static_folder, path)
+    except:
+        # 如果文件不存在，返回index.html（用于Vue Router的history模式）
+        return send_from_directory(app.static_folder, 'index.html')
 
 
 if __name__ == '__main__':
