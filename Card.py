@@ -2,8 +2,17 @@ import json
 import os
 import random
 import re
+import sys
 
 from PIL import Image, ImageDraw, ImageFont
+
+
+def get_resource_path(relative_path):
+    """获取资源文件的绝对路径，适用于开发环境和打包后的环境"""
+    if hasattr(sys, '_MEIPASS'):
+        # PyInstaller 打包后的临时目录
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
 
 
 def generate_random_braille(size, seed=None, dot_color=(0, 0, 0, 255)):
@@ -151,6 +160,7 @@ class ImageManager:
     def load_images(self, image_folder):
         """加载图片目录下所有支持的图像文件"""
         supported_ext = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
+        image_folder = get_resource_path(image_folder)
         try:
             for filename in os.listdir(image_folder):
                 name, ext = os.path.splitext(filename)
@@ -243,7 +253,7 @@ class FontManager:
                 '小字': '汉仪小隶书简',
             }
         self.font_map = {}
-        self.font_folder = font_folder
+        self.font_folder = get_resource_path(font_folder)
         self._load_fonts()
         self.lang = lang
 
