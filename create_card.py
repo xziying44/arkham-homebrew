@@ -2209,11 +2209,11 @@ def preprocessing_json(card_json):
 
     card_json = sort_submit_icons(card_json)
 
-    if card_json.get('type','') == '调查员':
+    if card_json.get('type', '') == '调查员':
         card_json['type'] = '调查员卡'
-    if card_json.get('type','') == '调查员背面':
+    if card_json.get('type', '') == '调查员背面':
         card_json['type'] = '调查员卡背'
-    if card_json.get('type','') == '定制卡':
+    if card_json.get('type', '') == '定制卡':
         card_json['type'] = '升级卡'
 
     def replace_bracketed_content(match):
@@ -2430,36 +2430,31 @@ def process_card_json_to_tts_json(card_json, front_image_url="", back_image_url=
 
 if __name__ == '__main__':
     json_data = {
-        "type": "支援卡",
-        "name": "测试",
-        "id": "",
-        "created_at": "",
-        "version": "1.0",
-        "subtitle": "测试",
-        "class": "多职阶",
-        "subclass": [
-            "探求者",
-            "流浪者"
+        "type": "地点卡",
+        "location_icon": "绿菱",
+        "location_link": [
+            "褐扭"
         ],
-        "health": 2,
-        "horror": 3,
-        "slots": "盟友",
-        "slots2": "身体",
-        "level": 4,
-        "cost": 6,
-        "submit_icon": [
-            "战力",
-            "战力"
-        ],
+        "shroud": "3",
+        "clues": "1<调查员>",
+        "location_type": "已揭示",
+        "id": 91,
+        "body": "➡️：【谈判】。检定📚(4)。如果你成功，获得1个线索(从供应堆)。(团队每场游戏限制成功1🕵️次。)\n➡️花费2资源：从你的调查员身上治愈共计至多2点伤害和/或恐惧。(每场游戏限制一次。)\n<relish>驻扎在堡垒的一名警官向你吐露，他的几名手下在荒野中搜寻纳德曼一行人的踪迹时失踪了。自审判以来，他们现在认为此案已结，并相信那些学生是死于纳德曼之手。</relish>\n",
+        "name": "麦克唐纳堡",
         "traits": [
-            "测试"
+            "已开拓",
+            "堡垒"
         ],
-        "body": "测试测试【测试】测试",
-        "flavor": "测试测试测试"
+        "picture_path": "D:\\BaiduSyncdisk\\PycharmProjects\\arkham_translate\\translation_space\\两个POD\\factory\\000091-raw.jpg",
+        "class": "中立"
     }
     fm = FontManager('fonts')
     im = ImageManager('images')
+    im.load_images('icons')
     card = process_card_json(json_data, picture_path=json_data.get('picture_path', None),
                              font_manager=fm,
-                             image_manager=im)
+                             image_manager=im,
+                             image_mode=1,
+                             transparent_encounter=False,
+                             transparent_background=False)
     card.image.show()

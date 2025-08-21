@@ -9,6 +9,7 @@ export interface ShowCondition {
   operator?: 'equals' | 'not-equals' | 'includes' | 'not-includes';  // 比较操作符，默认为 equals
 }
 
+// 在 FormField 接口中添加默认值和帮助文本属性
 export interface FormField {
   key: string;
   name: string;
@@ -19,14 +20,65 @@ export interface FormField {
   rows?: number;
   maxlength?: number;
   options?: FieldOption[];
-  showCondition?: ShowCondition;  // 新增：显示条件
-  index?: number;  // 新增：数组索引，表示绑定到 key[index]
-  maxSize?: number; // 图片最大文件大小（字节）
+  showCondition?: ShowCondition;
+  index?: number;
+  maxSize?: number;
+  defaultValue?: any; // 新增：默认值
+  helpText?: string;  // 新增：帮助文本
 }
+
 
 export interface CardTypeConfig {
   fields: FormField[];
 }
+
+// 提示文本
+const compoundNumbersTip = `输入格式：
+• 数字：如 8
+• 可变数字：如 2<调查员>
+• 特殊值：- / X / ?
+
+支持：数字、数字<调查员>、特殊符号(-/X/?)。
+`
+
+const bodyTip = `输入格式：
+【】表示粗体，如：【调查】
+{}表示特性，如：{盟友}
+[]表示风味文本，如：[这里是风味文本...]
+
+可用图标标签：
+🏅 <独特>
+⭕ <反应>
+➡️ <启动>
+⚡ <免费>
+💀 <骷髅>
+👤 <异教徒>
+📜 <石板>
+👹 <古神>
+🐙 <触手>
+⭐ <旧印>
+👊 <拳>
+📚 <书>
+🦶 <脚>
+🧠 <脑>
+❓ <?>
+🔵 <点>
+🌑 <诅咒>
+🌟 <祝福>
+❄️ <雪花>
+🕵️ <调查员>
+🚶 <流浪者>
+🏕️ <生存者>
+🛡️ <守护者>
+🧘 <潜修者>
+🔍 <探求者>
+
+特殊标签：
+<lr> 换行
+<hr> 横线
+
+支持直接使用emoji或对应的标签格式
+`
 
 export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   '支援卡': {
@@ -35,7 +87,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'name',
         name: '📝 卡名',
         type: 'text',
-        layout: 'half'
+        layout: 'half',
+        helpText: "测试提示文本"
       },
       {
         key: 'subtitle',
@@ -216,7 +269,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'body',
         name: '📄 卡牌效果',
         type: 'textarea',
-        layout: 'full'
+        layout: 'full',
+        helpText: bodyTip
       },
       {
         key: 'flavor',
@@ -364,7 +418,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'body',
         name: '📄 卡牌效果',
         type: 'textarea',
-        layout: 'full'
+        layout: 'full',
+        helpText: bodyTip
       },
       {
         key: 'flavor',
@@ -444,7 +499,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'body',
         name: '📄 卡牌效果',
         type: 'textarea',
-        layout: 'full'
+        layout: 'full',
+        helpText: bodyTip
       },
       {
         key: 'flavor',
@@ -480,6 +536,20 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         name: '📋 副标题',
         type: 'text',
         layout: 'half'
+      },
+      {
+        key: 'class',
+        name: '⚔️ 职阶',
+        type: 'select',
+        layout: 'full',
+        options: [
+          { label: '🛡️ 守护者', value: '守护者' },
+          { label: '🔍 探求者', value: '探求者' },
+          { label: '🏃 流浪者', value: '流浪者' },
+          { label: '🔮 潜修者', value: '潜修者' },
+          { label: '💪 生存者', value: '生存者' },
+          { label: '⚪ 中立', value: '中立' }
+        ]
       },
       {
         key: 'attribute',
@@ -549,7 +619,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'body',
         name: '📄 卡牌效果',
         type: 'textarea',
-        layout: 'full'
+        layout: 'full',
+        helpText: bodyTip
       },
       {
         key: 'flavor',
@@ -579,6 +650,20 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         name: '📋 副标题',
         type: 'text',
         layout: 'half'
+      },
+      {
+        key: 'class',
+        name: '⚔️ 职阶',
+        type: 'select',
+        layout: 'full',
+        options: [
+          { label: '🛡️ 守护者', value: '守护者' },
+          { label: '🔍 探求者', value: '探求者' },
+          { label: '🏃 流浪者', value: '流浪者' },
+          { label: '🔮 潜修者', value: '潜修者' },
+          { label: '💪 生存者', value: '生存者' },
+          { label: '⚪ 中立', value: '中立' }
+        ]
       },
       {
         key: 'card_back.size',
@@ -633,7 +718,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'body',
         name: '📄 卡牌效果',
         type: 'textarea',
-        layout: 'full'
+        layout: 'full',
+        helpText: bodyTip
       },
     ]
   },
@@ -655,7 +741,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'body',
         name: '📄 卡牌效果',
         type: 'textarea',
-        layout: 'full'
+        layout: 'full',
+        helpText: bodyTip
       },
       {
         key: 'flavor',
@@ -693,22 +780,36 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'half'
       },
       {
+        key: 'class',
+        name: '🃏 类型',
+        type: 'select',
+        layout: 'full',
+        defaultValue: '',
+        options: [
+          { label: '🔮 遭遇', value: "" },
+          { label: '💀 弱点', value: '弱点' },
+        ]
+      },
+      {
         key: 'attack',
         name: '⚔️ 攻击值',
         type: 'text',
-        layout: 'third'
+        layout: 'third',
+        helpText: compoundNumbersTip
       },
       {
         key: 'enemy_health',
         name: '❤️ 生命值',
         type: 'text',
-        layout: 'third'
+        layout: 'third',
+        helpText: compoundNumbersTip
       },
       {
         key: 'evade',
         name: '🏃 躲避值',
         type: 'text',
-        layout: 'third'
+        layout: 'third',
+        helpText: compoundNumbersTip
       },
       {
         key: 'enemy_damage',
@@ -740,7 +841,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'body',
         name: '📄 卡牌效果',
         type: 'textarea',
-        layout: 'full'
+        layout: 'full',
+        helpText: bodyTip
       },
       {
         key: 'flavor',
@@ -835,13 +937,15 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'shroud',
         name: '🌫️ 隐藏值',
         type: 'text',
-        layout: 'half'
+        layout: 'half',
+        helpText: compoundNumbersTip
       },
       {
         key: 'clues',
         name: '🔍 线索值',
         type: 'text',
-        layout: 'half'
+        layout: 'half',
+        helpText: compoundNumbersTip
       },
       {
         key: 'traits',
@@ -853,7 +957,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'body',
         name: '📄 卡牌效果',
         type: 'textarea',
-        layout: 'full'
+        layout: 'full',
+        helpText: bodyTip
       },
       {
         key: 'flavor',
@@ -869,6 +974,308 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       },
       {
         key: 'picture_base64',
+        name: '🖼️ 插画',
+        type: 'image',
+        layout: 'half',
+        maxSize: 50 * 1024 * 1024, // 50MB
+      },
+    ]
+  },
+  '密谋卡': {
+    fields: [
+      {
+        key: 'name',
+        name: '📝 卡名',
+        type: 'text',
+        layout: 'half'
+      },
+      {
+        key: 'is_back',
+        name: '📃 正面背面',
+        type: 'select',
+        layout: 'half',
+        defaultValue: false,
+        options: [
+          { label: '🔼 正面', value: false },
+          { label: '🔽 背面', value: true },
+        ]
+      },
+      {
+        key: 'serial_number',
+        showCondition: {
+          field: 'is_back',
+          value: false
+        },
+        name: '🔢 密谋编号',
+        type: 'text',
+        layout: 'half',
+        helpText: compoundNumbersTip
+      },
+      {
+        key: 'threshold',
+        showCondition: {
+          field: 'is_back',
+          value: false
+        },
+        name: '💥 毁灭阈值',
+        type: 'text',
+        layout: 'half',
+        helpText: compoundNumbersTip
+      },
+      {
+        key: 'flavor',
+        name: '🎭 风味文本',
+        type: 'textarea',
+        layout: 'full'
+      },
+      {
+        key: 'body',
+        name: '📄 卡牌效果',
+        type: 'textarea',
+        layout: 'full',
+        helpText: bodyTip
+      },
+      {
+        key: 'victory',
+        showCondition: {
+          field: 'is_back',
+          value: true
+        },
+        name: '🏆 胜利点',
+        type: 'number',
+        layout: 'full'
+      },
+      {
+        key: 'picture_base64',
+        showCondition: {
+          field: 'is_back',
+          value: false
+        },
+        name: '🖼️ 插画',
+        type: 'image',
+        layout: 'half',
+        maxSize: 50 * 1024 * 1024, // 50MB
+      },
+    ]
+  },
+  '密谋卡-大画': {
+    fields: [
+      {
+        key: 'name',
+        name: '📝 卡名',
+        type: 'text',
+        layout: 'half'
+      },
+      {
+        key: 'threshold',
+        name: '💥 毁灭阈值',
+        type: 'text',
+        layout: 'full'
+      },
+      {
+        key: 'flavor',
+        name: '🎭 风味文本',
+        type: 'textarea',
+        layout: 'full'
+      },
+      {
+        key: 'body',
+        name: '📄 卡牌效果',
+        type: 'textarea',
+        layout: 'full',
+        helpText: bodyTip
+      },
+      {
+        key: 'picture_base64',
+        name: '🖼️ 插画',
+        type: 'image',
+        layout: 'half',
+        maxSize: 50 * 1024 * 1024, // 50MB
+      },
+    ]
+  },
+  '场景卡': {
+    fields: [
+      {
+        key: 'name',
+        name: '📝 卡名',
+        type: 'text',
+        layout: 'half'
+      },
+      {
+        key: 'is_back',
+        name: '📃 正面背面',
+        type: 'select',
+        layout: 'half',
+        defaultValue: false,
+        options: [
+          { label: '🔼 正面', value: false },
+          { label: '🔽 背面', value: true },
+        ]
+      },
+      {
+        key: 'serial_number',
+        showCondition: {
+          field: 'is_back',
+          value: false
+        },
+        name: '🔢 场景编号',
+        type: 'text',
+        layout: 'half',
+        helpText: compoundNumbersTip
+      },
+      {
+        key: 'threshold',
+        showCondition: {
+          field: 'is_back',
+          value: false
+        },
+        name: '🎯 场景目标',
+        type: 'text',
+        layout: 'half',
+        helpText: compoundNumbersTip
+      },
+      {
+        key: 'flavor',
+        name: '🎭 风味文本',
+        type: 'textarea',
+        layout: 'full'
+      },
+      {
+        key: 'body',
+        name: '📄 卡牌效果',
+        type: 'textarea',
+        layout: 'full',
+        helpText: bodyTip
+      },
+      {
+        key: 'victory',
+        showCondition: {
+          field: 'is_back',
+          value: true
+        },
+        name: '🏆 胜利点',
+        type: 'number',
+        layout: 'full'
+      },
+      {
+        key: 'picture_base64',
+        showCondition: {
+          field: 'is_back',
+          value: false
+        },
+        name: '🖼️ 插画',
+        type: 'image',
+        layout: 'half',
+        maxSize: 50 * 1024 * 1024, // 50MB
+      },
+    ]
+  },
+  '场景卡-大画': {
+    fields: [
+      {
+        key: 'name',
+        name: '📝 卡名',
+        type: 'text',
+        layout: 'half'
+      },
+      {
+        key: 'flavor',
+        name: '🎭 风味文本',
+        type: 'textarea',
+        layout: 'full'
+      },
+      {
+        key: 'body',
+        name: '📄 卡牌效果',
+        type: 'textarea',
+        layout: 'full',
+        helpText: bodyTip
+      },
+      {
+        key: 'picture_base64',
+        name: '🖼️ 插画',
+        type: 'image',
+        layout: 'half',
+        maxSize: 50 * 1024 * 1024, // 50MB
+      },
+    ]
+  },
+  '冒险参考卡': {
+    fields: [
+      {
+        key: 'name',
+        name: '📝 卡名',
+        type: 'text',
+        layout: 'half'
+      },
+      {
+        key: 'subtitle',
+        name: '📋 副标题',
+        type: 'text',
+        layout: 'half'
+      },
+      {
+        key: 'scenario_type',
+        name: '🃏 卡牌类型',
+        type: 'select',
+        layout: 'full',
+        defaultValue: 0,
+        options: [
+          { label: '📊 默认类型', value: 0 },
+          { label: '💎 资源类型', value: 1 }
+        ]
+      },
+      {
+        key: 'scenario_card.resource_name',
+        showCondition: {
+          field: 'scenario_type',
+          value: 1
+        },
+        name: '💎 资源名称',
+        type: 'text',
+        layout: 'full'
+      },
+      {
+        key: 'scenario_card.skull',
+        name: '💀 骷髅效果',
+        type: 'textarea',
+        layout: 'half'
+      },
+      {
+        key: 'scenario_card.cultist',
+        name: '👥 异教徒效果',
+        type: 'textarea',
+        layout: 'half'
+      },
+      {
+        key: 'scenario_card.tablet',
+        name: '📜 石板效果',
+        type: 'textarea',
+        layout: 'half'
+      },
+      {
+        key: 'scenario_card.elder_thing',
+        name: '👁️ 古神效果',
+        type: 'textarea',
+        layout: 'half'
+      },
+      {
+        key: 'victory',
+        showCondition: {
+          field: 'is_back',
+          value: true
+        },
+        name: '🏆 胜利点',
+        type: 'number',
+        layout: 'full'
+      },
+      {
+        key: 'picture_base64',
+        showCondition: {
+          field: 'is_back',
+          value: false
+        },
         name: '🖼️ 插画',
         type: 'image',
         layout: 'half',

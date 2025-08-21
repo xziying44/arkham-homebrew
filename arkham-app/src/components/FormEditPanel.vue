@@ -343,7 +343,18 @@ const onCardTypeChange = (newType: string) => {
     });
 
     Object.assign(currentCardData, newData);
+
+    // 应用默认值
+    const config = cardTypeConfigs[newType];
+    if (config) {
+        config.fields.forEach(field => {
+            if (field.defaultValue !== undefined) {
+                setFieldValue(field, field.defaultValue);
+            }
+        });
+    }
 };
+
 
 // 自动生成卡图（如果数据有效的话）
 const autoGeneratePreview = async () => {
@@ -388,7 +399,7 @@ const loadCardData = async () => {
         });
 
         currentCardType.value = cardData.type || '';
-        message.success('卡牌数据加载成功');
+        // message.success('卡牌数据加载成功');
 
         // 加载完成后自动生成预览
         setTimeout(() => {
