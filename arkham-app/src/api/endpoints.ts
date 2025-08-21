@@ -111,8 +111,26 @@ export const API_ENDPOINTS = {
     url: '/api/save-card',
     method: HttpMethod.POST,
     timeout: 30000 // 30秒超时
-  } as ApiConfig
+  } as ApiConfig,
+
+  // 配置管理相关接口
+  GET_CONFIG: {
+    url: '/api/config',
+    method: HttpMethod.GET,
+    timeout: 5000
+  } as ApiConfig,
+  SAVE_CONFIG: {
+    url: '/api/config',
+    method: HttpMethod.PUT,
+    timeout: 10000
+  } as ApiConfig,
+  GET_ENCOUNTER_GROUPS: {
+    url: '/api/encounter-groups',
+    method: HttpMethod.GET,
+    timeout: 10000
+  } as ApiConfig,
 } as const;
+
 
 // 导出API端点类型
 export type ApiEndpoints = typeof API_ENDPOINTS;

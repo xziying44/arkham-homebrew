@@ -1,6 +1,3 @@
-我来更新这个API文档，主要需要修改获取文件树接口的部分：
-
-```markdown
 # 文件管理服务 API 文档
 
 ## 概述
@@ -35,6 +32,9 @@
 | 1001-1999 | 目录选择相关 | 目录选择操作相关错误  |
 | 2001-2999 | 快速开始相关 | 最近目录管理相关错误  |
 | 3001-3999 | 工作空间相关 | 工作空间操作相关错误  |
+| 4001-4999 | 卡牌生成相关 | 卡牌生成和保存相关错误 |
+| 5001-5999 | 文件内容相关 | 图片和文件信息相关错误 |
+| 6001-6999 | 配置管理相关 | 配置项和遭遇组相关错误 |
 | 9001-9999 | 系统错误   | HTTP状态码相关错误 |
 
 ### 详细错误码
@@ -52,6 +52,23 @@
 | 2001-2008 | 最近目录管理相关错误        |
 | 3001      | 请先选择或打开工作目录       |
 | 3002-3020 | 工作空间操作相关错误        |
+| 4001      | 请提供卡牌JSON数据       |
+| 4002      | 生成卡图失败            |
+| 4003      | 生成卡图失败（详细错误信息）    |
+| 4004      | 请提供卡牌JSON数据和文件名   |
+| 4005      | 保存卡图失败            |
+| 4006      | 保存卡图失败（详细错误信息）    |
+| 5001      | 请提供图片路径           |
+| 5002      | 图片文件不存在或无法读取      |
+| 5003      | 获取图片内容失败          |
+| 5004      | 请提供文件路径           |
+| 5005      | 文件不存在或无法访问        |
+| 5006      | 获取文件信息失败          |
+| 6001      | 获取配置失败            |
+| 6002      | 请提供配置数据           |
+| 6003      | 保存配置失败            |
+| 6004      | 保存配置失败（详细错误信息）    |
+| 6005      | 获取遭遇组列表失败         |
 | 9001      | 接口不存在 (404)       |
 | 9002      | 请求方法不支持 (405)     |
 | 9003      | 服务器内部错误 (500)     |
@@ -317,14 +334,6 @@ curl -X GET "/api/file-tree?include_hidden=false"
 }
 ```
 
-### 文件树结构说明
-
-- **根节点**: 始终是工作空间目录，类型为 `workspace`
-- **目录节点**: 包含 `children` 数组，递归包含子目录和文件
-- **文件节点**: 不包含 `children` 属性，根据扩展名自动识别类型
-- **路径字段**: 所有节点都包含完整的文件系统路径
-- **唯一键值**: 使用路径+微秒时间戳生成，确保前端渲染时的唯一性
-
 ## 7. 创建目录
 
 ### 基本信息
@@ -478,53 +487,230 @@ curl -X PUT /api/file-content \
   -d '{"path": "/path/to/file.txt", "content": "新的文件内容"}'
 ```
 
----
-
-# 系统接口
-
-## 13. 服务状态接口
+## 13. 获取图片内容
 
 ### 基本信息
 
-- **接口名称**: 获取服务状态
-- **请求地址**: `/api/status`
+- **接口名称**: 获取图片内容
+- **请求地址**: `/api/image-content`
 - **请求方法**: `GET`
-- **功能描述**: 获取服务运行状态和相关信息
+- **功能描述**: 获取图片文件并转换为base64格式
+
+### 请求参数
+
+| 参数名  | 类型     | 必填 | 说明   |
+|------|--------|----|------|
+| path | string | 是  | 图片路径 |
+
+### 请求示例
+
+```bash
+curl -X GET "/api/image-content?path=/path/to/image.png"
+```
+
+### 响应示例
+
+```json
+{
+  "code": 0,
+  "msg": "获取图片内容成功",
+  "data": {
+    "content": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+  }
+}
+```
+
+## 14. 获取文件信息
+
+### 基本信息
+
+- **接口名称**: 获取文件信息
+- **请求地址**: `/api/file-info`
+- **请求方法**: `GET`
+- **功能描述**: 获取文件的详细信息
+
+### 请求参数
+
+| 参数名  | 类型     | 必填 | 说明   |
+|------|--------|----|------|
+| path | string | 是  | 文件路径 |
 
 ### 响应格式
 
-| 字段                  | 类型          | 说明           |
-|---------------------|-------------|--------------|
-| data.service        | string      | 服务名称         |
-| data.version        | string      | 服务版本         |
-| data.is_selecting   | boolean     | 是否正在进行目录选择操作 |
-| data.has_workspace  | boolean     | 是否已打开工作空间    |
-| data.workspace_path | string/null | 当前工作空间路径     |
+| 字段                      | 类型      | 说明         |
+|-------------------------|---------|------------|
+| data.fileInfo.path      | string  | 文件绝对路径     |
+| data.fileInfo.type      | string  | 文件类型       |
+| data.fileInfo.is_file   | boolean | 是否为文件      |
+| data.fileInfo.is_directory | boolean | 是否为目录      |
+| data.fileInfo.is_image  | boolean | 是否为图片文件    |
+| data.fileInfo.size      | integer | 文件大小（字节）   |
+| data.fileInfo.modified  | integer | 修改时间戳      |
+| data.fileInfo.modified_formatted | string | 格式化的修改时间 |
+
+### 请求示例
+
+```bash
+curl -X GET "/api/file-info?path=/path/to/file.txt"
+```
+
+### 响应示例
+
+```json
+{
+  "code": 0,
+  "msg": "获取文件信息成功",
+  "data": {
+    "fileInfo": {
+      "path": "/Users/username/Documents/MyProject/file.txt",
+      "type": "text",
+      "is_file": true,
+      "is_directory": false,
+      "is_image": false,
+      "size": 1024,
+      "modified": 1699123456,
+      "modified_formatted": "2023-11-05 14:30:56"
+    }
+  }
+}
+```
+
+---
+
+# 配置管理相关接口
+
+## 15. 获取配置项
+
+### 基本信息
+
+- **接口名称**: 获取配置项
+- **请求地址**: `/api/config`
+- **请求方法**: `GET`
+- **功能描述**: 获取工作目录下config.json的配置内容
+
+### 请求参数
+
+无需传入参数
+
+### 响应格式
+
+| 字段        | 类型     | 说明    |
+|-----------|--------|-------|
+| data.config | object | 配置项对象 |
+
+### 示例请求
+
+```bash
+curl -X GET /api/config
+```
 
 ### 示例响应
 
 ```json
 {
   "code": 0,
-  "msg": "服务正常运行",
+  "msg": "获取配置成功",
   "data": {
-    "service": "file-manager",
-    "version": "2.0.0",
-    "is_selecting": false,
-    "has_workspace": true,
-    "workspace_path": "/Users/username/Documents/MyProject"
+    "config": {
+      "encounter_groups_dir": "encounters",
+      "other_setting": "some_value"
+    }
   }
 }
 ```
 
-基于您的需求，我来为API文档添加两个新的卡牌生成相关接口。在文档末尾的"系统接口"之前添加一个新的章节：
+## 16. 保存配置项
 
-```markdown
+### 基本信息
+
+- **接口名称**: 保存配置项
+- **请求地址**: `/api/config`
+- **请求方法**: `PUT`
+- **功能描述**: 保存配置到工作目录下的config.json文件
+
+### 请求参数
+
+| 参数名    | 类型     | 必填 | 说明    |
+|--------|--------|----|-------|
+| config | object | 是  | 配置项对象 |
+
+### 请求示例
+
+```bash
+curl -X PUT /api/config \
+  -H "Content-Type: application/json" \
+  -d '{
+    "config": {
+      "encounter_groups_dir": "encounters",
+      "other_setting": "new_value"
+    }
+  }'
+```
+
+### 示例响应
+
+```json
+{
+  "code": 0,
+  "msg": "保存配置成功",
+  "data": null
+}
+```
+
+## 17. 获取遭遇组列表
+
+### 基本信息
+
+- **接口名称**: 获取遭遇组列表
+- **请求地址**: `/api/encounter-groups`
+- **请求方法**: `GET`
+- **功能描述**: 根据配置中的遭遇组目录，搜索所有png图片文件并返回名称列表
+
+### 请求参数
+
+无需传入参数
+
+### 响应格式
+
+| 字段                     | 类型    | 说明        |
+|------------------------|-------|-----------|
+| data.encounter_groups  | array | 遭遇组名称列表   |
+
+### 示例请求
+
+```bash
+curl -X GET /api/encounter-groups
+```
+
+### 示例响应
+
+```json
+{
+  "code": 0,
+  "msg": "获取遭遇组列表成功",
+  "data": {
+    "encounter_groups": [
+      "boss_encounter",
+      "minion_encounter", 
+      "special_encounter"
+    ]
+  }
+}
+```
+
+### 注意事项
+
+1. **配置依赖**: 需要先通过 `/api/config` 接口设置 `encounter_groups_dir` 配置项
+2. **目录检查**: 系统会检查配置的目录是否存在
+3. **文件过滤**: 只搜索 `.png` 扩展名的文件
+4. **名称处理**: 返回的名称列表不包含文件扩展名
+5. **排序**: 返回的列表按名称字母顺序排序
+
 ---
 
 # 卡牌生成相关接口
 
-## 14. 生成卡图
+## 18. 生成卡图
 
 ### 基本信息
 
@@ -541,27 +727,28 @@ curl -X PUT /api/file-content \
 
 #### 卡牌数据格式 (json_data)
 
-| 字段名          | 类型       | 必填 | 说明        | 示例值          |
-|--------------|----------|----|-----------|--------------|
-| type         | string   | 是  | 卡牌类型      | "支援卡"        |
-| name         | string   | 是  | 卡牌名称      | "测试"          |
-| id           | string   | 否  | 卡牌ID      | ""           |
-| created_at   | string   | 否  | 创建时间      | ""           |
-| version      | string   | 否  | 版本号       | "1.0"        |
-| subtitle     | string   | 否  | 副标题       | "测试"          |
-| class        | string   | 否  | 职阶        | "多职阶"        |
-| subclass     | array    | 否  | 子职阶列表     | ["探求者", "流浪者"] |
-| health       | integer  | 否  | 生命值       | 2            |
-| horror       | integer  | 否  | 恐惧值       | 3            |
-| slots        | string   | 否  | 装备栏位1     | "盟友"          |
-| slots2       | string   | 否  | 装备栏位2     | "身体"          |
-| level        | integer  | 否  | 等级        | 4            |
-| cost         | integer  | 否  | 费用        | 6            |
-| submit_icon  | array    | 否  | 提交图标列表    | ["战力", "战力"]  |
-| traits       | array    | 否  | 特性列表      | ["测试"]       |
-| body         | string   | 否  | 卡牌正文      | "测试测试【测试】测试" |
-| flavor       | string   | 否  | 背景文本      | "测试测试测试"     |
-| picture_path | string   | 否  | 卡牌图片路径    | "/path/to/image.png" |
+| 字段名           | 类型       | 必填 | 说明         | 示例值                 |
+|---------------|----------|----|------------|---------------------|
+| type          | string   | 是  | 卡牌类型       | "支援卡"               |
+| name          | string   | 是  | 卡牌名称       | "测试"                 |
+| id            | string   | 否  | 卡牌ID       | ""                  |
+| created_at    | string   | 否  | 创建时间       | ""                  |
+| version       | string   | 否  | 版本号        | "1.0"               |
+| subtitle      | string   | 否  | 副标题        | "测试"                 |
+| class         | string   | 否  | 职阶         | "多职阶"               |
+| subclass      | array    | 否  | 子职阶列表      | ["探求者", "流浪者"]       |
+| health        | integer  | 否  | 生命值        | 2                   |
+| horror        | integer  | 否  | 恐惧值        | 3                   |
+| slots         | string   | 否  | 装备栏位1      | "盟友"                 |
+| slots2        | string   | 否  | 装备栏位2      | "身体"                 |
+| level         | integer  | 否  | 等级         | 4                   |
+| cost          | integer  | 否  | 费用         | 6                   |
+| submit_icon   | array    | 否  | 提交图标列表     | ["战力", "战力"]         |
+| traits        | array    | 否  | 特性列表       | ["测试"]               |
+| body          | string   | 否  | 卡牌正文       | "测试测试【测试】测试"        |
+| flavor        | string   | 否  | 背景文本       | "测试测试测试"            |
+| picture_path  | string   | 否  | 卡牌图片路径     | "/path/to/image.png" |
+| picture_base64| string   | 否  | base64图片数据 | "data:image/png;base64,..." |
 
 ### 请求示例
 
@@ -611,15 +798,7 @@ curl -X POST /api/generate-card \
 }
 ```
 
-### 错误响应
-
-| 错误码 | 说明           |
-|-----|--------------|
-| 4001| 请提供卡牌JSON数据  |
-| 4002| 生成卡图失败       |
-| 4003| 生成卡图失败（详细错误） |
-
-## 15. 保存卡图
+## 19. 保存卡图
 
 ### 基本信息
 
@@ -660,10 +839,6 @@ curl -X POST /api/save-card \
   }'
 ```
 
-### 响应格式
-
-成功时返回标准成功响应，无额外数据字段。
-
 ### 示例响应
 
 ```json
@@ -673,14 +848,6 @@ curl -X POST /api/save-card \
   "data": null
 }
 ```
-
-### 错误响应
-
-| 错误码 | 说明               |
-|-----|--------------------|
-| 4004| 请提供卡牌JSON数据和文件名    |
-| 4005| 保存卡图失败           |
-| 4006| 保存卡图失败（详细错误）     |
 
 ### 注意事项
 
@@ -692,32 +859,81 @@ curl -X POST /api/save-card \
 6. **目录创建**: 如果父目录不存在，系统会自动创建
 
 ---
+
+# 系统接口
+
+## 20. 服务状态接口
+
+### 基本信息
+
+- **接口名称**: 获取服务状态
+- **请求地址**: `/api/status`
+- **请求方法**: `GET`
+- **功能描述**: 获取服务运行状态和相关信息
+
+### 响应格式
+
+| 字段                  | 类型          | 说明           |
+|---------------------|-------------|--------------|
+| data.service        | string      | 服务名称         |
+| data.version        | string      | 服务版本         |
+| data.is_selecting   | boolean     | 是否正在进行目录选择操作 |
+| data.has_workspace  | boolean     | 是否已打开工作空间    |
+| data.workspace_path | string/null | 当前工作空间路径     |
+
+### 示例响应
+
+```json
+{
+  "code": 0,
+  "msg": "服务正常运行",
+  "data": {
+    "service": "file-manager",
+    "version": "2.0.0",
+    "is_selecting": false,
+    "has_workspace": true,
+    "workspace_path": "/Users/username/Documents/MyProject"
+  }
+}
 ```
 
-现在更新错误码说明部分，在原有错误码表格后添加：
+---
 
+# 附录
 
-| 错误码范围     | 分类     | 说明          |
-|-----------|--------|-------------|
-| 0         | 成功     | 操作成功        |
-| 1001-1999 | 目录选择相关 | 目录选择操作相关错误  |
-| 2001-2999 | 快速开始相关 | 最近目录管理相关错误  |
-| 3001-3999 | 工作空间相关 | 工作空间操作相关错误  |
-| 4001-4999 | 卡牌生成相关 | 卡牌生成和保存相关错误 |
-| 9001-9999 | 系统错误   | HTTP状态码相关错误 |
+## 支持的文件类型
 
+| 扩展名       | 文件类型 | 说明    |
+|-----------|------|-------|
+| .card     | card | 卡牌文件  |
+| .png      | image| 图片文件  |
+| .jpg      | image| 图片文件  |
+| .jpeg     | image| 图片文件  |
+| .gif      | image| 图片文件  |
+| .svg      | image| 图片文件  |
+| .bmp      | image| 图片文件  |
+| .webp     | image| 图片文件  |
+| .tiff     | image| 图片文件  |
+| .ico      | image| 图片文件  |
+| .json     | config| 配置文件 |
+| .yml      | config| 配置文件 |
+| .yaml     | config| 配置文件 |
+| .xml      | data | 数据文件  |
+| .css      | style| 样式文件  |
+| .txt      | text | 文本文件  |
+| .md       | text | 文本文件  |
+| 其他        | file | 普通文件  |
 
-以及详细错误码表格中添加：
+## 常见问题
 
+### Q: 为什么选择目录对话框没有响应？
+A: 检查是否有其他目录选择操作正在进行，系统同时只允许一个选择操作。
 
-| 错误码       | 说明                |
-|-----------|-------------------|
-| 4001      | 请提供卡牌JSON数据       |
-| 4002      | 生成卡图失败            |
-| 4003      | 生成卡图失败（详细错误信息）    |
-| 4004      | 请提供卡牌JSON数据和文件名   |
-| 4005      | 保存卡图失败            |
-| 4006      | 保存卡图失败（详细错误信息）    |
+### Q: 如何设置遭遇组目录？
+A: 使用 `/api/config` 接口设置 `encounter_groups_dir` 配置项，指定相对于工作目录的路径。
 
+### Q: 卡牌生成失败怎么办？
+A: 确保工作空间中存在 `fonts` 和 `images` 目录，并包含必要的字体和图片资源文件。
 
-这样就完整地添加了两个卡牌生成相关的API接口文档。
+### Q: 文件路径安全性如何保证？
+A: 所有文件操作都限制在当前工作空间目录内，防止路径遍历攻击。

@@ -60,11 +60,65 @@
                         </n-form>
                     </n-card>
 
+                    <!-- 卡牌信息 -->
+                    <n-card v-if="currentCardType" title="卡牌信息" size="small" class="form-card">
+                        <n-form :model="currentCardData" label-placement="top" size="small">
+                            <div class="form-row">
+                                <!-- 插画作者 -->
+                                <div class="form-field layout-third">
+                                    <FormFieldComponent :field="{
+                                        key: 'illustrator',
+                                        name: '🎨 插画作者',
+                                        type: 'text'
+                                    }" :value="currentCardData.illustrator || ''" :new-string-value="newStringValue"
+                                        @update:value="currentCardData.illustrator = $event"
+                                        @update:new-string-value="newStringValue = $event" />
+                                </div>
+                                <!-- 遭遇组序号 -->
+                                <div class="form-field layout-third">
+                                    <FormFieldComponent :field="{
+                                        key: 'encounter_group_number',
+                                        name: '📋 遭遇组序号',
+                                        type: 'text'
+                                    }" :value="currentCardData.encounter_group_number || ''"
+                                        :new-string-value="newStringValue"
+                                        @update:value="currentCardData.encounter_group_number = $event"
+                                        @update:new-string-value="newStringValue = $event" />
+                                </div>
+                                <!-- 卡牌序号 -->
+                                <div class="form-field layout-third">
+                                    <FormFieldComponent :field="{
+                                        key: 'card_number',
+                                        name: '📋 卡牌序号',
+                                        type: 'text'
+                                    }" :value="currentCardData.card_number || ''"
+                                        :new-string-value="newStringValue"
+                                        @update:value="currentCardData.card_number = $event"
+                                        @update:new-string-value="newStringValue = $event" />
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <!-- 卡牌备注信息 -->
+                                <div class="form-field layout-full">
+                                    <FormFieldComponent :field="{
+                                        key: 'remark',
+                                        name: '📝 卡牌备注信息',
+                                        type: 'textarea',
+                                        rows: 2,
+                                        maxlength: 200
+                                    }" :value="currentCardData.requirements || ''" :new-string-value="newStringValue"
+                                        @update:value="currentCardData.requirements = $event"
+                                        @update:new-string-value="newStringValue = $event" />
+                                </div>
+                            </div>
+                        </n-form>
+                    </n-card>
+
                     <!-- 操作按钮 -->
                     <div class="form-actions">
                         <n-space>
                             <n-button type="primary" @click="saveCard" :loading="saving">
-                                保存卡牌 
+                                保存卡牌
                                 <span class="keyboard-shortcut">(Ctrl+S)</span>
                             </n-button>
                             <n-button @click="previewCard" :loading="generating">预览卡图</n-button>
@@ -79,7 +133,7 @@
 
         <!-- JSON查看模态框 -->
         <n-modal v-model:show="showJsonModal" preset="dialog" title="当前JSON数据">
-            <n-code :code="JSON.stringify(currentCardData, null, 2)" language="json" />
+            <n-code :code="filteredJsonData" language="json" />
             <template #action>
                 <n-button @click="showJsonModal = false">关闭</n-button>
             </template>
@@ -87,14 +141,7 @@
 
         <!-- 保存确认对话框 -->
         <n-modal v-model:show="showSaveConfirmDialog">
-            <n-card
-                style="width: 450px"
-                title="保存确认"
-                :bordered="false"
-                size="huge"
-                role="dialog"
-                aria-modal="true"
-            >
+            <n-card style="width: 450px" title="保存确认" :bordered="false" size="huge" role="dialog" aria-modal="true">
                 <n-space vertical>
                     <n-alert type="warning" title="未保存的修改">
                         <template #icon>
@@ -176,7 +223,7 @@ const hasUnsavedChanges = computed(() => {
     if (!props.selectedFile || props.selectedFile.type !== 'card') {
         return false;
     }
-    
+
     const currentDataString = JSON.stringify(currentCardData);
     return originalCardData.value !== currentDataString;
 });
@@ -199,13 +246,13 @@ const handleKeydown = async (event: KeyboardEvent) => {
     if ((event.ctrlKey || event.metaKey) && event.key === 's') {
         event.preventDefault();
         event.stopPropagation(); // 阻止事件冒泡
-        
+
         // 防止重复处理
         if (isProcessingKeydown.value || saving.value) {
             console.log('阻止重复保存'); // 调试用
             return;
         }
-        
+
         if (props.selectedFile && props.selectedFile.type === 'card') {
             isProcessingKeydown.value = true;
             try {
@@ -489,7 +536,7 @@ const loadCardData = async () => {
         });
 
         currentCardType.value = cardData.type || '';
-        
+
         // 保存原始数据状态
         saveOriginalData();
 
@@ -608,6 +655,43 @@ const discardChanges = () => {
         saveOriginalData();
     }
 };
+
+// 过滤后的JSON数据（排除base64图片字段）
+const filteredJsonData = computed(() => {
+    const filteredData = { ...currentCardData };
+
+    // 删除所有base64图片字段
+    const imageFields = ['picture_base64', 'avatar_base64', 'background_base64']; // 可以根据需要添加更多字段
+
+    imageFields.forEach(field => {
+        if (field in filteredData) {
+            delete filteredData[field];
+        }
+    });
+
+    // 如果有嵌套对象，也要处理嵌套的base64字段
+    const removeBase64FromObject = (obj: any): any => {
+        if (typeof obj !== 'object' || obj === null) {
+            return obj;
+        }
+
+        if (Array.isArray(obj)) {
+            return obj.map(item => removeBase64FromObject(item));
+        }
+
+        const result = {};
+        for (const [key, value] of Object.entries(obj)) {
+            // 跳过包含base64的字段
+            if (key.includes('base64') || (typeof value === 'string' && value.startsWith('data:image'))) {
+                continue;
+            }
+            result[key] = removeBase64FromObject(value);
+        }
+        return result;
+    };
+
+    return JSON.stringify(removeBase64FromObject(filteredData), null, 2);
+});
 
 // 预览卡图
 const previewCard = async () => {

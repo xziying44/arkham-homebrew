@@ -121,6 +121,24 @@
     </div>
   </n-form-item>
 
+  <!-- 遭遇组选择 -->
+  <n-form-item v-else-if="field.type === 'encounter-group-select'" :path="field.key">
+    <template #label>
+      <div class="field-label">
+        <span>{{ field.name }}</span>
+        <n-button v-if="field.helpText" size="tiny" quaternary circle @click="showHelpModal = true" class="help-button"
+          title="查看字段说明">
+          <template #icon>
+            <n-icon :component="HelpCircleOutline" size="14" />
+          </template>
+        </n-button>
+      </div>
+    </template>
+    <n-select :value="value" @update:value="$emit('update:value', $event)" :options="encounterGroupOptions"
+      :placeholder="`请选择${getCleanFieldName(field.name)}`" :loading="loadingEncounterGroups" clearable filterable
+      @focus="loadEncounterGroups" />
+  </n-form-item>
+
   <!-- 图片上传 -->
   <n-form-item v-else-if="field.type === 'image'" :path="field.key">
     <template #label>
@@ -191,12 +209,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import type { UploadFileInfo } from 'naive-ui';
 import { TrashOutline, ImageOutline, HelpCircleOutline, CopyOutline } from '@vicons/ionicons5';
 import { useMessage } from 'naive-ui';
 import type { FormField } from '@/config/cardTypeConfigs';
-
+import { ConfigService } from '@/api'; // 导入ConfigService
 interface Props {
   field: FormField;
   value: any;
@@ -204,7 +222,6 @@ interface Props {
 }
 
 const props = defineProps<Props>();
-
 const emit = defineEmits<{
   'update:value': [value: any];
   'update:new-string-value': [value: string];
@@ -214,10 +231,42 @@ const emit = defineEmits<{
   'remove-string-array-item': [index: number];
   'remove-image': [];
 }>();
-
 const message = useMessage();
 const imageError = ref('');
 const showHelpModal = ref(false);
+// 遭遇组相关状态
+const encounterGroupOptions = ref<Array<{label: string, value: string}>>([]);
+const loadingEncounterGroups = ref(false);
+const encounterGroupsLoaded = ref(false);
+// 加载遭遇组列表
+const loadEncounterGroups = async () => {
+  // 如果已经加载过或正在加载中，则跳过
+  if (encounterGroupsLoaded.value || loadingEncounterGroups.value) {
+    return;
+  }
+  try {
+    loadingEncounterGroups.value = true;
+    const encounterGroups = await ConfigService.getEncounterGroups();
+    
+    // 转换为select组件需要的格式
+    encounterGroupOptions.value = encounterGroups.map(group => ({
+      label: group,
+      value: group
+    }));
+    
+    encounterGroupsLoaded.value = true;
+  } catch (error) {
+    console.error('加载遭遇组列表失败:', error);
+    message.error('加载遭遇组列表失败，请检查遭遇组目录配置');
+    
+    // 提供一个空选项，避免用户无法操作
+    encounterGroupOptions.value = [
+      { label: '无可用遭遇组 (请检查配置)', value: '' }
+    ];
+  } finally {
+    loadingEncounterGroups.value = false;
+  }
+};
 
 
 

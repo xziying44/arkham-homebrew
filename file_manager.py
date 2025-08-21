@@ -7,9 +7,12 @@ import mimetypes
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 
+from PIL import Image
+
 # 导入卡牌生成相关模块
 try:
     from create_card import process_card_json, FontManager, ImageManager
+
     CARD_GENERATION_AVAILABLE = True
 except ImportError:
     CARD_GENERATION_AVAILABLE = False
@@ -146,6 +149,8 @@ class WorkspaceManager:
         else:
             self.font_manager = None
             self.image_manager = None
+
+        self.config = self.get_config()
 
     def _get_file_type(self, file_path: str) -> str:
         """根据文件扩展名确定文件类型"""
@@ -541,6 +546,34 @@ class WorkspaceManager:
                 image_manager=self.image_manager
             )
 
+            # 检测是否有遭遇组
+            encounter_group = json_data.get('encounter_group', None)
+            encounter_groups_dir = self.config.get('encounter_groups_dir', None)
+            if encounter_group and encounter_groups_dir:
+                # 获取遭遇组图片路径
+                encounter_group_picture_path = os.path.join(self.workspace_path, encounter_groups_dir,
+                                                            encounter_group + '.png')
+                print(f"获取遭遇组图片路径: {encounter_group_picture_path}")
+                # 检查路径是否存在
+                if os.path.exists(encounter_group_picture_path):
+                    card.set_encounter_icon(Image.open(encounter_group_picture_path))
+            # 画页脚
+            illustrator = json_data.get('illustrator', '')
+            footer_copyright = self.config.get('footer_copyright', '')
+            encounter_group_number = json_data.get('encounter_group_number', '')
+            card_number = json_data.get('card_number', '')
+            footer_icon_name = self.config.get('footer_icon_dir', '')
+            footer_icon_path = os.path.join(self.workspace_path, footer_icon_name)
+            footer_icon = None
+            if footer_icon_name:
+                footer_icon = Image.open(footer_icon_path)
+            card.set_footer_information(
+                illustrator,
+                footer_copyright,
+                encounter_group_number,
+                footer_icon,
+                card_number
+            )
             return card.image
 
         except Exception as e:
@@ -596,3 +629,67 @@ class WorkspaceManager:
         except Exception as e:
             print(f"保存卡图失败: {e}")
             return False
+
+    def get_config(self) -> Dict[str, Any]:
+        """获取配置项"""
+        try:
+            config_path = os.path.join(self.workspace_path, 'config.json')
+            if os.path.exists(config_path):
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            else:
+                # 返回默认配置
+                return {}
+        except Exception as e:
+            print(f"读取配置文件失败: {e}")
+            return {}
+
+    def save_config(self, config: Dict[str, Any]) -> bool:
+        """保存配置项"""
+        try:
+            config_path = os.path.join(self.workspace_path, 'config.json')
+            with open(config_path, 'w', encoding='utf-8') as f:
+                json.dump(config, f, ensure_ascii=False, indent=2)
+            self.config = config
+            return True
+        except Exception as e:
+            print(f"保存配置文件失败: {e}")
+            return False
+
+    def get_encounter_groups(self) -> List[str]:
+        """获取遭遇组列表"""
+        try:
+            # 获取配置
+            config = self.config
+            encounter_dir = config.get('encounter_groups_dir', '')
+
+            if not encounter_dir:
+                print("配置中未设置遭遇组目录")
+                return []
+
+            # 构建遭遇组目录的绝对路径
+            encounter_path = os.path.join(self.workspace_path, encounter_dir)
+
+            if not os.path.exists(encounter_path):
+                print(f"遭遇组目录不存在: {encounter_path}")
+                return []
+
+            if not os.path.isdir(encounter_path):
+                print(f"指定路径不是目录: {encounter_path}")
+                return []
+
+            # 搜索所有png图片文件
+            encounter_groups = []
+            for file in os.listdir(encounter_path):
+                if file.lower().endswith('.png'):
+                    # 去掉扩展名
+                    name = os.path.splitext(file)[0]
+                    encounter_groups.append(name)
+
+            # 按名称排序
+            encounter_groups.sort()
+            return encounter_groups
+
+        except Exception as e:
+            print(f"获取遭遇组列表失败: {e}")
+            return []

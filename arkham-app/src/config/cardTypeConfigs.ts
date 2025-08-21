@@ -9,11 +9,11 @@ export interface ShowCondition {
   operator?: 'equals' | 'not-equals' | 'includes' | 'not-includes';  // 比较操作符，默认为 equals
 }
 
-// 在 FormField 接口中添加默认值和帮助文本属性
+// 在 FormField 接口中添加新的字段类型
 export interface FormField {
   key: string;
   name: string;
-  type: 'text' | 'textarea' | 'number' | 'select' | 'multi-select' | 'string-array' | 'image';
+  type: 'text' | 'textarea' | 'number' | 'select' | 'multi-select' | 'string-array' | 'image' | 'encounter-group-select'; // 添加新类型
   layout?: 'full' | 'half' | 'third' | 'quarter';
   min?: number;
   max?: number;
@@ -23,9 +23,10 @@ export interface FormField {
   showCondition?: ShowCondition;
   index?: number;
   maxSize?: number;
-  defaultValue?: any; // 新增：默认值
-  helpText?: string;  // 新增：帮助文本
+  defaultValue?: any;
+  helpText?: string;
 }
+
 
 
 export interface CardTypeConfig {
@@ -287,6 +288,16 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'victory',
         name: '🏆 胜利点',
         type: 'number',
+        layout: 'full'
+      },
+      {
+        key: 'encounter_group',
+        showCondition: {
+          field: 'class',
+          value: '中立'
+        },
+        name: '🎲 遭遇组',
+        type: 'encounter-group-select',
         layout: 'full'
       },
       {
@@ -759,6 +770,12 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         type: 'number',
         layout: 'full'
       },
+      {
+        key: 'encounter_group',
+        name: '🎲 遭遇组',
+        type: 'encounter-group-select',
+        layout: 'full'
+      },
     ]
   },
   '诡计卡': {
@@ -793,6 +810,12 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'victory',
         name: '🏆 胜利点',
         type: 'number',
+        layout: 'full'
+      },
+      {
+        key: 'encounter_group',
+        name: '🎲 遭遇组',
+        type: 'encounter-group-select',
         layout: 'full'
       },
       {
@@ -894,6 +917,12 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'victory',
         name: '🏆 胜利点',
         type: 'number',
+        layout: 'full'
+      },
+      {
+        key: 'encounter_group',
+        name: '🎲 遭遇组',
+        type: 'encounter-group-select',
         layout: 'full'
       },
       {
@@ -1014,6 +1043,12 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'full'
       },
       {
+        key: 'encounter_group',
+        name: '🎲 遭遇组',
+        type: 'encounter-group-select',
+        layout: 'full'
+      },
+      {
         key: 'picture_base64',
         name: '🖼️ 插画',
         type: 'image',
@@ -1085,6 +1120,12 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         },
         name: '🏆 胜利点',
         type: 'number',
+        layout: 'full'
+      },
+      {
+        key: 'encounter_group',
+        name: '🎲 遭遇组',
+        type: 'encounter-group-select',
         layout: 'full'
       },
       {
@@ -1203,6 +1244,12 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'full'
       },
       {
+        key: 'encounter_group',
+        name: '🎲 遭遇组',
+        type: 'encounter-group-select',
+        layout: 'full'
+      },
+      {
         key: 'picture_base64',
         showCondition: {
           field: 'is_back',
@@ -1236,6 +1283,12 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         type: 'textarea',
         layout: 'full',
         helpText: bodyTip
+      },
+      {
+        key: 'encounter_group',
+        name: '🎲 遭遇组',
+        type: 'encounter-group-select',
+        layout: 'full'
       },
       {
         key: 'picture_base64',
@@ -1314,6 +1367,12 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         },
         name: '🏆 胜利点',
         type: 'number',
+        layout: 'full'
+      },
+      {
+        key: 'encounter_group',
+        name: '🎲 遭遇组',
+        type: 'encounter-group-select',
         layout: 'full'
       },
       {

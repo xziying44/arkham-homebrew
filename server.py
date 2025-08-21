@@ -674,6 +674,81 @@ def serve_static_files(path):
         return send_from_directory(app.static_folder, 'index.html')
 
 
+# ================= 配置项相关接口 =================
+
+@app.route('/api/config', methods=['GET'])
+def get_config():
+    """获取配置项"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    try:
+        config = current_workspace.get_config()
+        return jsonify(create_response(
+            msg="获取配置成功",
+            data={"config": config}
+        ))
+    except Exception as e:
+        return jsonify(create_response(
+            code=6001,
+            msg=f"获取配置失败: {str(e)}"
+        )), 500
+
+
+@app.route('/api/config', methods=['PUT'])
+def save_config():
+    """保存配置项"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    try:
+        data = request.get_json()
+        if not data or 'config' not in data:
+            return jsonify(create_response(
+                code=6002,
+                msg="请提供配置数据"
+            )), 400
+
+        config = data['config']
+        success = current_workspace.save_config(config)
+
+        if success:
+            return jsonify(create_response(msg="保存配置成功"))
+        else:
+            return jsonify(create_response(
+                code=6003,
+                msg="保存配置失败"
+            )), 500
+
+    except Exception as e:
+        return jsonify(create_response(
+            code=6004,
+            msg=f"保存配置失败: {str(e)}"
+        )), 500
+
+
+@app.route('/api/encounter-groups', methods=['GET'])
+def get_encounter_groups():
+    """获取遭遇组列表"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    try:
+        encounter_groups = current_workspace.get_encounter_groups()
+        return jsonify(create_response(
+            msg="获取遭遇组列表成功",
+            data={"encounter_groups": encounter_groups}
+        ))
+    except Exception as e:
+        return jsonify(create_response(
+            code=6005,
+            msg=f"获取遭遇组列表失败: {str(e)}"
+        )), 500
+
+
 if __name__ == '__main__':
     print("=" * 60)
     print("文件管理服务启动")

@@ -2172,3 +2172,134 @@ class Card:
 
         # 粘贴图片
         self.paste_image(image, (x, y, width, height), 'contain')
+
+    @staticmethod
+    def invert_rgba_image(img):
+        """
+        对RGBA图像进行取反色，保持透明度不变
+
+        Args:
+            img: PIL.Image对象，支持RGBA模式
+
+        Returns:
+            取反色后的PIL.Image对象
+        """
+        # 确保图像是RGBA模式
+        if img.mode != 'RGBA':
+            img = img.convert('RGBA')
+
+        # 分离RGBA通道
+        r, g, b, a = img.split()
+
+        # 对RGB通道取反（255-原值）
+        r = r.point(lambda x: 255 - x)
+        g = g.point(lambda x: 255 - x)
+        b = b.point(lambda x: 255 - x)
+        # Alpha通道保持不变
+
+        # 重新合并通道
+        return Image.merge('RGBA', (r, g, b, a))
+
+    def set_footer_information(self,
+                               illustrator: str,
+                               footer_copyright: str,
+                               encounter_group_number: str,
+                               footer_icon: Image.Image,
+                               card_number: str):
+        """
+        写页脚信息
+        :param illustrator: 插画信息
+        :param footer_copyright: 版权信息
+        :param encounter_group_number: 遭遇组序号
+        :param footer_icon: 图标
+        :param card_number: 卡牌序号
+        :return:
+        """
+        if self.card_type in ['密谋卡', '场景卡'] and self.is_back:
+            return
+        left_text = ''
+        center_text = ''
+        encounter_text = ''
+        right_text = ''
+        footer_icon_copy = footer_icon
+
+        if illustrator and illustrator != '':
+            left_text = 'Illus. ' + illustrator
+        if footer_copyright and footer_copyright != '':
+            center_text = footer_copyright
+        if encounter_group_number and encounter_group_number != '':
+            encounter_text = encounter_group_number
+        if card_number and card_number != '':
+            right_text = card_number
+        if self.card_type in ['故事卡', '冒险参考卡']:
+            left_text = center_text
+            center_text = ''
+        # 通用位置点
+        card_width, card_height = self.image.size
+        pos_left = (40, card_height - 28)
+        pos_center = (card_width // 2, card_height - 28)
+        pos_icon = (card_width - 110, card_height - 34)
+        pos_right = (card_width - 80, card_height - 28)
+        pos_right_encounter_group_number = (card_width - 180, card_height - 28)
+        font_color = (255, 255, 255)
+        # 特殊卡牌位置点
+        if self.card_type in ['密谋卡', '场景卡']:
+            card_width = 1049 - 400
+            offset_x = 400 if self.card_type == '密谋卡' else 0
+            pos_left = (offset_x + 40, card_height - 28)
+            pos_center = (offset_x + card_width // 2, card_height - 28)
+            pos_icon = (offset_x + card_width - 110, card_height - 34)
+            pos_right = (offset_x + card_width - 80, card_height - 28)
+            pos_right_encounter_group_number = (offset_x + card_width - 180, card_height - 28)
+            pass
+        if self.card_type == '故事卡':
+            card_width = 570
+            offset_x = 80
+            offset_y = -44
+            pos_left = (offset_x + 40, offset_y + card_height - 28)
+            pos_center = (offset_x + card_width // 2, offset_y + card_height - 28)
+            pos_icon = (offset_x + card_width - 110, offset_y + card_height - 34)
+            pos_right = (offset_x + card_width - 80, offset_y + card_height - 28)
+            pos_right_encounter_group_number = (offset_x + card_width - 180, offset_y + card_height - 28)
+            font_color = (0, 0, 0)
+            footer_icon_copy = self.invert_rgba_image(footer_icon_copy)
+            pass
+        # 开始绘制
+        if left_text:
+            self.draw_left_text(
+                position=(pos_left[0], pos_left[1]),
+                text=left_text,
+                font_name='ArnoPro-Bold',
+                font_size=20,
+                font_color=font_color
+            )
+        if center_text:
+            self.draw_centered_text(
+                position=(pos_center[0], pos_center[1] + 8),
+                text=center_text,
+                font_name='ArnoPro-Bold',
+                font_size=20,
+                font_color=font_color
+            )
+        if encounter_text:
+            self.draw_centered_text(
+                position=(pos_right_encounter_group_number[0], pos_right_encounter_group_number[1] + 9),
+                text=encounter_text,
+                font_name='ArnoPro-Bold',
+                font_size=20,
+                font_color=font_color
+            )
+        if footer_icon_copy:
+            self.paste_image(
+                footer_icon_copy,
+                (pos_icon[0], pos_icon[1] + 3, 24, 24),
+                'stretch'
+            )
+        if right_text:
+            self.draw_left_text(
+                position=(pos_right[0], pos_right[1]),
+                text=right_text,
+                font_name='ArnoPro-Bold',
+                font_size=20,
+                font_color=font_color
+            )

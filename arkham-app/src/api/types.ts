@@ -40,7 +40,13 @@ export enum ErrorCode {
   // 系统错误
   NOT_FOUND = 9001,
   METHOD_NOT_ALLOWED = 9002,
-  INTERNAL_ERROR = 9003
+  INTERNAL_ERROR = 9003,
+  // 配置管理相关错误 (6001-6999)
+  CONFIG_GET_ERROR = 6001,
+  CONFIG_MISSING_DATA = 6002,
+  CONFIG_SAVE_ERROR = 6003,
+  CONFIG_SAVE_DETAILED_ERROR = 6004,
+  ENCOUNTER_GROUPS_ERROR = 6005,
 }
 
 // 目录选择响应数据类型
@@ -132,6 +138,12 @@ export interface CardData {
   body?: string;
   flavor?: string;
   picture_path?: string;
+  
+  // 新增字段 - 卡片基本信息
+  illustrator?: string;        // 插画作者
+  encounter_group?: string;    // 遭遇组
+  encounter_sequence?: string; // 遭遇组序号
+  card_sequence?: string;      // 卡牌序号
 }
 
 // 生成卡图请求数据类型
@@ -207,3 +219,32 @@ export interface ApiConfig {
   method: HttpMethod;
   timeout?: number;
 }
+
+// 在 types.ts 文件末尾添加以下类型定义
+
+// 配置项对象类型
+export interface ConfigData {
+  encounter_groups_dir?: string;
+  other_setting?: string;
+  [key: string]: any; // 允许其他配置项
+}
+
+// 获取配置响应数据类型
+export interface GetConfigData {
+  config: ConfigData;
+}
+
+// 保存配置请求数据类型
+export interface SaveConfigRequest {
+  config: ConfigData;
+}
+
+// 遭遇组列表响应数据类型
+export interface EncounterGroupsData {
+  encounter_groups: string[];
+}
+
+// API响应类型
+export type GetConfigResponse = BaseResponse<GetConfigData>;
+export type SaveConfigResponse = BaseResponse<null>;
+export type EncounterGroupsResponse = BaseResponse<EncounterGroupsData>;
