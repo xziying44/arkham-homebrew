@@ -129,6 +129,22 @@ export const API_ENDPOINTS = {
     method: HttpMethod.GET,
     timeout: 10000
   } as ApiConfig,
+  // OpenAI卡牌生成相关接口
+  GENERATE_CARD_INFO_STREAM: {
+    url: '/api/generate-card-info',
+    method: HttpMethod.POST,
+    timeout: 60000 // 60秒超时，AI生成可能需要较长时间
+  } as ApiConfig,
+  PARSE_CARD_JSON: {
+    url: '/api/parse-card-json',
+    method: HttpMethod.POST,
+    timeout: 10000
+  } as ApiConfig,
+  GENERATE_AND_PARSE_CARD: {
+    url: '/api/generate-and-parse-card',
+    method: HttpMethod.POST,
+    timeout: 60000 // 60秒超时
+  } as ApiConfig,
 } as const;
 
 

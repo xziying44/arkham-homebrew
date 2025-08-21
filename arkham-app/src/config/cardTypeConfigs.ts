@@ -784,8 +784,19 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'name',
         name: '📝 卡名',
         type: 'text',
-        layout: 'full',
+        layout: 'half',
         helpText: nameTip
+      },
+      {
+        key: 'class',
+        name: '🃏 类型',
+        type: 'select',
+        layout: 'half',
+        defaultValue: '',
+        options: [
+          { label: '🔮 遭遇', value: "" },
+          { label: '💀 弱点', value: '弱点' },
+        ]
       },
       {
         key: 'traits',

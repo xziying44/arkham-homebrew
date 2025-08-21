@@ -32,6 +32,88 @@
             <!-- 卡牌编辑器内容 -->
             <n-scrollbar v-else>
                 <div class="form-wrapper">
+                    <!-- AI制卡区域 -->
+                    <n-card v-if="aiEnabledInEditor" title="🤖 AI制卡助手" size="small" class="form-card ai-card">
+                        <n-space vertical size="medium">
+                            <!-- 提示词输入 -->
+                            <n-form-item label="描述你想要的卡牌">
+                                <n-input v-model:value="aiPrompt" type="textarea"
+                                    placeholder="例如：创建一个火属性的攻击法术卡牌，名字叫火球术，造成5点伤害，消耗3点法力..." :rows="3"
+                                    :disabled="aiGenerating" maxlength="500" show-count />
+                            </n-form-item>
+
+                            <!-- 控制按钮 -->
+                            <n-space>
+                                <n-button type="primary" :loading="aiGenerating" :disabled="!aiPrompt.trim()"
+                                    @click="startAIGeneration">
+                                    <template #icon>
+                                        <n-icon :component="SparklesIcon" />
+                                    </template>
+                                    {{ aiGenerating ? '生成中...' : '生成卡牌' }}
+                                </n-button>
+                                <n-button v-if="aiGenerating" @click="stopAIGeneration">
+                                    停止生成
+                                </n-button>
+                                <n-button v-if="aiResult" @click="clearAIResult">
+                                    清空结果
+                                </n-button>
+                            </n-space>
+
+                            <!-- AI生成结果展示 -->
+                            <div v-if="aiGenerating || aiResult" class="ai-result-container">
+                                <n-card size="small" class="ai-result-card">
+                                    <template #header>
+                                        <n-space align="center">
+                                            <n-icon :component="aiGenerating ? LoadingOutline : CheckmarkCircleOutline"
+                                                :class="{ 'spinning': aiGenerating }" />
+                                            <span>{{ aiGenerating ? 'AI正在思考中...' : '生成完成' }}</span>
+                                        </n-space>
+                                    </template>
+
+                                    <!-- 思考过程展示 -->
+                                    <div v-if="aiThinking" class="ai-thinking">
+                                        <n-text depth="3" style="font-size: 12px;">💭 AI思考过程：</n-text>
+                                        <div class="thinking-content">{{ aiThinking }}</div>
+                                    </div>
+
+                                    <!-- JSON内容展示 -->
+                                    <div v-if="aiJsonContent" class="ai-json-content">
+                                        <n-text depth="3" style="font-size: 12px;">📋 生成的卡牌数据：</n-text>
+                                        <n-code :code="aiJsonContent" language="json" class="ai-json-code" />
+                                    </div>
+
+                                    <!-- 验证状态 -->
+                                    <div v-if="aiValidationStatus" class="validation-status">
+                                        <n-alert :type="aiValidationStatus.isValid ? 'success' : 'error'"
+                                            :title="aiValidationStatus.isValid ? '✅ 验证成功' : '❌ 验证失败'" size="small">
+                                            <div v-if="!aiValidationStatus.isValid">
+                                                <div v-for="error in aiValidationStatus.errors" :key="error"
+                                                    class="error-item">
+                                                    • {{ error }}
+                                                </div>
+                                            </div>
+                                            <div v-else>
+                                                卡牌数据格式正确，可以导入到编辑器中
+                                            </div>
+                                        </n-alert>
+                                    </div>
+
+                                    <!-- 导入按钮 -->
+                                    <div v-if="aiValidationStatus?.isValid" class="import-actions">
+                                        <n-space>
+                                            <n-button type="success" @click="importAIResult">
+                                                <template #icon>
+                                                    <n-icon :component="DownloadOutline" />
+                                                </template>
+                                                导入到编辑器
+                                            </n-button>
+                                        </n-space>
+                                    </div>
+                                </n-card>
+                            </div>
+                        </n-space>
+                    </n-card>
+
                     <!-- 卡牌类型选择 -->
                     <n-card title="卡牌类型" size="small" class="form-card">
                         <n-form-item label="选择卡牌类型">
@@ -91,8 +173,7 @@
                                         key: 'card_number',
                                         name: '📋 卡牌序号',
                                         type: 'text'
-                                    }" :value="currentCardData.card_number || ''"
-                                        :new-string-value="newStringValue"
+                                    }" :value="currentCardData.card_number || ''" :new-string-value="newStringValue"
                                         @update:value="currentCardData.card_number = $event"
                                         @update:new-string-value="newStringValue = $event" />
                                 </div>
@@ -169,14 +250,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, watch, onMounted, onUnmounted } from 'vue';
+import { ref, computed, reactive, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { FolderOpenOutline, ImageOutline, WarningOutline } from '@vicons/ionicons5';
+import {
+    SparklesOutline as SparklesIcon,
+    RefreshOutline as LoadingOutline, // 修改这里，使用 RefreshOutline 代替 LoadingOutline
+    CheckmarkCircleOutline,
+    DownloadOutline
+} from '@vicons/ionicons5';
 import { useMessage } from 'naive-ui';
 import type { TreeOption } from 'naive-ui';
 import { cardTypeConfigs, cardTypeOptions, type FormField, type CardTypeConfig, type ShowCondition } from '@/config/cardTypeConfigs';
 import FormFieldComponent from './FormField.vue';
-import { WorkspaceService, CardService } from '@/api';
-import type { CardData } from '@/api/types';
+import { WorkspaceService, CardService, ConfigService } from '@/api';
+import AIService from '@/api/ai-service';
+import type { CardData, GenerateCardInfoStreamRequest, ParseCardJsonRequest, StreamDataChunk } from '@/api/types';
 
 interface Props {
     showFileTree: boolean;
@@ -217,6 +305,305 @@ const showSaveConfirmDialog = ref(false);
 const saving = ref(false);
 const generating = ref(false);
 const exporting = ref(false);
+
+// AI相关状态
+const aiEnabledInEditor = ref(false);
+const aiPrompt = ref('');
+const aiGenerating = ref(false);
+const aiResult = ref('');
+const aiThinking = ref('');
+const aiJsonContent = ref('');
+const aiValidationStatus = ref<{ isValid: boolean; errors: string[] } | null>(null);
+const aiAbortController = ref<AbortController | null>(null);
+
+// 初始化配置
+onMounted(async () => {
+    try {
+        const config = await ConfigService.getConfig();
+        aiEnabledInEditor.value = config.ai_enabled_in_editor || false;
+    } catch (error) {
+        console.warn('获取AI配置失败:', error);
+        aiEnabledInEditor.value = false;
+    }
+});
+
+// 修改 startAIGeneration 方法，添加更多日志
+const startAIGeneration = async () => {
+    if (!aiPrompt.value.trim()) {
+        message.warning('请输入提示词');
+        return;
+    }
+    console.log('🚀 开始AI生成');
+    aiGenerating.value = true;
+    aiResult.value = '';
+    aiThinking.value = '';
+    aiJsonContent.value = '';
+    aiValidationStatus.value = null;
+    aiAbortController.value = new AbortController();
+    const request: GenerateCardInfoStreamRequest = {
+        content: aiPrompt.value.trim()
+    };
+    try {
+        await AIService.generateCardInfoStream(
+            request,
+            (chunk: StreamDataChunk) => {
+                // console.log('📦 收到数据块:', chunk);
+                // 处理流式数据
+                if (chunk.reasoning) {
+                    aiThinking.value +=  chunk.reasoning;
+                    // console.log('💭 更新思考内容:', chunk.thinking.length);
+                }
+                if (chunk.content) {
+                    aiJsonContent.value += chunk.content;
+                    // console.log('📝 更新JSON内容，当前长度:', aiJsonContent.value.length);
+                }
+            },
+            (error: Error) => {
+                console.error('❌ AI生成失败:', error);
+                message.error(`AI生成失败: ${error.message}`);
+                aiGenerating.value = false;
+            },
+            () => {
+                console.log('✅ AI生成完成');
+                aiGenerating.value = false;
+
+                // 确保有内容才验证
+                if (aiJsonContent.value && aiJsonContent.value.trim()) {
+                    console.log('🔍 开始验证AI结果');
+                    try {
+                        validateAIResult();
+                    } catch (error) {
+                        console.error('❌ 验证AI结果时出错:', error);
+                        message.error(`验证失败: ${error.message || '未知错误'}`);
+                    }
+                } else {
+                    console.warn('⚠️ AI生成完成但没有内容');
+                    message.warning('AI生成完成但没有返回有效内容');
+                }
+            }
+        );
+    } catch (error) {
+        console.error('❌ AI生成出错:', error);
+        message.error(`AI生成出错: ${error.message || '未知错误'}`);
+        aiGenerating.value = false;
+    }
+};
+
+
+const stopAIGeneration = () => {
+    if (aiAbortController.value) {
+        aiAbortController.value.abort();
+        aiAbortController.value = null;
+    }
+    aiGenerating.value = false;
+};
+
+// 修改 validateAIResult 方法，添加更多日志和错误处理
+const validateAIResult = () => {
+    console.log('🔍 开始验证AI结果');
+
+    if (!aiJsonContent.value) {
+        console.warn('⚠️ 没有AI生成的JSON内容');
+        return;
+    }
+    // console.log('📄 AI生成的内容长度:', aiJsonContent.value.length);
+    // console.log('📄 AI生成的内容预览:', aiJsonContent.value.substring(0, 200));
+    try {
+        // 直接在前端使用处理函数解析JSON
+        console.log('🔧 开始处理JSON字符串');
+        const cardJson = processJsonStr(aiJsonContent.value);
+        console.log('✅ JSON解析成功:', cardJson);
+        // 检查AI返回的错误信息
+        if (cardJson.msg && cardJson.msg.trim()) {
+            console.warn('⚠️ AI返回包含错误信息:', cardJson.msg);
+            message.error('AI返回包含错误信息:' + cardJson.msg)
+            aiValidationStatus.value = {
+                isValid: false,
+                errors: [`AI返回错误: ${cardJson.msg}`]
+            };
+            return;
+        }
+        // 验证必要字段
+        console.log('🔍 验证必要字段');
+        const requiredFields = ['type', 'name', 'body'];
+        const missingFields = [];
+        for (const field of requiredFields) {
+            if (!(field in cardJson)) {
+                missingFields.push(field);
+                console.warn(`⚠️ 缺少字段: ${field}`);
+            }
+        }
+        if (missingFields.length > 0) {
+            console.error('❌ 验证失败，缺少必要字段:', missingFields);
+            aiValidationStatus.value = {
+                isValid: false,
+                errors: [`缺少必要字段: ${missingFields.join(', ')}`]
+            };
+            return;
+        }
+        // 清除msg字段（如果为空）
+        if (cardJson.msg && !cardJson.msg.trim()) {
+            delete cardJson.msg;
+            console.log('🧹 清除空的msg字段');
+        }
+        // 验证成功
+        console.log('✅ 验证成功');
+        aiValidationStatus.value = {
+            isValid: true,
+            errors: []
+        };
+        aiResult.value = aiJsonContent.value;
+        // 自动导入成功的结果
+        console.log('⏰ 准备自动导入结果');
+        setTimeout(() => {
+            console.log('🚀 开始自动导入');
+            try {
+                importAIResult();
+            } catch (error) {
+                console.error('❌ 自动导入时出错:', error);
+                message.error(`自动导入失败: ${error.message || '未知错误'}`);
+            }
+        }, 500);
+    } catch (error) {
+        console.error('❌ 验证AI结果失败:', error);
+        const errorMessage = error?.message || '未知错误';
+
+        aiValidationStatus.value = {
+            isValid: false,
+            errors: [`验证失败: ${errorMessage}`]
+        };
+
+        message.error(`验证AI结果失败: ${errorMessage}`);
+    }
+};
+// 修改 processJsonStr 方法，添加更多日志
+const processJsonStr = (jsonStr: string): any => {
+    console.log('🔧 开始处理JSON字符串，长度:', jsonStr.length);
+
+    // 如果返回了markdown的代码块，需要去除，保留原始的json字符串
+    if (jsonStr.includes('```json') && jsonStr.includes('```')) {
+        console.log('🧹 清理markdown代码块（json）');
+        jsonStr = jsonStr.substring(jsonStr.indexOf('```json') + 7, jsonStr.lastIndexOf('```'));
+    } else if (jsonStr.includes('```')) {
+        console.log('🧹 清理markdown代码块（通用）');
+        const start = jsonStr.indexOf('```');
+        const end = jsonStr.lastIndexOf('```');
+        if (start !== end) {
+            jsonStr = jsonStr.substring(start + 3, end);
+        }
+    }
+    jsonStr = jsonStr.trim();
+    console.log('🧹 清理后的JSON字符串长度:', jsonStr.length);
+    try {
+        console.log('🔍 尝试直接解析JSON');
+        const data = JSON.parse(jsonStr);
+        console.log('✅ JSON直接解析成功');
+        return data;
+    } catch (e) {
+        console.warn('⚠️ 直接解析失败，尝试修复:', e.message);
+
+        let fixedJson = jsonStr.trim();
+        // 如果最后一个字段没有闭合引号，尝试添加
+        if (!fixedJson.endsWith('"') && fixedJson.endsWith('...')) {
+            console.log('🔧 修复结尾的...');
+            fixedJson = fixedJson.slice(0, -3) + '"';
+        } else if (!fixedJson.endsWith('"') && fixedJson.includes('"')) {
+            console.log('🔧 修复未闭合的引号');
+            const lines = fixedJson.split('\n');
+            for (let i = lines.length - 1; i >= 0; i--) {
+                const line = lines[i].trim();
+                if (line.includes(':') && !line.endsWith('"') && !line.endsWith(',')) {
+                    lines[i] = line + '"';
+                    console.log('🔧 修复行:', line);
+                    break;
+                }
+            }
+            fixedJson = lines.join('\n');
+        }
+        // 如果没有闭合的大括号，尝试添加
+        if (!fixedJson.endsWith('}')) {
+            console.log('🔧 添加闭合大括号');
+            fixedJson += '}';
+        }
+
+        try {
+            console.log('🔍 尝试解析修复后的JSON');
+            const data = JSON.parse(fixedJson);
+            console.log('✅ 修复后的JSON解析成功');
+            return data;
+        } catch (err) {
+            console.error('❌ 修复后仍然解析失败:', err);
+            console.error('❌ 原始JSON:', jsonStr);
+            console.error('❌ 修复后JSON:', fixedJson);
+            throw new Error(`JSON解析错误: ${err.message || err}`);
+        }
+    }
+};
+// 修改 importAIResult 方法，添加更多日志
+const importAIResult = async () => {
+    console.log('🚀 开始导入AI结果');
+
+    if (!aiValidationStatus.value?.isValid) {
+        console.warn('⚠️ 没有有效的AI生成结果可以导入');
+        message.warning('没有有效的AI生成结果可以导入');
+        return;
+    }
+    try {
+        console.log('🔧 解析AI生成的JSON');
+        const aiData = processJsonStr(aiJsonContent.value);
+        console.log('✅ AI数据解析成功:', aiData);
+        // 保存当前的元数据
+        const metadata = {
+            id: currentCardData.id || '',
+            created_at: currentCardData.created_at || '',
+            version: '1.0',
+        };
+        console.log('📝 保存元数据:', metadata);
+        const newData = { ...metadata, ...aiData };
+        console.log('🔧 合并数据:', Object.keys(newData));
+        // 清空当前数据并重新赋值
+        console.log('🧹 清空当前数据');
+        Object.keys(currentCardData).forEach(key => {
+            delete currentCardData[key];
+        });
+        // 使用 nextTick 确保DOM更新
+        console.log('⏳ 等待DOM更新');
+        await nextTick();
+        // 重新赋值
+        console.log('📝 重新赋值数据');
+        Object.keys(newData).forEach(key => {
+            currentCardData[key] = newData[key];
+        });
+        // 更新卡牌类型
+        if (aiData.type) {
+            console.log('🏷️ 更新卡牌类型:', aiData.type);
+            currentCardType.value = aiData.type;
+        }
+        // 强制触发自动预览
+        console.log('🖼️ 准备生成预览');
+        await nextTick();
+        setTimeout(() => {
+            console.log('🖼️ 开始生成预览');
+            autoGeneratePreview();
+        }, 100);
+        console.log('✅ AI生成的卡牌数据已成功导入到编辑器');
+        message.success('AI生成的卡牌数据已成功导入到编辑器');
+        clearAIResult();
+    } catch (error) {
+        console.error('❌ 导入AI结果失败:', error);
+        console.error('❌ 错误堆栈:', error.stack);
+        message.error(`导入AI结果失败: ${error.message || '未知错误'}`);
+    }
+};
+
+
+const clearAIResult = () => {
+    aiResult.value = '';
+    aiThinking.value = '';
+    aiJsonContent.value = '';
+    aiValidationStatus.value = null;
+    aiPrompt.value = '';
+};
 
 // 检查是否有未保存的修改
 const hasUnsavedChanges = computed(() => {
@@ -908,6 +1295,101 @@ onUnmounted(() => {
 
 .form-card:hover {
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+/* AI卡片特殊样式 */
+.ai-card {
+    background: linear-gradient(135deg, rgba(139, 69, 19, 0.05) 0%, rgba(255, 165, 0, 0.05) 100%);
+    border: 2px solid rgba(139, 69, 19, 0.2);
+}
+
+.ai-result-container {
+    margin-top: 16px;
+    /* 确保容器不超出父容器 */
+    width: 100%;
+    overflow: hidden;
+}
+
+.ai-result-card {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(139, 69, 19, 0.1);
+    /* 确保卡片不超出容器 */
+    width: 100%;
+    overflow: hidden;
+}
+
+.ai-thinking {
+    margin-bottom: 16px;
+    padding: 12px;
+    background: rgba(139, 69, 19, 0.05);
+    border-radius: 8px;
+    border-left: 4px solid rgba(139, 69, 19, 0.3);
+    /* 添加宽度和溢出控制 */
+    width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.thinking-content {
+    margin-top: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #666;
+    white-space: pre-wrap;
+    /* 添加文本换行和溢出处理 */
+    word-wrap: break-word;
+    word-break: break-all;
+    max-width: 100%;
+    overflow-wrap: break-word;
+}
+
+.ai-json-content {
+    margin-bottom: 16px;
+    /* 确保JSON内容容器不溢出 */
+    width: 100%;
+    overflow: hidden;
+}
+
+.ai-json-code {
+    max-height: 200px;
+    overflow-y: auto;
+    overflow-x: auto;
+    /* 添加水平滚动 */
+    margin-top: 8px;
+    /* 确保代码块不超出容器 */
+    width: 100%;
+    box-sizing: border-box;
+    /* 添加边框来更好地显示滚动区域 */
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+    background: #f8f9fa;
+}
+
+.validation-status {
+    margin-bottom: 16px;
+}
+
+.error-item {
+    margin: 4px 0;
+    font-size: 13px;
+}
+
+.import-actions {
+    margin-top: 16px;
+}
+
+.spinning {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .form-row {
