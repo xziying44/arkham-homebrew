@@ -7,7 +7,10 @@
                         class="header-button">
                         <n-icon :component="FolderOpenOutline" />
                     </n-button>
-                    <span class="pane-title">{{ selectedFile?.label || '卡牌编辑器' }}</span>
+                    <span class="pane-title">
+                        {{ selectedFile?.label || '卡牌编辑器' }}
+                        <span v-if="hasUnsavedChanges" class="unsaved-indicator">*</span>
+                    </span>
                 </n-space>
                 <n-space size="small">
                     <n-button size="tiny" @click="showJsonModal = true" class="header-button"
@@ -60,7 +63,10 @@
                     <!-- 操作按钮 -->
                     <div class="form-actions">
                         <n-space>
-                            <n-button type="primary" @click="saveCard" :loading="saving">保存卡牌</n-button>
+                            <n-button type="primary" @click="saveCard" :loading="saving">
+                                保存卡牌 
+                                <span class="keyboard-shortcut">(Ctrl+S)</span>
+                            </n-button>
                             <n-button @click="previewCard" :loading="generating">预览卡图</n-button>
                             <n-button @click="exportCard" :loading="exporting"
                                 :disabled="!hasValidCardData">导出图片</n-button>
@@ -78,12 +84,46 @@
                 <n-button @click="showJsonModal = false">关闭</n-button>
             </template>
         </n-modal>
+
+        <!-- 保存确认对话框 -->
+        <n-modal v-model:show="showSaveConfirmDialog">
+            <n-card
+                style="width: 450px"
+                title="保存确认"
+                :bordered="false"
+                size="huge"
+                role="dialog"
+                aria-modal="true"
+            >
+                <n-space vertical>
+                    <n-alert type="warning" title="未保存的修改">
+                        <template #icon>
+                            <n-icon :component="WarningOutline" />
+                        </template>
+                        当前文件有未保存的修改，是否保存？
+                    </n-alert>
+                    <n-space vertical size="small">
+                        <p><strong>{{ selectedFile?.label }}</strong></p>
+                        <p style="color: #666; font-size: 12px;">
+                            如果不保存，您的修改将会丢失。
+                        </p>
+                    </n-space>
+                </n-space>
+                <template #footer>
+                    <n-space justify="end">
+                        <n-button @click="discardChanges">不保存</n-button>
+                        <n-button @click="showSaveConfirmDialog = false">取消</n-button>
+                        <n-button type="primary" @click="saveAndSwitch" :loading="saving">保存</n-button>
+                    </n-space>
+                </template>
+            </n-card>
+        </n-modal>
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, watch, onMounted } from 'vue';
-import { FolderOpenOutline, ImageOutline } from '@vicons/ionicons5';
+import { ref, computed, reactive, watch, onMounted, onUnmounted } from 'vue';
+import { FolderOpenOutline, ImageOutline, WarningOutline } from '@vicons/ionicons5';
 import { useMessage } from 'naive-ui';
 import type { TreeOption } from 'naive-ui';
 import { cardTypeConfigs, cardTypeOptions, type FormField, type CardTypeConfig, type ShowCondition } from '@/config/cardTypeConfigs';
@@ -117,12 +157,29 @@ const currentCardData = reactive({
     version: '1.0',
 });
 
+// 原始数据状态 - 用于检测修改
+const originalCardData = ref<string>('');
+
+// 待切换的文件
+const pendingSwitchFile = ref<TreeOption | null>(null);
+
 const currentCardType = ref('');
 const newStringValue = ref('');
 const showJsonModal = ref(false);
+const showSaveConfirmDialog = ref(false);
 const saving = ref(false);
 const generating = ref(false);
 const exporting = ref(false);
+
+// 检查是否有未保存的修改
+const hasUnsavedChanges = computed(() => {
+    if (!props.selectedFile || props.selectedFile.type !== 'card') {
+        return false;
+    }
+    
+    const currentDataString = JSON.stringify(currentCardData);
+    return originalCardData.value !== currentDataString;
+});
 
 // 检查是否有有效的卡牌数据
 const hasValidCardData = computed(() => {
@@ -133,6 +190,35 @@ const hasValidCardData = computed(() => {
 const currentFormConfig = computed((): CardTypeConfig | null => {
     return currentCardType.value ? cardTypeConfigs[currentCardType.value] : null;
 });
+
+// 添加防抖标志
+const isProcessingKeydown = ref(false);
+// 键盘事件处理器
+const handleKeydown = async (event: KeyboardEvent) => {
+    // Ctrl+S 保存
+    if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+        event.preventDefault();
+        event.stopPropagation(); // 阻止事件冒泡
+        
+        // 防止重复处理
+        if (isProcessingKeydown.value || saving.value) {
+            console.log('阻止重复保存'); // 调试用
+            return;
+        }
+        
+        if (props.selectedFile && props.selectedFile.type === 'card') {
+            isProcessingKeydown.value = true;
+            try {
+                await saveCard();
+            } finally {
+                // 确保标志被重置
+                setTimeout(() => {
+                    isProcessingKeydown.value = false;
+                }, 100);
+            }
+        }
+    }
+};
 
 // 检查显示条件
 const checkShowCondition = (condition: ShowCondition): boolean => {
@@ -355,6 +441,10 @@ const onCardTypeChange = (newType: string) => {
     }
 };
 
+// 保存原始数据状态
+const saveOriginalData = () => {
+    originalCardData.value = JSON.stringify(currentCardData);
+};
 
 // 自动生成卡图（如果数据有效的话）
 const autoGeneratePreview = async () => {
@@ -399,7 +489,9 @@ const loadCardData = async () => {
         });
 
         currentCardType.value = cardData.type || '';
-        // message.success('卡牌数据加载成功');
+        
+        // 保存原始数据状态
+        saveOriginalData();
 
         // 加载完成后自动生成预览
         setTimeout(() => {
@@ -431,32 +523,89 @@ const generateCardImage = async (): Promise<string | null> => {
     }
 };
 
-// 保存卡牌并生成预览
+// 修改 saveCard 方法，确保状态正确管理
 const saveCard = async () => {
     if (!props.selectedFile || !props.selectedFile.path) {
         message.warning('未选择文件');
-        return;
+        return false; // 返回 boolean
     }
-
+    // 如果已经在保存，直接返回
+    if (saving.value) {
+        console.log('已在保存中，跳过');
+        return false;
+    }
     try {
         saving.value = true;
-
         // 保存JSON文件
         const jsonContent = JSON.stringify(currentCardData, null, 2);
         await WorkspaceService.saveFileContent(props.selectedFile.path, jsonContent);
-
+        // 更新原始数据状态
+        saveOriginalData();
         // 生成并显示卡图
         const imageBase64 = await generateCardImage();
         if (imageBase64) {
             emit('update-preview-image', imageBase64);
         }
-
         message.success('卡牌保存成功');
+        return true;
     } catch (error) {
         console.error('保存卡牌失败:', error);
         message.error('保存卡牌失败');
+        return false;
     } finally {
         saving.value = false;
+    }
+};
+
+// 保存并切换文件
+const saveAndSwitch = async () => {
+    const success = await saveCard();
+    if (success && pendingSwitchFile.value) {
+        showSaveConfirmDialog.value = false;
+        // 直接加载新文件，因为 watch 会被触发但不会再次显示确认对话框
+        const fileToSwitch = pendingSwitchFile.value;
+        pendingSwitchFile.value = null;
+        // 由于我们已经处理了保存，可以直接切换
+        if (fileToSwitch && fileToSwitch.type === 'card') {
+            await loadCardData();
+        } else {
+            // 清空表单数据
+            Object.keys(currentCardData).forEach(key => {
+                delete currentCardData[key];
+            });
+            Object.assign(currentCardData, {
+                type: '',
+                name: '',
+                id: '',
+                created_at: '',
+                version: '1.0',
+            });
+            currentCardType.value = '';
+            saveOriginalData();
+        }
+    }
+};
+
+// 放弃修改并切换文件
+const discardChanges = () => {
+    showSaveConfirmDialog.value = false;
+    pendingSwitchFile.value = null;
+    // 重新加载当前文件或清空数据
+    if (props.selectedFile && props.selectedFile.type === 'card') {
+        loadCardData();
+    } else {
+        Object.keys(currentCardData).forEach(key => {
+            delete currentCardData[key];
+        });
+        Object.assign(currentCardData, {
+            type: '',
+            name: '',
+            id: '',
+            created_at: '',
+            version: '1.0',
+        });
+        currentCardType.value = '';
+        saveOriginalData();
     }
 };
 
@@ -520,7 +669,6 @@ const exportCard = async () => {
     }
 };
 
-
 const resetForm = () => {
     const hiddenFields = ['id', 'created_at', 'version'];
     const hiddenData = {};
@@ -537,13 +685,22 @@ const resetForm = () => {
 
     Object.assign(currentCardData, hiddenData, { type: '', name: '' });
     currentCardType.value = '';
+    saveOriginalData();
     message.info('表单已重置');
 };
 
 // 监听选中文件变化
-watch(() => props.selectedFile, (newFile) => {
+watch(() => props.selectedFile, async (newFile, oldFile) => {
+    // 如果当前有未保存的修改，显示确认对话框
+    if (hasUnsavedChanges.value && oldFile) {
+        pendingSwitchFile.value = newFile;
+        showSaveConfirmDialog.value = true;
+        return;
+    }
+
+    // 没有未保存修改，直接切换
     if (newFile && newFile.type === 'card') {
-        loadCardData();
+        await loadCardData();
     } else {
         // 清空表单数据
         Object.keys(currentCardData).forEach(key => {
@@ -557,16 +714,25 @@ watch(() => props.selectedFile, (newFile) => {
             version: '1.0',
         });
         currentCardType.value = '';
+        saveOriginalData();
     }
 }, { immediate: true });
 
 // 在 script 中添加删除图片的方法
 const removeImage = (field: FormField) => {
-  setFieldValue(field, '');
+    setFieldValue(field, '');
 };
+
+// 组件挂载时添加键盘事件监听器
+onMounted(() => {
+    document.addEventListener('keydown', handleKeydown);
+});
+
+// 组件卸载时移除键盘事件监听器
+onUnmounted(() => {
+    document.removeEventListener('keydown', handleKeydown);
+});
 </script>
-
-
 
 <style scoped>
 .form-pane {
@@ -591,6 +757,22 @@ const removeImage = (field: FormField) => {
     font-weight: 600;
     font-size: 14px;
     color: white;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.unsaved-indicator {
+    color: #fbbf24;
+    font-weight: bold;
+    font-size: 16px;
+    line-height: 1;
+}
+
+.keyboard-shortcut {
+    font-size: 12px;
+    opacity: 0.7;
+    margin-left: 4px;
 }
 
 /* 头部按钮样式统一 */

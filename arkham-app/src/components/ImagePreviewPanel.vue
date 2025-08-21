@@ -41,17 +41,24 @@
       <!-- 图片控制工具栏 -->
       <div v-if="currentImage" class="image-controls">
         <n-button-group size="small">
-          <n-button @click="zoomIn">
+          <n-button @click="zoomIn" title="放大">
             <n-icon :component="AddOutline" />
           </n-button>
           <n-button @click="resetImageView">
             {{ Math.round(imageScale * 100) }}%
           </n-button>
-          <n-button @click="zoomOut">
+          <n-button @click="zoomOut" title="缩小">
             <n-icon :component="RemoveOutline" />
           </n-button>
-          <n-button @click="fitToContainer">
+          <n-button @click="fitToContainer" title="适应窗口">
             适应窗口
+          </n-button>
+          <n-button 
+            @click="copyImageToClipboard" 
+            :loading="isCopying"
+            title="复制图片"
+          >
+            <n-icon :component="CopyOutline" />
           </n-button>
         </n-button-group>
       </div>
@@ -61,7 +68,8 @@
 
 <script setup lang="ts">
 import { ref, onUnmounted, watch, nextTick } from 'vue';
-import { ImageOutline, Close, AddOutline, RemoveOutline } from '@vicons/ionicons5';
+import { ImageOutline, Close, AddOutline, RemoveOutline, CopyOutline } from '@vicons/ionicons5';
+import { useMessage } from 'naive-ui';
 
 interface Props {
   width: number;
@@ -74,18 +82,73 @@ const emit = defineEmits<{
   'toggle': [];
 }>();
 
+const message = useMessage();
+
 // 图片预览状态
 const imageScale = ref(1);
 const imageOffsetX = ref(0);
 const imageOffsetY = ref(0);
 const imageContainer = ref<HTMLElement>();
 const isDragging = ref(false);
+const isCopying = ref(false);
 
 let dragStartX = 0;
 let dragStartY = 0;
 let dragStartOffsetX = 0;
 let dragStartOffsetY = 0;
 let dragAnimationFrameId: number;
+
+// 复制图片到剪贴板
+const copyImageToClipboard = async () => {
+  if (!props.currentImage || isCopying.value) return;
+  
+  try {
+    isCopying.value = true;
+    
+    // 检查浏览器是否支持 Clipboard API
+    if (!navigator.clipboard || !navigator.clipboard.write) {
+      message.warning('当前浏览器不支持复制功能');
+      return;
+    }
+
+    // 获取图片数据
+    const response = await fetch(props.currentImage);
+    if (!response.ok) {
+      throw new Error('获取图片失败');
+    }
+    
+    const blob = await response.blob();
+    
+    // 检查是否为图片类型
+    if (!blob.type.startsWith('image/')) {
+      throw new Error('不是有效的图片格式');
+    }
+    
+    // 复制到剪贴板
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        [blob.type]: blob
+      })
+    ]);
+    
+    message.success('图片已复制到剪贴板');
+  } catch (error) {
+    console.error('复制图片失败:', error);
+    
+    // 如果是权限错误，给出特殊提示
+    if (error instanceof Error && error.name === 'NotAllowedError') {
+      message.error('复制失败：浏览器阻止了剪贴板访问权限');
+    } else if (error instanceof Error && error.message.includes('获取图片失败')) {
+      message.error('复制失败：无法获取图片数据');
+    } else if (error instanceof Error && error.message.includes('不是有效的图片格式')) {
+      message.error('复制失败：不是有效的图片格式');
+    } else {
+      message.error('复制失败：请检查网络连接或重试');
+    }
+  } finally {
+    isCopying.value = false;
+  }
+};
 
 // 计算图片的适应缩放比例
 const calculateFitScale = (imageElement: HTMLImageElement) => {
@@ -198,7 +261,8 @@ watch(() => props.currentImage, () => {
 // 导出方法供父组件调用
 defineExpose({
   resetImageView,
-  fitToContainer
+  fitToContainer,
+  copyImageToClipboard
 });
 
 // 清理事件监听器

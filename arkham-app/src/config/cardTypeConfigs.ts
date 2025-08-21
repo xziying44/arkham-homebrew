@@ -80,6 +80,8 @@ const bodyTip = `输入格式：
 支持直接使用emoji或对应的标签格式
 `
 
+const nameTip = `支持添加独特标记：🏅 或 <独特>`
+
 export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   '支援卡': {
     fields: [
@@ -88,7 +90,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         name: '📝 卡名',
         type: 'text',
         layout: 'half',
-        helpText: "测试提示文本"
+        helpText: nameTip
       },
       {
         key: 'subtitle',
@@ -174,7 +176,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         type: 'select',
         layout: 'half',
         options: [
-          { label: '🚫 无生命值', value: null },
+          { label: '🚫 无生命值', value: -1 },
           { label: '💀 生命值-0', value: 0 },
           ...Array.from({ length: 99 }, (_, i) => ({ label: `❤️ 生命值-${i + 1}`, value: i + 1 }))
         ]
@@ -185,7 +187,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         type: 'select',
         layout: 'half',
         options: [
-          { label: '🚫 无理智值', value: null },
+          { label: '🚫 无理智值', value: -1 },
           { label: '😵 理智值-0', value: 0 },
           ...Array.from({ length: 99 }, (_, i) => ({ label: `🧠 理智值-${i + 1}`, value: i + 1 }))
         ]
@@ -229,8 +231,9 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         name: '⭐ 卡牌等级',
         type: 'select',
         layout: 'half',
+        defaultValue: -1,
         options: [
-          { label: '🚫 无等级', value: null },
+          { label: '🚫 无等级', value: -1 },
           { label: '0️⃣ 等级-0', value: 0 },
           ...Array.from({ length: 5 }, (_, i) => ({ label: `${['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][i]} 等级-${i + 1}`, value: i + 1 }))
         ]
@@ -240,8 +243,10 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         name: '💰 卡牌费用',
         type: 'select',
         layout: 'half',
+        defaultValue: -1,
         options: [
-          { label: '🆓 无费用', value: null },
+          { label: '🆓 无费用', value: -1 },
+          { label: '✖️ X费用', value: -2 },
           { label: '0️⃣ 费用-0', value: 0 },
           ...Array.from({ length: 99 }, (_, i) => ({ label: `💰 费用-${i + 1}`, value: i + 1 }))
         ]
@@ -299,7 +304,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'name',
         name: '📝 卡名',
         type: 'text',
-        layout: 'full'
+        layout: 'full',
+        helpText: nameTip
       },
       {
         key: 'class',
@@ -378,8 +384,9 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         name: '⭐ 卡牌等级',
         type: 'select',
         layout: 'half',
+        defaultValue: -1,
         options: [
-          { label: '🚫 无等级', value: null },
+          { label: '🚫 无等级', value: -1 },
           { label: '0️⃣ 等级-0', value: 0 },
           ...Array.from({ length: 5 }, (_, i) => ({ label: `${['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][i]} 等级-${i + 1}`, value: i + 1 }))
         ]
@@ -389,8 +396,10 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         name: '💰 卡牌费用',
         type: 'select',
         layout: 'half',
+        defaultValue: -1,
         options: [
-          { label: '🆓 无费用', value: null },
+          { label: '🆓 无费用', value: -1 },
+          { label: '✖️ X费用', value: -2 },
           { label: '0️⃣ 费用-0', value: 0 },
           ...Array.from({ length: 99 }, (_, i) => ({ label: `💰 费用-${i + 1}`, value: i + 1 }))
         ]
@@ -448,7 +457,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'name',
         name: '📝 卡名',
         type: 'text',
-        layout: 'full'
+        layout: 'full',
+        helpText: nameTip
       },
       {
         key: 'class',
@@ -470,8 +480,9 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         name: '⭐ 卡牌等级',
         type: 'select',
         layout: 'full',
+        defaultValue: -1,
         options: [
-          { label: '🚫 无等级', value: null },
+          { label: '🚫 无等级', value: -1 },
           { label: '0️⃣ 等级-0', value: 0 },
           ...Array.from({ length: 5 }, (_, i) => ({ label: `${['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][i]} 等级-${i + 1}`, value: i + 1 }))
         ]
@@ -529,7 +540,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'name',
         name: '📝 卡名',
         type: 'text',
-        layout: 'half'
+        layout: 'half',
+        helpText: nameTip
       },
       {
         key: 'subtitle',
@@ -593,7 +605,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         type: 'select',
         layout: 'half',
         options: [
-          { label: '🚫 无生命值', value: null },
+          { label: '🚫 无生命值', value: -1 },
           { label: '💀 生命值-0', value: 0 },
           ...Array.from({ length: 99 }, (_, i) => ({ label: `❤️ 生命值-${i + 1}`, value: i + 1 }))
         ]
@@ -604,7 +616,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         type: 'select',
         layout: 'half',
         options: [
-          { label: '🚫 无理智值', value: null },
+          { label: '🚫 无理智值', value: -1 },
           { label: '😵 理智值-0', value: 0 },
           ...Array.from({ length: 99 }, (_, i) => ({ label: `🧠 理智值-${i + 1}`, value: i + 1 }))
         ]
@@ -643,7 +655,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'name',
         name: '📝 卡名',
         type: 'text',
-        layout: 'half'
+        layout: 'half',
+        helpText: nameTip
       },
       {
         key: 'subtitle',
@@ -712,7 +725,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'name',
         name: '📝 卡名',
         type: 'text',
-        layout: 'half'
+        layout: 'half',
+        helpText: nameTip
       },
       {
         key: 'body',
@@ -723,13 +737,38 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       },
     ]
   },
+  '故事卡': {
+    fields: [
+      {
+        key: 'name',
+        name: '📝 卡名',
+        type: 'text',
+        layout: 'half',
+        helpText: nameTip
+      },
+      {
+        key: 'body',
+        name: '📄 卡牌效果',
+        type: 'textarea',
+        layout: 'full',
+        helpText: bodyTip
+      },
+      {
+        key: 'victory',
+        name: '🏆 胜利点',
+        type: 'number',
+        layout: 'full'
+      },
+    ]
+  },
   '诡计卡': {
     fields: [
       {
         key: 'name',
         name: '📝 卡名',
         type: 'text',
-        layout: 'full'
+        layout: 'full',
+        helpText: nameTip
       },
       {
         key: 'traits',
@@ -771,7 +810,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'name',
         name: '📝 卡名',
         type: 'text',
-        layout: 'half'
+        layout: 'half',
+        helpText: nameTip
       },
       {
         key: 'subtitle',
@@ -871,7 +911,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'name',
         name: '📝 卡名',
         type: 'text',
-        layout: 'half'
+        layout: 'half',
+        helpText: nameTip
       },
       {
         key: 'subtitle',
@@ -987,7 +1028,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'name',
         name: '📝 卡名',
         type: 'text',
-        layout: 'half'
+        layout: 'half',
+        helpText: nameTip
       },
       {
         key: 'is_back',
@@ -1064,7 +1106,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'name',
         name: '📝 卡名',
         type: 'text',
-        layout: 'half'
+        layout: 'half',
+        helpText: nameTip
       },
       {
         key: 'threshold',
@@ -1100,7 +1143,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'name',
         name: '📝 卡名',
         type: 'text',
-        layout: 'half'
+        layout: 'half',
+        helpText: nameTip
       },
       {
         key: 'is_back',
@@ -1177,7 +1221,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'name',
         name: '📝 卡名',
         type: 'text',
-        layout: 'half'
+        layout: 'half',
+        helpText: nameTip
       },
       {
         key: 'flavor',
@@ -1207,7 +1252,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'name',
         name: '📝 卡名',
         type: 'text',
-        layout: 'half'
+        layout: 'half',
+        helpText: nameTip
       },
       {
         key: 'subtitle',

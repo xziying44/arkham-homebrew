@@ -23,7 +23,7 @@ export class CardService {
             const requestData: GenerateCardRequest = {
                 json_data: cardData
             };
-            
+
             const response = await httpClient.post<GenerateCardData>(
                 API_ENDPOINTS.GENERATE_CARD.url,
                 requestData,
@@ -31,7 +31,7 @@ export class CardService {
                     timeout: API_ENDPOINTS.GENERATE_CARD.timeout
                 }
             );
-            
+
             return response.data.data!.image;
         } catch (error) {
             if (error instanceof ApiError) {
@@ -49,8 +49,8 @@ export class CardService {
      * @throws {ApiError} 当保存失败时抛出错误
      */
     public static async saveCard(
-        cardData: CardData, 
-        filename: string, 
+        cardData: CardData,
+        filename: string,
         parentPath?: string
     ): Promise<void> {
         try {
@@ -59,7 +59,7 @@ export class CardService {
                 filename,
                 parent_path: parentPath
             };
-            
+
             await httpClient.post(
                 API_ENDPOINTS.SAVE_CARD.url,
                 requestData,
@@ -91,10 +91,10 @@ export class CardService {
         try {
             // 先生成卡图
             const image = await this.generateCard(cardData);
-            
+
             // 再保存卡图
             await this.saveCard(cardData, filename, parentPath);
-            
+
             return { image };
         } catch (error) {
             if (error instanceof ApiError) {
@@ -109,9 +109,9 @@ export class CardService {
      * @param cardData 卡牌数据
      * @returns 验证结果和错误信息
      */
-    public static validateCardData(cardData: CardData): { 
-        isValid: boolean; 
-        errors: string[] 
+    public static validateCardData(cardData: CardData): {
+        isValid: boolean;
+        errors: string[]
     } {
         const errors: string[] = [];
 
@@ -124,22 +124,11 @@ export class CardService {
             errors.push('卡牌类型不能为空');
         }
 
-        // 检查数值字段的合理性
-        if (cardData.health !== undefined && cardData.health < 0) {
-            errors.push('生命值不能为负数');
+        if (cardData.type != '冒险参考卡' && (!cardData.body || cardData.body.trim() === '')) {
+            errors.push('正文不能为空不能为空');
         }
 
-        if (cardData.horror !== undefined && cardData.horror < 0) {
-            errors.push('恐惧值不能为负数');
-        }
 
-        if (cardData.level !== undefined && cardData.level < 0) {
-            errors.push('等级不能为负数');
-        }
-
-        if (cardData.cost !== undefined && cardData.cost < 0) {
-            errors.push('费用不能为负数');
-        }
 
         return {
             isValid: errors.length === 0,
