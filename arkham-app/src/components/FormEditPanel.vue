@@ -195,6 +195,10 @@
                         </n-form>
                     </n-card>
 
+                    <!-- TTS脚本编辑器 -->
+                    <TtsScriptEditor v-if="currentCardType" :card-data="currentCardData" :card-type="currentCardType"
+                        @update-tts-script="updateTtsScript" />
+
                     <!-- 操作按钮 -->
                     <div class="form-actions">
                         <n-space>
@@ -265,6 +269,7 @@ import FormFieldComponent from './FormField.vue';
 import { WorkspaceService, CardService, ConfigService } from '@/api';
 import AIService from '@/api/ai-service';
 import type { CardData, GenerateCardInfoStreamRequest, ParseCardJsonRequest, StreamDataChunk } from '@/api/types';
+import TtsScriptEditor from './TtsScriptEditor.vue';
 
 interface Props {
     showFileTree: boolean;
@@ -353,7 +358,7 @@ const startAIGeneration = async () => {
                 // console.log('📦 收到数据块:', chunk);
                 // 处理流式数据
                 if (chunk.reasoning) {
-                    aiThinking.value +=  chunk.reasoning;
+                    aiThinking.value += chunk.reasoning;
                     // console.log('💭 更新思考内容:', chunk.thinking.length);
                 }
                 if (chunk.content) {
@@ -627,6 +632,31 @@ const hasValidCardData = computed(() => {
 const currentFormConfig = computed((): CardTypeConfig | null => {
     return currentCardType.value ? cardTypeConfigs[currentCardType.value] : null;
 });
+
+// 更新TTS脚本数据
+const updateTtsScript = (ttsData: { GMNotes: string; LuaScript: string; config?: any }) => {
+    // 防止循环更新
+    if (saving.value) return;
+
+    // 更新currentCardData中的tts_script字段
+    if (!currentCardData.tts_script) {
+        currentCardData.tts_script = {};
+    }
+
+    currentCardData.tts_script.GMNotes = ttsData.GMNotes;
+    currentCardData.tts_script.LuaScript = ttsData.LuaScript;
+    
+    // 新增：保存config配置
+    if (ttsData.config) {
+        currentCardData.tts_script.config = ttsData.config;
+    }
+
+    // 如果所有字段都为空，则删除tts_script字段
+    if (!ttsData.GMNotes && !ttsData.LuaScript && !ttsData.config) {
+        delete currentCardData.tts_script;
+    }
+};
+
 
 // 添加防抖标志
 const isProcessingKeydown = ref(false);
@@ -964,33 +994,33 @@ const generateCardImage = async (): Promise<string | null> => {
 const saveCard = async () => {
     // 优先使用原始文件信息，如果没有则使用当前选中文件
     const fileToSave = originalFileInfo.value || props.selectedFile;
-    
+
     if (!fileToSave || !fileToSave.path) {
         message.warning('未选择文件');
         return false;
     }
-    
+
     // 如果已经在保存，直接返回
     if (saving.value) {
         console.log('已在保存中，跳过');
         return false;
     }
-    
+
     try {
         saving.value = true;
         // 保存JSON文件
         const jsonContent = JSON.stringify(currentCardData, null, 2);
         await WorkspaceService.saveFileContent(fileToSave.path, jsonContent);
-        
+
         // 更新原始数据状态
         saveOriginalData();
-        
+
         // 生成并显示卡图
         const imageBase64 = await generateCardImage();
         if (imageBase64) {
             emit('update-preview-image', imageBase64);
         }
-        
+
         message.success('卡牌保存成功');
         return true;
     } catch (error) {
@@ -1007,14 +1037,14 @@ const saveAndSwitch = async () => {
     const success = await saveCard();
     if (success && pendingSwitchFile.value) {
         showSaveConfirmDialog.value = false;
-        
+
         // 清空原始文件信息，因为已经保存了
         originalFileInfo.value = null;
-        
+
         // 加载新文件
         const fileToSwitch = pendingSwitchFile.value;
         pendingSwitchFile.value = null;
-        
+
         // 触发文件切换逻辑
         if (fileToSwitch && fileToSwitch.type === 'card') {
             await loadCardData();
@@ -1030,7 +1060,7 @@ const discardChanges = () => {
     showSaveConfirmDialog.value = false;
     originalFileInfo.value = null;
     pendingSwitchFile.value = null;
-    
+
     // 重新加载当前文件或清空数据
     if (props.selectedFile && props.selectedFile.type === 'card') {
         loadCardData();
@@ -1181,7 +1211,7 @@ watch(() => props.selectedFile, async (newFile, oldFile) => {
             path: oldFile.path as string,
             label: oldFile.label as string
         };
-        
+
         pendingSwitchFile.value = newFile;
         showSaveConfirmDialog.value = true;
         return;

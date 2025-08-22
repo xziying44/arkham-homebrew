@@ -153,6 +153,24 @@ class WorkspaceManager:
 
         self.config = self.get_config()
 
+    def _get_relative_path(self, absolute_path: str) -> str:
+        """将绝对路径转换为相对于工作目录的相对路径"""
+        try:
+            return os.path.relpath(absolute_path, self.workspace_path)
+        except Exception:
+            return absolute_path
+
+    def _get_absolute_path(self, relative_path: str) -> str:
+        """将相对路径转换为绝对路径"""
+        if os.path.isabs(relative_path):
+            return relative_path
+        return os.path.join(self.workspace_path, relative_path)
+
+    def _is_path_in_workspace(self, path: str) -> bool:
+        """检查路径是否在工作目录内"""
+        abs_path = self._get_absolute_path(path)
+        return abs_path.startswith(self.workspace_path)
+
     def _get_file_type(self, file_path: str) -> str:
         """根据文件扩展名确定文件类型"""
         ext = os.path.splitext(file_path)[1].lower()
@@ -219,7 +237,9 @@ class WorkspaceManager:
                     continue
 
                 item_path = os.path.join(path, item)
-                item_key = f"{item_path}_{int(time.time() * 1000000)}"  # 使用路径+时间戳生成唯一key
+                # 获取相对于工作目录的相对路径
+                relative_path = self._get_relative_path(item_path)
+                item_key = f"{relative_path}_{int(time.time() * 1000000)}"  # 使用相对路径+时间戳生成唯一key
 
                 if os.path.isdir(item_path):
                     # 处理目录，递归获取子项并排序
@@ -230,7 +250,7 @@ class WorkspaceManager:
                         'label': item,
                         'key': item_key,
                         'type': 'directory',
-                        'path': item_path,
+                        'path': relative_path,  # 使用相对路径
                         'children': children
                     })
 
@@ -240,7 +260,7 @@ class WorkspaceManager:
                         'label': item,
                         'key': item_key,
                         'type': self._get_file_type(item),
-                        'path': item_path
+                        'path': relative_path  # 使用相对路径
                     })
 
         except PermissionError:
@@ -263,7 +283,7 @@ class WorkspaceManager:
                 'label': workspace_name,
                 'key': f"workspace_{int(time.time() * 1000000)}",
                 'type': 'workspace',
-                'path': self.workspace_path,
+                'path': '.',  # 工作目录使用相对路径 '.'
                 'children': children
             }
 
@@ -273,7 +293,7 @@ class WorkspaceManager:
                 'label': 'Error',
                 'key': 'error',
                 'type': 'error',
-                'path': self.workspace_path,
+                'path': '.',
                 'children': []
             }
 
@@ -282,10 +302,9 @@ class WorkspaceManager:
         try:
             if parent_path:
                 # 确保parent_path在工作目录内
-                abs_parent = os.path.abspath(parent_path)
-                if not abs_parent.startswith(self.workspace_path):
+                if not self._is_path_in_workspace(parent_path):
                     return False
-                target_path = os.path.join(abs_parent, dir_name)
+                target_path = self._get_absolute_path(os.path.join(parent_path, dir_name))
             else:
                 target_path = os.path.join(self.workspace_path, dir_name)
 
@@ -301,10 +320,9 @@ class WorkspaceManager:
         try:
             if parent_path:
                 # 确保parent_path在工作目录内
-                abs_parent = os.path.abspath(parent_path)
-                if not abs_parent.startswith(self.workspace_path):
+                if not self._is_path_in_workspace(parent_path):
                     return False
-                target_path = os.path.join(abs_parent, file_name)
+                target_path = self._get_absolute_path(os.path.join(parent_path, file_name))
             else:
                 target_path = os.path.join(self.workspace_path, file_name)
 
@@ -323,10 +341,10 @@ class WorkspaceManager:
         """重命名文件或目录"""
         try:
             # 确保路径在工作目录内
-            abs_old_path = os.path.abspath(old_path)
-            if not abs_old_path.startswith(self.workspace_path):
+            if not self._is_path_in_workspace(old_path):
                 return False
 
+            abs_old_path = self._get_absolute_path(old_path)
             if not os.path.exists(abs_old_path):
                 return False
 
@@ -347,10 +365,10 @@ class WorkspaceManager:
         """删除文件或目录"""
         try:
             # 确保路径在工作目录内
-            abs_item_path = os.path.abspath(item_path)
-            if not abs_item_path.startswith(self.workspace_path):
+            if not self._is_path_in_workspace(item_path):
                 return False
 
+            abs_item_path = self._get_absolute_path(item_path)
             if not os.path.exists(abs_item_path):
                 return False
 
@@ -370,10 +388,11 @@ class WorkspaceManager:
         """获取文本文件内容"""
         try:
             # 确保路径在工作目录内
-            abs_file_path = os.path.abspath(file_path)
-            if not abs_file_path.startswith(self.workspace_path):
+            if not self._is_path_in_workspace(file_path):
                 return None
 
+            abs_file_path = self._get_absolute_path(file_path)
+            print(f"获取文件内容: {abs_file_path}")
             if not os.path.isfile(abs_file_path):
                 return None
 
@@ -389,17 +408,17 @@ class WorkspaceManager:
         获取图片文件并转换为base64格式
 
         Args:
-            image_path: 图片文件路径
+            image_path: 图片文件相对路径
 
         Returns:
             str: base64格式的图片数据（包含data URL前缀），失败时返回None
         """
         try:
             # 确保路径在工作目录内
-            abs_image_path = os.path.abspath(image_path)
-            if not abs_image_path.startswith(self.workspace_path):
+            if not self._is_path_in_workspace(image_path):
                 return None
 
+            abs_image_path = self._get_absolute_path(image_path)
             if not os.path.isfile(abs_image_path):
                 return None
 
@@ -431,17 +450,17 @@ class WorkspaceManager:
         获取文件信息
 
         Args:
-            file_path: 文件路径
+            file_path: 文件相对路径
 
         Returns:
             dict: 文件信息，包含type、size、modified等
         """
         try:
             # 确保路径在工作目录内
-            abs_file_path = os.path.abspath(file_path)
-            if not abs_file_path.startswith(self.workspace_path):
+            if not self._is_path_in_workspace(file_path):
                 return None
 
+            abs_file_path = self._get_absolute_path(file_path)
             if not os.path.exists(abs_file_path):
                 return None
 
@@ -449,7 +468,7 @@ class WorkspaceManager:
             file_type = self._get_file_type(abs_file_path)
 
             return {
-                'path': abs_file_path,
+                'path': file_path,  # 返回相对路径
                 'type': file_type,
                 'is_file': os.path.isfile(abs_file_path),
                 'is_directory': os.path.isdir(abs_file_path),
@@ -467,9 +486,10 @@ class WorkspaceManager:
         """保存文件内容"""
         try:
             # 确保路径在工作目录内
-            abs_file_path = os.path.abspath(file_path)
-            if not abs_file_path.startswith(self.workspace_path):
+            if not self._is_path_in_workspace(file_path):
                 return False
+
+            abs_file_path = self._get_absolute_path(file_path)
 
             # 确保父目录存在
             os.makedirs(os.path.dirname(abs_file_path), exist_ok=True)
@@ -533,9 +553,9 @@ class WorkspaceManager:
                     print(f"解码base64图片数据失败: {e}")
                     return None
 
-            # 如果picture_path是相对路径，尝试在工作目录中查找
+            # 如果picture_path是相对路径，转换为绝对路径
             elif picture_path and not os.path.isabs(picture_path):
-                full_picture_path = os.path.join(self.workspace_path, picture_path)
+                full_picture_path = self._get_absolute_path(picture_path)
                 if os.path.exists(full_picture_path):
                     picture_path = full_picture_path
 
@@ -552,22 +572,26 @@ class WorkspaceManager:
             encounter_groups_dir = self.config.get('encounter_groups_dir', None)
             if encounter_group and encounter_groups_dir:
                 # 获取遭遇组图片路径
-                encounter_group_picture_path = os.path.join(self.workspace_path, encounter_groups_dir,
-                                                            encounter_group + '.png')
+                encounter_group_picture_path = self._get_absolute_path(
+                    os.path.join(encounter_groups_dir, encounter_group + '.png')
+                )
                 print(f"获取遭遇组图片路径: {encounter_group_picture_path}")
                 # 检查路径是否存在
                 if os.path.exists(encounter_group_picture_path):
                     card.set_encounter_icon(Image.open(encounter_group_picture_path))
+
             # 画页脚
             illustrator = json_data.get('illustrator', '')
             footer_copyright = self.config.get('footer_copyright', '')
             encounter_group_number = json_data.get('encounter_group_number', '')
             card_number = json_data.get('card_number', '')
             footer_icon_name = self.config.get('footer_icon_dir', '')
-            footer_icon_path = os.path.join(self.workspace_path, footer_icon_name)
             footer_icon = None
             if footer_icon_name:
-                footer_icon = Image.open(footer_icon_path)
+                footer_icon_path = self._get_absolute_path(footer_icon_name)
+                if os.path.exists(footer_icon_path):
+                    footer_icon = Image.open(footer_icon_path)
+
             card.set_footer_information(
                 illustrator,
                 footer_copyright,
@@ -597,7 +621,7 @@ class WorkspaceManager:
         Args:
             json_data: 卡牌数据的JSON字典
             filename: 保存的文件名（包含扩展名）
-            parent_path: 保存的父目录路径，如果为None则保存到工作目录
+            parent_path: 保存的父目录相对路径，如果为None则保存到工作目录
 
         Returns:
             bool: 保存是否成功
@@ -611,10 +635,9 @@ class WorkspaceManager:
             # 确定保存路径
             if parent_path:
                 # 确保parent_path在工作目录内
-                abs_parent = os.path.abspath(parent_path)
-                if not abs_parent.startswith(self.workspace_path):
+                if not self._is_path_in_workspace(parent_path):
                     return False
-                save_path = os.path.join(abs_parent, filename)
+                save_path = self._get_absolute_path(os.path.join(parent_path, filename))
             else:
                 save_path = os.path.join(self.workspace_path, filename)
 
@@ -624,7 +647,7 @@ class WorkspaceManager:
             # 保存图片
             card_image.save(save_path)
 
-            print(f"卡图已保存到: {save_path}")
+            print(f"卡图已保存到: {self._get_relative_path(save_path)}")
             return True
 
         except Exception as e:
@@ -669,14 +692,14 @@ class WorkspaceManager:
                 return []
 
             # 构建遭遇组目录的绝对路径
-            encounter_path = os.path.join(self.workspace_path, encounter_dir)
+            encounter_path = self._get_absolute_path(encounter_dir)
 
             if not os.path.exists(encounter_path):
-                print(f"遭遇组目录不存在: {encounter_path}")
+                print(f"遭遇组目录不存在: {encounter_dir}")
                 return []
 
             if not os.path.isdir(encounter_path):
-                print(f"指定路径不是目录: {encounter_path}")
+                print(f"指定路径不是目录: {encounter_dir}")
                 return []
 
             # 搜索所有png图片文件
