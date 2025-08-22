@@ -295,6 +295,9 @@ const currentCardData = reactive({
 // 原始数据状态 - 用于检测修改
 const originalCardData = ref<string>('');
 
+// 原始文件信息 - 用于记住需要保存的文件
+const originalFileInfo = ref<{ path: string; label: string } | null>(null);
+
 // 待切换的文件
 const pendingSwitchFile = ref<TreeOption | null>(null);
 
@@ -957,29 +960,37 @@ const generateCardImage = async (): Promise<string | null> => {
     }
 };
 
-// 修改 saveCard 方法，确保状态正确管理
+// 修改 saveCard 方法，支持使用原始文件信息保存
 const saveCard = async () => {
-    if (!props.selectedFile || !props.selectedFile.path) {
+    // 优先使用原始文件信息，如果没有则使用当前选中文件
+    const fileToSave = originalFileInfo.value || props.selectedFile;
+    
+    if (!fileToSave || !fileToSave.path) {
         message.warning('未选择文件');
-        return false; // 返回 boolean
+        return false;
     }
+    
     // 如果已经在保存，直接返回
     if (saving.value) {
         console.log('已在保存中，跳过');
         return false;
     }
+    
     try {
         saving.value = true;
         // 保存JSON文件
         const jsonContent = JSON.stringify(currentCardData, null, 2);
-        await WorkspaceService.saveFileContent(props.selectedFile.path, jsonContent);
+        await WorkspaceService.saveFileContent(fileToSave.path, jsonContent);
+        
         // 更新原始数据状态
         saveOriginalData();
+        
         // 生成并显示卡图
         const imageBase64 = await generateCardImage();
         if (imageBase64) {
             emit('update-preview-image', imageBase64);
         }
+        
         message.success('卡牌保存成功');
         return true;
     } catch (error) {
@@ -996,26 +1007,20 @@ const saveAndSwitch = async () => {
     const success = await saveCard();
     if (success && pendingSwitchFile.value) {
         showSaveConfirmDialog.value = false;
-        // 直接加载新文件，因为 watch 会被触发但不会再次显示确认对话框
+        
+        // 清空原始文件信息，因为已经保存了
+        originalFileInfo.value = null;
+        
+        // 加载新文件
         const fileToSwitch = pendingSwitchFile.value;
         pendingSwitchFile.value = null;
-        // 由于我们已经处理了保存，可以直接切换
+        
+        // 触发文件切换逻辑
         if (fileToSwitch && fileToSwitch.type === 'card') {
             await loadCardData();
         } else {
             // 清空表单数据
-            Object.keys(currentCardData).forEach(key => {
-                delete currentCardData[key];
-            });
-            Object.assign(currentCardData, {
-                type: '',
-                name: '',
-                id: '',
-                created_at: '',
-                version: '1.0',
-            });
-            currentCardType.value = '';
-            saveOriginalData();
+            clearFormData();
         }
     }
 };
@@ -1023,24 +1028,31 @@ const saveAndSwitch = async () => {
 // 放弃修改并切换文件
 const discardChanges = () => {
     showSaveConfirmDialog.value = false;
+    originalFileInfo.value = null;
     pendingSwitchFile.value = null;
+    
     // 重新加载当前文件或清空数据
     if (props.selectedFile && props.selectedFile.type === 'card') {
         loadCardData();
     } else {
-        Object.keys(currentCardData).forEach(key => {
-            delete currentCardData[key];
-        });
-        Object.assign(currentCardData, {
-            type: '',
-            name: '',
-            id: '',
-            created_at: '',
-            version: '1.0',
-        });
-        currentCardType.value = '';
-        saveOriginalData();
+        clearFormData();
     }
+};
+
+// 清空表单数据
+const clearFormData = () => {
+    Object.keys(currentCardData).forEach(key => {
+        delete currentCardData[key];
+    });
+    Object.assign(currentCardData, {
+        type: '',
+        name: '',
+        id: '',
+        created_at: '',
+        version: '1.0',
+    });
+    currentCardType.value = '';
+    saveOriginalData();
 };
 
 // 过滤后的JSON数据（排除base64图片字段）
@@ -1164,28 +1176,23 @@ const resetForm = () => {
 watch(() => props.selectedFile, async (newFile, oldFile) => {
     // 如果当前有未保存的修改，显示确认对话框
     if (hasUnsavedChanges.value && oldFile) {
+        // 记住原始文件信息（用于保存）
+        originalFileInfo.value = {
+            path: oldFile.path as string,
+            label: oldFile.label as string
+        };
+        
         pendingSwitchFile.value = newFile;
         showSaveConfirmDialog.value = true;
         return;
     }
 
     // 没有未保存修改，直接切换
+    originalFileInfo.value = null;
     if (newFile && newFile.type === 'card') {
         await loadCardData();
     } else {
-        // 清空表单数据
-        Object.keys(currentCardData).forEach(key => {
-            delete currentCardData[key];
-        });
-        Object.assign(currentCardData, {
-            type: '',
-            name: '',
-            id: '',
-            created_at: '',
-            version: '1.0',
-        });
-        currentCardType.value = '';
-        saveOriginalData();
+        clearFormData();
     }
 }, { immediate: true });
 
@@ -1204,6 +1211,7 @@ onUnmounted(() => {
     document.removeEventListener('keydown', handleKeydown);
 });
 </script>
+
 
 <style scoped>
 .form-pane {

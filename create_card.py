@@ -2209,6 +2209,9 @@ def preprocessing_json(card_json):
 
     card_json = sort_submit_icons(card_json)
 
+    if 'body' not in card_json:
+        card_json['body'] = ''
+
     if card_json.get('type', '') == '调查员':
         card_json['type'] = '调查员卡'
     if card_json.get('type', '') == '调查员背面':
@@ -2430,23 +2433,24 @@ def process_card_json_to_tts_json(card_json, front_image_url="", back_image_url=
 
 if __name__ == '__main__':
     json_data = {
-        "type": "地点卡",
-        "location_icon": "绿菱",
-        "location_link": [
-            "褐扭"
-        ],
-        "shroud": "3",
-        "clues": "1<调查员>",
-        "location_type": "已揭示",
-        "id": 91,
-        "body": "➡️：【谈判】。检定📚(4)。如果你成功，获得1个线索(从供应堆)。(团队每场游戏限制成功1🕵️次。)\n➡️花费2资源：从你的调查员身上治愈共计至多2点伤害和/或恐惧。(每场游戏限制一次。)\n<relish>驻扎在堡垒的一名警官向你吐露，他的几名手下在荒野中搜寻纳德曼一行人的踪迹时失踪了。自审判以来，他们现在认为此案已结，并相信那些学生是死于纳德曼之手。</relish>\n",
-        "name": "麦克唐纳堡",
-        "traits": [
-            "已开拓",
-            "堡垒"
-        ],
-        "picture_path": "D:\\BaiduSyncdisk\\PycharmProjects\\arkham_translate\\translation_space\\两个POD\\factory\\000091-raw.jpg",
-        "class": "中立"
+        "type": "调查员背面",
+        "name": "测试",
+        "id": "",
+        "created_at": "",
+        "version": "1.0",
+        "subtitle": "测试",
+        "card_back": {
+            "size": 30,
+            "option": [
+                "测试",
+                "测试2"
+            ],
+            "requirement": "测试测试123",
+            "other": "测试其他文本测试其他文本",
+            "story": "测试故事文本"
+        },
+        "body": "测试",
+        "flavor": "测试"
     }
     fm = FontManager('fonts')
     im = ImageManager('images')

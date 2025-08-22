@@ -124,7 +124,7 @@ export class CardService {
             errors.push('卡牌类型不能为空');
         }
 
-        if (cardData.type != '冒险参考卡' && (!cardData.body || cardData.body.trim() === '')) {
+        if ((cardData.type != '冒险参考卡' && cardData.type != '调查员背面') && (!cardData.body || cardData.body.trim() === '')) {
             errors.push('正文不能为空不能为空');
         }
 
