@@ -2217,6 +2217,8 @@ class Card:
         """
         if self.card_type in ['密谋卡', '场景卡'] and self.is_back:
             return
+        if self.card_type == '调查员卡背':
+            return
         left_text = ''
         center_text = ''
         encounter_text = ''
@@ -2251,6 +2253,16 @@ class Card:
             pos_icon = (offset_x + card_width - 110, card_height - 34)
             pos_right = (offset_x + card_width - 80, card_height - 28)
             pos_right_encounter_group_number = (offset_x + card_width - 180, card_height - 28)
+            pass
+        if self.card_type == '调查员卡':
+            card_width = 1049 - 580
+            offset_x = 580
+            end_x = 28
+            pos_left = (offset_x, card_height - 28)
+            pos_center = (offset_x + card_width // 2, card_height - 28)
+            pos_icon = (offset_x + card_width - 110 + end_x, card_height - 34)
+            pos_right = (offset_x + card_width - 80 + end_x, card_height - 28)
+            pos_right_encounter_group_number = (offset_x + card_width - 160 + end_x, card_height - 28)
             pass
         if self.card_type == '故事卡':
             card_width = 570

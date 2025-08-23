@@ -8,6 +8,8 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    DeckEditor: typeof import('./src/components/DeckEditor.vue')['default']
+    DeckGridEditor: typeof import('./src/components/DeckGridEditor.vue')['default']
     FileTreePanel: typeof import('./src/components/FileTreePanel.vue')['default']
     FormEditPanel: typeof import('./src/components/FormEditPanel.vue')['default']
     FormField: typeof import('./src/components/FormField.vue')['default']
@@ -20,6 +22,8 @@ declare module 'vue' {
     NCode: typeof import('naive-ui')['NCode']
     NCollapse: typeof import('naive-ui')['NCollapse']
     NCollapseItem: typeof import('naive-ui')['NCollapseItem']
+    NDrawer: typeof import('naive-ui')['NDrawer']
+    NDrawerContent: typeof import('naive-ui')['NDrawerContent']
     NDropdown: typeof import('naive-ui')['NDropdown']
     NEmpty: typeof import('naive-ui')['NEmpty']
     NForm: typeof import('naive-ui')['NForm']
@@ -33,10 +37,15 @@ declare module 'vue' {
     NListItem: typeof import('naive-ui')['NListItem']
     NModal: typeof import('naive-ui')['NModal']
     NP: typeof import('naive-ui')['NP']
+    NRadio: typeof import('naive-ui')['NRadio']
+    NRadioGroup: typeof import('naive-ui')['NRadioGroup']
+    NResult: typeof import('naive-ui')['NResult']
     NScrollbar: typeof import('naive-ui')['NScrollbar']
     NSelect: typeof import('naive-ui')['NSelect']
+    NSlider: typeof import('naive-ui')['NSlider']
     NSpace: typeof import('naive-ui')['NSpace']
     NSpin: typeof import('naive-ui')['NSpin']
+    NStatistic: typeof import('naive-ui')['NStatistic']
     NSwitch: typeof import('naive-ui')['NSwitch']
     NTabPane: typeof import('naive-ui')['NTabPane']
     NTabs: typeof import('naive-ui')['NTabs']
@@ -47,6 +56,7 @@ declare module 'vue' {
     NUpload: typeof import('naive-ui')['NUpload']
     NUploadDragger: typeof import('naive-ui')['NUploadDragger']
     ResizeSplitter: typeof import('./src/components/ResizeSplitter.vue')['default']
+    TTSExportGuide: typeof import('./src/components/TTSExportGuide.vue')['default']
     TtsScriptEditor: typeof import('./src/components/TtsScriptEditor.vue')['default']
     WorkspaceSidebar: typeof import('./src/components/WorkspaceSidebar.vue')['default']
   }

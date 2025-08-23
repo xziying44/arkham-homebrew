@@ -11,7 +11,10 @@ import os
 
 from openai import OpenAI
 
-from file_manager import QuickStart, WorkspaceManager
+from bin.file_manager import QuickStart
+from bin.workspace_manager import WorkspaceManager
+# 在文件顶部添加导入
+from bin.gitHub_image import GitHubImageHost
 
 app = Flask(__name__)
 
@@ -22,6 +25,7 @@ is_selecting = False
 # 全局实例
 quick_start = QuickStart()
 current_workspace = None
+github_image_host = None
 
 
 def create_response(code=0, msg="操作成功", data=None):
@@ -993,6 +997,310 @@ def generate_card_info():
         return jsonify(create_response(
             code=7005,
             msg=f"生成卡牌信息失败: {str(e)}"
+        )), 500
+
+
+@app.route('/api/export-deck-image', methods=['POST'])
+def export_deck_image():
+    """导出牌库图片"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    try:
+        data = request.get_json()
+        if not data or 'deck_name' not in data:
+            return jsonify(create_response(
+                code=8001,
+                msg="请提供牌库名称"
+            )), 400
+
+        deck_name = data['deck_name']
+        export_format = data.get('format', 'PNG').upper()  # JPG或PNG
+        quality = data.get('quality', 95)  # 图片质量百分比
+
+        if export_format not in ['JPG', 'PNG']:
+            return jsonify(create_response(
+                code=8002,
+                msg="导出格式只支持JPG和PNG"
+            )), 400
+
+        if not (1 <= quality <= 100):
+            return jsonify(create_response(
+                code=8003,
+                msg="图片质量必须在1-100之间"
+            )), 400
+
+        # 导出牌库图片
+        success = current_workspace.export_deck_image(deck_name, export_format, quality)
+
+        if success:
+            return jsonify(create_response(msg="牌库图片导出成功"))
+        else:
+            return jsonify(create_response(
+                code=8004,
+                msg="牌库图片导出失败"
+            )), 500
+
+    except Exception as e:
+        return jsonify(create_response(
+            code=8005,
+            msg=f"导出牌库图片失败: {str(e)}"
+        )), 500
+
+
+@app.route('/api/open-directory', methods=['POST'])
+def open_directory():
+    """打开指定目录"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    try:
+        data = request.get_json()
+        if not data or 'directory_path' not in data:
+            return jsonify(create_response(
+                code=9001,
+                msg="请提供目录路径"
+            )), 400
+
+        directory_path = data['directory_path']
+
+        # 打开目录
+        success = current_workspace.open_directory_in_explorer(directory_path)
+
+        if success:
+            return jsonify(create_response(msg="目录已在资源管理器中打开"))
+        else:
+            return jsonify(create_response(
+                code=9002,
+                msg="打开目录失败，目录可能不存在"
+            )), 400
+
+    except Exception as e:
+        return jsonify(create_response(
+            code=9003,
+            msg=f"打开目录失败: {str(e)}"
+        )), 500
+
+
+# ================= GitHub图床相关接口 =================
+def get_or_create_github_host():
+    """获取或创建GitHub图床实例"""
+    global github_image_host, current_workspace
+
+    if not current_workspace:
+        return None, "请先选择工作空间"
+
+    # 获取GitHub配置
+    config = current_workspace.get_config()
+    github_token = config.get("github_token", "")
+
+    if not github_token:
+        return None, "请先配置GitHub Token"
+
+    # 如果实例不存在或token不匹配，创建新实例
+    if (not github_image_host or
+            not github_image_host.token or
+            github_image_host.token != github_token):
+
+        github_image_host = GitHubImageHost()
+        if not github_image_host.silent_login(github_token):
+            return None, github_image_host.get_last_error()
+
+    return github_image_host, None
+
+
+@app.route('/api/github/login', methods=['POST'])
+def github_login():
+    """GitHub登录"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    try:
+        data = request.get_json()
+        if not data or 'token' not in data:
+            return jsonify(create_response(
+                code=10001,
+                msg="请提供GitHub Token"
+            )), 400
+
+        token = data['token']
+
+        # 创建GitHub图床实例并登录
+        global github_image_host
+        github_image_host = GitHubImageHost()
+
+        if not github_image_host.login(token):
+            return jsonify(create_response(
+                code=10002,
+                msg=github_image_host.get_last_error()
+            )), 400
+
+        return jsonify(create_response(
+            msg="GitHub登录成功",
+            data={
+                "username": github_image_host.username
+            }
+        ))
+
+    except Exception as e:
+        return jsonify(create_response(
+            code=10003,
+            msg=f"GitHub登录失败: {str(e)}"
+        )), 500
+
+
+@app.route('/api/github/repositories', methods=['GET'])
+def get_github_repositories():
+    """获取GitHub仓库列表"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    try:
+        # 获取或创建GitHub实例
+        github_host, error_msg = get_or_create_github_host()
+        if not github_host:
+            return jsonify(create_response(
+                code=10004,
+                msg=error_msg
+            )), 400
+
+        # 获取仓库列表
+        repositories, error_msg = github_host.list_repositories()
+        if error_msg:
+            return jsonify(create_response(
+                code=10005,
+                msg=error_msg
+            )), 500
+
+        return jsonify(create_response(
+            msg="获取仓库列表成功",
+            data={"repositories": repositories}
+        ))
+
+    except Exception as e:
+        return jsonify(create_response(
+            code=10006,
+            msg=f"获取仓库列表失败: {str(e)}"
+        )), 500
+
+
+@app.route('/api/github/upload', methods=['POST'])
+def github_upload_image():
+    """上传图片到GitHub"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    try:
+        data = request.get_json()
+        if not data or 'image_path' not in data:
+            return jsonify(create_response(
+                code=10007,
+                msg="请提供图片路径"
+            )), 400
+
+        image_path = data['image_path']
+
+        # 获取或创建GitHub实例
+        github_host, error_msg = get_or_create_github_host()
+        if not github_host:
+            return jsonify(create_response(
+                code=10008,
+                msg=error_msg
+            )), 400
+
+        # 获取配置
+        config = current_workspace.get_config()
+        repo_name = config.get("github_repo", "")
+        branch = config.get("github_branch", "main")
+        folder = config.get("github_folder", "images")
+
+        if not repo_name:
+            return jsonify(create_response(
+                code=10009,
+                msg="请先在配置中设置GitHub仓库"
+            )), 400
+
+        # 转换为绝对路径
+        if not current_workspace._is_path_in_workspace(image_path):
+            return jsonify(create_response(
+                code=10010,
+                msg="图片路径无效"
+            )), 400
+
+        abs_image_path = current_workspace._get_absolute_path(image_path)
+
+        # 上传图片
+        download_url, error_msg = github_host.upload_image(
+            image_path=abs_image_path,
+            repo_name=repo_name,
+            branch=branch,
+            folder=folder
+        )
+
+        if error_msg:
+            return jsonify(create_response(
+                code=10011,
+                msg=error_msg
+            )), 500
+
+        return jsonify(create_response(
+            msg="图片上传成功",
+            data={
+                "url": download_url,
+                "repo": repo_name,
+                "branch": branch,
+                "folder": folder
+            }
+        ))
+
+    except Exception as e:
+        return jsonify(create_response(
+            code=10012,
+            msg=f"上传图片失败: {str(e)}"
+        )), 500
+
+
+@app.route('/api/github/status', methods=['GET'])
+def get_github_status():
+    """获取GitHub状态"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    try:
+        status = {
+            "is_logged_in": False,
+            "username": None,
+            "has_config": False,
+            "last_error": ""
+        }
+
+        # 检查配置
+        config = current_workspace.get_config()
+        if config.get("github_token") and config.get("github_repo"):
+            status["has_config"] = True
+
+        # 检查登录状态
+        if github_image_host and github_image_host.is_authenticated:
+            github_status = github_image_host.get_status()
+            status["is_logged_in"] = github_status["is_authenticated"]
+            status["username"] = github_status["username"]
+            status["last_error"] = github_status["last_error"]
+
+        return jsonify(create_response(
+            msg="获取GitHub状态成功",
+            data={"status": status}
+        ))
+
+    except Exception as e:
+        return jsonify(create_response(
+            code=10013,
+            msg=f"获取GitHub状态失败: {str(e)}"
         )), 500
 
 

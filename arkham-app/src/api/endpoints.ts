@@ -145,6 +145,38 @@ export const API_ENDPOINTS = {
     method: HttpMethod.POST,
     timeout: 60000 // 60秒超时
   } as ApiConfig,
+  // TTS导出相关接口
+  OPEN_DIRECTORY: {
+    url: '/api/open-directory',
+    method: HttpMethod.POST,
+    timeout: 5000
+  } as ApiConfig,
+  EXPORT_DECK_IMAGE: {
+    url: '/api/export-deck-image',
+    method: HttpMethod.POST,
+    timeout: 60000 // 60秒超时，牌库图片导出可能需要较长时间
+  } as ApiConfig,
+  // GitHub 图床相关接口
+  GITHUB_LOGIN: {
+    url: '/api/github/login',
+    method: HttpMethod.POST,
+    timeout: 10000
+  } as ApiConfig,
+  GITHUB_REPOSITORIES: {
+    url: '/api/github/repositories',
+    method: HttpMethod.GET,
+    timeout: 10000
+  } as ApiConfig,
+  GITHUB_UPLOAD: {
+    url: '/api/github/upload',
+    method: HttpMethod.POST,
+    timeout: 30000 // GitHub上传可能需要较长时间
+  } as ApiConfig,
+  GITHUB_STATUS: {
+    url: '/api/github/status',
+    method: HttpMethod.GET,
+    timeout: 5000
+  } as ApiConfig,
 } as const;
 
 

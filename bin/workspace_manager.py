@@ -1,12 +1,12 @@
-import os
-import json
-import sys
-import time
 import base64
-import tempfile  # 添加这个导入
+import json
 import mimetypes
-from typing import List, Dict, Any, Optional
+import os
+import sys
+import tempfile  # 添加这个导入
+import time
 from pathlib import Path
+from typing import List, Dict, Any, Optional
 
 from PIL import Image
 
@@ -18,104 +18,6 @@ try:
 except ImportError:
     CARD_GENERATION_AVAILABLE = False
     print("警告: 无法导入卡牌生成模块，卡牌生成功能将不可用")
-
-
-class QuickStart:
-    """快速开始类，负责目录选择和最近记录管理"""
-
-    def __init__(self, config_file: str = "recent_directories.json"):
-        self.config_file = config_file
-        self.max_records = 20
-
-    def _load_recent_records(self) -> List[Dict[str, Any]]:
-        """加载最近打开的目录记录"""
-        try:
-            if os.path.exists(self.config_file):
-                with open(self.config_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-        except Exception as e:
-            print(f"加载最近记录失败: {e}")
-        return []
-
-    def _save_recent_records(self, records: List[Dict[str, Any]]):
-        """保存最近打开的目录记录"""
-        try:
-            with open(self.config_file, 'w', encoding='utf-8') as f:
-                json.dump(records, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            print(f"保存最近记录失败: {e}")
-
-    def add_recent_directory(self, directory_path: str) -> bool:
-        """添加最近打开的目录"""
-        try:
-            if not os.path.exists(directory_path) or not os.path.isdir(directory_path):
-                return False
-
-            records = self._load_recent_records()
-
-            # 检查是否已存在，如果存在则移除旧记录
-            records = [r for r in records if r.get('path') != directory_path]
-
-            # 添加新记录到开头
-            new_record = {
-                'path': directory_path,
-                'name': os.path.basename(directory_path) or directory_path,
-                'timestamp': int(time.time()),
-                'formatted_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-            }
-
-            records.insert(0, new_record)
-
-            # 保持最多20条记录
-            if len(records) > self.max_records:
-                records = records[:self.max_records]
-
-            self._save_recent_records(records)
-            return True
-
-        except Exception as e:
-            print(f"添加最近目录失败: {e}")
-            return False
-
-    def get_recent_directories(self) -> List[Dict[str, Any]]:
-        """获取最近打开的目录列表"""
-        records = self._load_recent_records()
-
-        # 验证目录是否仍然存在，移除不存在的记录
-        valid_records = []
-        for record in records:
-            if os.path.exists(record.get('path', '')):
-                valid_records.append(record)
-
-        # 如果有无效记录被移除，保存更新后的列表
-        if len(valid_records) != len(records):
-            self._save_recent_records(valid_records)
-
-        return valid_records
-
-    def remove_recent_directory(self, directory_path: str) -> bool:
-        """移除指定的最近目录记录"""
-        try:
-            records = self._load_recent_records()
-            original_length = len(records)
-            records = [r for r in records if r.get('path') != directory_path]
-
-            if len(records) != original_length:
-                self._save_recent_records(records)
-                return True
-            return False
-        except Exception as e:
-            print(f"移除最近目录失败: {e}")
-            return False
-
-    def clear_recent_directories(self) -> bool:
-        """清空所有最近目录记录"""
-        try:
-            self._save_recent_records([])
-            return True
-        except Exception as e:
-            print(f"清空最近目录失败: {e}")
-            return False
 
 
 class WorkspaceManager:
@@ -654,28 +556,171 @@ class WorkspaceManager:
             print(f"保存卡图失败: {e}")
             return False
 
-    def get_config(self) -> Dict[str, Any]:
-        """获取配置项"""
+    def _get_global_config_path(self) -> str:
+        """获取全局配置文件路径（Python根目录）"""
+        # 获取用户主目录
+        home_dir = Path.home()
+
+        # 创建应用配置目录
+        config_dir = home_dir / ".file_manager"
+        config_dir.mkdir(exist_ok=True)
+
+        return str(config_dir / "global_config.json")
+
+        # 在WorkspaceManager类中添加以下方法
+
+    def get_github_config(self) -> Dict[str, Any]:
+        """获取GitHub配置"""
+        global_config = self._get_global_config()
+        return {
+            "github_token": global_config.get("github_token", ""),
+            "github_repo": global_config.get("github_repo", ""),
+            "github_branch": global_config.get("github_branch", "main"),
+            "github_folder": global_config.get("github_folder", "images")
+        }
+
+    def save_github_config(self, github_config: Dict[str, Any]) -> bool:
+        """保存GitHub配置"""
         try:
+            # 读取现有全局配置
+            existing_global_config = self._get_global_config()
+
+            # 更新GitHub相关配置
+            github_keys = ["github_token", "github_repo", "github_branch", "github_folder"]
+            for key in github_keys:
+                if key in github_config:
+                    existing_global_config[key] = github_config[key]
+
+            # 保存全局配置
+            return self._save_global_config(existing_global_config)
+        except Exception as e:
+            print(f"保存GitHub配置失败: {e}")
+            return False
+
+    def _get_global_config(self) -> Dict[str, Any]:
+        """获取全局配置（更新默认配置）"""
+        try:
+            global_config_path = self._get_global_config_path()
+            if os.path.exists(global_config_path):
+                with open(global_config_path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            else:
+                # 返回默认全局配置（包含GitHub配置）
+                return {
+                    "ai_api_key": "",
+                    "ai_endpoint": "https://api.deepseek.com/v1",
+                    "ai_model": "deepseek-chat",
+                    "github_token": "",
+                    "github_repo": "",
+                    "github_branch": "main",
+                    "github_folder": "images"
+                }
+        except Exception as e:
+            print(f"读取全局配置文件失败: {e}")
+            return {
+                "ai_api_key": "",
+                "ai_endpoint": "https://api.deepseek.com/v1",
+                "ai_model": "deepseek-chat",
+                "github_token": "",
+                "github_repo": "",
+                "github_branch": "main",
+                "github_folder": "images"
+            }
+
+    def _save_global_config(self, global_config: Dict[str, Any]) -> bool:
+        """保存全局配置"""
+        try:
+            global_config_path = self._get_global_config_path()
+            with open(global_config_path, 'w', encoding='utf-8') as f:
+                json.dump(global_config, f, ensure_ascii=False, indent=2)
+            return True
+        except Exception as e:
+            print(f"保存全局配置文件失败: {e}")
+            return False
+
+    def get_config(self) -> Dict[str, Any]:
+        """获取配置项（合并全局配置和工作目录配置）"""
+        try:
+            # 读取工作目录配置
+            workspace_config = {}
             config_path = os.path.join(self.workspace_path, 'config.json')
             if os.path.exists(config_path):
                 with open(config_path, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            else:
-                # 返回默认配置
-                return {}
+                    workspace_config = json.load(f)
+
+            # 读取全局配置
+            global_config = self._get_global_config()
+
+            # 合并配置，全局配置的AI相关配置优先
+            combined_config = workspace_config.copy()
+            combined_config.update({
+                "ai_api_key": global_config.get("ai_api_key", ""),
+                "ai_endpoint": global_config.get("ai_endpoint", "https://api.deepseek.com/v1"),
+                "ai_model": global_config.get("ai_model", "deepseek-chat"),
+                "github_token": global_config.get("github_token", ""),
+                "github_repo": global_config.get("github_repo", ""),
+                "github_branch": global_config.get("github_branch", "main"),
+                "github_folder": global_config.get("github_folder", "images"),
+            })
+
+            return combined_config
+
         except Exception as e:
             print(f"读取配置文件失败: {e}")
-            return {}
+            # 返回默认配置
+            return {
+                "ai_api_key": "",
+                "ai_endpoint": "https://api.deepseek.com/v1",
+                "ai_model": "deepseek-chat",
+                "github_token": "",
+                "github_repo": "",
+                "github_branch": "main",
+                "github_folder": "images"
+            }
 
     def save_config(self, config: Dict[str, Any]) -> bool:
-        """保存配置项"""
+        """保存配置项（分别保存全局配置和工作目录配置）"""
         try:
-            config_path = os.path.join(self.workspace_path, 'config.json')
-            with open(config_path, 'w', encoding='utf-8') as f:
-                json.dump(config, f, ensure_ascii=False, indent=2)
-            self.config = config
+            # AI相关配置项列表
+            global_config_keys = [
+                "ai_api_key",
+                "ai_endpoint",
+                "ai_model",
+                "github_token",
+                "github_repo",
+                "github_branch",
+                "github_folder"
+            ]
+
+            # 分离全局配置和工作目录配置
+            global_config = {}
+            workspace_config = {}
+
+            for key, value in config.items():
+                if key in global_config_keys:
+                    global_config[key] = value
+                else:
+                    workspace_config[key] = value
+
+            # 保存全局配置
+            if global_config:
+                # 读取现有全局配置，然后更新
+                existing_global_config = self._get_global_config()
+                existing_global_config.update(global_config)
+
+                if not self._save_global_config(existing_global_config):
+                    return False
+
+            # 保存工作目录配置
+            if workspace_config:
+                config_path = os.path.join(self.workspace_path, 'config.json')
+                with open(config_path, 'w', encoding='utf-8') as f:
+                    json.dump(workspace_config, f, ensure_ascii=False, indent=2)
+
+            # 更新内存中的配置
+            self.config = self.get_config()
             return True
+
         except Exception as e:
             print(f"保存配置文件失败: {e}")
             return False
@@ -717,3 +762,301 @@ class WorkspaceManager:
         except Exception as e:
             print(f"获取遭遇组列表失败: {e}")
             return []
+
+    def export_deck_image(self, deck_name: str, export_format: str = 'PNG', quality: int = 95) -> bool:
+        """
+        导出牌库图片
+
+        Args:
+            deck_name: 牌库名称（DeckBuilder文件夹中的文件名）
+            export_format: 导出格式（JPG或PNG）
+            quality: 图片质量百分比（1-100）
+
+        Returns:
+            bool: 导出是否成功
+        """
+        try:
+            from PIL import Image, ImageDraw
+
+            # 1. 读取牌库JSON文件
+            deck_builder_path = os.path.join(self.workspace_path, 'DeckBuilder')
+            if not os.path.exists(deck_builder_path):
+                print("DeckBuilder目录不存在")
+                return False
+
+            deck_file_path = os.path.join(deck_builder_path, deck_name)
+            if not os.path.exists(deck_file_path):
+                print(f"牌库文件不存在: {deck_name}")
+                return False
+
+            with open(deck_file_path, 'r', encoding='utf-8') as f:
+                deck_data = json.load(f)
+
+            # 2. 获取底图尺寸
+            width = deck_data.get('width', 1)
+            height = deck_data.get('height', 1)
+
+            # 单元大小
+            card_width = 739
+            card_height = 1049
+
+            # 创建底图（黑色背景）
+            canvas_width = width * card_width
+            canvas_height = height * card_height
+
+            front_image = Image.new('RGB', (canvas_width, canvas_height), (0, 0, 0))
+            back_image = Image.new('RGB', (canvas_width, canvas_height), (0, 0, 0))
+
+            # 3. 处理正面卡片
+            front_cards = deck_data.get('frontCards', [])
+            back_cards = deck_data.get('backCards', [])
+
+            # 收集所有需要处理的位置
+            positions_to_process = set()
+            for card in front_cards:
+                positions_to_process.add(card.get('index', 0))
+            for card in back_cards:
+                positions_to_process.add(card.get('index', 0))
+
+            # 处理每个位置的卡片
+            for position in positions_to_process:
+                # 计算位置坐标（从左到右，从上到下）
+                col = position % width
+                row = position // width
+                x = col * card_width
+                y = row * card_height
+
+                # 处理正面卡片
+                front_card_image = self._get_card_image_for_position(front_cards, position)
+                if front_card_image:
+                    processed_front = self._process_card_image(front_card_image, True, card_width, card_height)
+                    front_image.paste(processed_front, (x, y))
+
+                # 处理背面卡片
+                back_card_image = self._get_card_image_for_position(back_cards, position)
+                if back_card_image:
+                    processed_back = self._process_card_image(back_card_image, False, card_width, card_height)
+                    back_image.paste(processed_back, (x, y))
+
+            # 4. 保存图片
+            deck_base_name = os.path.splitext(deck_name)[0]  # 去掉后缀
+
+            front_filename = f"{deck_base_name}_front.{export_format.lower()}"
+            back_filename = f"{deck_base_name}_back.{export_format.lower()}"
+
+            front_path = os.path.join(deck_builder_path, front_filename)
+            back_path = os.path.join(deck_builder_path, back_filename)
+
+            save_kwargs = {}
+            if export_format == 'JPG':
+                save_kwargs['quality'] = quality
+                save_kwargs['format'] = 'JPEG'
+            else:
+                save_kwargs['format'] = 'PNG'
+
+            front_image.save(front_path, **save_kwargs)
+            back_image.save(back_path, **save_kwargs)
+
+            print(f"牌库图片已导出:")
+            print(f"  正面: {self._get_relative_path(front_path)}")
+            print(f"  背面: {self._get_relative_path(back_path)}")
+
+            return True
+
+        except Exception as e:
+            print(f"导出牌库图片失败: {e}")
+            return False
+
+    def _get_card_image_for_position(self, cards: List[Dict], position: int) -> Optional[Image.Image]:
+        """获取指定位置的卡片图片"""
+        for card in cards:
+            if card.get('index') == position:
+                return self._load_card_image(card)
+        return None
+
+    def _load_card_image(self, card_data: Dict) -> Optional[Image.Image]:
+        """根据卡片数据加载图片"""
+        try:
+            from PIL import Image
+
+            card_type = card_data.get('type')
+            card_path = card_data.get('path')
+
+            if card_type == 'image':
+                # 直接读取图片文件（相对工作目录路径）
+                image_path = self._get_absolute_path(card_path)
+                if os.path.exists(image_path):
+                    return Image.open(image_path)
+
+            elif card_type == 'cardback':
+                # 固定的卡牌背面，从程序目录读取
+                if card_path == 'player':
+                    cardback_filename = 'cardback/player-back.jpg'
+                elif card_path == 'encounter':
+                    cardback_filename = 'cardback/encounter-back.jpg'
+                else:
+                    return None
+
+                # 从程序目录读取
+                current_dir = os.path.dirname(os.path.abspath(__file__))
+                cardback_path = os.path.join(current_dir, cardback_filename)
+
+                # 如果是PyInstaller打包的程序
+                if hasattr(sys, '_MEIPASS'):
+                    cardback_path = os.path.join(sys._MEIPASS, cardback_filename)
+
+                if os.path.exists(cardback_path):
+                    return Image.open(cardback_path)
+
+            elif card_type == 'card':
+                # 卡牌对象，需要读取卡牌JSON并生成图片
+                card_json_path = self._get_absolute_path(card_path)
+                if os.path.exists(card_json_path):
+                    with open(card_json_path, 'r', encoding='utf-8') as f:
+                        card_json_data = json.load(f)
+                    return self.generate_card_image(card_json_data)
+
+            return None
+
+        except Exception as e:
+            print(f"加载卡片图片失败: {e}")
+            return None
+
+    def _process_card_image(self, image: Image.Image, is_front: bool, target_width: int,
+                            target_height: int) -> Image.Image:
+        """处理卡片图片（检测方向、旋转、拉伸）"""
+        try:
+            # 检测图片是横向还是纵向
+            img_width, img_height = image.size
+            is_landscape = img_width > img_height
+
+            if is_landscape:
+                # 横向图片需要旋转
+                if is_front:
+                    # 正面顺时针旋转90度
+                    image = image.rotate(-90, expand=True)
+                else:
+                    # 背面逆时针旋转90度
+                    image = image.rotate(90, expand=True)
+
+            # 拉伸到目标尺寸
+            image = image.resize((target_width, target_height), Image.Resampling.LANCZOS)
+
+            return image
+
+        except Exception as e:
+            print(f"处理卡片图片失败: {e}")
+            return image
+
+    def open_directory_in_explorer(self, directory_path: str, bring_to_front: bool = True) -> bool:
+        """
+        在系统资源管理器中打开指定目录
+
+        Args:
+            directory_path: 相对于工作目录的目录路径
+            bring_to_front: 是否将打开的窗口置顶
+
+        Returns:
+            bool: 是否成功打开
+        """
+        try:
+            import subprocess
+            import platform
+
+            # 确保路径在工作目录内
+            if not self._is_path_in_workspace(directory_path):
+                print(f"路径不在工作目录内: {directory_path}")
+                return False
+
+            # 获取绝对路径
+            abs_directory_path = self._get_absolute_path(directory_path)
+
+            # 检查目录是否存在
+            if not os.path.exists(abs_directory_path):
+                print(f"目录不存在: {abs_directory_path}")
+                return False
+
+            if not os.path.isdir(abs_directory_path):
+                print(f"指定路径不是目录: {abs_directory_path}")
+                return False
+
+            # 检查是否为Windows系统
+            system = platform.system()
+            if system != "Windows":
+                print(f"不支持的操作系统: {system}")
+                return False
+
+            # Windows系统打开目录
+            if bring_to_front:
+                self._open_directory_windows_with_focus(abs_directory_path)
+            else:
+                # 简单打开
+                os.startfile(abs_directory_path)
+
+            print(f"已在资源管理器中打开目录: {self._get_relative_path(abs_directory_path)}")
+            return True
+
+        except Exception as e:
+            print(f"打开目录失败: {e}")
+            return False
+
+    def _open_directory_windows_with_focus(self, abs_directory_path: str):
+        """Windows系统打开目录并置顶"""
+        try:
+            import subprocess
+            import time
+
+            # 打开资源管理器
+            subprocess.Popen(['explorer', abs_directory_path])
+
+            # 等待一小段时间让窗口打开
+            time.sleep(0.5)
+
+            try:
+                # 尝试使用Windows API将资源管理器窗口置顶
+                import win32gui
+                import win32con
+
+                def enum_windows_callback(hwnd, windows):
+                    if win32gui.IsWindowVisible(hwnd):
+                        window_title = win32gui.GetWindowText(hwnd)
+                        class_name = win32gui.GetClassName(hwnd)
+
+                        # 查找资源管理器窗口
+                        if (class_name == "CabinetWClass" or class_name == "ExploreWClass"):
+                            # 检查窗口标题是否包含目录名
+                            folder_name = os.path.basename(abs_directory_path)
+                            if folder_name in window_title or abs_directory_path in window_title:
+                                windows.append(hwnd)
+                    return True
+
+                windows = []
+                win32gui.EnumWindows(enum_windows_callback, windows)
+
+                # 将找到的窗口置顶
+                for hwnd in windows:
+                    win32gui.SetWindowPos(
+                        hwnd,
+                        win32con.HWND_TOPMOST,
+                        0, 0, 0, 0,
+                        win32con.SWP_NOMOVE | win32con.SWP_NOSIZE
+                    )
+                    # 取消置顶状态，只是激活到前台
+                    win32gui.SetWindowPos(
+                        hwnd,
+                        win32con.HWND_NOTOPMOST,
+                        0, 0, 0, 0,
+                        win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW
+                    )
+                    win32gui.SetForegroundWindow(hwnd)
+                    break
+
+            except ImportError:
+                # 如果没有安装pywin32，使用备用方案
+                print("提示: 安装 pywin32 可获得更好的窗口置顶效果")
+                print("安装命令: pip install pywin32")
+
+        except Exception as e:
+            print(f"Windows打开目录失败: {e}")
+            # 回退到简单打开
+            os.startfile(abs_directory_path)

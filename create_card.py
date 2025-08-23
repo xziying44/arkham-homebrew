@@ -2431,26 +2431,23 @@ def process_card_json_to_tts_json(card_json, front_image_url="", back_image_url=
     return tts_card_json
 
 
+
+
 if __name__ == '__main__':
     json_data = {
-        "type": "调查员背面",
+        "type": "调查员",
         "name": "测试",
         "id": "",
         "created_at": "",
         "version": "1.0",
-        "subtitle": "测试",
-        "card_back": {
-            "size": 30,
-            "option": [
-                "测试",
-                "测试2"
-            ],
-            "requirement": "测试测试123",
-            "other": "测试其他文本测试其他文本",
-            "story": "测试故事文本"
-        },
         "body": "测试",
-        "flavor": "测试"
+        "attribute": [
+            1,
+            1,
+            1,
+            1
+        ],
+        "subtitle": "测试"
     }
     fm = FontManager('fonts')
     im = ImageManager('images')

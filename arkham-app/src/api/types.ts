@@ -158,7 +158,7 @@ export interface CardData {
   body?: string;
   flavor?: string;
   picture_path?: string;
-  
+
   // 新增字段 - 卡片基本信息
   illustrator?: string;        // 插画作者
   encounter_group?: string;    // 遭遇组
@@ -301,3 +301,132 @@ export interface GenerateAndParseCardData {
 // OpenAI相关API响应类型
 export type ParseCardJsonResponse = BaseResponse<ParseCardJsonData>;
 export type GenerateAndParseCardResponse = BaseResponse<GenerateAndParseCardData>;
+
+
+// TTS导出相关类型定义
+
+// 在资源管理器中打开目录请求类型
+export interface OpenDirectoryRequest {
+  directory_path: string;
+}
+
+// 导出牌库图片请求类型
+export interface ExportDeckImageRequest {
+  deck_name: string;
+  format?: 'JPG' | 'PNG';
+  quality?: number;
+}
+
+// 牌库卡片项类型
+export interface DeckCardItem {
+  index: number;
+  type: 'image' | 'card' | 'cardback';
+  path: string;
+}
+
+// 牌库JSON数据类型
+export interface DeckData {
+  name: string;
+  width: number;
+  height: number;
+  frontCards: DeckCardItem[];
+  backCards: DeckCardItem[];
+}
+
+// TTS导出相关错误码扩展
+export enum TtsExportErrorCode {
+  // 目录操作相关错误码 (9001-9099)
+  DIRECTORY_PATH_MISSING = 9001,
+  DIRECTORY_OPEN_FAILED = 9002,
+  DIRECTORY_SYSTEM_ERROR = 9003,
+  WORKSPACE_OPEN_FAILED = 9004,
+  WORKSPACE_SYSTEM_ERROR = 9005,
+  FILE_PATH_MISSING = 9006,
+  FILE_LOCATION_OPEN_FAILED = 9007,
+  FILE_LOCATION_SYSTEM_ERROR = 9008,
+
+  // 牌库导出相关错误码 (8001-8099)
+  DECK_NAME_MISSING = 8001,
+  EXPORT_FORMAT_INVALID = 8002,
+  QUALITY_INVALID = 8003,
+  DECK_EXPORT_FAILED = 8004,
+  DECK_EXPORT_SYSTEM_ERROR = 8005,
+}
+
+// API响应类型
+export type OpenDirectoryResponse = BaseResponse<null>;
+export type ExportDeckImageResponse = BaseResponse<null>;
+
+
+
+// GitHub 相关错误码
+export enum GitHubErrorCode {
+  // GitHub相关错误码 (10001-10099)
+  GITHUB_TOKEN_MISSING = 10001,
+  GITHUB_LOGIN_FAILED = 10002,
+  GITHUB_LOGIN_SYSTEM_ERROR = 10003,
+  GITHUB_TOKEN_NOT_CONFIGURED = 10004,
+  GITHUB_REPOSITORIES_FETCH_FAILED = 10005,
+  GITHUB_REPOSITORIES_SYSTEM_ERROR = 10006,
+  GITHUB_IMAGE_PATH_MISSING = 10007,
+  GITHUB_INSTANCE_ERROR = 10008,
+  GITHUB_REPO_NOT_CONFIGURED = 10009,
+  GITHUB_IMAGE_PATH_INVALID = 10010,
+  GITHUB_UPLOAD_FAILED = 10011,
+  GITHUB_UPLOAD_SYSTEM_ERROR = 10012,
+  GITHUB_STATUS_SYSTEM_ERROR = 10013,
+}
+// GitHub 登录请求类型
+export interface GitHubLoginRequest {
+  token: string;
+}
+// GitHub 登录响应数据类型
+export interface GitHubLoginData {
+  username: string;
+}
+// GitHub 仓库信息类型
+export interface GitHubRepository {
+  name: string;
+  full_name: string;
+  private: boolean;
+  description: string;
+  updated_at: string;
+}
+// GitHub 仓库列表响应数据类型
+export interface GitHubRepositoriesData {
+  repositories: GitHubRepository[];
+}
+// GitHub 上传图片请求类型
+export interface GitHubUploadRequest {
+  image_path: string;
+}
+// GitHub 上传图片响应数据类型
+export interface GitHubUploadData {
+  url: string;
+  repo: string;
+  branch: string;
+  folder: string;
+}
+// GitHub 状态信息类型
+export interface GitHubStatus {
+  is_logged_in: boolean;
+  username: string | null;
+  has_config: boolean;
+  last_error: string;
+}
+// GitHub 状态响应数据类型
+export interface GitHubStatusData {
+  status: GitHubStatus;
+}
+// GitHub 配置类型
+export interface GitHubConfig {
+  github_token?: string;
+  github_repo?: string;
+  github_branch?: string;
+  github_folder?: string;
+}
+// GitHub API响应类型
+export type GitHubLoginResponse = BaseResponse<GitHubLoginData>;
+export type GitHubRepositoriesResponse = BaseResponse<GitHubRepositoriesData>;
+export type GitHubUploadResponse = BaseResponse<GitHubUploadData>;
+export type GitHubStatusResponse = BaseResponse<GitHubStatusData>;
