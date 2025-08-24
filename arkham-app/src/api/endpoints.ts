@@ -156,6 +156,11 @@ export const API_ENDPOINTS = {
     method: HttpMethod.POST,
     timeout: 60000 // 60秒超时，牌库图片导出可能需要较长时间
   } as ApiConfig,
+  EXPORT_TTS_ITEM: {
+    url: '/api/export-tts',
+    method: HttpMethod.POST,
+    timeout: 60000 // 60秒超时，TTS物品导出可能需要较长时间
+  } as ApiConfig,
   // GitHub 图床相关接口
   GITHUB_LOGIN: {
     url: '/api/github/login',

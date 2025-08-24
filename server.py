@@ -1085,29 +1085,32 @@ def open_directory():
 
 
 # ================= GitHub图床相关接口 =================
+
 def get_or_create_github_host():
-    """获取或创建GitHub图床实例"""
+    """获取或创建GitHub图床实例（改进版）"""
     global github_image_host, current_workspace
 
     if not current_workspace:
         return None, "请先选择工作空间"
 
-    # 获取GitHub配置
+    # 如果全局对象存在且已认证，直接返回
+    if github_image_host and github_image_host.is_authenticated:
+        return github_image_host, None
+
+    # 获取GitHub配置进行静默登录
     config = current_workspace.get_config()
     github_token = config.get("github_token", "")
 
     if not github_token:
         return None, "请先配置GitHub Token"
 
-    # 如果实例不存在或token不匹配，创建新实例
-    if (not github_image_host or
-            not github_image_host.token or
-            github_image_host.token != github_token):
+    # 创建新实例并尝试静默登录
+    temp_github_host = GitHubImageHost()
+    if not temp_github_host.silent_login(github_token):
+        return None, temp_github_host.get_last_error()
 
-        github_image_host = GitHubImageHost()
-        if not github_image_host.silent_login(github_token):
-            return None, github_image_host.get_last_error()
-
+    # 只有登录成功后才赋值给全局变量（新登录替换旧登录）
+    github_image_host = temp_github_host
     return github_image_host, None
 
 
@@ -1128,15 +1131,19 @@ def github_login():
 
         token = data['token']
 
-        # 创建GitHub图床实例并登录
-        global github_image_host
-        github_image_host = GitHubImageHost()
+        # 创建新的GitHub图床实例
+        temp_github_host = GitHubImageHost()
 
-        if not github_image_host.login(token):
+        # 尝试登录
+        if not temp_github_host.login(token):
             return jsonify(create_response(
                 code=10002,
-                msg=github_image_host.get_last_error()
+                msg=temp_github_host.get_last_error()
             )), 400
+
+        # 只有登录成功后才赋值给全局变量（新登录替换旧登录）
+        global github_image_host
+        github_image_host = temp_github_host
 
         return jsonify(create_response(
             msg="GitHub登录成功",
@@ -1152,6 +1159,21 @@ def github_login():
         )), 500
 
 
+@app.route('/api/github/logout', methods=['POST'])
+def github_logout():
+    """GitHub登出"""
+    try:
+        global github_image_host
+        github_image_host = None
+
+        return jsonify(create_response(msg="GitHub登出成功"))
+    except Exception as e:
+        return jsonify(create_response(
+            code=10017,
+            msg=f"GitHub登出失败: {str(e)}"
+        )), 500
+
+
 @app.route('/api/github/repositories', methods=['GET'])
 def get_github_repositories():
     """获取GitHub仓库列表"""
@@ -1160,7 +1182,7 @@ def get_github_repositories():
         return error_response
 
     try:
-        # 获取或创建GitHub实例
+        # 获取或创建GitHub实例（如果全局变量为空会自动静默登录）
         github_host, error_msg = get_or_create_github_host()
         if not github_host:
             return jsonify(create_response(
@@ -1205,7 +1227,7 @@ def github_upload_image():
 
         image_path = data['image_path']
 
-        # 获取或创建GitHub实例
+        # 获取或创建GitHub实例（如果全局变量为空会自动静默登录）
         github_host, error_msg = get_or_create_github_host()
         if not github_host:
             return jsonify(create_response(
@@ -1286,6 +1308,7 @@ def get_github_status():
             status["has_config"] = True
 
         # 检查登录状态
+        global github_image_host
         if github_image_host and github_image_host.is_authenticated:
             github_status = github_image_host.get_status()
             status["is_logged_in"] = github_status["is_authenticated"]
@@ -1301,6 +1324,56 @@ def get_github_status():
         return jsonify(create_response(
             code=10013,
             msg=f"获取GitHub状态失败: {str(e)}"
+        )), 500
+
+
+@app.route('/api/export-tts', methods=['POST'])
+def export_tts():
+    """导出TTS物品"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    try:
+        data = request.get_json()
+        if not data or 'deck_name' not in data or 'face_url' not in data or 'back_url' not in data:
+            return jsonify(create_response(
+                code=11001,
+                msg="请提供牌库名称、正面URL和背面URL"
+            )), 400
+
+        deck_name = data['deck_name']
+        face_url = data['face_url']
+        back_url = data['back_url']
+
+        # 验证URL格式（简单验证）
+        if not (face_url.startswith('http://') or face_url.startswith('https://')):
+            return jsonify(create_response(
+                code=11002,
+                msg="正面URL格式无效"
+            )), 400
+
+        if not (back_url.startswith('http://') or back_url.startswith('https://')):
+            return jsonify(create_response(
+                code=11003,
+                msg="背面URL格式无效"
+            )), 400
+
+        # 导出TTS物品
+        success = current_workspace.export_deck_to_tts(deck_name, face_url, back_url)
+
+        if success:
+            return jsonify(create_response(msg="TTS物品导出成功"))
+        else:
+            return jsonify(create_response(
+                code=11004,
+                msg="TTS物品导出失败"
+            )), 500
+
+    except Exception as e:
+        return jsonify(create_response(
+            code=11005,
+            msg=f"导出TTS物品失败: {str(e)}"
         )), 500
 
 

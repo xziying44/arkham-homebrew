@@ -10,6 +10,8 @@ from typing import List, Dict, Any, Optional
 
 from PIL import Image
 
+from bin.tts_card_converter import TTSCardConverter
+
 # 导入卡牌生成相关模块
 try:
     from create_card import process_card_json, FontManager, ImageManager
@@ -557,17 +559,11 @@ class WorkspaceManager:
             return False
 
     def _get_global_config_path(self) -> str:
-        """获取全局配置文件路径（Python根目录）"""
-        # 获取用户主目录
-        home_dir = Path.home()
-
-        # 创建应用配置目录
-        config_dir = home_dir / ".file_manager"
-        config_dir.mkdir(exist_ok=True)
-
-        return str(config_dir / "global_config.json")
-
-        # 在WorkspaceManager类中添加以下方法
+        """获取全局配置文件路径"""
+        if hasattr(sys, '_MEIPASS'):
+            # PyInstaller 打包后的临时目录
+            return os.path.join(sys._MEIPASS, "global_config.json")
+        return os.path.join(os.path.abspath("."), "global_config.json")
 
     def get_github_config(self) -> Dict[str, Any]:
         """获取GitHub配置"""
@@ -898,13 +894,13 @@ class WorkspaceManager:
                     return None
 
                 # 从程序目录读取
-                current_dir = os.path.dirname(os.path.abspath(__file__))
-                cardback_path = os.path.join(current_dir, cardback_filename)
+                cardback_path = os.path.join('.', cardback_filename)
 
                 # 如果是PyInstaller打包的程序
                 if hasattr(sys, '_MEIPASS'):
                     cardback_path = os.path.join(sys._MEIPASS, cardback_filename)
 
+                print(f"正在读取卡牌背面图片: {cardback_path} {os.path.exists(cardback_path)}")
                 if os.path.exists(cardback_path):
                     return Image.open(cardback_path)
 
@@ -1060,3 +1056,240 @@ class WorkspaceManager:
             print(f"Windows打开目录失败: {e}")
             # 回退到简单打开
             os.startfile(abs_directory_path)
+
+    def _get_tts_save_directory(self) -> Optional[str]:
+        """获取TTS保存目录，不存在则创建"""
+        try:
+            # 获取我的文档路径
+            import os
+            user_home = os.path.expanduser("~")
+            documents_path = os.path.join(user_home, "Documents")
+
+            # 如果Documents目录不存在，尝试中文版本
+            if not os.path.exists(documents_path):
+                documents_path = os.path.join(user_home, "文档")
+
+            if not os.path.exists(documents_path):
+                print("无法找到我的文档目录")
+                return None
+
+            # 构建完整路径
+            tts_path = os.path.join(
+                documents_path,
+                "My Games",
+                "Tabletop Simulator",
+                "Saves",
+                "Saved Objects",
+                "阿卡姬制作"
+            )
+
+            # 创建目录（如果不存在）
+            os.makedirs(tts_path, exist_ok=True)
+
+            print(f"TTS保存目录: {tts_path}")
+            return tts_path
+
+        except Exception as e:
+            print(f"创建TTS保存目录失败: {e}")
+            return None
+
+    def _generate_tts_cover(self, deck_config: Dict[str, Any]) -> Optional[Image.Image]:
+        """生成TTS物品封面图片（256x256，等比缩放，透明背景）"""
+        try:
+            from PIL import Image
+
+            # 获取前面卡片列表
+            front_cards = deck_config.get("frontCards", [])
+
+            if not front_cards:
+                print("牌库中没有正面卡片")
+                return None
+
+            # 寻找第一个有效的对象作为封面
+            for card_data in front_cards:
+                try:
+                    card_type = card_data.get('type')
+                    card_path = card_data.get('path')
+
+                    source_image = None
+
+                    if card_type == 'card':
+                        # 读取卡牌JSON并生成图片
+                        card_json_path = self._get_absolute_path(card_path)
+                        if os.path.exists(card_json_path):
+                            with open(card_json_path, 'r', encoding='utf-8') as f:
+                                card_json_data = json.load(f)
+
+                            # 生成卡图
+                            source_image = self.generate_card_image(card_json_data)
+
+                    elif card_type == 'image':
+                        # 直接读取图片文件
+                        image_path = self._get_absolute_path(card_path)
+                        if os.path.exists(image_path):
+                            source_image = Image.open(image_path)
+
+                    elif card_type == 'cardback':
+                        # 使用卡背图片
+                        cardback_filename = None
+                        if card_path == 'player':
+                            cardback_filename = 'cardback/player-back.jpg'
+                        elif card_path == 'encounter':
+                            cardback_filename = 'cardback/encounter-back.jpg'
+
+                        if cardback_filename:
+                            cardback_path = os.path.join('.', cardback_filename)
+
+                            # 如果是PyInstaller打包的程序
+                            if hasattr(sys, '_MEIPASS'):
+                                cardback_path = os.path.join(sys._MEIPASS, cardback_filename)
+
+                            if os.path.exists(cardback_path):
+                                source_image = Image.open(cardback_path)
+
+                    # 如果成功获取到源图片，进行等比缩放处理
+                    if source_image:
+                        # 创建透明背景的256x256画布
+                        cover_image = Image.new('RGBA', (256, 256), (0, 0, 0, 0))
+
+                        # 计算等比缩放尺寸
+                        source_width, source_height = source_image.size
+                        aspect_ratio = source_width / source_height
+
+                        if aspect_ratio > 1:  # 宽图
+                            scaled_width = 256
+                            scaled_height = int(256 / aspect_ratio)
+                        else:  # 高图或正方形
+                            scaled_width = int(256 * aspect_ratio)
+                            scaled_height = 256
+
+                        # 等比缩放源图片
+                        scaled_image = source_image.resize((scaled_width, scaled_height), Image.Resampling.LANCZOS)
+
+                        # 计算居中位置
+                        x = (256 - scaled_width) // 2
+                        y = (256 - scaled_height) // 2
+
+                        # 如果源图片有alpha通道，直接粘贴；否则转换为RGBA
+                        if scaled_image.mode != 'RGBA':
+                            scaled_image = scaled_image.convert('RGBA')
+
+                        # 将缩放后的图片粘贴到透明背景上
+                        cover_image.paste(scaled_image, (x, y), scaled_image)
+
+                        return cover_image
+
+                except Exception as e:
+                    print(f"处理封面卡片时出错 {card_data.get('path', 'unknown')}: {e}")
+                    continue
+
+            # 如果没有找到有效的卡片，创建一个默认透明封面
+            print("未找到有效的封面卡片，创建默认封面")
+            default_cover = Image.new('RGBA', (256, 256), (50, 50, 50, 128))  # 半透明灰色
+            return default_cover
+
+        except Exception as e:
+            print(f"生成TTS封面失败: {e}")
+            return None
+
+    def _get_next_file_number(self, base_name: str, save_dir: str) -> int:
+        """获取下一个可用的文件编号"""
+        try:
+            max_number = 0
+
+            # 扫描目录中已存在的文件
+            if os.path.exists(save_dir):
+                for filename in os.listdir(save_dir):
+                    # 匹配格式：base_name_数字.扩展名
+                    if filename.startswith(f"{base_name}_") and (
+                            filename.endswith('.json') or filename.endswith('.png')):
+                        try:
+                            # 提取数字部分
+                            name_part = filename[len(base_name) + 1:]  # 去掉前缀和下划线
+                            number_part = name_part.split('.')[0]  # 去掉扩展名
+
+                            if number_part.isdigit():
+                                number = int(number_part)
+                                max_number = max(max_number, number)
+                        except (ValueError, IndexError):
+                            continue
+
+            return max_number + 1
+
+        except Exception as e:
+            print(f"获取文件编号失败: {e}")
+            return 1
+
+    def export_deck_to_tts(self, deck_name: str, face_url: str, back_url: str) -> bool:
+        """
+        导出TTS物品
+
+        Args:
+            deck_name: 牌库名称（DeckBuilder文件夹中的文件名）
+            face_url: 正面图片URL
+            back_url: 背面图片URL
+
+        Returns:
+            bool: 导出是否成功
+        """
+        try:
+            from PIL import Image
+
+            # 1. 检查牌库文件是否存在
+            deck_builder_path = os.path.join(self.workspace_path, 'DeckBuilder')
+            if not os.path.exists(deck_builder_path):
+                print("DeckBuilder目录不存在")
+                return False
+
+            deck_file_path = os.path.join(deck_builder_path, deck_name)
+            if not os.path.exists(deck_file_path):
+                print(f"牌库文件不存在: {deck_name}")
+                return False
+
+            # 2. 读取牌库配置
+            with open(deck_file_path, 'r', encoding='utf-8') as f:
+                deck_config = json.load(f)
+
+            # 3. 创建TTS转换器并转换
+            converter = TTSCardConverter(self.workspace_path)
+            tts_json = converter.convert_deck_to_tts(deck_config, face_url, back_url)
+
+            # 4. 生成封面图片（256x256，等比缩放，透明背景）
+            cover_image = self._generate_tts_cover(deck_config)
+            if cover_image is None:
+                print("无法生成封面图片")
+                return False
+
+            # 5. 确定保存路径
+            save_dir = self._get_tts_save_directory()
+            if not save_dir:
+                return False
+
+            # 6. 生成文件名（去掉原文件扩展名）
+            base_name = os.path.splitext(deck_name)[0]
+
+            # 获取下一个可用的编号
+            file_number = self._get_next_file_number(base_name, save_dir)
+
+            json_filename = f"{base_name}_{file_number:03d}.json"  # 使用3位数字，例如001, 002, 003
+            cover_filename = f"{base_name}_{file_number:03d}.png"
+
+            json_path = os.path.join(save_dir, json_filename)
+            cover_path = os.path.join(save_dir, cover_filename)
+
+            # 7. 保存JSON文件
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(tts_json, f, indent=2, ensure_ascii=False)
+
+            # 8. 保存封面图片
+            cover_image.save(cover_path, 'PNG')
+
+            print(f"TTS物品已导出:")
+            print(f"  JSON: {json_path}")
+            print(f"  封面: {cover_path}")
+
+            return True
+
+        except Exception as e:
+            print(f"导出TTS物品失败: {e}")
+            return False

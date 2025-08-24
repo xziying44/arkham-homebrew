@@ -47,6 +47,92 @@
           </div>
         </div>
 
+        <!-- GitHub图床设置 -->
+        <div class="settings-section">
+          <h3>📷 GitHub图床设置</h3>
+          
+          <!-- GitHub Token -->
+          <div class="setting-item">
+            <label>GitHub Token</label>
+            <div class="token-input-container">
+              <input 
+                v-model="githubConfig.github_token" 
+                type="password" 
+                placeholder="输入GitHub Personal Access Token"
+                :disabled="githubVerifying"
+              />
+              <button 
+                @click="verifyGitHubToken" 
+                :disabled="!githubConfig.github_token || githubVerifying"
+                class="verify-btn"
+                :class="{ 'success': githubLoginSuccess, 'error': githubLoginError }"
+              >
+                {{ githubVerifying ? '验证中...' : githubLoginSuccess ? '已验证' : '验证登录' }}
+              </button>
+            </div>
+            <span class="setting-description">
+              需要repo权限的GitHub Personal Access Token
+              <a href="https://github.com/settings/tokens" target="_blank" class="link">获取Token</a>
+            </span>
+            <div v-if="githubLoginError" class="error-hint">
+              {{ githubLoginError }}
+            </div>
+            <div v-if="githubLoginSuccess" class="success-hint">
+              登录成功，用户名: {{ githubUsername }}
+            </div>
+          </div>
+
+          <!-- GitHub 仓库配置（登录成功后显示） -->
+          <template v-if="githubLoginSuccess">
+            <div class="setting-item">
+              <label>GitHub仓库</label>
+              <div class="repo-selector">
+                <select 
+                  v-model="githubConfig.github_repo"
+                  :disabled="loadingRepositories"
+                >
+                  <option value="">请选择仓库</option>
+                  <option 
+                    v-for="repo in githubRepositories" 
+                    :key="repo.full_name" 
+                    :value="repo.full_name"
+                  >
+                    {{ repo.full_name }} {{ repo.private ? '(私有)' : '(公开)' }}
+                  </option>
+                </select>
+                <button 
+                  @click="loadGitHubRepositories" 
+                  :disabled="loadingRepositories"
+                  class="refresh-btn"
+                >
+                  {{ loadingRepositories ? '加载中...' : '刷新' }}
+                </button>
+              </div>
+              <span class="setting-description">选择用作图床的GitHub仓库</span>
+            </div>
+
+            <div class="setting-item">
+              <label>分支名称</label>
+              <input 
+                v-model="githubConfig.github_branch" 
+                type="text" 
+                placeholder="main"
+              />
+              <span class="setting-description">图片存储的分支（默认：main）</span>
+            </div>
+
+            <div class="setting-item">
+              <label>存储文件夹</label>
+              <input 
+                v-model="githubConfig.github_folder" 
+                type="text" 
+                placeholder="images"
+              />
+              <span class="setting-description">图片存储的文件夹名称（默认：images）</span>
+            </div>
+          </template>
+        </div>
+
         <!-- 工作区配置 -->
         <div class="settings-section">
           <h3>🏗️ 工作区配置</h3>
@@ -173,7 +259,8 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch } from 'vue';
 import { ConfigService, WorkspaceService } from '@/api';
-import type { ConfigData, TreeOption } from '@/api/types';
+import { GitHubService } from '@/api/github-service';
+import type { ConfigData, TreeOption, GitHubRepository } from '@/api/types';
 
 // 扩展TreeOption类型以包含相对路径
 interface ExtendedTreeOption extends TreeOption {
@@ -187,6 +274,14 @@ const refreshingDirs = ref(false);
 const error = ref('');
 const successMessage = ref('');
 
+// GitHub相关状态
+const githubVerifying = ref(false);
+const githubLoginSuccess = ref(false);
+const githubLoginError = ref('');
+const githubUsername = ref('');
+const loadingRepositories = ref(false);
+const githubRepositories = ref<GitHubRepository[]>([]);
+
 // 配置数据
 const config = reactive<ConfigData>({
   ai_endpoint: '',
@@ -197,6 +292,14 @@ const config = reactive<ConfigData>({
   footer_icon_dir: '',
   footer_copyright: '',
   language: 'zh'
+});
+
+// GitHub配置
+const githubConfig = reactive({
+  github_token: '',
+  github_repo: '',
+  github_branch: 'main',
+  github_folder: 'images'
 });
 
 // 目录和图片列表
@@ -214,6 +317,7 @@ const selectedFooterIcon = ref('');
 onMounted(async () => {
   await loadSettings();
   await loadDirectories();
+  await checkGitHubStatus();
   loading.value = false;
 });
 
@@ -236,12 +340,99 @@ const loadSettings = async () => {
       language: configData.language || 'zh'
     });
 
+    // 加载GitHub配置
+    Object.assign(githubConfig, {
+      github_token: configData.github_token || '',
+      github_repo: configData.github_repo || '',
+      github_branch: configData.github_branch || 'main',
+      github_folder: configData.github_folder || 'images'
+    });
+
     // 设置选中的相对路径值
     selectedEncounterGroupsDir.value = config.encounter_groups_dir;
     selectedFooterIcon.value = config.footer_icon_dir;
   } catch (err: any) {
     console.warn('加载配置失败，使用默认配置:', err);
     resetToDefaults();
+  }
+};
+
+/**
+ * 检查GitHub状态
+ */
+const checkGitHubStatus = async () => {
+  try {
+    const status = await GitHubService.getStatus();
+    
+    if (status.data.status.is_logged_in) {
+      githubLoginSuccess.value = true;
+      githubUsername.value = status.data.status.username || '';
+      // 自动加载仓库列表
+      await loadGitHubRepositories();
+    }
+  } catch (err: any) {
+    console.warn('获取GitHub状态失败:', err);
+  }
+};
+
+/**
+ * 验证GitHub Token
+ */
+const verifyGitHubToken = async () => {
+  if (!githubConfig.github_token.trim()) {
+    githubLoginError.value = '请输入GitHub Token';
+    return;
+  }
+
+  githubVerifying.value = true;
+  githubLoginError.value = '';
+  githubLoginSuccess.value = false;
+
+  try {
+    // 1. 先调用登录接口验证token
+    await GitHubService.login(githubConfig.github_token.trim());
+    
+    // 2. 登录成功后获取GitHub状态来获取用户名
+    const status = await GitHubService.getStatus();
+    
+    
+    githubLoginSuccess.value = true;
+    githubUsername.value = status.data.status.username || '';
+    githubLoginError.value = '';
+    
+    // 3. 登录成功后自动加载仓库列表
+    await loadGitHubRepositories();
+    
+  } catch (err: any) {
+    githubLoginError.value = err.message || 'GitHub登录失败';
+    githubLoginSuccess.value = false;
+    githubUsername.value = '';
+    githubRepositories.value = [];
+  } finally {
+    githubVerifying.value = false;
+  }
+};
+
+/**
+ * 加载GitHub仓库列表
+ */
+const loadGitHubRepositories = async () => {
+  if (!githubLoginSuccess.value) {
+    console.warn('未登录，跳过加载仓库列表');
+    return;
+  }
+
+  loadingRepositories.value = true;
+  try {
+    const repositories = (await GitHubService.getRepositories()).data.repositories;
+    githubRepositories.value = repositories;
+    console.log('获取到的仓库列表:', githubRepositories.value);
+  } catch (err: any) {
+    console.error('加载仓库列表失败:', err);
+    error.value = '加载仓库列表失败: ' + (err.message || '未知错误');
+    githubRepositories.value = [];
+  } finally {
+    loadingRepositories.value = false;
   }
 };
 
@@ -379,11 +570,13 @@ const saveSettings = async () => {
       }
     }
     
-    // 确保配置中存储的是相对路径
+    // 合并所有配置
     const configToSave = {
       ...config,
       encounter_groups_dir: selectedEncounterGroupsDir.value,
-      footer_icon_dir: selectedFooterIcon.value
+      footer_icon_dir: selectedFooterIcon.value,
+      // GitHub配置
+      ...githubConfig
     };
     
     // 保存配置
@@ -393,7 +586,7 @@ const saveSettings = async () => {
     config.encounter_groups_dir = selectedEncounterGroupsDir.value;
     config.footer_icon_dir = selectedFooterIcon.value;
     
-    successMessage.value = '设置保存成功！（使用相对路径）';
+    successMessage.value = '设置保存成功！';
     setTimeout(() => {
       successMessage.value = '';
     }, 3000);
@@ -406,7 +599,7 @@ const saveSettings = async () => {
 };
 
 /**
- * 重置为默认设置
+ * 重置设置
  */
 const resetSettings = () => {
   if (confirm('确定要重置所有设置为默认值吗？此操作不可撤销。')) {
@@ -429,6 +622,20 @@ const resetToDefaults = () => {
     language: 'zh'
   });
   
+  // 重置GitHub配置
+  Object.assign(githubConfig, {
+    github_token: '',
+    github_repo: '',
+    github_branch: 'main',
+    github_folder: 'images'
+  });
+  
+  // 重置GitHub状态
+  githubLoginSuccess.value = false;
+  githubLoginError.value = '';
+  githubUsername.value = '';
+  githubRepositories.value = [];
+  
   // 重置选中的相对路径
   selectedEncounterGroupsDir.value = '';
   selectedFooterIcon.value = '';
@@ -442,7 +649,18 @@ watch(() => successMessage.value, (newVal) => {
     }, 3000);
   }
 });
+
+// 监听GitHub Token变化，重置登录状态
+watch(() => githubConfig.github_token, () => {
+  if (githubLoginSuccess.value) {
+    githubLoginSuccess.value = false;
+    githubLoginError.value = '';
+    githubUsername.value = '';
+    githubRepositories.value = [];
+  }
+});
 </script>
+
 
 <style scoped>
 .settings-container {
@@ -553,6 +771,81 @@ watch(() => successMessage.value, (newVal) => {
   font-size: 0.8rem;
   margin-top: 0.25rem;
   font-style: italic;
+}
+
+.link {
+  color: #3498db;
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+/* GitHub相关样式 */
+.token-input-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.token-input-container input {
+  flex: 1;
+}
+
+.verify-btn {
+  padding: 0.5rem 1rem;
+  background: #3498db;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  transition: background-color 0.2s;
+}
+
+.verify-btn:hover:not(:disabled) {
+  background: #2980b9;
+}
+
+.verify-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.verify-btn.success {
+  background: #27ae60;
+}
+
+.verify-btn.success:hover {
+  background: #229954;
+}
+
+.verify-btn.error {
+  background: #e74c3c;
+}
+
+.error-hint {
+  color: #e74c3c;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.success-hint {
+  color: #27ae60;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.repo-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.repo-selector select {
+  flex: 1;
 }
 
 .directory-selector {
@@ -688,6 +981,8 @@ watch(() => successMessage.value, (newVal) => {
     gap: 0.25rem;
   }
   
+  .token-input-container,
+  .repo-selector,
   .directory-selector {
     flex-direction: column;
     gap: 0.5rem;

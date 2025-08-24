@@ -333,6 +333,12 @@ export interface DeckData {
   backCards: DeckCardItem[];
 }
 
+// TTS导出物品请求类型
+export interface ExportTtsItemRequest {
+  deck_name: string;
+  face_url: string;
+  back_url: string;
+}
 // TTS导出相关错误码扩展
 export enum TtsExportErrorCode {
   // 目录操作相关错误码 (9001-9099)
@@ -344,18 +350,23 @@ export enum TtsExportErrorCode {
   FILE_PATH_MISSING = 9006,
   FILE_LOCATION_OPEN_FAILED = 9007,
   FILE_LOCATION_SYSTEM_ERROR = 9008,
-
   // 牌库导出相关错误码 (8001-8099)
   DECK_NAME_MISSING = 8001,
   EXPORT_FORMAT_INVALID = 8002,
   QUALITY_INVALID = 8003,
   DECK_EXPORT_FAILED = 8004,
   DECK_EXPORT_SYSTEM_ERROR = 8005,
+  // TTS物品导出相关错误码 (11001-11099)
+  TTS_MISSING_PARAMS = 11001,
+  TTS_FACE_URL_INVALID = 11002,
+  TTS_BACK_URL_INVALID = 11003,
+  TTS_EXPORT_FAILED = 11004,
+  TTS_EXPORT_SYSTEM_ERROR = 11005,
 }
-
 // API响应类型
 export type OpenDirectoryResponse = BaseResponse<null>;
 export type ExportDeckImageResponse = BaseResponse<null>;
+export type ExportTtsItemResponse = BaseResponse<null>;
 
 
 
