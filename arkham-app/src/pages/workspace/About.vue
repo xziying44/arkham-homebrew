@@ -84,7 +84,7 @@
           <div class="version-info">
             <div class="version-item">
               <span class="version-label">{{ $t('about.sections.version.current') }}</span>
-              <span class="version-value">v2.3</span>
+              <span class="version-value">v2.4</span>
             </div>
             <div class="version-item">
               <span class="version-label">{{ $t('about.sections.version.buildTime') }}</span>

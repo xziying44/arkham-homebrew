@@ -238,6 +238,17 @@ class FontManager:
 
         :param font_folder: 字体文件存放目录，默认为'fonts'
         """
+
+        self.font_map = {}
+        self.font_folder = get_resource_path(font_folder)
+        self._load_fonts()
+        self.lang = lang
+        self.set_lang(lang)
+
+    def set_lang(self, lang='zh'):
+        if lang == self.lang:
+            return
+        self.lang = lang
         if lang == 'en':
             self.font_dict = {
                 '思源黑体': 'NimbusRomNo9L-Med',
@@ -252,10 +263,6 @@ class FontManager:
                 '副标题': '汉仪小隶书简',
                 '小字': '汉仪小隶书简',
             }
-        self.font_map = {}
-        self.font_folder = get_resource_path(font_folder)
-        self._load_fonts()
-        self.lang = lang
 
     def _load_fonts(self):
         """加载字体目录下所有支持的字体文件"""

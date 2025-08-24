@@ -68,14 +68,14 @@ export default {
     validation: {
       folderNameRequired: '请输入文件夹名称',
       folderNameLength: '文件夹名称长度在1-50个字符',
-      folderNameInvalid: '文件夹名称不能包含特殊字符 \\/:*?"<>|',
+      folderNameInvalid: '文件夹名称不能包含特殊字符 \\/:*?"<>',
       cardNameRequired: '请输入卡牌文件名',
       cardNameLength: '卡牌文件名长度在1-50个字符',
-      cardNameInvalid: '卡牌文件名不能包含特殊字符 \\/:*?"<>|',
+      cardNameInvalid: '卡牌文件名不能包含特殊字符 \\/:*?"<>',
       filenameRequired: '请输入文件名',
       filenameLength: '文件名长度在1-50个字符',
-      filenameInvalid: '文件名不能包含特殊字符 \\/:*?"<>|.',
-      extensionInvalid: '扩展名不能包含特殊字符 \\/:*?"<>|.'
+      filenameInvalid: '文件名不能包含特殊字符 \\/:*?"<>.',
+      extensionInvalid: '扩展名不能包含特殊字符 \\/:*?"<>.'
     },
     messages: {
       loadFailed: '加载文件树失败',

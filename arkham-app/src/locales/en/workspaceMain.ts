@@ -68,14 +68,14 @@ export default {
     validation: {
       folderNameRequired: 'Please enter folder name',
       folderNameLength: 'Folder name length should be 1-50 characters',
-      folderNameInvalid: 'Folder name cannot contain special characters \\/:*?"<>|',
+      folderNameInvalid: 'Folder name cannot contain special characters \\/:*?"<>',
       cardNameRequired: 'Please enter card filename',
       cardNameLength: 'Card filename length should be 1-50 characters',
-      cardNameInvalid: 'Card filename cannot contain special characters \\/:*?"<>|',
+      cardNameInvalid: 'Card filename cannot contain special characters \\/:*?"<>',
       filenameRequired: 'Please enter filename',
       filenameLength: 'Filename length should be 1-50 characters',
-      filenameInvalid: 'Filename cannot contain special characters \\/:*?"<>|.',
-      extensionInvalid: 'Extension cannot contain special characters \\/:*?"<>|.'
+      filenameInvalid: 'Filename cannot contain special characters \\/:*?"<>.',
+      extensionInvalid: 'Extension cannot contain special characters \\/:*?"<>.'
     },
     messages: {
       loadFailed: 'Failed to load file tree',

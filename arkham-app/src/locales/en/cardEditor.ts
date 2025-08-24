@@ -26,7 +26,7 @@ export default {
     importJson: 'Import JSON',
     viewJson: 'View JSON',
     selectCardFileToEdit: 'Please select a card file (.card) in the file manager to edit',
-    
+
     // AI assistant
     aiAssistant: '🤖 AI Card Assistant',
     describeYourCard: 'Describe the card you want',
@@ -43,38 +43,43 @@ export default {
     validationFailed: '❌ Validation Failed',
     cardDataValid: 'Card data format is correct and can be imported into the editor',
     importToEditor: 'Import to Editor',
-    
+
     // Card type
     cardType: 'Card Type',
     selectCardType: 'Select Card Type',
-    
+
     // Card properties
     cardProperties: 'Card Properties',
-    
+
+    language: "Language",
+    selectLanguage: "Select Language",
+    chinese: "中文",
+    english: "English",
+
     // Card info
     cardInfo: 'Card Information',
     illustrator: '🎨 Illustrator',
     encounterGroupNumber: '📋 Encounter Group Number',
     cardNumber: '📋 Card Number',
     cardRemarks: '📝 Card Remarks',
-    
+
     // Action buttons
     saveCard: 'Save Card',
     previewCard: 'Preview Card',
     exportImage: 'Export Image',
     reset: 'Reset',
-    
+
     // JSON modal
     currentJsonData: 'Current JSON Data',
     copyJson: 'Copy JSON',
-    
+
     // Import JSON modal
     importJsonData: 'Import JSON Data',
     pasteJsonData: 'Please paste JSON data',
     pasteJsonPlaceholder: 'Please paste the JSON data to import...',
     cancel: 'Cancel',
     import: 'Import',
-    
+
     // Save confirmation dialog
     saveConfirmation: 'Save Confirmation',
     unsavedChanges: 'Unsaved Changes',
@@ -82,10 +87,10 @@ export default {
     changesWillBeLost: 'If you don\'t save, your changes will be lost.',
     dontSave: 'Don\'t Save',
     save: 'Save',
-    
+
     // Shortcuts
     ctrlS: '(Ctrl+S)',
-    
+
     // Message prompts
     noFileSelected: 'No file selected',
     cardSavedSuccessfully: 'Card saved successfully',
@@ -106,7 +111,7 @@ export default {
     jsonDataImportedSuccessfully: 'JSON data imported successfully',
     importFailed: 'Import failed',
     invalidJsonFormat: 'Invalid JSON format',
-    
+
     // AI related messages
     pleaseEnterPrompt: 'Please enter prompt',
     aiGenerationFailed: 'AI generation failed',

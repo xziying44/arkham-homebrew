@@ -13,9 +13,10 @@
                     </span>
                 </n-space>
                 <n-space size="small">
-                    <n-button size="tiny" @click="showImportJsonModal = true" class="header-button">{{ $t('cardEditor.panel.importJson') }}</n-button>
-                    <n-button size="tiny" @click="showJsonModal = true" class="header-button"
-                        v-if="selectedFile">{{ $t('cardEditor.panel.viewJson') }}</n-button>
+                    <n-button size="tiny" @click="showImportJsonModal = true" class="header-button">{{
+                        $t('cardEditor.panel.importJson') }}</n-button>
+                    <n-button size="tiny" @click="showJsonModal = true" class="header-button" v-if="selectedFile">{{
+                        $t('cardEditor.panel.viewJson') }}</n-button>
                     <n-button v-if="!showImagePreview" size="tiny" quaternary @click="$emit('toggle-image-preview')"
                         class="header-button">
                         <n-icon :component="ImageOutline" />
@@ -34,7 +35,8 @@
             <n-scrollbar v-else>
                 <div class="form-wrapper">
                     <!-- AI制卡区域 -->
-                    <n-card v-if="aiEnabledInEditor" :title="$t('cardEditor.panel.aiAssistant')" size="small" class="form-card ai-card">
+                    <n-card v-if="aiEnabledInEditor" :title="$t('cardEditor.panel.aiAssistant')" size="small"
+                        class="form-card ai-card">
                         <n-space vertical size="medium">
                             <!-- 提示词输入 -->
                             <n-form-item :label="$t('cardEditor.panel.describeYourCard')">
@@ -50,7 +52,8 @@
                                     <template #icon>
                                         <n-icon :component="SparklesIcon" />
                                     </template>
-                                    {{ aiGenerating ? $t('cardEditor.panel.generating') : $t('cardEditor.panel.generateCard') }}
+                                    {{ aiGenerating ? $t('cardEditor.panel.generating') :
+                                        $t('cardEditor.panel.generateCard') }}
                                 </n-button>
                                 <n-button v-if="aiGenerating" @click="stopAIGeneration">
                                     {{ $t('cardEditor.panel.stopGeneration') }}
@@ -67,19 +70,22 @@
                                         <n-space align="center">
                                             <n-icon :component="aiGenerating ? LoadingOutline : CheckmarkCircleOutline"
                                                 :class="{ 'spinning': aiGenerating }" />
-                                            <span>{{ aiGenerating ? $t('cardEditor.panel.aiThinking') : $t('cardEditor.panel.generationComplete') }}</span>
+                                            <span>{{ aiGenerating ? $t('cardEditor.panel.aiThinking') :
+                                                $t('cardEditor.panel.generationComplete') }}</span>
                                         </n-space>
                                     </template>
 
                                     <!-- 思考过程展示 -->
                                     <div v-if="aiThinking" class="ai-thinking">
-                                        <n-text depth="3" style="font-size: 12px;">{{ $t('cardEditor.panel.aiThoughtProcess') }}</n-text>
+                                        <n-text depth="3" style="font-size: 12px;">{{
+                                            $t('cardEditor.panel.aiThoughtProcess') }}</n-text>
                                         <div class="thinking-content">{{ aiThinking }}</div>
                                     </div>
 
                                     <!-- JSON内容展示 -->
                                     <div v-if="aiJsonContent" class="ai-json-content">
-                                        <n-text depth="3" style="font-size: 12px;">{{ $t('cardEditor.panel.generatedCardData') }}</n-text>
+                                        <n-text depth="3" style="font-size: 12px;">{{
+                                            $t('cardEditor.panel.generatedCardData') }}</n-text>
                                         <div class="ai-json-display">
                                             <n-code :code="aiJsonContent" language="json" class="ai-json-code" />
                                         </div>
@@ -88,7 +94,8 @@
                                     <!-- 验证状态 -->
                                     <div v-if="aiValidationStatus" class="validation-status">
                                         <n-alert :type="aiValidationStatus.isValid ? 'success' : 'error'"
-                                            :title="aiValidationStatus.isValid ? $t('cardEditor.panel.validationSuccess') : $t('cardEditor.panel.validationFailed')" size="small">
+                                            :title="aiValidationStatus.isValid ? $t('cardEditor.panel.validationSuccess') : $t('cardEditor.panel.validationFailed')"
+                                            size="small">
                                             <div v-if="!aiValidationStatus.isValid">
                                                 <div v-for="error in aiValidationStatus.errors" :key="error"
                                                     class="error-item">
@@ -119,14 +126,29 @@
 
                     <!-- 卡牌类型选择 -->
                     <n-card :title="$t('cardEditor.panel.cardType')" size="small" class="form-card">
-                        <n-form-item :label="$t('cardEditor.panel.selectCardType')">
-                            <n-select v-model:value="currentCardData.type" :options="cardTypeOptions"
-                                :placeholder="$t('cardEditor.panel.selectCardType')" @update:value="onCardTypeChange" />
-                        </n-form-item>
+                        <div class="form-row">
+                            <!-- 语言选择 - 左列 -->
+                            <div class="form-field layout-half">
+                                <n-form-item :label="$t('cardEditor.panel.language')">
+                                    <n-select v-model:value="currentCardData.language" :options="languageOptions"
+                                        :placeholder="$t('cardEditor.panel.selectLanguage')" />
+                                </n-form-item>
+                            </div>
+
+                            <!-- 卡牌类型选择 - 右列 -->
+                            <div class="form-field layout-half">
+                                <n-form-item :label="$t('cardEditor.panel.selectCardType')">
+                                    <n-select v-model:value="currentCardData.type" :options="cardTypeOptions"
+                                        :placeholder="$t('cardEditor.panel.selectCardType')"
+                                        @update:value="onCardTypeChange" />
+                                </n-form-item>
+                            </div>
+                        </div>
                     </n-card>
 
                     <!-- 动态表单 -->
-                    <n-card v-if="currentCardType && currentFormConfig" :title="$t('cardEditor.panel.cardProperties')" size="small" class="form-card">
+                    <n-card v-if="currentCardType && currentFormConfig" :title="$t('cardEditor.panel.cardProperties')"
+                        size="small" class="form-card">
                         <n-form ref="dynamicFormRef" :model="currentCardData" label-placement="top" size="small">
                             <div v-for="(row, rowIndex) in formFieldRows" :key="rowIndex" class="form-row">
                                 <div v-for="field in row"
@@ -146,7 +168,8 @@
                     </n-card>
 
                     <!-- 卡牌信息 -->
-                    <n-card v-if="currentCardType" :title="$t('cardEditor.panel.cardInfo')" size="small" class="form-card">
+                    <n-card v-if="currentCardType" :title="$t('cardEditor.panel.cardInfo')" size="small"
+                        class="form-card">
                         <n-form :model="currentCardData" label-placement="top" size="small">
                             <div class="form-row">
                                 <!-- 插画作者 -->
@@ -209,9 +232,10 @@
                                 {{ $t('cardEditor.panel.saveCard') }}
                                 <span class="keyboard-shortcut">{{ $t('cardEditor.panel.ctrlS') }}</span>
                             </n-button>
-                            <n-button @click="previewCard" :loading="generating">{{ $t('cardEditor.panel.previewCard') }}</n-button>
-                            <n-button @click="exportCard" :loading="exporting"
-                                :disabled="!hasValidCardData">{{ $t('cardEditor.panel.exportImage') }}</n-button>
+                            <n-button @click="previewCard" :loading="generating">{{ $t('cardEditor.panel.previewCard')
+                                }}</n-button>
+                            <n-button @click="exportCard" :loading="exporting" :disabled="!hasValidCardData">{{
+                                $t('cardEditor.panel.exportImage') }}</n-button>
                             <n-button @click="resetForm">{{ $t('cardEditor.panel.reset') }}</n-button>
                         </n-space>
                     </div>
@@ -221,7 +245,8 @@
 
         <!-- JSON查看模态框 -->
         <n-modal v-model:show="showJsonModal" style="width: 80%; max-width: 800px;">
-            <n-card :title="$t('cardEditor.panel.currentJsonData')" :bordered="false" size="huge" role="dialog" aria-modal="true">
+            <n-card :title="$t('cardEditor.panel.currentJsonData')" :bordered="false" size="huge" role="dialog"
+                aria-modal="true">
                 <div class="json-modal-content">
                     <div class="json-display-container">
                         <n-scrollbar style="max-height: 60vh;">
@@ -249,8 +274,9 @@
         <n-modal v-model:show="showImportJsonModal" preset="dialog" :title="$t('cardEditor.panel.importJsonData')">
             <div class="import-json-content">
                 <n-form-item :label="$t('cardEditor.panel.pasteJsonData')">
-                    <n-input v-model:value="importJsonText" type="textarea" :placeholder="$t('cardEditor.panel.pasteJsonPlaceholder')" :rows="10"
-                        maxlength="50000" show-count class="import-textarea" />
+                    <n-input v-model:value="importJsonText" type="textarea"
+                        :placeholder="$t('cardEditor.panel.pasteJsonPlaceholder')" :rows="10" maxlength="50000"
+                        show-count class="import-textarea" />
                 </n-form-item>
                 <div v-if="importJsonError" class="import-error">
                     <n-alert type="error" :title="importJsonError" />
@@ -268,7 +294,8 @@
 
         <!-- 保存确认对话框 -->
         <n-modal v-model:show="showSaveConfirmDialog">
-            <n-card style="width: 450px" :title="$t('cardEditor.panel.saveConfirmation')" :bordered="false" size="huge" role="dialog" aria-modal="true">
+            <n-card style="width: 450px" :title="$t('cardEditor.panel.saveConfirmation')" :bordered="false" size="huge"
+                role="dialog" aria-modal="true">
                 <n-space vertical>
                     <n-alert type="warning" :title="$t('cardEditor.panel.unsavedChanges')">
                         <template #icon>
@@ -287,7 +314,8 @@
                     <n-space justify="end">
                         <n-button @click="discardChanges">{{ $t('cardEditor.panel.dontSave') }}</n-button>
                         <n-button @click="showSaveConfirmDialog = false">{{ $t('cardEditor.panel.cancel') }}</n-button>
-                        <n-button type="primary" @click="saveAndSwitch" :loading="saving">{{ $t('cardEditor.panel.save') }}</n-button>
+                        <n-button type="primary" @click="saveAndSwitch" :loading="saving">{{ $t('cardEditor.panel.save')
+                            }}</n-button>
                     </n-space>
                 </template>
             </n-card>
@@ -352,7 +380,20 @@ const currentCardData = reactive({
     id: '',
     created_at: '',
     version: '1.0',
+    language: 'zh', // 新增：默认语言为中文
 });
+
+// 新增：语言选项
+const languageOptions = computed(() => [
+    {
+        label: t('cardEditor.panel.chinese'),
+        value: 'zh'
+    },
+    {
+        label: t('cardEditor.panel.english'),
+        value: 'en'
+    }
+]);
 
 // 原始数据状态 - 用于检测修改
 const originalCardData = ref<string>('');
@@ -1083,20 +1124,18 @@ const autoGeneratePreview = async () => {
     }
 };
 
+// 修改 loadCardData 方法，确保有默认语言
 const loadCardData = async () => {
     if (!props.selectedFile || props.selectedFile.type !== 'card' || !props.selectedFile.path) {
         return;
     }
-
     try {
         const content = await WorkspaceService.getFileContent(props.selectedFile.path);
         const cardData = JSON.parse(content || '{}');
-
         // 清空当前数据
         Object.keys(currentCardData).forEach(key => {
             delete currentCardData[key];
         });
-
         // 加载新数据
         Object.assign(currentCardData, {
             type: '',
@@ -1104,20 +1143,17 @@ const loadCardData = async () => {
             id: '',
             created_at: '',
             version: '1.0',
+            language: 'zh', // 新增：默认语言
             ...cardData
         });
-
         currentCardType.value = cardData.type || '';
-
         // 等待TTS配置加载完成后再保存原始数据
         await nextTick();
         setTimeout(() => {
             saveOriginalData();
-
             // 加载完成后自动生成预览
             autoGeneratePreview();
-        }, 100); // 给TTS配置更新一点时间
-
+        }, 100);
     } catch (error) {
         console.error('加载卡牌数据失败:', error);
         message.error(t('cardEditor.panel.loadCardDataFailed'));
@@ -1233,6 +1269,7 @@ const clearFormData = () => {
         id: '',
         created_at: '',
         version: '1.0',
+        language: 'zh', // 新增：默认语言
     });
     currentCardType.value = '';
     saveOriginalData();
@@ -1335,21 +1372,25 @@ const exportCard = async () => {
     }
 };
 
+// 修改 resetForm 方法，保持语言设置
 const resetForm = () => {
     const hiddenFields = ['id', 'created_at', 'version'];
     const hiddenData = {};
-
     hiddenFields.forEach(field => {
         if (currentCardData[field] !== undefined) {
             hiddenData[field] = currentCardData[field];
         }
     });
-
+    // 保持当前语言设置
+    const currentLanguage = currentCardData.language || 'zh';
     Object.keys(currentCardData).forEach(key => {
         delete currentCardData[key];
     });
-
-    Object.assign(currentCardData, hiddenData, { type: '', name: '' });
+    Object.assign(currentCardData, hiddenData, {
+        type: '',
+        name: '',
+        language: currentLanguage // 新增：保持语言设置
+    });
     currentCardType.value = '';
     saveOriginalData();
     message.info(t('cardEditor.panel.formReset'));

@@ -26,7 +26,7 @@ export default {
     importJson: '导入JSON',
     viewJson: '查看JSON',
     selectCardFileToEdit: '请在文件管理器中选择一个卡牌文件(.card)进行编辑',
-    
+
     // AI 助手
     aiAssistant: '🤖 AI制卡助手',
     describeYourCard: '描述你想要的卡牌',
@@ -43,38 +43,43 @@ export default {
     validationFailed: '❌ 验证失败',
     cardDataValid: '卡牌数据格式正确，可以导入到编辑器中',
     importToEditor: '导入到编辑器',
-    
+
     // 卡牌类型
     cardType: '卡牌类型',
     selectCardType: '选择卡牌类型',
-    
+
+    language: "语言",
+    selectLanguage: "选择语言",
+    chinese: "中文",
+    english: "English",
+
     // 卡牌属性
     cardProperties: '卡牌属性',
-    
+
     // 卡牌信息
     cardInfo: '卡牌信息',
     illustrator: '🎨 插画作者',
     encounterGroupNumber: '📋 遭遇组序号',
     cardNumber: '📋 卡牌序号',
     cardRemarks: '📝 卡牌备注信息',
-    
+
     // 操作按钮
     saveCard: '保存卡牌',
     previewCard: '预览卡图',
     exportImage: '导出图片',
     reset: '重置',
-    
+
     // JSON 模态框
     currentJsonData: '当前JSON数据',
     copyJson: '复制JSON',
-    
+
     // 导入 JSON 模态框
     importJsonData: '导入JSON数据',
     pasteJsonData: '请粘贴JSON数据',
     pasteJsonPlaceholder: '请粘贴要导入的JSON数据...',
     cancel: '取消',
     import: '导入',
-    
+
     // 保存确认对话框
     saveConfirmation: '保存确认',
     unsavedChanges: '未保存的修改',
@@ -82,10 +87,10 @@ export default {
     changesWillBeLost: '如果不保存，您的修改将会丢失。',
     dontSave: '不保存',
     save: '保存',
-    
+
     // 快捷键
     ctrlS: '(Ctrl+S)',
-    
+
     // 消息提示
     noFileSelected: '未选择文件',
     cardSavedSuccessfully: '卡牌保存成功',
@@ -106,7 +111,7 @@ export default {
     jsonDataImportedSuccessfully: 'JSON数据导入成功',
     importFailed: '导入失败',
     invalidJsonFormat: '无效的JSON格式',
-    
+
     // AI 相关消息
     pleaseEnterPrompt: '请输入提示词',
     aiGenerationFailed: 'AI生成失败',

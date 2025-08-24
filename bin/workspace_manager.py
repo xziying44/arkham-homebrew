@@ -463,6 +463,10 @@ class WorkspaceManager:
                 if os.path.exists(full_picture_path):
                     picture_path = full_picture_path
 
+            # 检测卡牌语言
+            language = json_data.get('language', 'zh')
+            self.font_manager.set_lang(language)
+
             # 调用process_card_json生成卡牌
             card = process_card_json(
                 json_data,

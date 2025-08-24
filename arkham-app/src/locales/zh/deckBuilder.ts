@@ -36,7 +36,7 @@ export default {
     validation: {
       nameRequired: '请输入牌库名称',
       nameLength: '牌库名称长度在1-50个字符',
-      namePattern: '牌库名称不能包含特殊字符 \\/:*?"<>|',
+      namePattern: '牌库名称不能包含特殊字符 \\/:*?"<>',
       widthRequired: '请输入宽度',
       widthRange: '宽度必须在1-10之间',
       heightRequired: '请输入高度',

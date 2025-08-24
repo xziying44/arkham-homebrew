@@ -36,7 +36,7 @@ export default {
     validation: {
       nameRequired: 'Please enter deck name',
       nameLength: 'Deck name must be between 1-50 characters',
-      namePattern: 'Deck name cannot contain special characters \\/:*?"<>|',
+      namePattern: 'Deck name cannot contain special characters \\/:*?"<>',
       widthRequired: 'Please enter width',
       widthRange: 'Width must be between 1-10',
       heightRequired: 'Please enter height',
