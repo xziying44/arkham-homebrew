@@ -4,8 +4,8 @@
             <!-- ID配置 -->
             <n-form-item label="🔖 脚本ID">
                 <n-space align="center">
-                    <n-input v-model:value="cardConfig.id" placeholder="输入自定义ID或使用随机生成" style="flex: 1"
-                        @update:value="onCardConfigChange" />
+                    <n-input v-model:value="scriptConfig.id" placeholder="输入自定义ID或使用随机生成" style="flex: 1"
+                        @update:value="onScriptConfigChange" />
                     <n-button @click="generateRandomId" size="small" type="primary">
                         🎲 随机
                     </n-button>
@@ -13,11 +13,11 @@
             </n-form-item>
 
             <!-- 调查员专用配置 -->
-            <template v-if="cardType === '调查员'">
+            <template v-if="props.cardType === '调查员'">
                 <!-- 额外标记类型 -->
                 <n-form-item label="🏷️ 额外标记（每轮一次）">
                     <n-select v-model:value="investigatorConfig.extraToken" :options="extraTokenOptions"
-                        placeholder="选择额外标记类型" @update:value="onCardConfigChange" />
+                        placeholder="选择额外标记类型" @update:value="onScriptConfigChange" />
                 </n-form-item>
 
                 <!-- 四维属性 -->
@@ -26,108 +26,74 @@
                         <div class="attribute-input">
                             <n-text depth="3" style="font-size: 12px;">🧠 意志</n-text>
                             <n-input-number v-model:value="investigatorConfig.willpowerIcons" :min="0" :max="9" :step="1"
-                                size="small" @update:value="onCardConfigChange" />
+                                size="small" @update:value="onScriptConfigChange" />
                         </div>
                         <div class="attribute-input">
                             <n-text depth="3" style="font-size: 12px;">📚 智力</n-text>
                             <n-input-number v-model:value="investigatorConfig.intellectIcons" :min="0" :max="9" :step="1"
-                                size="small" @update:value="onCardConfigChange" />
+                                size="small" @update:value="onScriptConfigChange" />
                         </div>
                         <div class="attribute-input">
                             <n-text depth="3" style="font-size: 12px;">⚔️ 战力</n-text>
                             <n-input-number v-model:value="investigatorConfig.combatIcons" :min="0" :max="9" :step="1"
-                                size="small" @update:value="onCardConfigChange" />
+                                size="small" @update:value="onScriptConfigChange" />
                         </div>
                         <div class="attribute-input">
                             <n-text depth="3" style="font-size: 12px;">⚡ 敏捷</n-text>
                             <n-input-number v-model:value="investigatorConfig.agilityIcons" :min="0" :max="9" :step="1"
-                                size="small" @update:value="onCardConfigChange" />
+                                size="small" @update:value="onScriptConfigChange" />
                         </div>
                     </n-space>
                 </n-form-item>
-            </template>
 
-            <!-- 支援卡/事件卡专用配置 -->
-            <template v-if="cardType === '支援' || cardType === '事件'">
-                <!-- 基本属性 -->
-                <n-form-item label="📊 卡片属性">
+                <!-- 每阶段脚本配置开关 -->
+                <n-form-item label="🎮 每阶段按钮配置">
                     <n-space vertical size="small">
-                        <n-space align="center">
-                            <n-text depth="3">💰 费用:</n-text>
-                            <n-input-number v-model:value="assetConfig.cost" :min="0" :max="99" :step="1"
-                                size="small" style="width: 80px" @update:value="onCardConfigChange" />
-                            
-                            <n-text depth="3">📶 等级:</n-text>
-                            <n-input-number v-model:value="assetConfig.level" :min="0" :max="5" :step="1"
-                                size="small" style="width: 80px" @update:value="onCardConfigChange" />
-                        </n-space>
-                        
-                        <!-- 技能图标 -->
-                        <n-space>
-                            <div class="attribute-input">
-                                <n-text depth="3" style="font-size: 12px;">🧠</n-text>
-                                <n-input-number v-model:value="assetConfig.willpowerIcons" :min="0" :max="3" :step="1"
-                                    size="small" @update:value="onCardConfigChange" />
-                            </div>
-                            <div class="attribute-input">
-                                <n-text depth="3" style="font-size: 12px;">📚</n-text>
-                                <n-input-number v-model:value="assetConfig.intellectIcons" :min="0" :max="3" :step="1"
-                                    size="small" @update:value="onCardConfigChange" />
-                            </div>
-                            <div class="attribute-input">
-                                <n-text depth="3" style="font-size: 12px;">⚔️</n-text>
-                                <n-input-number v-model:value="assetConfig.combatIcons" :min="0" :max="3" :step="1"
-                                    size="small" @update:value="onCardConfigChange" />
-                            </div>
-                            <div class="attribute-input">
-                                <n-text depth="3" style="font-size: 12px;">⚡</n-text>
-                                <n-input-number v-model:value="assetConfig.agilityIcons" :min="0" :max="3" :step="1"
-                                    size="small" @update:value="onCardConfigChange" />
-                            </div>
-                            <div class="attribute-input">
-                                <n-text depth="3" style="font-size: 12px;">🌟</n-text>
-                                <n-input-number v-model:value="assetConfig.wildIcons" :min="0" :max="3" :step="1"
-                                    size="small" @update:value="onCardConfigChange" />
-                            </div>
-                        </n-space>
-                    </n-space>
-                </n-form-item>
-
-                <!-- Uses 配置 -->
-                <n-form-item label="🎯 Uses 配置">
-                    <n-space vertical size="small">
-                        <n-switch v-model:value="enableUses" @update:value="onUsesToggle">
-                            <template #checked>启用 Uses</template>
-                            <template #unchecked>禁用 Uses</template>
+                        <n-switch v-model:value="enablePhaseButtons" @update:value="onPhaseButtonToggle">
+                            <template #checked>启用</template>
+                            <template #unchecked>禁用</template>
                         </n-switch>
 
-                        <div v-show="enableUses" class="uses-config">
+                        <!-- 每阶段脚本配置 -->
+                        <div v-show="enablePhaseButtons" class="phase-buttons-config">
                             <n-space vertical size="small">
-                                <!-- Uses 列表 -->
-                                <div v-for="(use, index) in assetConfig.uses" :key="index" class="use-config-row">
+                                <!-- 按钮列表 -->
+                                <div v-for="(button, index) in phaseButtonConfig.buttons" :key="index"
+                                    class="button-config-row">
                                     <n-space align="center">
-                                        <n-text depth="3">数量:</n-text>
-                                        <n-input-number v-model:value="use.count" :min="1" :max="99" :step="1"
-                                            size="small" style="width: 80px" @update:value="onCardConfigChange" />
-                                        
-                                        <n-text depth="3">类型:</n-text>
-                                        <n-input v-model:value="use.type" placeholder="如: Ammo" 
-                                            style="width: 100px" @update:value="onCardConfigChange" />
-                                        
-                                        <n-text depth="3">Token:</n-text>
-                                        <n-select v-model:value="use.token" :options="tokenTypeOptions"
-                                            placeholder="选择Token类型" style="width: 120px"
-                                            @update:value="onCardConfigChange" />
-                                        
-                                        <n-button @click="removeUse(index)" size="small" type="error" quaternary>
-                                            🗑️
+                                        <n-input v-model:value="button.id" placeholder="按钮ID" style="width: 120px"
+                                            @update:value="onPhaseButtonConfigChange" />
+                                        <n-select v-model:value="button.label" :options="buttonLabelOptions"
+                                            placeholder="选择标签" style="width: 140px"
+                                            @update:value="onPhaseButtonConfigChange" />
+                                        <n-select v-model:value="button.color" :options="colorOptions" placeholder="选择颜色"
+                                            style="width: 120px" @update:value="onPhaseButtonConfigChange">
+                                            <template #label="{ option }">
+                                                <div class="color-option-display">
+                                                    <div
+                                                        :style="{ backgroundColor: option.value, width: '16px', height: '16px', borderRadius: '2px', marginRight: '8px' }">
+                                                    </div>
+                                                    <span>{{ option.label }}</span>
+                                                </div>
+                                            </template>
+                                            <template #option="{ node, option }">
+                                                <div class="color-option-display">
+                                                    <div
+                                                        :style="{ backgroundColor: option.value, width: '16px', height: '16px', borderRadius: '2px', marginRight: '8px' }">
+                                                    </div>
+                                                    <span>{{ option.label }}</span>
+                                                </div>
+                                            </template>
+                                        </n-select>
+                                        <n-button @click="removePhaseButton(index)" size="small" type="error" quaternary>
+                                            🗑️ 删除
                                         </n-button>
                                     </n-space>
                                 </div>
 
-                                <!-- 添加 Use -->
-                                <n-button @click="addUse" size="small" type="primary" dashed>
-                                    ➕ 添加 Use
+                                <!-- 添加按钮 -->
+                                <n-button @click="addPhaseButton" size="small" type="primary" dashed>
+                                    ➕ 添加按钮
                                 </n-button>
                             </n-space>
                         </div>
@@ -135,59 +101,44 @@
                 </n-form-item>
             </template>
 
-            <!-- 每阶段脚本配置开关 -->
-            <n-form-item label="🎮 每阶段按钮配置">
-                <n-space vertical size="small">
-                    <n-switch v-model:value="enablePhaseButtons" @update:value="onPhaseButtonToggle">
-                        <template #checked>启用</template>
-                        <template #unchecked>禁用</template>
-                    </n-switch>
+            <!-- 支援卡/事件卡专用配置 -->
+            <template v-if="props.cardType === '支援卡' || props.cardType === '事件卡'">
+                <!-- Uses配置 -->
+                <n-form-item label="🎯 入场标记配置">
+                    <n-space vertical size="medium">
+                        <!-- Uses列表 -->
+                        <div v-for="(use, index) in assetConfig.uses" :key="index" class="uses-config-row">
+                            <n-space align="center">
+                                <div class="uses-input-group">
+                                    <n-text depth="3" style="font-size: 12px;">数量</n-text>
+                                    <n-input-number v-model:value="use.count" :min="0" :max="20" :step="1"
+                                        size="small" @update:value="onScriptConfigChange" />
+                                </div>
+                                <div class="uses-input-group">
+                                    <n-text depth="3" style="font-size: 12px;">令牌</n-text>
+                                    <n-select v-model:value="use.token" :options="tokenOptions"
+                                        placeholder="选择令牌类型" style="width: 120px"
+                                        @update:value="(value) => onTokenChange(index, value)" />
+                                </div>
+                                <div class="uses-input-group">
+                                    <n-text depth="3" style="font-size: 12px;">类型</n-text>
+                                    <n-select v-model:value="use.type" :options="getUsesTypeOptions(use.token)"
+                                        placeholder="选择标记类型" style="width: 120px"
+                                        @update:value="onScriptConfigChange" />
+                                </div>
+                                <n-button @click="removeUse(index)" size="small" type="error" quaternary>
+                                    🗑️ 删除
+                                </n-button>
+                            </n-space>
+                        </div>
 
-                    <!-- 每阶段脚本配置 -->
-                    <div v-show="enablePhaseButtons" class="phase-buttons-config">
-                        <n-space vertical size="small">
-                            <!-- 按钮列表 -->
-                            <div v-for="(button, index) in phaseButtonConfig.buttons" :key="index"
-                                class="button-config-row">
-                                <n-space align="center">
-                                    <n-input v-model:value="button.id" placeholder="按钮ID" style="width: 120px"
-                                        @update:value="onPhaseButtonConfigChange" />
-                                    <n-select v-model:value="button.label" :options="buttonLabelOptions"
-                                        placeholder="选择标签" style="width: 140px"
-                                        @update:value="onPhaseButtonConfigChange" />
-                                    <n-select v-model:value="button.color" :options="colorOptions" placeholder="选择颜色"
-                                        style="width: 120px" @update:value="onPhaseButtonConfigChange">
-                                        <template #label="{ option }">
-                                            <div class="color-option-display">
-                                                <div
-                                                    :style="{ backgroundColor: option.value, width: '16px', height: '16px', borderRadius: '2px', marginRight: '8px' }">
-                                                </div>
-                                                <span>{{ option.label }}</span>
-                                            </div>
-                                        </template>
-                                        <template #option="{ node, option }">
-                                            <div class="color-option-display">
-                                                <div
-                                                    :style="{ backgroundColor: option.value, width: '16px', height: '16px', borderRadius: '2px', marginRight: '8px' }">
-                                                </div>
-                                                <span>{{ option.label }}</span>
-                                            </div>
-                                        </template>
-                                    </n-select>
-                                    <n-button @click="removePhaseButton(index)" size="small" type="error" quaternary>
-                                        🗑️ 删除
-                                    </n-button>
-                                </n-space>
-                            </div>
-
-                            <!-- 添加按钮 -->
-                            <n-button @click="addPhaseButton" size="small" type="primary" dashed>
-                                ➕ 添加按钮
-                            </n-button>
-                        </n-space>
-                    </div>
-                </n-space>
-            </n-form-item>
+                        <!-- 添加Uses -->
+                        <n-button @click="addUse" size="small" type="primary" dashed>
+                            ➕ 添加标记配置
+                        </n-button>
+                    </n-space>
+                </n-form-item>
+            </template>
 
             <!-- 预览GMNotes -->
             <n-form-item label="📋 GMNotes预览">
@@ -231,17 +182,21 @@ interface Props {
 interface TtsScriptData {
     GMNotes: string;
     LuaScript: string;
+    // 新增：保存配置项
     config?: {
         enablePhaseButtons: boolean;
-        enableUses: boolean;
         phaseButtonConfig: PhaseButtonConfig;
         investigatorConfig: InvestigatorConfig;
         assetConfig: AssetConfig;
+        scriptConfig: ScriptConfig;
     };
 }
 
-interface InvestigatorConfig {
+interface ScriptConfig {
     id: string;
+}
+
+interface InvestigatorConfig {
     extraToken: string;
     willpowerIcons: number;
     intellectIcons: number;
@@ -256,14 +211,6 @@ interface UseConfig {
 }
 
 interface AssetConfig {
-    id: string;
-    cost: number;
-    level: number;
-    willpowerIcons: number;
-    intellectIcons: number;
-    combatIcons: number;
-    agilityIcons: number;
-    wildIcons: number;
     uses: UseConfig[];
 }
 
@@ -274,14 +221,13 @@ const emit = defineEmits<{
 
 const message = useMessage();
 
-// 通用卡片配置
-const cardConfig = ref({
+// 通用脚本配置
+const scriptConfig = ref<ScriptConfig>({
     id: ''
 });
 
 // 调查员TTS配置
 const investigatorConfig = ref<InvestigatorConfig>({
-    id: '',
     extraToken: 'None',
     willpowerIcons: 3,
     intellectIcons: 3,
@@ -289,21 +235,10 @@ const investigatorConfig = ref<InvestigatorConfig>({
     agilityIcons: 2
 });
 
-// 支援卡/事件卡配置
+// 支援卡/事件卡TTS配置
 const assetConfig = ref<AssetConfig>({
-    id: '',
-    cost: 1,
-    level: 0,
-    willpowerIcons: 0,
-    intellectIcons: 0,
-    combatIcons: 0,
-    agilityIcons: 0,
-    wildIcons: 0,
     uses: []
 });
-
-// Uses 配置开关
-const enableUses = ref(false);
 
 // 每阶段按钮配置开关
 const enablePhaseButtons = ref(false);
@@ -323,11 +258,11 @@ const classMapping: Record<string, string> = {
     '中立': 'Neutral'
 };
 
-// 卡片类型映射
+// 卡牌类型映射
 const typeMapping: Record<string, string> = {
     '调查员': 'Investigator',
-    '支援': 'Asset',
-    '事件': 'Event'
+    '支援卡': 'Asset',
+    '事件卡': 'Event'
 };
 
 // 额外标记选项
@@ -337,76 +272,93 @@ const extraTokenOptions = [
     { label: '⚡ 免费', value: 'FreeTrigger' }
 ];
 
-// Token类型选项
-const tokenTypeOptions = [
-    { label: '💧 Resource', value: 'resource' },
-    { label: '🔫 Ammo', value: 'resource' },
-    { label: '💰 Bounty', value: 'resource' },
-    { label: '⚡ Charge', value: 'resource' },
-    { label: '🔍 Evidence', value: 'resource' },
-    { label: '🤫 Secret', value: 'resource' },
-    { label: '📦 Supply', value: 'resource' },
-    { label: '🎁 Offering', value: 'resource' }
+// 令牌类型选项
+const tokenOptions = [
+    { label: '📋 资源', value: 'resource' },
+    { label: '🔥 伤害', value: 'damage' },
+    { label: '👻 恐惧', value: 'horror' },
+    { label: '💀 毁灭', value: 'doom' },
+    { label: '🔍 线索', value: 'clue' }
 ];
+
+// Resource令牌的type选项
+const resourceTypeOptions = [
+    { label: '🔫 弹药', value: 'Ammo' },
+    { label: '💰 资源', value: 'Resource' },
+    { label: '🎯 赏金', value: 'Bounty' },
+    { label: '⚡ 充能', value: 'Charge' },
+    { label: '🔍 证据', value: 'Evidence' },
+    { label: '🤫 秘密', value: 'Secret' },
+    { label: '📦 补给', value: 'Supply' },
+    { label: '🕯️ 贡品', value: 'Offering' }
+];
+
+// 固定令牌的type选项
+const fixedTokenTypeMap: Record<string, { label: string; value: string }[]> = {
+    damage: [{ label: '🔥 伤害', value: 'Damage' }],
+    horror: [{ label: '👻 恐怖', value: 'Horror' }],
+    doom: [{ label: '💀 厄运', value: 'Doom' }],
+    clue: [{ label: '🔍 线索', value: 'Clue' }]
+};
+
+// 根据选择的token类型获取可用的type选项
+const getUsesTypeOptions = (token: string) => {
+    if (token === 'resource') {
+        return resourceTypeOptions;
+    }
+    return fixedTokenTypeMap[token] || [];
+};
 
 // 判断是否应该显示TTS脚本组件
 const shouldShowTtsScript = computed(() => {
-    const supportedTypes = ['调查员', '支援', '事件'];
+    const supportedTypes = ['调查员', '支援卡', '事件卡'];
     return supportedTypes.includes(props.cardType);
 });
 
 // 生成GMNotes
 const generatedGMNotes = computed(() => {
-    if (props.cardType === '调查员') {
-        return generateInvestigatorGMNotes();
-    } else if (props.cardType === '支援' || props.cardType === '事件') {
-        return generateAssetGMNotes();
-    }
-    return '';
-});
+    const cardType = props.cardType;
+    if (!shouldShowTtsScript.value) return '';
 
-// 生成调查员GMNotes
-const generateInvestigatorGMNotes = () => {
-    const gmNotesData = {
-        id: cardConfig.value.id || generateUUID(),
-        type: 'Investigator',
-        class: classMapping[props.cardData.class || '探求者'] || 'Seeker',
-        traits: (props.cardData.traits || []).join('.') + (props.cardData.traits?.length ? '.' : ''),
-        willpowerIcons: investigatorConfig.value.willpowerIcons,
-        intellectIcons: investigatorConfig.value.intellectIcons,
-        combatIcons: investigatorConfig.value.combatIcons,
-        agilityIcons: investigatorConfig.value.agilityIcons,
-        extraToken: investigatorConfig.value.extraToken
-    };
-
-    try {
-        return JSON.stringify(gmNotesData, null, 2);
-    } catch (error) {
-        return '// JSON生成失败';
-    }
-};
-
-// 生成支援卡/事件卡GMNotes
-const generateAssetGMNotes = () => {
-    const gmNotesData: any = {
-        id: cardConfig.value.id || generateUUID(),
+    const baseData = {
+        id: scriptConfig.value.id || generateUUID(),
+        type: typeMapping[cardType] || 'Asset',
         class: classMapping[props.cardData.class || '中立'] || 'Neutral',
-        type: typeMapping[props.cardType] || 'Asset',
-        level: assetConfig.value.level,
+        level: props.cardData.level || 0,
         traits: (props.cardData.traits || []).join('.') + (props.cardData.traits?.length ? '.' : ''),
-        cost: assetConfig.value.cost
+        cost: props.cardData.cost || 0
     };
 
-    // 添加技能图标
-    if (assetConfig.value.willpowerIcons > 0) gmNotesData.willpowerIcons = assetConfig.value.willpowerIcons;
-    if (assetConfig.value.intellectIcons > 0) gmNotesData.intellectIcons = assetConfig.value.intellectIcons;
-    if (assetConfig.value.combatIcons > 0) gmNotesData.combatIcons = assetConfig.value.combatIcons;
-    if (assetConfig.value.agilityIcons > 0) gmNotesData.agilityIcons = assetConfig.value.agilityIcons;
-    if (assetConfig.value.wildIcons > 0) gmNotesData.wildIcons = assetConfig.value.wildIcons;
+    let gmNotesData: any;
 
-    // 添加Uses配置
-    if (enableUses.value && assetConfig.value.uses.length > 0) {
-        gmNotesData.uses = assetConfig.value.uses;
+    switch (cardType) {
+        case '调查员':
+            gmNotesData = {
+                ...baseData,
+                type: 'Investigator',
+                willpowerIcons: investigatorConfig.value.willpowerIcons,
+                intellectIcons: investigatorConfig.value.intellectIcons,
+                combatIcons: investigatorConfig.value.combatIcons,
+                agilityIcons: investigatorConfig.value.agilityIcons,
+                extraToken: investigatorConfig.value.extraToken
+            };
+            break;
+
+        case '支援卡':
+        case '事件卡':
+            gmNotesData = {
+                ...baseData,
+                ...(props.cardData.slot && { slot: props.cardData.slot }),
+                ...(props.cardData.willpowerIcons && { willpowerIcons: props.cardData.willpowerIcons }),
+                ...(props.cardData.intellectIcons && { intellectIcons: props.cardData.intellectIcons }),
+                ...(props.cardData.combatIcons && { combatIcons: props.cardData.combatIcons }),
+                ...(props.cardData.agilityIcons && { agilityIcons: props.cardData.agilityIcons }),
+                ...(assetConfig.value.uses.length > 0 && { uses: assetConfig.value.uses })
+            };
+            break;
+
+        default:
+            return '';
     }
 
     try {
@@ -414,11 +366,11 @@ const generateAssetGMNotes = () => {
     } catch (error) {
         return '// JSON生成失败';
     }
-};
+});
 
 // 生成完整的Lua脚本
 const generatedLuaScript = computed(() => {
-    if (!enablePhaseButtons.value) return '';
+    if (props.cardType !== '调查员' || !enablePhaseButtons.value) return '';
     return generatePhaseButtonScript(phaseButtonConfig.value);
 });
 
@@ -428,10 +380,10 @@ const ttsScriptData = computed((): TtsScriptData => ({
     LuaScript: generatedLuaScript.value,
     config: {
         enablePhaseButtons: enablePhaseButtons.value,
-        enableUses: enableUses.value,
         phaseButtonConfig: phaseButtonConfig.value,
         investigatorConfig: investigatorConfig.value,
-        assetConfig: assetConfig.value
+        assetConfig: assetConfig.value,
+        scriptConfig: scriptConfig.value
     }
 }));
 
@@ -442,36 +394,40 @@ const generateUUID = (): string => {
 
 // 生成随机ID
 const generateRandomId = () => {
-    cardConfig.value.id = generateUUID();
-    if (props.cardType === '调查员') {
-        investigatorConfig.value.id = cardConfig.value.id;
-    } else {
-        assetConfig.value.id = cardConfig.value.id;
-    }
-    onCardConfigChange();
+    scriptConfig.value.id = generateUUID();
+    onScriptConfigChange();
 };
 
-// 添加Use
+// 添加Uses配置
 const addUse = () => {
     assetConfig.value.uses.push({
         count: 2,
-        type: 'Ammo',
+        type: 'Resource',
         token: 'resource'
     });
-    onCardConfigChange();
+    onScriptConfigChange();
 };
 
-// 删除Use
+// 删除Uses配置
 const removeUse = (index: number) => {
     assetConfig.value.uses.splice(index, 1);
-    onCardConfigChange();
+    onScriptConfigChange();
 };
 
-// Uses开关变化处理
-const onUsesToggle = () => {
-    nextTick(() => {
-        emit('update-tts-script', ttsScriptData.value);
-    });
+// 令牌类型变化时自动更新type
+const onTokenChange = (index: number, token: string) => {
+    const use = assetConfig.value.uses[index];
+    if (use) {
+        use.token = token;
+        
+        // 根据token类型自动设置对应的type
+        const typeOptions = getUsesTypeOptions(token);
+        if (typeOptions.length > 0) {
+            use.type = typeOptions[0].value;
+        }
+        
+        onScriptConfigChange();
+    }
 };
 
 // 添加阶段按钮
@@ -490,8 +446,8 @@ const removePhaseButton = (index: number) => {
     onPhaseButtonConfigChange();
 };
 
-// 卡片配置变化处理
-const onCardConfigChange = () => {
+// 脚本配置变化处理
+const onScriptConfigChange = () => {
     nextTick(() => {
         emit('update-tts-script', ttsScriptData.value);
     });
@@ -523,7 +479,8 @@ const copyGMNotes = async () => {
 
 // 重新生成GMNotes
 const regenerateGMNotes = () => {
-    onCardConfigChange();
+    // 触发重新计算
+    onScriptConfigChange();
     message.success('GMNotes已重新生成');
 };
 
@@ -537,20 +494,11 @@ const syncAttributesFromCardData = () => {
             investigatorConfig.value.combatIcons = attributes[2] || 2;
             investigatorConfig.value.agilityIcons = attributes[3] || 2;
         }
-    } else if ((props.cardType === '支援' || props.cardType === '事件') && props.cardData) {
-        // 同步费用
-        if (props.cardData.cost !== undefined) {
-            assetConfig.value.cost = props.cardData.cost;
-        }
-        // 同步等级
-        if (props.cardData.level !== undefined) {
-            assetConfig.value.level = props.cardData.level;
-        }
-        // 同步uses配置
-        if (props.cardData.uses && Array.isArray(props.cardData.uses)) {
-            enableUses.value = true;
-            assetConfig.value.uses = [...props.cardData.uses];
-        }
+    }
+    
+    // 同步Uses数据（支援卡/事件卡）
+    if ((props.cardType === '支援卡' || props.cardType === '事件卡') && props.cardData.uses) {
+        assetConfig.value.uses = [...props.cardData.uses];
     }
 };
 
@@ -558,40 +506,19 @@ const syncAttributesFromCardData = () => {
 const loadFromSavedConfig = (savedConfig: any) => {
     console.log('🔧 加载保存的TTS配置:', savedConfig);
     
+    if (savedConfig?.scriptConfig) {
+        scriptConfig.value = { ...savedConfig.scriptConfig };
+        console.log('✅ 脚本配置已加载');
+    }
+    
     if (savedConfig?.investigatorConfig) {
-        const config = savedConfig.investigatorConfig;
-        investigatorConfig.value = {
-            id: config.id || '',
-            extraToken: config.extraToken || 'None',
-            willpowerIcons: config.willpowerIcons || 3,
-            intellectIcons: config.intellectIcons || 3,
-            combatIcons: config.combatIcons || 2,
-            agilityIcons: config.agilityIcons || 2
-        };
-        cardConfig.value.id = config.id;
+        investigatorConfig.value = { ...savedConfig.investigatorConfig };
         console.log('✅ 调查员配置已加载');
     }
 
     if (savedConfig?.assetConfig) {
-        const config = savedConfig.assetConfig;
-        assetConfig.value = {
-            id: config.id || '',
-            cost: config.cost || 1,
-            level: config.level || 0,
-            willpowerIcons: config.willpowerIcons || 0,
-            intellectIcons: config.intellectIcons || 0,
-            combatIcons: config.combatIcons || 0,
-            agilityIcons: config.agilityIcons || 0,
-            wildIcons: config.wildIcons || 0,
-            uses: config.uses || []
-        };
-        cardConfig.value.id = config.id;
+        assetConfig.value = { ...savedConfig.assetConfig };
         console.log('✅ 支援卡/事件卡配置已加载');
-    }
-
-    if (savedConfig?.enableUses !== undefined) {
-        enableUses.value = savedConfig.enableUses;
-        console.log('✅ Uses配置开关状态已加载:', enableUses.value);
     }
 
     if (savedConfig?.enablePhaseButtons !== undefined) {
@@ -613,34 +540,28 @@ const loadFromLegacyFormat = (ttsScript: any) => {
     if (ttsScript?.GMNotes) {
         try {
             const parsed = JSON.parse(ttsScript.GMNotes);
-            cardConfig.value.id = parsed.id || '';
             
+            // 加载通用ID
+            if (parsed.id) {
+                scriptConfig.value.id = parsed.id;
+            }
+            
+            // 加载调查员配置
             if (props.cardType === '调查员') {
                 investigatorConfig.value = {
-                    id: parsed.id || '',
                     extraToken: parsed.extraToken || 'None',
                     willpowerIcons: parsed.willpowerIcons || 3,
                     intellectIcons: parsed.intellectIcons || 3,
                     combatIcons: parsed.combatIcons || 2,
                     agilityIcons: parsed.agilityIcons || 2
                 };
-            } else {
-                assetConfig.value = {
-                    id: parsed.id || '',
-                    cost: parsed.cost || 1,
-                    level: parsed.level || 0,
-                    willpowerIcons: parsed.willpowerIcons || 0,
-                    intellectIcons: parsed.intellectIcons || 0,
-                    combatIcons: parsed.combatIcons || 0,
-                    agilityIcons: parsed.agilityIcons || 0,
-                    wildIcons: parsed.wildIcons || 0,
-                    uses: parsed.uses || []
-                };
-                
-                if (parsed.uses && parsed.uses.length > 0) {
-                    enableUses.value = true;
-                }
             }
+            
+            // 加载支援卡/事件卡配置
+            if ((props.cardType === '支援卡' || props.cardType === '事件卡') && parsed.uses) {
+                assetConfig.value.uses = parsed.uses;
+            }
+            
             console.log('✅ 从GMNotes解析配置成功');
         } catch (error) {
             console.warn('⚠️ 解析GMNotes失败:', error);
@@ -648,15 +569,18 @@ const loadFromLegacyFormat = (ttsScript: any) => {
     }
 
     // 如果存在LuaScript，启用阶段按钮并尝试解析配置
-    if (ttsScript?.LuaScript) {
+    if (ttsScript?.LuaScript && props.cardType === '调查员') {
         enablePhaseButtons.value = true;
         const parsedConfig = parsePhaseButtonConfig(ttsScript.LuaScript);
         if (parsedConfig) {
             phaseButtonConfig.value = parsedConfig;
             console.log('✅ 从LuaScript解析阶段按钮配置成功');
+        } else {
+            console.log('⚠️ 无法解析LuaScript，使用默认配置');
         }
     } else {
         enablePhaseButtons.value = false;
+        console.log('🔧 没有LuaScript，禁用阶段按钮');
     }
 };
 
@@ -664,7 +588,9 @@ const loadFromLegacyFormat = (ttsScript: any) => {
 watch(
     () => props.cardData,
     () => {
-        syncAttributesFromCardData();
+        if (shouldShowTtsScript.value) {
+            syncAttributesFromCardData();
+        }
     },
     { deep: true }
 );
@@ -690,7 +616,7 @@ watch(
         
         // 触发一次配置更新以确保数据同步
         nextTick(() => {
-            onCardConfigChange();
+            onScriptConfigChange();
         });
     },
     { immediate: true }
@@ -700,7 +626,7 @@ watch(
 if (shouldShowTtsScript.value) {
     nextTick(() => {
         syncAttributesFromCardData();
-        onCardConfigChange();
+        onScriptConfigChange();
     });
 }
 </script>
@@ -719,7 +645,25 @@ if (shouldShowTtsScript.value) {
 }
 
 .attribute-input :deep(.n-input-number) {
-    width: 60px;
+    width: 80px;
+}
+
+.uses-input-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.uses-input-group :deep(.n-input-number) {
+    width: 80px;
+}
+
+.uses-config-row {
+    background: rgba(255, 255, 255, 0.7);
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .gmnotes-preview {
@@ -766,21 +710,6 @@ if (shouldShowTtsScript.value) {
     border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.uses-config {
-    padding: 16px;
-    background: rgba(255, 255, 255, 0.5);
-    border-radius: 8px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    margin-top: 8px;
-}
-
-.use-config-row {
-    background: rgba(255, 255, 255, 0.7);
-    padding: 12px;
-    border-radius: 6px;
-    border: 1px solid rgba(0, 0, 0, 0.05);
-}
-
 .color-option-display {
     display: flex;
     align-items: center;
@@ -805,11 +734,15 @@ if (shouldShowTtsScript.value) {
     }
 
     .attribute-input :deep(.n-input-number) {
-        width: 50px;
+        width: 60px;
+    }
+
+    .uses-input-group :deep(.n-input-number) {
+        width: 60px;
     }
 
     .button-config-row :deep(.n-space),
-    .use-config-row :deep(.n-space) {
+    .uses-config-row :deep(.n-space) {
         flex-wrap: wrap;
     }
 }

@@ -930,7 +930,6 @@ const autoGeneratePreview = async () => {
     }
 };
 
-// 加载卡牌数据
 const loadCardData = async () => {
     if (!props.selectedFile || props.selectedFile.type !== 'card' || !props.selectedFile.path) {
         return;
@@ -957,19 +956,21 @@ const loadCardData = async () => {
 
         currentCardType.value = cardData.type || '';
 
-        // 保存原始数据状态
-        saveOriginalData();
-
-        // 加载完成后自动生成预览
+        // 等待TTS配置加载完成后再保存原始数据
+        await nextTick();
         setTimeout(() => {
+            saveOriginalData();
+            
+            // 加载完成后自动生成预览
             autoGeneratePreview();
-        }, 100); // 给一点时间让数据完全加载
+        }, 100); // 给TTS配置更新一点时间
 
     } catch (error) {
         console.error('加载卡牌数据失败:', error);
         message.error('加载卡牌数据失败');
     }
 };
+
 
 // 生成卡图的通用方法
 const generateCardImage = async (): Promise<string | null> => {
