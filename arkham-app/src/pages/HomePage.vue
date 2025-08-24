@@ -14,14 +14,30 @@
     <!-- ============================================= -->
     <div class="left-pane">
       <div class="left-content">
+        <!-- 语言切换按钮 -->
+        <div class="language-switcher-container">
+          <n-dropdown 
+            :options="languageOptions" 
+            @select="handleLanguageChange"
+            trigger="click"
+          >
+            <n-button quaternary size="small" class="language-btn">
+              <template #icon>
+                <n-icon :component="LanguageOutline" />
+              </template>
+              {{ currentLanguageLabel }}
+            </n-button>
+          </n-dropdown>
+        </div>
+
         <!-- Logo 和标题 -->
         <div class="logo-area">
           <div class="logo-icon">
             <n-icon size="48" :component="ColorWand" color="white" />
           </div>
           <div class="logo-text">
-            <h1>阿卡姆印牌姬</h1>
-            <p>专业的卡牌设计工具</p>
+            <h1>{{ $t('home.title') }}</h1>
+            <p>{{ $t('home.subtitle') }}</p>
           </div>
         </div>
 
@@ -36,9 +52,9 @@
               <n-icon size="28" :component="FolderOpenOutline" />
             </div>
             <div class="btn-content">
-              <span class="btn-title">打开项目文件夹</span>
+              <span class="btn-title">{{ $t('home.actions.openProject') }}</span>
               <span class="btn-desc">
-                {{ isSelecting ? '正在选择文件夹...' : '选择包含卡牌文件的文件夹开始工作' }}
+                {{ isSelecting ? $t('home.actions.selecting') : $t('home.actions.openProjectDesc') }}
               </span>
             </div>
             <div class="btn-arrow">
@@ -51,11 +67,11 @@
         <div class="service-status">
           <div class="status-item" :class="{ 'online': serviceOnline, 'offline': !serviceOnline }">
             <n-icon :component="serviceOnline ? CheckmarkCircle : AlertCircle" />
-            <span>{{ serviceOnline ? '后端服务已连接' : '后端服务离线' }}</span>
+            <span>{{ serviceOnline ? $t('home.serviceStatus.connected') : $t('home.serviceStatus.disconnected') }}</span>
           </div>
           <div v-if="serviceOnline && hasWorkspace" class="status-item workspace-info">
             <n-icon :component="FolderOpenOutline" />
-            <span>工作空间: {{ workspaceName }}</span>
+            <span>{{ $t('home.serviceStatus.workspace', { name: workspaceName }) }}</span>
           </div>
         </div>
 
@@ -63,15 +79,15 @@
         <div class="quick-info">
           <div class="info-item">
             <n-icon :component="FileTrayFullOutline" color="#a855f7" />
-            <span>轻量化的json卡牌格式</span>
+            <span>{{ $t('home.features.lightweight') }}</span>
           </div>
           <div class="info-item">
             <n-icon :component="LayersOutline" color="#a855f7" />
-            <span>同一个工作空间快捷D卡</span>
+            <span>{{ $t('home.features.workspace') }}</span>
           </div>
           <div class="info-item">
             <n-icon :component="ImageOutline" color="#a855f7" />
-            <span>自动装配TTS物品</span>
+            <span>{{ $t('home.features.autoTTS') }}</span>
           </div>
         </div>
       </div>
@@ -85,8 +101,8 @@
         <header class="content-header">
           <div class="header-with-actions">
             <div>
-              <h2>最近项目</h2>
-              <p class="subtitle">选择一个最近使用的项目继续编辑</p>
+              <h2>{{ $t('home.recentProjects.title') }}</h2>
+              <p class="subtitle">{{ $t('home.recentProjects.subtitle') }}</p>
             </div>
             <div class="header-actions" v-if="recentDirectories.length > 0">
               <n-button 
@@ -98,7 +114,7 @@
                 <template #icon>
                   <n-icon :component="TrashOutline" />
                 </template>
-                清空记录
+                {{ $t('home.recentProjects.clearRecords') }}
               </n-button>
             </div>
           </div>
@@ -109,7 +125,7 @@
           <!-- 加载状态 -->
           <div v-if="loadingRecent" class="loading-state">
             <n-spin size="large" />
-            <p>正在加载最近项目...</p>
+            <p>{{ $t('home.recentProjects.loading') }}</p>
           </div>
 
           <!-- 最近目录列表 -->
@@ -150,7 +166,7 @@
           <!-- 空状态 -->
           <n-empty
             v-else
-            description="还没有最近项目"
+            :description="$t('home.recentProjects.emptyState')"
             size="huge"
             class="empty-state"
           >
@@ -159,7 +175,7 @@
             </template>
             <template #extra>
               <n-button @click="handleOpenFolder" :disabled="isSelecting || !serviceOnline">
-                打开项目文件夹
+                {{ $t('home.actions.openProject') }}
               </n-button>
             </template>
           </n-empty>
@@ -170,7 +186,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
   FolderOpenOutline,
   ArrowForwardOutline,
@@ -182,12 +199,14 @@ import {
   CheckmarkCircle,
   AlertCircle,
   TrashOutline,
-  CloseOutline
+  CloseOutline,
+  LanguageOutline
 } from '@vicons/ionicons5';
 import { useMessage } from 'naive-ui';
 
 import { DirectoryService } from '@/api/directory-service';
 import { ApiError } from '@/api/http-client';
+import { setLanguage } from '@/locales';
 
 // ----------- Types -----------
 interface RecentDirectory {
@@ -213,6 +232,30 @@ const emit = defineEmits<{
     projectName: string;
   }];
 }>();
+
+// ----------- 国际化 -----------
+const { t, locale } = useI18n();
+
+// 语言选项
+const languageOptions = [
+  {
+    label: '中文',
+    key: 'zh'
+  },
+  {
+    label: 'English',
+    key: 'en'
+  }
+];
+
+const currentLanguageLabel = computed(() => {
+  const current = languageOptions.find(lang => lang.key === locale.value);
+  return current?.label || '中文';
+});
+
+const handleLanguageChange = (key: string) => {
+  setLanguage(key);
+};
 
 // ----------- 文件选择相关 -----------
 const folderInput = ref<HTMLInputElement>();
@@ -293,9 +336,9 @@ const loadRecentDirectories = async () => {
   } catch (error) {
     console.error('❌ [获取最近目录] 失败:', error);
     if (error instanceof ApiError) {
-      message.error(`获取最近目录失败: ${error.message}`);
+      message.error(`${t('common.messages.operationFailed')}: ${error.message}`);
     } else {
-      message.error('获取最近目录失败');
+      message.error(t('common.messages.operationFailed'));
     }
   } finally {
     loadingRecent.value = false;
@@ -307,7 +350,7 @@ const loadRecentDirectories = async () => {
  */
 const handleClearRecent = async () => {
   if (!serviceOnline.value) {
-    message.error('后端服务未连接');
+    message.error(t('home.messages.serviceOffline'));
     return;
   }
 
@@ -315,14 +358,14 @@ const handleClearRecent = async () => {
   try {
     await DirectoryService.clearRecentDirectories();
     recentDirectories.value = [];
-    message.success('已清空最近项目记录');
+    message.success(t('home.recentProjects.clearSuccess'));
     console.log('✅ [清空最近目录] 操作成功');
   } catch (error) {
     console.error('❌ [清空最近目录] 失败:', error);
     if (error instanceof ApiError) {
-      message.error(`清空失败: ${error.message}`);
+      message.error(`${t('common.messages.operationFailed')}: ${error.message}`);
     } else {
-      message.error('清空最近项目失败');
+      message.error(t('common.messages.operationFailed'));
     }
   } finally {
     clearingRecent.value = false;
@@ -334,7 +377,7 @@ const handleClearRecent = async () => {
  */
 const handleRemoveRecent = async (directory: RecentDirectory) => {
   if (!serviceOnline.value) {
-    message.error('后端服务未连接');
+    message.error(t('home.messages.serviceOffline'));
     return;
   }
 
@@ -348,14 +391,14 @@ const handleRemoveRecent = async (directory: RecentDirectory) => {
       recentDirectories.value.splice(index, 1);
     }
     
-    message.success(`已移除: ${directory.name}`);
+    message.success(t('home.recentProjects.removeSuccess', { name: directory.name }));
     console.log('✅ [移除最近目录] 操作成功:', directory.path);
   } catch (error) {
     console.error('❌ [移除最近目录] 失败:', error);
     if (error instanceof ApiError) {
-      message.error(`移除失败: ${error.message}`);
+      message.error(`${t('common.messages.operationFailed')}: ${error.message}`);
     } else {
-      message.error('移除最近项目失败');
+      message.error(t('common.messages.operationFailed'));
     }
   } finally {
     removingRecentPath.value = null;
@@ -393,18 +436,18 @@ const selectDirectoryFromBackend = async (): Promise<string | null> => {
  */
 const handleOpenFolder = async () => {
   if (isSelecting.value) {
-    message.warning('目录选择正在进行中，请稍候...');
+    message.warning(t('home.messages.selectingInProgress'));
     return;
   }
 
   if (!serviceOnline.value) {
-    message.error('后端服务未连接，请确保服务正在运行');
+    message.error(t('home.messages.serviceOffline'));
     return;
   }
 
   console.log('📁 [阿卡姆印牌姬] 用户点击：打开文件夹');
   
-  const loadingMessage = message.loading('正在打开目录选择对话框...', {
+  const loadingMessage = message.loading(t('home.messages.openingFolder'), {
     duration: 0 // 持续显示直到手动关闭
   });
 
@@ -415,7 +458,7 @@ const handleOpenFolder = async () => {
     
     if (selectedPath) {
       const folderName = selectedPath.split(/[/\\]/).pop() || selectedPath;
-      message.success(`文件夹 "${folderName}" 已成功打开！`);
+      message.success(t('home.messages.folderOpened', { name: folderName }));
       
       // 重新加载最近目录列表（因为选择目录会自动添加到最近记录）
       await loadRecentDirectories();
@@ -427,7 +470,7 @@ const handleOpenFolder = async () => {
         projectName: folderName
       });
     } else {
-      message.info('未选择文件夹');
+      message.info(t('home.messages.folderNotSelected'));
     }
   } catch (error) {
     loadingMessage.destroy();
@@ -436,25 +479,25 @@ const handleOpenFolder = async () => {
       // 处理特定的API错误
       switch (error.code) {
         case 1001:
-          message.warning('目录选择正在进行中，请稍后再试');
+          message.warning(t('home.errors.selectInProgress'));
           break;
         case 1002:
-          message.error('操作超时，请重试');
+          message.error(t('home.errors.timeout'));
           break;
         case 1003:
-          message.info('用户取消了选择');
+          message.info(t('home.errors.userCancelled'));
           break;
         case 1004:
-          message.error('选择目录时出错，请重试');
+          message.error(t('home.errors.selectError'));
           break;
         case 1006:
-          message.error('服务器错误，请检查后端服务');
+          message.error(t('home.errors.serverError'));
           break;
         default:
-          message.error(`选择目录失败: ${error.message}`);
+          message.error(`${t('common.messages.operationFailed')}: ${error.message}`);
       }
     } else {
-      message.error('选择目录时发生未知错误');
+      message.error(t('home.errors.unknownError'));
     }
   }
 };
@@ -474,7 +517,7 @@ const handleFolderSelected = async (event: Event) => {
     console.log('📁 [浏览器文件夹选择] 已选择文件夹:', folderName);
     console.log('📁 [文件夹选择] 文件夹内包含文件数量:', files.length);
     
-    message.success(`文件夹 "${folderName}" 已成功打开！包含 ${files.length} 个文件`);
+    message.success(t('home.messages.folderOpened', { name: folderName }) + ` (${files.length} 个文件)`);
     
     emit('navigate-to-workspace', {
       mode: 'folder',
@@ -491,14 +534,14 @@ const handleFolderSelected = async (event: Event) => {
  */
 const handleOpenRecent = async (directory: RecentDirectory) => {
   if (!serviceOnline.value) {
-    message.error('后端服务未连接');
+    message.error(t('home.messages.serviceOffline'));
     return;
   }
 
   console.log('🔄 [阿卡姆印牌姬] 用户点击最近项目:', directory.name);
   console.log('🔄 [最近项目] 目录路径:', directory.path);
   
-  const loadingMessage = message.loading(`正在打开: ${directory.name}...`, {
+  const loadingMessage = message.loading(t('home.messages.openingRecent', { name: directory.name }), {
     duration: 0
   });
   
@@ -507,7 +550,7 @@ const handleOpenRecent = async (directory: RecentDirectory) => {
     await DirectoryService.openWorkspace(directory.path);
     
     loadingMessage.destroy();
-    message.success(`已打开: ${directory.name}`);
+    message.success(t('home.messages.opened', { name: directory.name }));
     
     // 导航到工作空间
     emit('navigate-to-workspace', {
@@ -523,17 +566,16 @@ const handleOpenRecent = async (directory: RecentDirectory) => {
     if (error instanceof ApiError) {
       switch (error.code) {
         case 3001:
-          message.error('工作目录不存在，请重新选择');
-          // 可以考虑从最近记录中移除这个无效路径
+          message.error(t('home.errors.workspaceNotExists'));
           break;
         case 3002:
-          message.error('无法访问该目录，请检查权限');
+          message.error(t('home.errors.accessDenied'));
           break;
         default:
-          message.error(`打开失败: ${error.message}`);
+          message.error(`${t('common.messages.operationFailed')}: ${error.message}`);
       }
     } else {
-      message.error(`打开失败: ${directory.name}`);
+      message.error(`${t('common.messages.operationFailed')}: ${directory.name}`);
     }
   }
 };
@@ -597,6 +639,26 @@ onUnmounted(() => {
 .left-content {
   position: relative;
   z-index: 1;
+}
+
+/* 语言切换器 */
+.language-switcher-container {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 10;
+}
+
+.language-btn {
+  color: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(10px);
+}
+
+.language-btn:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
 }
 
 .logo-area {
@@ -925,6 +987,12 @@ onUnmounted(() => {
   .left-pane {
     width: 100%;
     padding: 30px 20px;
+  }
+
+  .language-switcher-container {
+    position: static;
+    text-align: right;
+    margin-bottom: 20px;
   }
   
   .right-pane {

@@ -1,0 +1,257 @@
+export default {
+  title: '🃏 Deck Builder',
+  actions: {
+    newDeck: 'New Deck',
+    refresh: 'Refresh',
+    save: 'Save',
+    delete: 'Delete Deck',
+    cancel: 'Cancel',
+    create: 'Create',
+    confirm: 'Confirm',
+    back: 'Back to Edit',
+    next: 'Next Step',
+    prev: 'Previous Step',
+    exportTTS: 'Export as TTS Item',
+    saveDeck: 'Save Deck',
+    openDirectory: 'Open Export Directory',
+    uploadToGithub: 'Upload to GitHub',
+    generateTTS: 'Generate TTS File',
+    copyUrl: 'Copy URL',
+    openSteamWorkshop: 'Open Steam Workshop'
+  },
+  panels: {
+    myDecks: 'My Decks',
+    deckEditor: 'Deck Editor'
+  },
+  forms: {
+    newDeck: {
+      title: 'New Deck',
+      name: 'Deck Name',
+      namePlaceholder: 'Enter deck name',
+      width: 'Width (1-10)',
+      height: 'Height (1-7)',
+      widthPlaceholder: 'Width',
+      heightPlaceholder: 'Height'
+    },
+    validation: {
+      nameRequired: 'Please enter deck name',
+      nameLength: 'Deck name must be between 1-50 characters',
+      namePattern: 'Deck name cannot contain special characters \\/:*?"<>|',
+      widthRequired: 'Please enter width',
+      widthRange: 'Width must be between 1-10',
+      heightRequired: 'Please enter height',
+      heightRange: 'Height must be between 1-7'
+    }
+  },
+  deckList: {
+    grid: 'grid',
+    empty: 'No decks',
+    emptyDesc: 'Click the button above to create a new deck'
+  },
+  deleteDialog: {
+    title: 'Delete Confirmation',
+    warning: 'Warning',
+    message: 'This operation cannot be undone. Are you sure you want to delete deck "{name}"?'
+  },
+  noSelection: {
+    title: 'Please select a deck to start editing',
+    description: 'Select a deck from the left list, or create a new deck'
+  },
+  // Deck Editor Section
+  editor: {
+    shortcuts: {
+      save: '(Ctrl+S)'
+    },
+    sides: {
+      front: 'Front',
+      back: 'Back',
+      frontWithIcon: '🎯 Front',
+      backWithIcon: '🎲 Back'
+    },
+    content: {
+      selectContent: 'Select Content',
+      selectContentFor: 'Select Content - {side}',
+      clickToAdd: 'Click to add content',
+      sideIndicator: {
+        front: 'Front',
+        back: 'Back'
+      }
+    },
+    tabs: {
+      cards: '🎯 Cards',
+      cardbacks: '🎴 Card Backs',
+      images: '🖼️ Images'
+    },
+    search: {
+      cards: 'Search card names...',
+      images: 'Search image files...'
+    },
+    cardbacks: {
+      player: 'Player Card Back',
+      encounter: 'Encounter Card Back'
+    },
+    empty: {
+      noCards: 'No matching cards found',
+      noImages: 'No matching images found'
+    }
+  },
+  // TTS Export Guide Section
+  ttsExport: {
+    title: 'TTS Export Guide',
+    steps: {
+      step1: {
+        number: '1',
+        title: 'Export Images',
+        description: 'Export your deck front and back as image files, which will be used to display your cards in TTS.',
+        header: '📷 Step 1: Export Deck Images'
+      },
+      step2: {
+        number: '2',
+        title: 'Upload Images',
+        description: 'Upload the exported images to an image hosting service to get online URLs for TTS use.',
+        header: '☁️ Step 2: Upload to Image Host'
+      },
+      step3: {
+        number: '3',
+        title: 'Generate TTS File',
+        description: 'Use the uploaded image URLs to generate a deck file that can be imported into Tabletop Simulator.',
+        header: '🎯 Step 3: Generate TTS File'
+      }
+    },
+    export: {
+      title: 'Export Settings',
+      format: 'Export Format',
+      formatPlaceholder: 'Select image format',
+      quality: 'Image Quality',
+      qualityMarks: {
+        60: 'Low',
+        70: 'Medium',
+        80: 'High',
+        90: 'Very High',
+        100: 'Maximum'
+      },
+      startExport: 'Start Export Images',
+      exporting: 'Exporting...',
+      openDirectory: 'Open Export Directory',
+      exportedFiles: 'Exported files:'
+    },
+    imageHost: {
+      title: 'Choose Image Host Service',
+      steam: {
+        name: 'Steam Cloud Storage',
+        description: 'Recommended: Use Steam Workshop cloud storage, stable and reliable',
+        instruction: 'Please first upload images to Steam Workshop, then fill in the obtained image URLs below.'
+      },
+      github: {
+        name: 'GitHub Image Host',
+        description: 'Convenient: One-click upload to GitHub repository image hosting service',
+        notConfigured: 'Please configure GitHub Token and repository information in settings first.',
+        configured: 'Connected to GitHub, User: {username}',
+        checking: 'Checking GitHub configuration...',
+        verifying: 'Verifying GitHub login status...'
+      },
+      urls: {
+        frontImage: 'Front Image URL',
+        backImage: 'Back Image URL',
+        frontPlaceholder: 'Please enter the Steam cloud storage URL for front image',
+        backPlaceholder: 'Please enter the Steam cloud storage URL for back image',
+        autoGenerated: 'Auto-generated after upload'
+      }
+    },
+    upload: {
+      frontImage: 'Front Image',
+      backImage: 'Back Image',
+      uploading: 'Uploading...',
+      waiting: 'Waiting',
+      success: 'Success',
+      error: 'Error',
+      uploadingTitle: 'Uploading...',
+      uploadSuccess: 'Successfully uploaded {count} images',
+      urlsGenerated: 'URLs have been automatically filled in the input boxes above, you can click the copy button to copy them.'
+    },
+    generate: {
+      title: 'TTS File Configuration',
+      deckName: 'Deck Name',
+      cardCount: 'Card Count',
+      frontImageUrl: 'Front Image URL',
+      backImageUrl: 'Back Image URL',
+      description: 'TTS file will be generated to the following location:',
+      location: 'My Documents/My Games/Tabletop Simulator/Saves/Saved Objects/ArcaneAssistant/',
+      includes: 'File includes:',
+      includesList: {
+        config: 'TTS JSON configuration file (contains complete deck data and scripts)',
+        thumbnail: '256x256 pixel PNG thumbnail image'
+      },
+      generating: 'Generating TTS file...',
+      complete: 'Complete and Return to Edit',
+      retry: 'Retry Generation',
+      backToStep: 'Back to Previous Step'
+    },
+    navigation: {
+      nextExport: 'Next: Export Images',
+      nextUpload: 'Next: Upload to Image Host',
+      nextGenerate: 'Next: Generate TTS File'
+    }
+  },
+  messages: {
+    refreshSuccess: 'Deck list refreshed',
+    loadFailed: 'Failed to load deck list, please try again',
+    createSuccess: 'Deck created successfully',
+    createFailed: 'Failed to create deck, please try again',
+    saveSuccess: 'Deck saved successfully',
+    saveFailed: 'Failed to save deck, please try again',
+    deleteSuccess: 'Deck deleted successfully',
+    deleteFailed: 'Failed to delete deck, please try again',
+    loadCardsFailed: 'Failed to load available cards',
+    loadImagesFailed: 'Failed to load available images',
+    // Editor related messages
+    cardAdded: '{type} added to {side}',
+    contentRemoved: 'Content removed',
+    positionSwapped: 'Content positions swapped',
+    // TTS export related messages
+    exportSuccess: 'Images exported successfully!',
+    exportFailed: 'Image export failed: {error}',
+    directoryOpened: 'Export directory opened',
+    directoryOpenFailed: 'Failed to open directory: {error}',
+    uploadSuccess: 'GitHub image host upload successful!',
+    uploadFailed: 'GitHub image host upload failed: {error}',
+    generateSuccess: 'TTS file generated successfully!',
+    generateFailed: 'TTS file generation failed: {error}',
+    urlCopied: '{label} copied to clipboard',
+    urlEmpty: '{label} is empty, cannot copy',
+    copyFailed: 'Copy failed, please copy manually',
+    // Type names
+    types: {
+      card: 'Card',
+      cardback: 'Card Back',
+      image: 'Image'
+    },
+    // TTS export result messages
+    tts: {
+      exportSuccess: {
+        title: 'Export Successful!',
+        message: 'Deck images have been successfully exported to the DeckBuilder directory.'
+      },
+      exportFailed: {
+        title: 'Export Failed',
+        message: 'An error occurred during export, please try again.'
+      },
+      uploadSuccess: {
+        title: 'Upload Successful!',
+        message: 'Images have been successfully uploaded to GitHub image host, URLs have been automatically filled in.'
+      },
+      uploadFailed: {
+        title: 'Upload Failed',
+        message: 'An error occurred during upload, please try again.'
+      },
+      generateSuccess: {
+        title: '🎉 TTS File Generated Successfully!',
+        message: 'Deck "{name}" has been successfully exported as a TTS file! The file has been saved to the TTS game directory, you can now import this deck in Tabletop Simulator!'
+      },
+      generateFailed: {
+        title: 'Generation Failed',
+        message: 'An error occurred while generating the TTS file, please check the configuration and try again.'
+      }
+    }
+  }
+}

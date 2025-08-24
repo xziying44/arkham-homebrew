@@ -8,14 +8,14 @@
                         <n-icon :component="FolderOpenOutline" />
                     </n-button>
                     <span class="pane-title">
-                        {{ selectedFile?.label || '卡牌编辑器' }}
+                        {{ selectedFile?.label || $t('cardEditor.panel.cardEditor') }}
                         <span v-if="hasUnsavedChanges" class="unsaved-indicator">*</span>
                     </span>
                 </n-space>
                 <n-space size="small">
-                    <n-button size="tiny" @click="showImportJsonModal = true" class="header-button">导入JSON</n-button>
+                    <n-button size="tiny" @click="showImportJsonModal = true" class="header-button">{{ $t('cardEditor.panel.importJson') }}</n-button>
                     <n-button size="tiny" @click="showJsonModal = true" class="header-button"
-                        v-if="selectedFile">查看JSON</n-button>
+                        v-if="selectedFile">{{ $t('cardEditor.panel.viewJson') }}</n-button>
                     <n-button v-if="!showImagePreview" size="tiny" quaternary @click="$emit('toggle-image-preview')"
                         class="header-button">
                         <n-icon :component="ImageOutline" />
@@ -27,19 +27,19 @@
         <div class="form-content">
             <!-- 未选择卡牌文件时的提示 -->
             <div v-if="!selectedFile || selectedFile.type !== 'card'" class="empty-state">
-                <n-empty description="请在文件管理器中选择一个卡牌文件(.card)进行编辑" />
+                <n-empty :description="$t('cardEditor.panel.selectCardFileToEdit')" />
             </div>
 
             <!-- 卡牌编辑器内容 -->
             <n-scrollbar v-else>
                 <div class="form-wrapper">
                     <!-- AI制卡区域 -->
-                    <n-card v-if="aiEnabledInEditor" title="🤖 AI制卡助手" size="small" class="form-card ai-card">
+                    <n-card v-if="aiEnabledInEditor" :title="$t('cardEditor.panel.aiAssistant')" size="small" class="form-card ai-card">
                         <n-space vertical size="medium">
                             <!-- 提示词输入 -->
-                            <n-form-item label="描述你想要的卡牌">
+                            <n-form-item :label="$t('cardEditor.panel.describeYourCard')">
                                 <n-input v-model:value="aiPrompt" type="textarea"
-                                    placeholder="例如：创建一个火属性的攻击法术卡牌，名字叫火球术，造成5点伤害，消耗3点法力..." :rows="3"
+                                    :placeholder="$t('cardEditor.panel.cardDescriptionPlaceholder')" :rows="3"
                                     :disabled="aiGenerating" maxlength="500" show-count />
                             </n-form-item>
 
@@ -50,13 +50,13 @@
                                     <template #icon>
                                         <n-icon :component="SparklesIcon" />
                                     </template>
-                                    {{ aiGenerating ? '生成中...' : '生成卡牌' }}
+                                    {{ aiGenerating ? $t('cardEditor.panel.generating') : $t('cardEditor.panel.generateCard') }}
                                 </n-button>
                                 <n-button v-if="aiGenerating" @click="stopAIGeneration">
-                                    停止生成
+                                    {{ $t('cardEditor.panel.stopGeneration') }}
                                 </n-button>
                                 <n-button v-if="aiResult" @click="clearAIResult">
-                                    清空结果
+                                    {{ $t('cardEditor.panel.clearResult') }}
                                 </n-button>
                             </n-space>
 
@@ -67,19 +67,19 @@
                                         <n-space align="center">
                                             <n-icon :component="aiGenerating ? LoadingOutline : CheckmarkCircleOutline"
                                                 :class="{ 'spinning': aiGenerating }" />
-                                            <span>{{ aiGenerating ? 'AI正在思考中...' : '生成完成' }}</span>
+                                            <span>{{ aiGenerating ? $t('cardEditor.panel.aiThinking') : $t('cardEditor.panel.generationComplete') }}</span>
                                         </n-space>
                                     </template>
 
                                     <!-- 思考过程展示 -->
                                     <div v-if="aiThinking" class="ai-thinking">
-                                        <n-text depth="3" style="font-size: 12px;">💭 AI思考过程：</n-text>
+                                        <n-text depth="3" style="font-size: 12px;">{{ $t('cardEditor.panel.aiThoughtProcess') }}</n-text>
                                         <div class="thinking-content">{{ aiThinking }}</div>
                                     </div>
 
                                     <!-- JSON内容展示 -->
                                     <div v-if="aiJsonContent" class="ai-json-content">
-                                        <n-text depth="3" style="font-size: 12px;">📋 生成的卡牌数据：</n-text>
+                                        <n-text depth="3" style="font-size: 12px;">{{ $t('cardEditor.panel.generatedCardData') }}</n-text>
                                         <div class="ai-json-display">
                                             <n-code :code="aiJsonContent" language="json" class="ai-json-code" />
                                         </div>
@@ -88,7 +88,7 @@
                                     <!-- 验证状态 -->
                                     <div v-if="aiValidationStatus" class="validation-status">
                                         <n-alert :type="aiValidationStatus.isValid ? 'success' : 'error'"
-                                            :title="aiValidationStatus.isValid ? '✅ 验证成功' : '❌ 验证失败'" size="small">
+                                            :title="aiValidationStatus.isValid ? $t('cardEditor.panel.validationSuccess') : $t('cardEditor.panel.validationFailed')" size="small">
                                             <div v-if="!aiValidationStatus.isValid">
                                                 <div v-for="error in aiValidationStatus.errors" :key="error"
                                                     class="error-item">
@@ -96,7 +96,7 @@
                                                 </div>
                                             </div>
                                             <div v-else>
-                                                卡牌数据格式正确，可以导入到编辑器中
+                                                {{ $t('cardEditor.panel.cardDataValid') }}
                                             </div>
                                         </n-alert>
                                     </div>
@@ -108,7 +108,7 @@
                                                 <template #icon>
                                                     <n-icon :component="DownloadOutline" />
                                                 </template>
-                                                导入到编辑器
+                                                {{ $t('cardEditor.panel.importToEditor') }}
                                             </n-button>
                                         </n-space>
                                     </div>
@@ -118,15 +118,15 @@
                     </n-card>
 
                     <!-- 卡牌类型选择 -->
-                    <n-card title="卡牌类型" size="small" class="form-card">
-                        <n-form-item label="选择卡牌类型">
+                    <n-card :title="$t('cardEditor.panel.cardType')" size="small" class="form-card">
+                        <n-form-item :label="$t('cardEditor.panel.selectCardType')">
                             <n-select v-model:value="currentCardData.type" :options="cardTypeOptions"
-                                placeholder="选择卡牌类型" @update:value="onCardTypeChange" />
+                                :placeholder="$t('cardEditor.panel.selectCardType')" @update:value="onCardTypeChange" />
                         </n-form-item>
                     </n-card>
 
                     <!-- 动态表单 -->
-                    <n-card v-if="currentCardType && currentFormConfig" title="卡牌属性" size="small" class="form-card">
+                    <n-card v-if="currentCardType && currentFormConfig" :title="$t('cardEditor.panel.cardProperties')" size="small" class="form-card">
                         <n-form ref="dynamicFormRef" :model="currentCardData" label-placement="top" size="small">
                             <div v-for="(row, rowIndex) in formFieldRows" :key="rowIndex" class="form-row">
                                 <div v-for="field in row"
@@ -146,14 +146,14 @@
                     </n-card>
 
                     <!-- 卡牌信息 -->
-                    <n-card v-if="currentCardType" title="卡牌信息" size="small" class="form-card">
+                    <n-card v-if="currentCardType" :title="$t('cardEditor.panel.cardInfo')" size="small" class="form-card">
                         <n-form :model="currentCardData" label-placement="top" size="small">
                             <div class="form-row">
                                 <!-- 插画作者 -->
                                 <div class="form-field layout-third">
                                     <FormFieldComponent :field="{
                                         key: 'illustrator',
-                                        name: '🎨 插画作者',
+                                        name: $t('cardEditor.panel.illustrator'),
                                         type: 'text'
                                     }" :value="currentCardData.illustrator || ''" :new-string-value="newStringValue"
                                         @update:value="currentCardData.illustrator = $event"
@@ -163,7 +163,7 @@
                                 <div class="form-field layout-third">
                                     <FormFieldComponent :field="{
                                         key: 'encounter_group_number',
-                                        name: '📋 遭遇组序号',
+                                        name: $t('cardEditor.panel.encounterGroupNumber'),
                                         type: 'text'
                                     }" :value="currentCardData.encounter_group_number || ''"
                                         :new-string-value="newStringValue"
@@ -174,7 +174,7 @@
                                 <div class="form-field layout-third">
                                     <FormFieldComponent :field="{
                                         key: 'card_number',
-                                        name: '📋 卡牌序号',
+                                        name: $t('cardEditor.panel.cardNumber'),
                                         type: 'text'
                                     }" :value="currentCardData.card_number || ''" :new-string-value="newStringValue"
                                         @update:value="currentCardData.card_number = $event"
@@ -186,7 +186,7 @@
                                 <div class="form-field layout-full">
                                     <FormFieldComponent :field="{
                                         key: 'remark',
-                                        name: '📝 卡牌备注信息',
+                                        name: $t('cardEditor.panel.cardRemarks'),
                                         type: 'textarea',
                                         rows: 2,
                                         maxlength: 200
@@ -206,13 +206,13 @@
                     <div class="form-actions">
                         <n-space>
                             <n-button type="primary" @click="saveCard" :loading="saving">
-                                保存卡牌
-                                <span class="keyboard-shortcut">(Ctrl+S)</span>
+                                {{ $t('cardEditor.panel.saveCard') }}
+                                <span class="keyboard-shortcut">{{ $t('cardEditor.panel.ctrlS') }}</span>
                             </n-button>
-                            <n-button @click="previewCard" :loading="generating">预览卡图</n-button>
+                            <n-button @click="previewCard" :loading="generating">{{ $t('cardEditor.panel.previewCard') }}</n-button>
                             <n-button @click="exportCard" :loading="exporting"
-                                :disabled="!hasValidCardData">导出图片</n-button>
-                            <n-button @click="resetForm">重置</n-button>
+                                :disabled="!hasValidCardData">{{ $t('cardEditor.panel.exportImage') }}</n-button>
+                            <n-button @click="resetForm">{{ $t('cardEditor.panel.reset') }}</n-button>
                         </n-space>
                     </div>
                 </div>
@@ -221,7 +221,7 @@
 
         <!-- JSON查看模态框 -->
         <n-modal v-model:show="showJsonModal" style="width: 80%; max-width: 800px;">
-            <n-card title="当前JSON数据" :bordered="false" size="huge" role="dialog" aria-modal="true">
+            <n-card :title="$t('cardEditor.panel.currentJsonData')" :bordered="false" size="huge" role="dialog" aria-modal="true">
                 <div class="json-modal-content">
                     <div class="json-display-container">
                         <n-scrollbar style="max-height: 60vh;">
@@ -233,23 +233,23 @@
                             <template #icon>
                                 <n-icon :component="CopyOutline" />
                             </template>
-                            复制JSON
+                            {{ $t('cardEditor.panel.copyJson') }}
                         </n-button>
                     </div>
                 </div>
                 <template #footer>
                     <n-space justify="end">
-                        <n-button @click="showJsonModal = false">关闭</n-button>
+                        <n-button @click="showJsonModal = false">{{ $t('cardEditor.panel.close') }}</n-button>
                     </n-space>
                 </template>
             </n-card>
         </n-modal>
 
         <!-- 导入JSON模态框 -->
-        <n-modal v-model:show="showImportJsonModal" preset="dialog" title="导入JSON数据">
+        <n-modal v-model:show="showImportJsonModal" preset="dialog" :title="$t('cardEditor.panel.importJsonData')">
             <div class="import-json-content">
-                <n-form-item label="请粘贴JSON数据">
-                    <n-input v-model:value="importJsonText" type="textarea" placeholder="请粘贴要导入的JSON数据..." :rows="10"
+                <n-form-item :label="$t('cardEditor.panel.pasteJsonData')">
+                    <n-input v-model:value="importJsonText" type="textarea" :placeholder="$t('cardEditor.panel.pasteJsonPlaceholder')" :rows="10"
                         maxlength="50000" show-count class="import-textarea" />
                 </n-form-item>
                 <div v-if="importJsonError" class="import-error">
@@ -258,9 +258,9 @@
             </div>
             <template #action>
                 <n-space>
-                    <n-button @click="cancelImportJson">取消</n-button>
+                    <n-button @click="cancelImportJson">{{ $t('cardEditor.panel.cancel') }}</n-button>
                     <n-button type="primary" @click="importJsonData" :disabled="!importJsonText.trim()">
-                        导入
+                        {{ $t('cardEditor.panel.import') }}
                     </n-button>
                 </n-space>
             </template>
@@ -268,26 +268,26 @@
 
         <!-- 保存确认对话框 -->
         <n-modal v-model:show="showSaveConfirmDialog">
-            <n-card style="width: 450px" title="保存确认" :bordered="false" size="huge" role="dialog" aria-modal="true">
+            <n-card style="width: 450px" :title="$t('cardEditor.panel.saveConfirmation')" :bordered="false" size="huge" role="dialog" aria-modal="true">
                 <n-space vertical>
-                    <n-alert type="warning" title="未保存的修改">
+                    <n-alert type="warning" :title="$t('cardEditor.panel.unsavedChanges')">
                         <template #icon>
                             <n-icon :component="WarningOutline" />
                         </template>
-                        当前文件有未保存的修改，是否保存？
+                        {{ $t('cardEditor.panel.hasUnsavedChangesMessage') }}
                     </n-alert>
                     <n-space vertical size="small">
                         <p><strong>{{ selectedFile?.label }}</strong></p>
                         <p style="color: #666; font-size: 12px;">
-                            如果不保存，您的修改将会丢失。
+                            {{ $t('cardEditor.panel.changesWillBeLost') }}
                         </p>
                     </n-space>
                 </n-space>
                 <template #footer>
                     <n-space justify="end">
-                        <n-button @click="discardChanges">不保存</n-button>
-                        <n-button @click="showSaveConfirmDialog = false">取消</n-button>
-                        <n-button type="primary" @click="saveAndSwitch" :loading="saving">保存</n-button>
+                        <n-button @click="discardChanges">{{ $t('cardEditor.panel.dontSave') }}</n-button>
+                        <n-button @click="showSaveConfirmDialog = false">{{ $t('cardEditor.panel.cancel') }}</n-button>
+                        <n-button type="primary" @click="saveAndSwitch" :loading="saving">{{ $t('cardEditor.panel.save') }}</n-button>
                     </n-space>
                 </template>
             </n-card>
@@ -300,13 +300,18 @@ import { ref, computed, reactive, watch, onMounted, onUnmounted, nextTick } from
 import { FolderOpenOutline, ImageOutline, WarningOutline, CopyOutline } from '@vicons/ionicons5';
 import {
     SparklesOutline as SparklesIcon,
-    RefreshOutline as LoadingOutline, // 修改这里，使用 RefreshOutline 代替 LoadingOutline
+    RefreshOutline as LoadingOutline,
     CheckmarkCircleOutline,
     DownloadOutline
 } from '@vicons/ionicons5';
 import { useMessage } from 'naive-ui';
+import { useI18n } from 'vue-i18n';
 import type { TreeOption } from 'naive-ui';
-import { cardTypeConfigs, cardTypeOptions, type FormField, type CardTypeConfig, type ShowCondition } from '@/config/cardTypeConfigs';
+
+// 导入中文和英文配置
+import { cardTypeConfigs as cardTypeConfigsZh, cardTypeOptions as cardTypeOptionsZh, type FormField, type CardTypeConfig, type ShowCondition } from '@/config/cardTypeConfigs';
+import { cardTypeConfigs as cardTypeConfigsEn, cardTypeOptions as cardTypeOptionsEn } from '@/config/cardTypeConfigsEn';
+
 import FormFieldComponent from './FormField.vue';
 import { WorkspaceService, CardService, ConfigService } from '@/api';
 import AIService from '@/api/ai-service';
@@ -328,7 +333,17 @@ const emit = defineEmits<{
     'refresh-file-tree': [];
 }>();
 
+const { t, locale } = useI18n(); // 添加 locale
 const message = useMessage();
+
+// 动态获取当前语言的配置
+const cardTypeConfigs = computed(() => {
+    return locale.value === 'en' ? cardTypeConfigsEn : cardTypeConfigsZh;
+});
+
+const cardTypeOptions = computed(() => {
+    return locale.value === 'en' ? cardTypeOptionsEn : cardTypeOptionsZh;
+});
 
 // 表单状态
 const currentCardData = reactive({
@@ -375,7 +390,7 @@ const aiAbortController = ref<AbortController | null>(null);
 const copyJsonToClipboard = async () => {
     try {
         await navigator.clipboard.writeText(filteredJsonData.value);
-        message.success('JSON已复制到剪贴板');
+        message.success(t('cardEditor.panel.jsonCopiedToClipboard'));
     } catch (error) {
         console.error('复制失败:', error);
         // 如果clipboard API不可用，使用备用方案
@@ -390,9 +405,9 @@ const copyJsonToClipboard = async () => {
             textArea.select();
             document.execCommand('copy');
             document.body.removeChild(textArea);
-            message.success('JSON已复制到剪贴板');
+            message.success(t('cardEditor.panel.jsonCopiedToClipboard'));
         } catch (fallbackError) {
-            message.error('复制失败，请手动选择文本复制');
+            message.error(t('cardEditor.panel.copyFailed'));
         }
     }
 };
@@ -402,7 +417,7 @@ const importJsonData = async () => {
     importJsonError.value = '';
 
     if (!importJsonText.value.trim()) {
-        message.warning('请输入JSON数据');
+        message.warning(t('cardEditor.panel.pleaseEnterJsonData'));
         return;
     }
 
@@ -412,7 +427,7 @@ const importJsonData = async () => {
 
         // 验证是否是有效的卡牌数据
         if (typeof jsonData !== 'object' || jsonData === null) {
-            throw new Error('JSON数据格式无效');
+            throw new Error(t('cardEditor.panel.invalidJsonFormat'));
         }
 
         // 保存当前的元数据
@@ -453,10 +468,10 @@ const importJsonData = async () => {
             autoGeneratePreview();
         }, 100);
 
-        message.success('JSON数据导入成功');
+        message.success(t('cardEditor.panel.jsonDataImportedSuccessfully'));
     } catch (error) {
         console.error('导入JSON失败:', error);
-        importJsonError.value = `导入失败: ${error.message || '无效的JSON格式'}`;
+        importJsonError.value = `${t('cardEditor.panel.importFailed')}: ${error.message || t('cardEditor.panel.invalidJsonFormat')}`;
     }
 };
 
@@ -481,7 +496,7 @@ onMounted(async () => {
 // 修改 startAIGeneration 方法，添加更多日志
 const startAIGeneration = async () => {
     if (!aiPrompt.value.trim()) {
-        message.warning('请输入提示词');
+        message.warning(t('cardEditor.panel.pleaseEnterPrompt'));
         return;
     }
     console.log('🚀 开始AI生成');
@@ -498,20 +513,17 @@ const startAIGeneration = async () => {
         await AIService.generateCardInfoStream(
             request,
             (chunk: StreamDataChunk) => {
-                // console.log('📦 收到数据块:', chunk);
                 // 处理流式数据
                 if (chunk.reasoning) {
                     aiThinking.value += chunk.reasoning;
-                    // console.log('💭 更新思考内容:', chunk.thinking.length);
                 }
                 if (chunk.content) {
                     aiJsonContent.value += chunk.content;
-                    // console.log('📝 更新JSON内容，当前长度:', aiJsonContent.value.length);
                 }
             },
             (error: Error) => {
                 console.error('❌ AI生成失败:', error);
-                message.error(`AI生成失败: ${error.message}`);
+                message.error(`${t('cardEditor.panel.aiGenerationFailed')}: ${error.message}`);
                 aiGenerating.value = false;
             },
             () => {
@@ -525,21 +537,20 @@ const startAIGeneration = async () => {
                         validateAIResult();
                     } catch (error) {
                         console.error('❌ 验证AI结果时出错:', error);
-                        message.error(`验证失败: ${error.message || '未知错误'}`);
+                        message.error(`${t('cardEditor.panel.validationError')}: ${error.message || '未知错误'}`);
                     }
                 } else {
                     console.warn('⚠️ AI生成完成但没有内容');
-                    message.warning('AI生成完成但没有返回有效内容');
+                    message.warning(t('cardEditor.panel.aiGenerationCompleted'));
                 }
             }
         );
     } catch (error) {
         console.error('❌ AI生成出错:', error);
-        message.error(`AI生成出错: ${error.message || '未知错误'}`);
+        message.error(`${t('cardEditor.panel.aiGenerationFailed')}: ${error.message || '未知错误'}`);
         aiGenerating.value = false;
     }
 };
-
 
 const stopAIGeneration = () => {
     if (aiAbortController.value) {
@@ -557,8 +568,7 @@ const validateAIResult = () => {
         console.warn('⚠️ 没有AI生成的JSON内容');
         return;
     }
-    // console.log('📄 AI生成的内容长度:', aiJsonContent.value.length);
-    // console.log('📄 AI生成的内容预览:', aiJsonContent.value.substring(0, 200));
+
     try {
         // 直接在前端使用处理函数解析JSON
         console.log('🔧 开始处理JSON字符串');
@@ -567,10 +577,10 @@ const validateAIResult = () => {
         // 检查AI返回的错误信息
         if (cardJson.msg && cardJson.msg.trim()) {
             console.warn('⚠️ AI返回包含错误信息:', cardJson.msg);
-            message.error('AI返回包含错误信息:' + cardJson.msg)
+            message.error(`${t('cardEditor.panel.aiReturnedError')}:` + cardJson.msg)
             aiValidationStatus.value = {
                 isValid: false,
-                errors: [`AI返回错误: ${cardJson.msg}`]
+                errors: [`${t('cardEditor.panel.aiReturnedError')}: ${cardJson.msg}`]
             };
             return;
         }
@@ -588,7 +598,7 @@ const validateAIResult = () => {
             console.error('❌ 验证失败，缺少必要字段:', missingFields);
             aiValidationStatus.value = {
                 isValid: false,
-                errors: [`缺少必要字段: ${missingFields.join(', ')}`]
+                errors: [`${t('cardEditor.panel.missingRequiredFields')}: ${missingFields.join(', ')}`]
             };
             return;
         }
@@ -612,7 +622,7 @@ const validateAIResult = () => {
                 importAIResult();
             } catch (error) {
                 console.error('❌ 自动导入时出错:', error);
-                message.error(`自动导入失败: ${error.message || '未知错误'}`);
+                message.error(`${t('cardEditor.panel.importAiResultFailed')}: ${error.message || '未知错误'}`);
             }
         }, 500);
     } catch (error) {
@@ -621,12 +631,13 @@ const validateAIResult = () => {
 
         aiValidationStatus.value = {
             isValid: false,
-            errors: [`验证失败: ${errorMessage}`]
+            errors: [`${t('cardEditor.panel.validationError')}: ${errorMessage}`]
         };
 
-        message.error(`验证AI结果失败: ${errorMessage}`);
+        message.error(`${t('cardEditor.panel.validationError')}: ${errorMessage}`);
     }
 };
+
 // 修改 processJsonStr 方法，添加更多日志
 const processJsonStr = (jsonStr: string): any => {
     console.log('🔧 开始处理JSON字符串，长度:', jsonStr.length);
@@ -686,17 +697,18 @@ const processJsonStr = (jsonStr: string): any => {
             console.error('❌ 修复后仍然解析失败:', err);
             console.error('❌ 原始JSON:', jsonStr);
             console.error('❌ 修复后JSON:', fixedJson);
-            throw new Error(`JSON解析错误: ${err.message || err}`);
+            throw new Error(`${t('cardEditor.panel.jsonParseError')}: ${err.message || err}`);
         }
     }
 };
+
 // 修改 importAIResult 方法，添加更多日志
 const importAIResult = async () => {
     console.log('🚀 开始导入AI结果');
 
     if (!aiValidationStatus.value?.isValid) {
         console.warn('⚠️ 没有有效的AI生成结果可以导入');
-        message.warning('没有有效的AI生成结果可以导入');
+        message.warning(t('cardEditor.panel.noValidAiResult'));
         return;
     }
     try {
@@ -738,15 +750,14 @@ const importAIResult = async () => {
             autoGeneratePreview();
         }, 100);
         console.log('✅ AI生成的卡牌数据已成功导入到编辑器');
-        message.success('AI生成的卡牌数据已成功导入到编辑器');
+        message.success(t('cardEditor.panel.aiDataImportedSuccessfully'));
         clearAIResult();
     } catch (error) {
         console.error('❌ 导入AI结果失败:', error);
         console.error('❌ 错误堆栈:', error.stack);
-        message.error(`导入AI结果失败: ${error.message || '未知错误'}`);
+        message.error(`${t('cardEditor.panel.importAiResultFailed')}: ${error.message || '未知错误'}`);
     }
 };
-
 
 const clearAIResult = () => {
     aiResult.value = '';
@@ -773,7 +784,7 @@ const hasValidCardData = computed(() => {
 });
 
 const currentFormConfig = computed((): CardTypeConfig | null => {
-    return currentCardType.value ? cardTypeConfigs[currentCardType.value] : null;
+    return currentCardType.value ? cardTypeConfigs.value[currentCardType.value] : null;
 });
 
 // 更新TTS脚本数据
@@ -799,7 +810,6 @@ const updateTtsScript = (ttsData: { GMNotes: string; LuaScript: string; config?:
         delete currentCardData.tts_script;
     }
 };
-
 
 // 添加防抖标志
 const isProcessingKeydown = ref(false);
@@ -1041,7 +1051,7 @@ const onCardTypeChange = (newType: string) => {
     Object.assign(currentCardData, newData);
 
     // 应用默认值
-    const config = cardTypeConfigs[newType];
+    const config = cardTypeConfigs.value[newType];
     if (config) {
         config.fields.forEach(field => {
             if (field.defaultValue !== undefined) {
@@ -1110,17 +1120,16 @@ const loadCardData = async () => {
 
     } catch (error) {
         console.error('加载卡牌数据失败:', error);
-        message.error('加载卡牌数据失败');
+        message.error(t('cardEditor.panel.loadCardDataFailed'));
     }
 };
-
 
 // 生成卡图的通用方法
 const generateCardImage = async (): Promise<string | null> => {
     // 验证卡牌数据
     const validation = CardService.validateCardData(currentCardData as CardData);
     if (!validation.isValid) {
-        message.error('卡牌数据验证失败: ' + validation.errors.join(', '));
+        message.error(`${t('cardEditor.panel.cardDataValidationFailed')}: ` + validation.errors.join(', '));
         return null;
     }
 
@@ -1129,7 +1138,7 @@ const generateCardImage = async (): Promise<string | null> => {
         return imageBase64;
     } catch (error) {
         console.error('生成卡图失败:', error);
-        message.error(`生成卡图失败: ${error.message || '未知错误'}`);
+        message.error(`${t('cardEditor.panel.generateCardImageFailed')}: ${error.message || '未知错误'}`);
         return null;
     }
 };
@@ -1140,7 +1149,7 @@ const saveCard = async () => {
     const fileToSave = originalFileInfo.value || props.selectedFile;
 
     if (!fileToSave || !fileToSave.path) {
-        message.warning('未选择文件');
+        message.warning(t('cardEditor.panel.noFileSelected'));
         return false;
     }
 
@@ -1165,11 +1174,11 @@ const saveCard = async () => {
             emit('update-preview-image', imageBase64);
         }
 
-        message.success('卡牌保存成功');
+        message.success(t('cardEditor.panel.cardSavedSuccessfully'));
         return true;
     } catch (error) {
         console.error('保存卡牌失败:', error);
-        message.error('保存卡牌失败');
+        message.error(t('cardEditor.panel.saveCardFailed'));
         return false;
     } finally {
         saving.value = false;
@@ -1269,7 +1278,7 @@ const filteredJsonData = computed(() => {
 // 预览卡图
 const previewCard = async () => {
     if (!hasValidCardData.value) {
-        message.warning('请先填写卡牌名称和类型');
+        message.warning(t('cardEditor.panel.pleaseEnterCardNameAndType'));
         return;
     }
 
@@ -1278,7 +1287,7 @@ const previewCard = async () => {
         const imageBase64 = await generateCardImage();
         if (imageBase64) {
             emit('update-preview-image', imageBase64);
-            message.success('卡图预览生成成功');
+            message.success(t('cardEditor.panel.cardPreviewGenerated'));
         }
     } catch (error) {
         console.error('预览卡图失败:', error);
@@ -1290,12 +1299,12 @@ const previewCard = async () => {
 // 导出图片
 const exportCard = async () => {
     if (!hasValidCardData.value) {
-        message.warning('请先填写卡牌名称和类型');
+        message.warning(t('cardEditor.panel.pleaseEnterCardNameAndType'));
         return;
     }
 
     if (!props.selectedFile || !props.selectedFile.path) {
-        message.warning('未选择卡牌文件');
+        message.warning(t('cardEditor.panel.noCardFileSelected'));
         return;
     }
 
@@ -1317,10 +1326,10 @@ const exportCard = async () => {
         // 刷新文件树以显示新生成的图片文件
         emit('refresh-file-tree');
 
-        message.success(`图片已导出: ${filename}`);
+        message.success(t('cardEditor.panel.imageExported', { filename }));
     } catch (error) {
         console.error('导出图片失败:', error);
-        message.error(`导出图片失败: ${error.message || '未知错误'}`);
+        message.error(`${t('cardEditor.panel.exportImageFailed')}: ${error.message || '未知错误'}`);
     } finally {
         exporting.value = false;
     }
@@ -1343,7 +1352,7 @@ const resetForm = () => {
     Object.assign(currentCardData, hiddenData, { type: '', name: '' });
     currentCardType.value = '';
     saveOriginalData();
-    message.info('表单已重置');
+    message.info(t('cardEditor.panel.formReset'));
 };
 
 // 监听选中文件变化
@@ -1385,6 +1394,7 @@ onUnmounted(() => {
     document.removeEventListener('keydown', handleKeydown);
 });
 </script>
+
 
 <style scoped>
 .form-pane {

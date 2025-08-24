@@ -22,12 +22,16 @@
 
 <script setup lang="ts">
 import { ref, computed, markRaw } from 'vue';
+import { useI18n } from 'vue-i18n';
 import WorkspaceSidebar from '@/components/WorkspaceSidebar.vue';
 import WorkspaceMain from './workspace/WorkspaceMain.vue';
 import DeckBuilder from './workspace/DeckBuilder.vue';
 import TTSItems from './workspace/TTSItems.vue';
 import Settings from './workspace/Settings.vue';
-import About from './workspace/About.vue'; // 新增
+import About from './workspace/About.vue';
+
+// 国际化
+const { t } = useI18n();
 
 // Props
 defineProps<{
@@ -50,7 +54,7 @@ const componentMap = {
   'deck-builder': markRaw(DeckBuilder),
   'tts-items': markRaw(TTSItems),
   'settings': markRaw(Settings),
-  'about': markRaw(About) // 新增
+  'about': markRaw(About)
 };
 
 // 当前组件

@@ -14,7 +14,7 @@
     <ResizeSplitter
       v-if="showFileTree && shouldShowFileTree"
       :is-active="isResizing && resizeType === 'fileTree'"
-      title="拖拽调整文件树宽度"
+      :title="$t('workspaceMain.fileTree.adjustWidth')"
       @start-resize="startResize('fileTree', $event)"
     />
 
@@ -34,7 +34,7 @@
     <ResizeSplitter
       v-if="showImagePreview && shouldShowImagePreview"
       :is-active="isResizing && resizeType === 'form'"
-      title="拖拽调整预览区宽度"
+      :title="$t('workspaceMain.imagePreview.adjustWidth')"
       @start-resize="startResize('form', $event)"
     />
 
@@ -73,8 +73,8 @@
     <div v-if="showMobileFileTree" class="mobile-modal" @click="closeMobileFileTree">
       <div class="mobile-modal-content file-tree-modal" @click.stop>
         <div class="modal-header">
-          <h3>文件树</h3>
-          <button class="close-btn" @click="closeMobileFileTree">✕</button>
+          <h3>{{ $t('workspaceMain.fileTree.title') }}</h3>
+          <button class="close-btn" @click="closeMobileFileTree">{{ $t('workspaceMain.modals.close') }}</button>
         </div>
         <FileTreePanel 
           :width="'100%'"
@@ -88,8 +88,8 @@
     <div v-if="showMobileImagePreview" class="mobile-modal" @click="closeMobileImagePreview">
       <div class="mobile-modal-content image-modal" @click.stop>
         <div class="modal-header">
-          <h3>图片预览</h3>
-          <button class="close-btn" @click="closeMobileImagePreview">✕</button>
+          <h3>{{ $t('workspaceMain.imagePreview.title') }}</h3>
+          <button class="close-btn" @click="closeMobileImagePreview">{{ $t('workspaceMain.modals.close') }}</button>
         </div>
         <ImagePreviewPanel
           :width="'100%'"
@@ -105,6 +105,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useMessage } from 'naive-ui';
+import { useI18n } from 'vue-i18n';
 import type { TreeOption } from 'naive-ui';
 import FileTreePanel from '@/components/FileTreePanel.vue';
 import FormEditPanel from '@/components/FormEditPanel.vue';
@@ -125,6 +126,7 @@ const emit = defineEmits<{
 }>();
 
 const message = useMessage();
+const { t } = useI18n();
 
 // 响应式断点
 const BREAKPOINT_LARGE = 1200;  // 隐藏文件树的断点
@@ -247,7 +249,7 @@ const loadImageFromPath = async (imagePath: string): Promise<string | null> => {
     const fileInfo = await WorkspaceService.getFileInfo(imagePath);
     
     if (!fileInfo.is_image) {
-      console.warn('选中的文件不是图片格式');
+      console.warn(t('workspaceMain.messages.notImageFormat'));
       return null;
     }
     
@@ -256,7 +258,7 @@ const loadImageFromPath = async (imagePath: string): Promise<string | null> => {
     
   } catch (error) {
     console.error('加载图片失败:', error);
-    message.error('加载图片失败');
+    message.error(t('workspaceMain.messages.imageLoadFailed'));
     return null;
   }
 };

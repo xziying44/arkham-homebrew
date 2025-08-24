@@ -2,7 +2,7 @@
   <div class="image-pane" :style="{ width: width + 'px' }">
     <div class="pane-header">
       <n-space align="center" justify="space-between">
-        <span class="pane-title">图片预览</span>
+        <span class="pane-title">{{ $t('workspaceMain.imagePreview.title') }}</span>
         <n-button size="tiny" quaternary @click="$emit('toggle')">
           <n-icon :component="Close" />
         </n-button>
@@ -31,7 +31,7 @@
       </div>
 
       <div v-else class="image-placeholder">
-        <n-empty description="选择图片进行预览" size="large">
+        <n-empty :description="$t('workspaceMain.imagePreview.emptyText')" size="large">
           <template #icon>
             <n-icon :component="ImageOutline" />
           </template>
@@ -41,22 +41,22 @@
       <!-- 图片控制工具栏 -->
       <div v-if="currentImage" class="image-controls">
         <n-button-group size="small">
-          <n-button @click="zoomIn" title="放大">
+          <n-button @click="zoomIn" :title="$t('workspaceMain.imagePreview.controls.zoomIn')">
             <n-icon :component="AddOutline" />
           </n-button>
           <n-button @click="resetImageView">
             {{ Math.round(imageScale * 100) }}%
           </n-button>
-          <n-button @click="zoomOut" title="缩小">
+          <n-button @click="zoomOut" :title="$t('workspaceMain.imagePreview.controls.zoomOut')">
             <n-icon :component="RemoveOutline" />
           </n-button>
-          <n-button @click="fitToContainer" title="适应窗口">
-            适应窗口
+          <n-button @click="fitToContainer" :title="$t('workspaceMain.imagePreview.controls.fitToWindow')">
+            {{ $t('workspaceMain.imagePreview.controls.fitToWindow') }}
           </n-button>
           <n-button 
             @click="copyImageToClipboard" 
             :loading="isCopying"
-            title="复制图片"
+            :title="$t('workspaceMain.imagePreview.controls.copyImage')"
           >
             <n-icon :component="CopyOutline" />
           </n-button>
@@ -70,6 +70,7 @@
 import { ref, onUnmounted, watch, nextTick } from 'vue';
 import { ImageOutline, Close, AddOutline, RemoveOutline, CopyOutline } from '@vicons/ionicons5';
 import { useMessage } from 'naive-ui';
+import { useI18n } from 'vue-i18n';
 
 interface Props {
   width: number;
@@ -83,6 +84,7 @@ const emit = defineEmits<{
 }>();
 
 const message = useMessage();
+const { t } = useI18n();
 
 // 图片预览状态
 const imageScale = ref(1);
@@ -107,7 +109,7 @@ const copyImageToClipboard = async () => {
     
     // 检查浏览器是否支持 Clipboard API
     if (!navigator.clipboard || !navigator.clipboard.write) {
-      message.warning('当前浏览器不支持复制功能');
+      message.warning(t('workspaceMain.imagePreview.messages.copyNotSupported'));
       return;
     }
 
@@ -131,19 +133,19 @@ const copyImageToClipboard = async () => {
       })
     ]);
     
-    message.success('图片已复制到剪贴板');
+    message.success(t('workspaceMain.imagePreview.messages.copySuccess'));
   } catch (error) {
     console.error('复制图片失败:', error);
     
     // 如果是权限错误，给出特殊提示
     if (error instanceof Error && error.name === 'NotAllowedError') {
-      message.error('复制失败：浏览器阻止了剪贴板访问权限');
+      message.error(t('workspaceMain.imagePreview.messages.copyPermissionDenied'));
     } else if (error instanceof Error && error.message.includes('获取图片失败')) {
-      message.error('复制失败：无法获取图片数据');
+      message.error(t('workspaceMain.imagePreview.messages.copyImageFetchFailed'));
     } else if (error instanceof Error && error.message.includes('不是有效的图片格式')) {
-      message.error('复制失败：不是有效的图片格式');
+      message.error(t('workspaceMain.imagePreview.messages.copyInvalidFormat'));
     } else {
-      message.error('复制失败：请检查网络连接或重试');
+      message.error(t('workspaceMain.imagePreview.messages.copyFailed'));
     }
   } finally {
     isCopying.value = false;

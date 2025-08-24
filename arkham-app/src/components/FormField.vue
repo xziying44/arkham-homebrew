@@ -5,7 +5,7 @@
       <div class="field-label">
         <span>{{ field.name }}</span>
         <n-button v-if="field.helpText" size="tiny" quaternary circle @click="showHelpModal = true" class="help-button"
-          title="查看字段说明">
+          :title="$t('cardEditor.field.viewFieldDescription')">
           <template #icon>
             <n-icon :component="HelpCircleOutline" size="14" />
           </template>
@@ -13,7 +13,7 @@
       </div>
     </template>
     <n-input :value="value" @update:value="$emit('update:value', $event)"
-      :placeholder="`请输入${getCleanFieldName(field.name)}`" />
+      :placeholder="$t('cardEditor.field.pleaseEnter', { name: getCleanFieldName(field.name) })" />
   </n-form-item>
 
   <!-- 长文本输入 -->
@@ -22,7 +22,7 @@
       <div class="field-label">
         <span>{{ field.name }}</span>
         <n-button v-if="field.helpText" size="tiny" quaternary circle @click="showHelpModal = true" class="help-button"
-          title="查看字段说明">
+          :title="$t('cardEditor.field.viewFieldDescription')">
           <template #icon>
             <n-icon :component="HelpCircleOutline" size="14" />
           </template>
@@ -30,7 +30,7 @@
       </div>
     </template>
     <n-input :value="value" @update:value="$emit('update:value', $event)" type="textarea" :rows="field.rows || 3"
-      :maxlength="field.maxlength" :placeholder="`请输入${getCleanFieldName(field.name)}`" show-count
+      :maxlength="field.maxlength" :placeholder="$t('cardEditor.field.pleaseEnter', { name: getCleanFieldName(field.name) })" show-count
       :autosize="{ minRows: field.rows || 3, maxRows: (field.rows || 3) + 2 }" />
   </n-form-item>
 
@@ -40,7 +40,7 @@
       <div class="field-label">
         <span>{{ field.name }}</span>
         <n-button v-if="field.helpText" size="tiny" quaternary circle @click="showHelpModal = true" class="help-button"
-          title="查看字段说明">
+          :title="$t('cardEditor.field.viewFieldDescription')">
           <template #icon>
             <n-icon :component="HelpCircleOutline" size="14" />
           </template>
@@ -48,7 +48,7 @@
       </div>
     </template>
     <n-input-number :value="value" @update:value="$emit('update:value', $event)" :min="field.min" :max="field.max"
-      :placeholder="`请输入${getCleanFieldName(field.name)}`" />
+      :placeholder="$t('cardEditor.field.pleaseEnter', { name: getCleanFieldName(field.name) })" />
   </n-form-item>
 
   <!-- 下拉单选 -->
@@ -57,7 +57,7 @@
       <div class="field-label">
         <span>{{ field.name }}</span>
         <n-button v-if="field.helpText" size="tiny" quaternary circle @click="showHelpModal = true" class="help-button"
-          title="查看字段说明">
+          :title="$t('cardEditor.field.viewFieldDescription')">
           <template #icon>
             <n-icon :component="HelpCircleOutline" size="14" />
           </template>
@@ -65,7 +65,7 @@
       </div>
     </template>
     <n-select :value="value" @update:value="$emit('update:value', $event)" :options="field.options"
-      :placeholder="`请选择${getCleanFieldName(field.name)}`" />
+      :placeholder="$t('cardEditor.field.pleaseSelect', { name: getCleanFieldName(field.name) })" />
   </n-form-item>
 
   <!-- 多选数组 -->
@@ -74,7 +74,7 @@
       <div class="field-label">
         <span>{{ field.name }}</span>
         <n-button v-if="field.helpText" size="tiny" quaternary circle @click="showHelpModal = true" class="help-button"
-          title="查看字段说明">
+          :title="$t('cardEditor.field.viewFieldDescription')">
           <template #icon>
             <n-icon :component="HelpCircleOutline" size="14" />
           </template>
@@ -82,7 +82,7 @@
       </div>
     </template>
     <div class="multi-select-container">
-      <n-select :value="null" :options="field.options" :placeholder="`添加${getCleanFieldName(field.name)}`"
+      <n-select :value="null" :options="field.options" :placeholder="$t('cardEditor.field.add', { name: getCleanFieldName(field.name) })"
         @update:value="$emit('add-multi-select-item', $event)" clearable />
       <div v-if="value && value.length > 0" class="selected-items">
         <n-tag v-for="(item, index) in value" :key="index" closable @close="$emit('remove-multi-select-item', index)"
@@ -99,7 +99,7 @@
       <div class="field-label">
         <span>{{ field.name }}</span>
         <n-button v-if="field.helpText" size="tiny" quaternary circle @click="showHelpModal = true" class="help-button"
-          title="查看字段说明">
+          :title="$t('cardEditor.field.viewFieldDescription')">
           <template #icon>
             <n-icon :component="HelpCircleOutline" size="14" />
           </template>
@@ -109,8 +109,8 @@
     <div class="string-array-container">
       <n-space align="center">
         <n-input :value="newStringValue" @update:value="$emit('update:new-string-value', $event)"
-          :placeholder="`输入${getCleanFieldName(field.name)}`" @keyup.enter="$emit('add-string-array-item')" />
-        <n-button @click="$emit('add-string-array-item')" size="small">添加</n-button>
+          :placeholder="$t('cardEditor.field.input', { name: getCleanFieldName(field.name) })" @keyup.enter="$emit('add-string-array-item')" />
+        <n-button @click="$emit('add-string-array-item')" size="small">{{ $t('cardEditor.field.addItem') }}</n-button>
       </n-space>
       <div v-if="value && value.length > 0" class="selected-items">
         <n-tag v-for="(item, index) in value" :key="index" closable @close="$emit('remove-string-array-item', index)"
@@ -127,7 +127,7 @@
       <div class="field-label">
         <span>{{ field.name }}</span>
         <n-button v-if="field.helpText" size="tiny" quaternary circle @click="showHelpModal = true" class="help-button"
-          title="查看字段说明">
+          :title="$t('cardEditor.field.viewFieldDescription')">
           <template #icon>
             <n-icon :component="HelpCircleOutline" size="14" />
           </template>
@@ -135,7 +135,7 @@
       </div>
     </template>
     <n-select :value="value" @update:value="$emit('update:value', $event)" :options="encounterGroupOptions"
-      :placeholder="`请选择${getCleanFieldName(field.name)}`" :loading="loadingEncounterGroups" clearable filterable
+      :placeholder="$t('cardEditor.field.pleaseSelect', { name: getCleanFieldName(field.name) })" :loading="loadingEncounterGroups" clearable filterable
       @focus="loadEncounterGroups" />
   </n-form-item>
 
@@ -145,7 +145,7 @@
       <div class="field-label">
         <span>{{ field.name }}</span>
         <n-button v-if="field.helpText" size="tiny" quaternary circle @click="showHelpModal = true" class="help-button"
-          title="查看字段说明">
+          :title="$t('cardEditor.field.viewFieldDescription')">
           <template #icon>
             <n-icon :component="HelpCircleOutline" size="14" />
           </template>
@@ -161,7 +161,7 @@
             <template #icon>
               <n-icon :component="TrashOutline" />
             </template>
-            删除
+            {{ $t('cardEditor.field.delete') }}
           </n-button>
         </div>
       </div>
@@ -175,10 +175,10 @@
                 <ImageOutline />
               </n-icon>
               <n-text style="font-size: 16px">
-                点击或者拖拽图片到该区域来上传
+                {{ $t('cardEditor.field.clickOrDragToUpload') }}
               </n-text>
               <n-p depth="3" style="margin: 8px 0 0 0">
-                支持 JPG、PNG、GIF、WebP 等格式，大小不超过 {{ formatFileSize(field.maxSize || 5 * 1024 * 1024) }}
+                {{ $t('cardEditor.field.supportedFormats', { size: formatFileSize(field.maxSize || 5 * 1024 * 1024) }) }}
               </n-p>
             </div>
           </n-upload-dragger>
@@ -195,14 +195,13 @@
   </n-form-item>
 
   <!-- 帮助文本模态框 -->
-  <n-modal v-model:show="showHelpModal" preset="dialog" title="字段说明" style="width: 600px;">
+  <n-modal v-model:show="showHelpModal" preset="dialog" :title="$t('cardEditor.field.fieldDescription')" style="width: 600px;">
     <div class="help-content">
       <pre class="help-text">{{ field.helpText }}</pre>
     </div>
     <template #action>
       <n-space>
-
-        <n-button @click="showHelpModal = false" type="primary">关闭</n-button>
+        <n-button @click="showHelpModal = false" type="primary">{{ $t('cardEditor.field.close') }}</n-button>
       </n-space>
     </template>
   </n-modal>
@@ -213,8 +212,10 @@ import { ref, onMounted } from 'vue';
 import type { UploadFileInfo } from 'naive-ui';
 import { TrashOutline, ImageOutline, HelpCircleOutline, CopyOutline } from '@vicons/ionicons5';
 import { useMessage } from 'naive-ui';
+import { useI18n } from 'vue-i18n'; // 新增
 import type { FormField } from '@/config/cardTypeConfigs';
-import { ConfigService } from '@/api'; // 导入ConfigService
+import { ConfigService } from '@/api';
+
 interface Props {
   field: FormField;
   value: any;
@@ -231,6 +232,8 @@ const emit = defineEmits<{
   'remove-string-array-item': [index: number];
   'remove-image': [];
 }>();
+
+const { t } = useI18n(); // 新增
 const message = useMessage();
 const imageError = ref('');
 const showHelpModal = ref(false);
@@ -238,6 +241,7 @@ const showHelpModal = ref(false);
 const encounterGroupOptions = ref<Array<{label: string, value: string}>>([]);
 const loadingEncounterGroups = ref(false);
 const encounterGroupsLoaded = ref(false);
+
 // 加载遭遇组列表
 const loadEncounterGroups = async () => {
   // 如果已经加载过或正在加载中，则跳过
@@ -257,18 +261,16 @@ const loadEncounterGroups = async () => {
     encounterGroupsLoaded.value = true;
   } catch (error) {
     console.error('加载遭遇组列表失败:', error);
-    message.error('加载遭遇组列表失败，请检查遭遇组目录配置');
+    message.error(t('cardEditor.field.loadEncounterGroupsFailed'));
     
     // 提供一个空选项，避免用户无法操作
     encounterGroupOptions.value = [
-      { label: '无可用遭遇组 (请检查配置)', value: '' }
+      { label: t('cardEditor.field.noAvailableEncounterGroups'), value: '' }
     ];
   } finally {
     loadingEncounterGroups.value = false;
   }
 };
-
-
 
 // 去掉emoji和空格，获取纯净的字段名
 const getCleanFieldName = (fieldName: string): string => {
@@ -288,12 +290,12 @@ const formatFileSize = (bytes: number): string => {
 const validateImageFile = (file: File, field: FormField): string | null => {
   const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
   if (!validTypes.includes(file.type)) {
-    return '不支持的图片格式，请选择 JPG、PNG、GIF、WebP 或 SVG 文件';
+    return t('cardEditor.field.unsupportedImageFormat');
   }
 
   const maxSize = field.maxSize || 5 * 1024 * 1024;
   if (file.size > maxSize) {
-    return `文件大小超过限制，最大支持 ${formatFileSize(maxSize)}`;
+    return t('cardEditor.field.fileSizeExceeded', { size: formatFileSize(maxSize) });
   }
 
   return null;
@@ -308,7 +310,7 @@ const fileToBase64 = (file: File): Promise<string> => {
       resolve(result);
     };
     reader.onerror = () => {
-      reject(new Error('文件读取失败'));
+      reject(new Error(t('cardEditor.field.fileReadFailed')));
     };
     reader.readAsDataURL(file);
   });
@@ -336,12 +338,13 @@ const handleFileChange = async (data: { file: UploadFileInfo; fileList: UploadFi
 
   } catch (error) {
     console.error('处理图片文件失败:', error);
-    imageError.value = '图片处理失败，请重试';
+    imageError.value = t('cardEditor.field.imageProcessFailed');
   }
 };
 </script>
 
 <style scoped>
+/* 样式保持不变 */
 .multi-select-container,
 .string-array-container,
 .image-upload-container {

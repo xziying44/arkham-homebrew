@@ -1,13 +1,13 @@
 <template>
   <div class="deck-builder-container">
     <div class="deck-builder-header">
-      <h2>🃏 牌库制作</h2>
+      <h2>{{ $t('deckBuilder.title') }}</h2>
       <div class="header-actions">
         <n-button type="primary" @click="showCreateDeckDialog = true" size="large">
           <template #icon>
             <n-icon :component="AddOutline" />
           </template>
-          新建牌库
+          {{ $t('deckBuilder.actions.newDeck') }}
         </n-button>
       </div>
     </div>
@@ -16,8 +16,8 @@
       <!-- 左侧牌库列表 -->
       <div class="deck-list-panel">
         <div class="panel-header">
-          <h3>我的牌库</h3>
-          <n-button text @click="loadDecks" :loading="loading" title="刷新">
+          <h3>{{ $t('deckBuilder.panels.myDecks') }}</h3>
+          <n-button text @click="loadDecks" :loading="loading" :title="$t('deckBuilder.actions.refresh')">
             <n-icon :component="RefreshOutline" />
           </n-button>
         </div>
@@ -27,18 +27,18 @@
             <div class="deck-icon">🎴</div>
             <div class="deck-info">
               <div class="deck-name">{{ deck.name }}</div>
-              <div class="deck-meta">{{ deck.width }}×{{ deck.height }} 网格</div>
+              <div class="deck-meta">{{ deck.width }}×{{ deck.height }} {{ $t('deckBuilder.deckList.grid') }}</div>
             </div>
-            <n-button text type="error" @click.stop="showDeleteConfirm(deck)" title="删除牌库" size="small">
+            <n-button text type="error" @click.stop="showDeleteConfirm(deck)" :title="$t('deckBuilder.actions.delete')" size="small">
               <n-icon :component="TrashOutline" />
             </n-button>
           </div>
-          <n-empty v-if="deckList.length === 0 && !loading" description="暂无牌库">
+          <n-empty v-if="deckList.length === 0 && !loading" :description="$t('deckBuilder.deckList.empty')">
             <template #icon>
               <n-icon :component="FolderOpenOutline" />
             </template>
             <template #extra>
-              <n-text depth="3">点击上方按钮创建新牌库</n-text>
+              <n-text depth="3">{{ $t('deckBuilder.deckList.emptyDesc') }}</n-text>
             </template>
           </n-empty>
         </n-scrollbar>
@@ -51,33 +51,33 @@
 
       <!-- 当没有选择牌库时显示的提示 -->
       <div v-else class="no-deck-selected">
-        <n-empty description="请选择一个牌库开始编辑">
+        <n-empty :description="$t('deckBuilder.noSelection.title')">
           <template #icon>
             <n-icon :component="FolderOpenOutline" size="64" />
           </template>
           <template #extra>
-            <n-text depth="3">从左侧列表选择一个牌库，或创建新的牌库</n-text>
+            <n-text depth="3">{{ $t('deckBuilder.noSelection.description') }}</n-text>
           </template>
         </n-empty>
       </div>
     </div>
 
     <!-- 新建牌库对话框 -->
-    <n-modal v-model:show="showCreateDeckDialog" preset="dialog" title="新建牌库">
+    <n-modal v-model:show="showCreateDeckDialog" preset="dialog" :title="$t('deckBuilder.forms.newDeck.title')">
       <n-form ref="createFormRef" :model="newDeckForm" :rules="createRules">
-        <n-form-item path="name" label="牌库名称">
-          <n-input v-model:value="newDeckForm.name" placeholder="请输入牌库名称" @keydown.enter="createDeck" clearable />
+        <n-form-item path="name" :label="$t('deckBuilder.forms.newDeck.name')">
+          <n-input v-model:value="newDeckForm.name" :placeholder="$t('deckBuilder.forms.newDeck.namePlaceholder')" @keydown.enter="createDeck" clearable />
         </n-form-item>
         <n-grid :cols="2" :x-gap="12">
           <n-grid-item>
-            <n-form-item path="width" label="宽度 (1-10)">
-              <n-input-number v-model:value="newDeckForm.width" :min="1" :max="10" placeholder="宽度"
+            <n-form-item path="width" :label="$t('deckBuilder.forms.newDeck.width')">
+              <n-input-number v-model:value="newDeckForm.width" :min="1" :max="10" :placeholder="$t('deckBuilder.forms.newDeck.widthPlaceholder')"
                 :show-button="false" />
             </n-form-item>
           </n-grid-item>
           <n-grid-item>
-            <n-form-item path="height" label="高度 (1-7)">
-              <n-input-number v-model:value="newDeckForm.height" :min="1" :max="7" placeholder="高度"
+            <n-form-item path="height" :label="$t('deckBuilder.forms.newDeck.height')">
+              <n-input-number v-model:value="newDeckForm.height" :min="1" :max="7" :placeholder="$t('deckBuilder.forms.newDeck.heightPlaceholder')"
                 :show-button="false" />
             </n-form-item>
           </n-grid-item>
@@ -85,27 +85,27 @@
       </n-form>
       <template #action>
         <n-space>
-          <n-button @click="closeCreateDialog">取消</n-button>
+          <n-button @click="closeCreateDialog">{{ $t('deckBuilder.actions.cancel') }}</n-button>
           <n-button type="primary" @click="createDeck" :loading="creating">
-            创建
+            {{ $t('deckBuilder.actions.create') }}
           </n-button>
         </n-space>
       </template>
     </n-modal>
 
     <!-- 删除确认对话框 -->
-    <n-modal v-model:show="showDeleteDialog" preset="dialog" title="删除确认">
-      <n-alert type="warning" title="警告">
+    <n-modal v-model:show="showDeleteDialog" preset="dialog" :title="$t('deckBuilder.deleteDialog.title')">
+      <n-alert type="warning" :title="$t('deckBuilder.deleteDialog.warning')">
         <template #icon>
           <n-icon :component="WarningOutline" />
         </template>
-        此操作不可恢复，确定要删除牌库"{{ deckToDelete?.name }}"吗？
+        {{ $t('deckBuilder.deleteDialog.message', { name: deckToDelete?.name }) }}
       </n-alert>
       <template #action>
         <n-space>
-          <n-button @click="showDeleteDialog = false">取消</n-button>
+          <n-button @click="showDeleteDialog = false">{{ $t('deckBuilder.actions.cancel') }}</n-button>
           <n-button type="error" @click="confirmDeleteDeck" :loading="deleting">
-            删除
+            {{ $t('deckBuilder.actions.delete') }}
           </n-button>
         </n-space>
       </template>
@@ -114,12 +114,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import {
   useMessage,
   type FormInst,
   type FormRules
 } from 'naive-ui';
+import { useI18n } from 'vue-i18n';
 import {
   AddOutline,
   RefreshOutline,
@@ -136,7 +137,6 @@ interface DeckCard {
   path: string;
 }
 
-// 在DeckBuilder.vue的interface部分添加TTS相关接口
 interface TTSInfo {
   frontImageUrl?: string;
   backImageUrl?: string;
@@ -144,14 +144,16 @@ interface TTSInfo {
   lastExportTime?: string;
   exportPath?: string;
 }
+
 interface DeckData {
   name: string;
   width: number;
   height: number;
   frontCards: DeckCard[];
   backCards: DeckCard[];
-  ttsInfo?: TTSInfo; // 新增
+  ttsInfo?: TTSInfo;
 }
+
 interface DeckFile {
   name: string;
   path: string;
@@ -159,7 +161,7 @@ interface DeckFile {
   height: number;
   frontCards: DeckCard[];
   backCards: DeckCard[];
-  ttsInfo?: TTSInfo; // 新增
+  ttsInfo?: TTSInfo;
 }
 
 interface CardFile {
@@ -173,6 +175,7 @@ interface ImageFile {
 }
 
 const message = useMessage();
+const { t } = useI18n();
 
 // 状态管理
 const loading = ref(false);
@@ -202,27 +205,27 @@ const showDeleteDialog = ref(false);
 const deckToDelete = ref<DeckFile | null>(null);
 
 // 表单验证规则
-const createRules: FormRules = {
+const createRules = computed((): FormRules => ({
   name: [
-    { required: true, message: '请输入牌库名称', trigger: ['input', 'blur'] },
-    { min: 1, max: 50, message: '牌库名称长度在1-50个字符', trigger: ['input', 'blur'] },
+    { required: true, message: t('deckBuilder.forms.validation.nameRequired'), trigger: ['input', 'blur'] },
+    { min: 1, max: 50, message: t('deckBuilder.forms.validation.nameLength'), trigger: ['input', 'blur'] },
     {
       pattern: /^[^\\/:*?"<>|]+$/,
-      message: '牌库名称不能包含特殊字符 \\/:*?"<>|',
+      message: t('deckBuilder.forms.validation.namePattern'),
       trigger: ['input', 'blur']
     }
   ],
   width: [
     {
       required: true,
-      message: '请输入宽度',
+      message: t('deckBuilder.forms.validation.widthRequired'),
       trigger: ['blur', 'change'],
       validator: (rule: any, value: any) => {
         if (value === null || value === undefined || value === '') {
-          return new Error('请输入宽度');
+          return new Error(t('deckBuilder.forms.validation.widthRequired'));
         }
         if (typeof value !== 'number' || value < 1 || value > 10) {
-          return new Error('宽度必须在1-10之间');
+          return new Error(t('deckBuilder.forms.validation.widthRange'));
         }
         return true;
       }
@@ -231,20 +234,20 @@ const createRules: FormRules = {
   height: [
     {
       required: true,
-      message: '请输入高度',
+      message: t('deckBuilder.forms.validation.heightRequired'),
       trigger: ['blur', 'change'],
       validator: (rule: any, value: any) => {
         if (value === null || value === undefined || value === '') {
-          return new Error('请输入高度');
+          return new Error(t('deckBuilder.forms.validation.heightRequired'));
         }
         if (typeof value !== 'number' || value < 1 || value > 7) {
-          return new Error('高度必须在1-7之间');
+          return new Error(t('deckBuilder.forms.validation.heightRange'));
         }
         return true;
       }
     }
   ]
-};
+}));
 
 // 确保DeckBuilder目录存在
 const ensureDeckBuilderDirectory = async () => {
@@ -288,7 +291,6 @@ const loadDecks = async () => {
             }));
           }
 
-          // 在loadDecks函数中添加TTS信息的处理
           decks.push({
             name: deckData.name,
             path: file.path,
@@ -296,7 +298,7 @@ const loadDecks = async () => {
             height: deckData.height,
             frontCards: frontCards,
             backCards: backCards,
-            ttsInfo: deckData.ttsInfo // 新增
+            ttsInfo: deckData.ttsInfo
           });
         } catch (error) {
           console.error(`加载牌库文件失败: ${file.path}`, error);
@@ -309,10 +311,10 @@ const loadDecks = async () => {
     }
 
     await loadAvailableCards();
-    message.success('牌库列表已刷新');
+    message.success(t('deckBuilder.messages.refreshSuccess'));
   } catch (error) {
     console.error('加载牌库列表失败:', error);
-    message.error('加载牌库列表失败，请重试');
+    message.error(t('deckBuilder.messages.loadFailed'));
   } finally {
     loading.value = false;
   }
@@ -352,7 +354,7 @@ const loadAvailableCards = async () => {
     availableCards.value = cards;
   } catch (error) {
     console.error('加载可用卡牌失败:', error);
-    message.error('加载可用卡牌失败');
+    message.error(t('deckBuilder.messages.loadCardsFailed'));
   }
 };
 
@@ -383,7 +385,7 @@ const loadAvailableImages = async () => {
     console.log('加载到的图片文件:', images);
   } catch (error) {
     console.error('加载可用图片失败:', error);
-    message.error('加载可用图片失败');
+    message.error(t('deckBuilder.messages.loadImagesFailed'));
   }
 };
 
@@ -392,14 +394,10 @@ const selectDeck = async (deck: DeckFile) => {
   selectedDeck.value = deck;
 };
 
-// 更新选中的牌库 - 修改版本
+// 更新选中的牌库
 const updateSelectedDeck = (updatedDeck: DeckFile) => {
-  // 只更新引用，避免深度比较
   if (selectedDeck.value && selectedDeck.value.path === updatedDeck.path) {
-    // 使用 Object.assign 来更新现有对象，而不是替换整个对象
     Object.assign(selectedDeck.value, updatedDeck);
-
-    // 同时更新牌库列表中的对应项
     const index = deckList.value.findIndex(deck => deck.path === updatedDeck.path);
     if (index > -1) {
       Object.assign(deckList.value[index], updatedDeck);
@@ -442,18 +440,15 @@ const createDeck = async () => {
     };
 
     deckList.value.push(newDeck);
-
     closeCreateDialog();
-    message.success('牌库创建成功');
-
-    // 自动选择新创建的牌库
+    message.success(t('deckBuilder.messages.createSuccess'));
     selectDeck(newDeck);
   } catch (error) {
     if (error && typeof error === 'object' && 'errors' in error) {
       return;
     }
     console.error('创建牌库失败:', error);
-    message.error('创建牌库失败，请重试');
+    message.error(t('deckBuilder.messages.createFailed'));
   } finally {
     creating.value = false;
   }
@@ -481,7 +476,8 @@ const saveDeck = async () => {
       width: selectedDeck.value.width,
       height: selectedDeck.value.height,
       frontCards: selectedDeck.value.frontCards,
-      backCards: selectedDeck.value.backCards
+      backCards: selectedDeck.value.backCards,
+      ttsInfo: selectedDeck.value.ttsInfo
     };
 
     await WorkspaceService.saveFileContent(
@@ -489,10 +485,10 @@ const saveDeck = async () => {
       JSON.stringify(deckData, null, 2)
     );
 
-    message.success('牌库保存成功');
+    message.success(t('deckBuilder.messages.saveSuccess'));
   } catch (error) {
     console.error('保存牌库失败:', error);
-    message.error('保存牌库失败，请重试');
+    message.error(t('deckBuilder.messages.saveFailed'));
   } finally {
     saving.value = false;
   }
@@ -523,10 +519,10 @@ const confirmDeleteDeck = async () => {
 
     showDeleteDialog.value = false;
     deckToDelete.value = null;
-    message.success('牌库删除成功');
+    message.success(t('deckBuilder.messages.deleteSuccess'));
   } catch (error) {
     console.error('删除牌库失败:', error);
-    message.error('删除牌库失败，请重试');
+    message.error(t('deckBuilder.messages.deleteFailed'));
   } finally {
     deleting.value = false;
   }
@@ -567,22 +563,22 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 2rem; /* 进一步减少上下padding到0.5rem */
+  padding: 0.5rem 2rem;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
-  height: 48px; /* 固定高度为48px */
+  height: 48px;
 }
 
 .deck-builder-header h2 {
   margin: 0;
-  font-size: 1.1rem; /* 进一步减小字体 */
+  font-size: 1.1rem;
   font-weight: 600;
   line-height: 1.1;
 }
 
 .header-actions .n-button {
-  height: 32px; /* 减小按钮高度 */
+  height: 32px;
 }
 
 .deck-builder-content {
@@ -663,7 +659,6 @@ onUnmounted(() => {
   color: #6c757d;
 }
 
-/* 当没有选择牌库时的提示样式 */
 .no-deck-selected {
   flex: 1;
   display: flex;

@@ -1,14 +1,14 @@
 <template>
   <div class="tts-items-container">
     <div class="tts-content">
-      <h2>TTS物品管理</h2>
+      <h2>{{ $t('ttsItems.title') }}</h2>
       
       <!-- 开发中提示 -->
       <div class="dev-notice">
         <div class="dev-icon">🚧</div>
         <div class="dev-text">
-          <strong>此页面正在开发中</strong>
-          <span>功能可能不完整，部分特性正在完善中</span>
+          <strong>{{ $t('ttsItems.devNotice.title') }}</strong>
+          <span>{{ $t('ttsItems.devNotice.description') }}</span>
         </div>
       </div>
 
@@ -16,13 +16,13 @@
         <div class="item-card" v-for="item in items" :key="item.id">
           <div class="item-icon">📦</div>
           <div class="item-info">
-            <h3>{{ item.name }}</h3>
-            <p>{{ item.description }}</p>
+            <h3>{{ $t(`ttsItems.items.${item.type}.name`) }}</h3>
+            <p>{{ $t(`ttsItems.items.${item.type}.description`) }}</p>
           </div>
         </div>
         <div class="item-card add-new" @click="addNewItem">
           <div class="add-icon">➕</div>
-          <div class="add-text">添加新物品</div>
+          <div class="add-text">{{ $t('ttsItems.actions.addNewItem') }}</div>
         </div>
       </div>
     </div>
@@ -31,6 +31,9 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 interface TTSItem {
   id: string;
@@ -40,9 +43,9 @@ interface TTSItem {
 }
 
 const items = ref<TTSItem[]>([
-  { id: '1', name: '骰子', description: '六面骰子，用于游戏中的随机数生成', type: 'dice' },
-  { id: '2', name: '游戏板', description: '主游戏板，放置卡牌和游戏物件', type: 'board' },
-  { id: '3', name: '计数器', description: '用于记录生命值、得分等数值', type: 'counter' }
+  { id: '1', name: 'dice', description: 'dice_desc', type: 'dice' },
+  { id: '2', name: 'board', description: 'board_desc', type: 'board' },
+  { id: '3', name: 'counter', description: 'counter_desc', type: 'counter' }
 ]);
 
 const addNewItem = () => {

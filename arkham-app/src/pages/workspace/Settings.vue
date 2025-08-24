@@ -1,20 +1,20 @@
 <template>
   <div class="settings-container">
     <div class="settings-content">
-      <h2>工作区设置</h2>
+      <h2>{{ $t('settings.title') }}</h2>
       
       <!-- 加载状态 -->
       <div v-if="loading" class="loading-container">
         <div class="loading-spinner"></div>
-        <p>正在加载配置...</p>
+        <p>{{ $t('settings.loading') }}</p>
       </div>
 
       <div v-else class="settings-sections">
         <!-- AI设置 -->
         <div class="settings-section">
-          <h3>🤖 AI设置</h3>
+          <h3>{{ $t('settings.sections.ai.title') }}</h3>
           <div class="setting-item">
-            <label>AI端点</label>
+            <label>{{ $t('settings.sections.ai.endpoint') }}</label>
             <input 
               v-model="config.ai_endpoint" 
               type="text" 
@@ -22,7 +22,7 @@
             />
           </div>
           <div class="setting-item">
-            <label>AI模型</label>
+            <label>{{ $t('settings.sections.ai.model') }}</label>
             <input 
               v-model="config.ai_model" 
               type="text" 
@@ -30,35 +30,35 @@
             />
           </div>
           <div class="setting-item">
-            <label>API密钥</label>
+            <label>{{ $t('settings.sections.ai.apiKey') }}</label>
             <input 
               v-model="config.ai_api_key" 
               type="password" 
-              placeholder="输入你的API密钥"
+              :placeholder="$t('settings.sections.ai.apiKey')"
             />
           </div>
           <div class="setting-item">
-            <label>在编辑区启用AI</label>
+            <label>{{ $t('settings.sections.ai.enableInEditor') }}</label>
             <input 
               v-model="config.ai_enabled_in_editor" 
               type="checkbox"
             />
-            <span class="setting-description">在编辑器中启用AI辅助功能</span>
+            <span class="setting-description">{{ $t('settings.sections.ai.enableInEditorDesc') }}</span>
           </div>
         </div>
 
         <!-- GitHub图床设置 -->
         <div class="settings-section">
-          <h3>📷 GitHub图床设置</h3>
+          <h3>{{ $t('settings.sections.github.title') }}</h3>
           
           <!-- GitHub Token -->
           <div class="setting-item">
-            <label>GitHub Token</label>
+            <label>{{ $t('settings.sections.github.token') }}</label>
             <div class="token-input-container">
               <input 
                 v-model="githubConfig.github_token" 
                 type="password" 
-                placeholder="输入GitHub Personal Access Token"
+                :placeholder="$t('settings.sections.github.tokenPlaceholder')"
                 :disabled="githubVerifying"
               />
               <button 
@@ -67,37 +67,37 @@
                 class="verify-btn"
                 :class="{ 'success': githubLoginSuccess, 'error': githubLoginError }"
               >
-                {{ githubVerifying ? '验证中...' : githubLoginSuccess ? '已验证' : '验证登录' }}
+                {{ githubVerifying ? $t('settings.sections.github.verifying') : githubLoginSuccess ? $t('settings.sections.github.verified') : $t('settings.sections.github.verifyLogin') }}
               </button>
             </div>
             <span class="setting-description">
-              需要repo权限的GitHub Personal Access Token
-              <a href="https://github.com/settings/tokens" target="_blank" class="link">获取Token</a>
+              {{ $t('settings.sections.github.tokenDesc') }}
+              <a href="https://github.com/settings/tokens" target="_blank" class="link">{{ $t('settings.sections.github.getToken') }}</a>
             </span>
             <div v-if="githubLoginError" class="error-hint">
               {{ githubLoginError }}
             </div>
             <div v-if="githubLoginSuccess" class="success-hint">
-              登录成功，用户名: {{ githubUsername }}
+              {{ $t('settings.sections.github.loginSuccess', { username: githubUsername }) }}
             </div>
           </div>
 
           <!-- GitHub 仓库配置（登录成功后显示） -->
           <template v-if="githubLoginSuccess">
             <div class="setting-item">
-              <label>GitHub仓库</label>
+              <label>{{ $t('settings.sections.github.repo') }}</label>
               <div class="repo-selector">
                 <select 
                   v-model="githubConfig.github_repo"
                   :disabled="loadingRepositories"
                 >
-                  <option value="">请选择仓库</option>
+                  <option value="">{{ $t('settings.sections.github.selectRepo') }}</option>
                   <option 
                     v-for="repo in githubRepositories" 
                     :key="repo.full_name" 
                     :value="repo.full_name"
                   >
-                    {{ repo.full_name }} {{ repo.private ? '(私有)' : '(公开)' }}
+                    {{ repo.full_name }} {{ repo.private ? `(${$t('settings.sections.github.private')})` : `(${$t('settings.sections.github.public')})` }}
                   </option>
                 </select>
                 <button 
@@ -105,47 +105,47 @@
                   :disabled="loadingRepositories"
                   class="refresh-btn"
                 >
-                  {{ loadingRepositories ? '加载中...' : '刷新' }}
+                  {{ loadingRepositories ? $t('common.buttons.loading') : $t('common.buttons.refresh') }}
                 </button>
               </div>
-              <span class="setting-description">选择用作图床的GitHub仓库</span>
+              <span class="setting-description">{{ $t('settings.sections.github.repoDesc') }}</span>
             </div>
 
             <div class="setting-item">
-              <label>分支名称</label>
+              <label>{{ $t('settings.sections.github.branch') }}</label>
               <input 
                 v-model="githubConfig.github_branch" 
                 type="text" 
                 placeholder="main"
               />
-              <span class="setting-description">图片存储的分支（默认：main）</span>
+              <span class="setting-description">{{ $t('settings.sections.github.branchDesc') }}</span>
             </div>
 
             <div class="setting-item">
-              <label>存储文件夹</label>
+              <label>{{ $t('settings.sections.github.folder') }}</label>
               <input 
                 v-model="githubConfig.github_folder" 
                 type="text" 
                 placeholder="images"
               />
-              <span class="setting-description">图片存储的文件夹名称（默认：images）</span>
+              <span class="setting-description">{{ $t('settings.sections.github.folderDesc') }}</span>
             </div>
           </template>
         </div>
 
         <!-- 工作区配置 -->
         <div class="settings-section">
-          <h3>🏗️ 工作区配置</h3>
+          <h3>{{ $t('settings.sections.workspace.title') }}</h3>
           
           <div class="setting-item">
-            <label>遭遇组图标目录</label>
+            <label>{{ $t('settings.sections.workspace.encounterGroups') }}</label>
             <div class="directory-selector">
               <select 
                 v-model="selectedEncounterGroupsDir"
                 :disabled="!directories.length"
                 @change="onDirectoryChange"
               >
-                <option value="">请选择目录</option>
+                <option value="">{{ $t('settings.sections.workspace.selectDirectory') }}</option>
                 <option 
                   v-for="dir in directories" 
                   :key="dir.key" 
@@ -159,23 +159,23 @@
                 :disabled="refreshingDirs"
                 class="refresh-btn"
               >
-                {{ refreshingDirs ? '刷新中...' : '刷新' }}
+                {{ refreshingDirs ? $t('common.buttons.loading') : $t('common.buttons.refresh') }}
               </button>
             </div>
             <span v-if="selectedEncounterGroupsDir" class="setting-description">
-              相对路径: {{ selectedEncounterGroupsDir }}
+              {{ $t('settings.sections.workspace.relativePath', { path: selectedEncounterGroupsDir }) }}
             </span>
           </div>
 
           <div class="setting-item">
-            <label>底标图标</label>
+            <label>{{ $t('settings.sections.workspace.footerIcon') }}</label>
             <div class="directory-selector">
               <select 
                 v-model="selectedFooterIcon"
                 :disabled="!rootImages.length"
                 @change="onImageChange"
               >
-                <option value="">请选择图片</option>
+                <option value="">{{ $t('settings.sections.workspace.selectImage') }}</option>
                 <option 
                   v-for="img in rootImages" 
                   :key="img.key" 
@@ -189,17 +189,17 @@
                 :disabled="refreshingDirs"
                 class="refresh-btn"
               >
-                {{ refreshingDirs ? '刷新中...' : '刷新' }}
+                {{ refreshingDirs ? $t('common.buttons.loading') : $t('common.buttons.refresh') }}
               </button>
             </div>
-            <span class="setting-description">选择根目录下的PNG图片作为底标图标</span>
+            <span class="setting-description">{{ $t('settings.sections.workspace.footerIconDesc') }}</span>
             <span v-if="selectedFooterIcon" class="setting-description">
-              相对路径: {{ selectedFooterIcon }}
+              {{ $t('settings.sections.workspace.relativePath', { path: selectedFooterIcon }) }}
             </span>
           </div>
 
           <div class="setting-item">
-            <label>底标版权信息</label>
+            <label>{{ $t('settings.sections.workspace.copyright') }}</label>
             <input 
               v-model="config.footer_copyright" 
               type="text" 
@@ -210,12 +210,12 @@
 
         <!-- 语言设置 -->
         <div class="settings-section">
-          <h3>🌐 语言设置</h3>
+          <h3>{{ $t('settings.sections.language.title') }}</h3>
           <div class="setting-item">
-            <label>界面语言</label>
-            <select v-model="config.language">
-              <option value="zh">中文</option>
-              <option value="en" disabled>English (待开发)</option>
+            <label>{{ $t('settings.sections.language.interface') }}</label>
+            <select v-model="config.language" @change="handleLanguageChange">
+              <option value="zh">{{ $t('settings.sections.language.chinese') }}</option>
+              <option value="en">{{ $t('settings.sections.language.english') }}</option>
             </select>
           </div>
         </div>
@@ -228,14 +228,14 @@
           @click="saveSettings"
           :disabled="saving"
         >
-          {{ saving ? '保存中...' : '保存设置' }}
+          {{ saving ? $t('common.buttons.saving') : $t('settings.actions.save') }}
         </button>
         <button 
           class="btn-secondary" 
           @click="resetSettings"
           :disabled="saving"
         >
-          重置为默认
+          {{ $t('settings.actions.reset') }}
         </button>
       </div>
 
@@ -258,14 +258,19 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { ConfigService, WorkspaceService } from '@/api';
 import { GitHubService } from '@/api/github-service';
 import type { ConfigData, TreeOption, GitHubRepository } from '@/api/types';
+import { setLanguage } from '@/locales';
 
 // 扩展TreeOption类型以包含相对路径
 interface ExtendedTreeOption extends TreeOption {
   relativePath?: string;
 }
+
+// 国际化
+const { t } = useI18n();
 
 // 响应式数据
 const loading = ref(true);
@@ -310,6 +315,13 @@ const workspaceRootPath = ref('');
 // 选中的相对路径
 const selectedEncounterGroupsDir = ref('');
 const selectedFooterIcon = ref('');
+
+/**
+ * 语言变化处理
+ */
+const handleLanguageChange = () => {
+  setLanguage(config.language);
+};
 
 /**
  * 初始化设置页面
@@ -380,7 +392,7 @@ const checkGitHubStatus = async () => {
  */
 const verifyGitHubToken = async () => {
   if (!githubConfig.github_token.trim()) {
-    githubLoginError.value = '请输入GitHub Token';
+    githubLoginError.value = t('settings.messages.tokenRequired');
     return;
   }
 
@@ -395,7 +407,6 @@ const verifyGitHubToken = async () => {
     // 2. 登录成功后获取GitHub状态来获取用户名
     const status = await GitHubService.getStatus();
     
-    
     githubLoginSuccess.value = true;
     githubUsername.value = status.data.status.username || '';
     githubLoginError.value = '';
@@ -404,7 +415,7 @@ const verifyGitHubToken = async () => {
     await loadGitHubRepositories();
     
   } catch (err: any) {
-    githubLoginError.value = err.message || 'GitHub登录失败';
+    githubLoginError.value = err.message || t('settings.messages.githubLoginFailed');
     githubLoginSuccess.value = false;
     githubUsername.value = '';
     githubRepositories.value = [];
@@ -429,7 +440,7 @@ const loadGitHubRepositories = async () => {
     console.log('获取到的仓库列表:', githubRepositories.value);
   } catch (err: any) {
     console.error('加载仓库列表失败:', err);
-    error.value = '加载仓库列表失败: ' + (err.message || '未知错误');
+    error.value = t('settings.messages.loadRepoFailed', { error: err.message || t('common.messages.networkError') });
     githubRepositories.value = [];
   } finally {
     loadingRepositories.value = false;
@@ -453,7 +464,7 @@ const loadDirectories = async () => {
     rootImages.value = extractRootImages(fileTree.fileTree, workspaceRootPath.value);
   } catch (err: any) {
     console.warn('加载目录列表失败:', err);
-    error.value = '无法加载工作区目录，请确保已打开工作空间';
+    error.value = t('settings.messages.loadError');
   }
 };
 
@@ -566,7 +577,7 @@ const saveSettings = async () => {
     // 验证必填项
     if (config.ai_enabled_in_editor) {
       if (!config.ai_endpoint || !config.ai_api_key) {
-        throw new Error('启用AI功能时，端点和API密钥为必填项');
+        throw new Error(t('settings.messages.aiConfigRequired'));
       }
     }
     
@@ -586,13 +597,13 @@ const saveSettings = async () => {
     config.encounter_groups_dir = selectedEncounterGroupsDir.value;
     config.footer_icon_dir = selectedFooterIcon.value;
     
-    successMessage.value = '设置保存成功！';
+    successMessage.value = t('settings.messages.saveSuccess');
     setTimeout(() => {
       successMessage.value = '';
     }, 3000);
     
   } catch (err: any) {
-    error.value = err.message || '保存设置失败';
+    error.value = err.message || t('common.messages.operationFailed');
   } finally {
     saving.value = false;
   }
@@ -602,7 +613,7 @@ const saveSettings = async () => {
  * 重置设置
  */
 const resetSettings = () => {
-  if (confirm('确定要重置所有设置为默认值吗？此操作不可撤销。')) {
+  if (confirm(t('settings.actions.resetConfirm'))) {
     resetToDefaults();
   }
 };
@@ -660,7 +671,6 @@ watch(() => githubConfig.github_token, () => {
   }
 });
 </script>
-
 
 <style scoped>
 .settings-container {
@@ -781,7 +791,6 @@ watch(() => githubConfig.github_token, () => {
 .link:hover {
   text-decoration: underline;
 }
-
 /* GitHub相关样式 */
 .token-input-container {
   display: flex;

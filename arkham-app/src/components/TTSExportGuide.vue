@@ -5,25 +5,25 @@
                 <template #icon>
                     <n-icon :component="ArrowBackOutline" />
                 </template>
-                返回编辑
+                {{ t('deckBuilder.actions.back') }}
             </n-button>
         </div>
 
         <div class="guide-content">
             <div class="progress-bar">
                 <div class="progress-item" :class="{ active: currentStep >= 1, completed: currentStep > 1 }">
-                    <div class="step-number">1</div>
-                    <div class="step-label">导出图片</div>
+                    <div class="step-number">{{ t('deckBuilder.ttsExport.steps.step1.number') }}</div>
+                    <div class="step-label">{{ t('deckBuilder.ttsExport.steps.step1.title') }}</div>
                 </div>
                 <div class="progress-line" :class="{ completed: currentStep > 1 }"></div>
                 <div class="progress-item" :class="{ active: currentStep >= 2, completed: currentStep > 2 }">
-                    <div class="step-number">2</div>
-                    <div class="step-label">上传图床</div>
+                    <div class="step-number">{{ t('deckBuilder.ttsExport.steps.step2.number') }}</div>
+                    <div class="step-label">{{ t('deckBuilder.ttsExport.steps.step2.title') }}</div>
                 </div>
                 <div class="progress-line" :class="{ completed: currentStep > 2 }"></div>
                 <div class="progress-item" :class="{ active: currentStep >= 3, completed: currentStep > 3 }">
-                    <div class="step-number">3</div>
-                    <div class="step-label">生成TTS文件</div>
+                    <div class="step-number">{{ t('deckBuilder.ttsExport.steps.step3.number') }}</div>
+                    <div class="step-label">{{ t('deckBuilder.ttsExport.steps.step3.title') }}</div>
                 </div>
             </div>
 
@@ -31,18 +31,18 @@
                 <!-- 第一步：导出图片 -->
                 <div v-if="currentStep === 1" class="step-panel">
                     <div class="step-header">
-                        <h3>📷 第一步：导出牌库图片</h3>
-                        <p class="step-description">将您的牌库正面和背面导出为图片文件，这些图片将用于在TTS中显示您的卡牌。</p>
+                        <h3>{{ t('deckBuilder.ttsExport.steps.step1.header') }}</h3>
+                        <p class="step-description">{{ t('deckBuilder.ttsExport.steps.step1.description') }}</p>
                     </div>
 
                     <div class="export-section">
-                        <n-card title="导出设置" class="export-card">
+                        <n-card :title="t('deckBuilder.ttsExport.export.title')" class="export-card">
                             <div class="export-options">
-                                <n-form-item label="导出格式">
+                                <n-form-item :label="t('deckBuilder.ttsExport.export.format')">
                                     <n-select v-model:value="exportFormat" :options="formatOptions"
-                                        placeholder="选择图片格式" />
+                                        :placeholder="t('deckBuilder.ttsExport.export.formatPlaceholder')" />
                                 </n-form-item>
-                                <n-form-item label="图片质量" v-if="exportFormat === 'JPG'">
+                                <n-form-item :label="t('deckBuilder.ttsExport.export.quality')" v-if="exportFormat === 'JPG'">
                                     <n-slider v-model:value="imageQuality" :min="60" :max="100" :step="10"
                                         :marks="qualityMarks" />
                                 </n-form-item>
@@ -55,7 +55,7 @@
                                         <template #icon>
                                             <n-icon :component="DownloadOutline" />
                                         </template>
-                                        {{ exporting ? '正在导出...' : '开始导出图片' }}
+                                        {{ exporting ? t('deckBuilder.ttsExport.export.exporting') : t('deckBuilder.ttsExport.export.startExport') }}
                                     </n-button>
 
                                     <n-button size="large" @click="openExportDirectory"
@@ -63,7 +63,7 @@
                                         <template #icon>
                                             <n-icon :component="FolderOpenOutline" />
                                         </template>
-                                        打开导出目录
+                                        {{ t('deckBuilder.actions.openDirectory') }}
                                     </n-button>
                                 </n-space>
                             </div>
@@ -72,7 +72,7 @@
                                 <n-alert :type="exportResult.success ? 'success' : 'error'" :title="exportResult.title">
                                     {{ exportResult.message }}
                                     <div v-if="exportResult.success && exportResult.paths" class="exported-files">
-                                        <p><strong>导出的文件：</strong></p>
+                                        <p><strong>{{ t('deckBuilder.ttsExport.export.exportedFiles') }}</strong></p>
                                         <ul>
                                             <li v-for="path in exportResult.paths" :key="path">{{ path }}</li>
                                         </ul>
@@ -84,7 +84,7 @@
 
                     <div class="step-actions step-actions-first">
                         <n-button type="primary" @click="nextStep" :disabled="!exportResult?.success" size="large">
-                            下一步：上传到图床
+                            {{ t('deckBuilder.ttsExport.navigation.nextUpload') }}
                             <template #icon>
                                 <n-icon :component="ChevronForwardOutline" />
                             </template>
@@ -95,12 +95,12 @@
                 <!-- 第二步：上传图床 -->
                 <div v-if="currentStep === 2" class="step-panel">
                     <div class="step-header">
-                        <h3>☁️ 第二步：上传到图床</h3>
-                        <p class="step-description">将导出的图片上传到图床，获取在线地址供TTS使用。</p>
+                        <h3>{{ t('deckBuilder.ttsExport.steps.step2.header') }}</h3>
+                        <p class="step-description">{{ t('deckBuilder.ttsExport.steps.step2.description') }}</p>
                     </div>
 
                     <div class="upload-section">
-                        <n-card title="选择图床服务" class="upload-card">
+                        <n-card :title="t('deckBuilder.ttsExport.imageHost.title')" class="upload-card">
                             <div class="image-host-options">
                                 <div 
                                     class="host-option" 
@@ -110,8 +110,8 @@
                                     <div class="host-content">
                                         <div class="host-icon">🎮</div>
                                         <div class="host-info">
-                                            <div class="host-name">Steam 云存储</div>
-                                            <div class="host-desc">推荐：使用Steam Workshop云存储，稳定可靠</div>
+                                            <div class="host-name">{{ t('deckBuilder.ttsExport.imageHost.steam.name') }}</div>
+                                            <div class="host-desc">{{ t('deckBuilder.ttsExport.imageHost.steam.description') }}</div>
                                         </div>
                                         <div class="host-check">
                                             <n-icon v-if="imageHostType === 'steam'" :component="CheckmarkCircleOutline" />
@@ -127,8 +127,8 @@
                                     <div class="host-content">
                                         <div class="host-icon">📦</div>
                                         <div class="host-info">
-                                            <div class="host-name">GitHub图床</div>
-                                            <div class="host-desc">便捷：一键上传到GitHub仓库图床服务</div>
+                                            <div class="host-name">{{ t('deckBuilder.ttsExport.imageHost.github.name') }}</div>
+                                            <div class="host-desc">{{ t('deckBuilder.ttsExport.imageHost.github.description') }}</div>
                                         </div>
                                         <div class="host-check">
                                             <n-icon v-if="imageHostType === 'github'" :component="CheckmarkCircleOutline" />
@@ -139,23 +139,23 @@
                         </n-card>
 
                         <!-- Steam 云存储选项 -->
-                        <n-card v-if="imageHostType === 'steam'" title="Steam 云存储设置" class="upload-card">
+                        <n-card v-if="imageHostType === 'steam'" :title="t('deckBuilder.ttsExport.imageHost.steam.name')" class="upload-card">
                             <div class="steam-upload">
-                                <n-alert type="info" title="使用说明">
-                                    请先将图片上传到Steam Workshop，然后将获取到的图片URL地址填写到下方。
+                                <n-alert type="info" :title="t('common.instructions')">
+                                    {{ t('deckBuilder.ttsExport.imageHost.steam.instruction') }}
                                     <template #action>
                                         <n-button text type="primary" @click="openSteamWorkshop">
-                                            打开Steam Workshop
+                                            {{ t('deckBuilder.actions.openSteamWorkshop') }}
                                         </n-button>
                                     </template>
                                 </n-alert>
 
                                 <div class="url-inputs">
-                                    <n-form-item label="正面图片URL" required>
+                                    <n-form-item :label="t('deckBuilder.ttsExport.imageHost.urls.frontImage')" required>
                                         <n-input-group>
-                                            <n-input v-model:value="ttsInfo.frontImageUrl" placeholder="请输入正面图片的Steam云存储URL"
+                                            <n-input v-model:value="ttsInfo.frontImageUrl" :placeholder="t('deckBuilder.ttsExport.imageHost.urls.frontPlaceholder')"
                                                 clearable />
-                                            <n-button @click="copyToClipboard(ttsInfo.frontImageUrl, '正面图片URL')" 
+                                            <n-button @click="copyToClipboard(ttsInfo.frontImageUrl, t('deckBuilder.ttsExport.imageHost.urls.frontImage'))" 
                                                 :disabled="!ttsInfo.frontImageUrl">
                                                 <template #icon>
                                                     <n-icon :component="CopyOutline" />
@@ -163,11 +163,11 @@
                                             </n-button>
                                         </n-input-group>
                                     </n-form-item>
-                                    <n-form-item label="背面图片URL" required>
+                                    <n-form-item :label="t('deckBuilder.ttsExport.imageHost.urls.backImage')" required>
                                         <n-input-group>
-                                            <n-input v-model:value="ttsInfo.backImageUrl" placeholder="请输入背面图片的Steam云存储URL"
+                                            <n-input v-model:value="ttsInfo.backImageUrl" :placeholder="t('deckBuilder.ttsExport.imageHost.urls.backPlaceholder')"
                                                 clearable />
-                                            <n-button @click="copyToClipboard(ttsInfo.backImageUrl, '背面图片URL')" 
+                                            <n-button @click="copyToClipboard(ttsInfo.backImageUrl, t('deckBuilder.ttsExport.imageHost.urls.backImage'))" 
                                                 :disabled="!ttsInfo.backImageUrl">
                                                 <template #icon>
                                                     <n-icon :component="CopyOutline" />
@@ -180,14 +180,14 @@
                         </n-card>
 
                         <!-- GitHub图床选项 -->
-                        <n-card v-if="imageHostType === 'github'" title="GitHub图床上传" class="upload-card">
+                        <n-card v-if="imageHostType === 'github'" :title="t('deckBuilder.ttsExport.imageHost.github.name')" class="upload-card">
                             <div class="github-upload">
                                 <!-- GitHub状态检查中 -->
                                 <div v-if="githubChecking" class="github-status">
-                                    <n-alert type="info" title="正在检查GitHub配置...">
+                                    <n-alert type="info" :title="t('deckBuilder.ttsExport.imageHost.github.checking')">
                                         <div class="checking-spinner">
                                             <n-icon :component="EllipsisHorizontalOutline" class="rotating" />
-                                            正在验证GitHub登录状态...
+                                            {{ t('deckBuilder.ttsExport.imageHost.github.verifying') }}
                                         </div>
                                     </n-alert>
                                 </div>
@@ -195,10 +195,10 @@
                                 <!-- GitHub未配置 -->
                                 <div v-else-if="!githubStatus.is_logged_in" class="github-status">
                                     <n-alert type="warning" title="GitHub未配置">
-                                        请先在设置页面配置GitHub Token和仓库信息。
+                                        {{ t('deckBuilder.ttsExport.imageHost.github.notConfigured') }}
                                         <template #action>
                                             <n-button text type="primary" @click="$emit('openSettings')">
-                                                前往设置
+                                                {{ t('common.goToSettings') }}
                                             </n-button>
                                         </template>
                                     </n-alert>
@@ -208,16 +208,16 @@
                                 <div v-else class="github-ready">
                                     <div class="github-status-info">
                                         <n-alert type="success" title="GitHub已配置">
-                                            已连接到GitHub，用户：{{ githubStatus.username }}
+                                            {{ t('deckBuilder.ttsExport.imageHost.github.configured', { username: githubStatus.username }) }}
                                         </n-alert>
                                     </div>
 
                                     <div class="url-display">
-                                        <n-form-item label="正面图片URL">
+                                        <n-form-item :label="t('deckBuilder.ttsExport.imageHost.urls.frontImage')">
                                             <n-input-group>
-                                                <n-input :value="ttsInfo.frontImageUrl || '上传后自动生成'" readonly
-                                                    placeholder="上传后自动生成" />
-                                                <n-button @click="copyToClipboard(ttsInfo.frontImageUrl, '正面图片URL')" 
+                                                <n-input :value="ttsInfo.frontImageUrl || t('deckBuilder.ttsExport.imageHost.urls.autoGenerated')" readonly
+                                                    :placeholder="t('deckBuilder.ttsExport.imageHost.urls.autoGenerated')" />
+                                                <n-button @click="copyToClipboard(ttsInfo.frontImageUrl, t('deckBuilder.ttsExport.imageHost.urls.frontImage'))" 
                                                     :disabled="!ttsInfo.frontImageUrl">
                                                     <template #icon>
                                                         <n-icon :component="CopyOutline" />
@@ -225,11 +225,11 @@
                                                 </n-button>
                                             </n-input-group>
                                         </n-form-item>
-                                        <n-form-item label="背面图片URL">
+                                        <n-form-item :label="t('deckBuilder.ttsExport.imageHost.urls.backImage')">
                                             <n-input-group>
-                                                <n-input :value="ttsInfo.backImageUrl || '上传后自动生成'" readonly
-                                                    placeholder="上传后自动生成" />
-                                                <n-button @click="copyToClipboard(ttsInfo.backImageUrl, '背面图片URL')" 
+                                                <n-input :value="ttsInfo.backImageUrl || t('deckBuilder.ttsExport.imageHost.urls.autoGenerated')" readonly
+                                                    :placeholder="t('deckBuilder.ttsExport.imageHost.urls.autoGenerated')" />
+                                                <n-button @click="copyToClipboard(ttsInfo.backImageUrl, t('deckBuilder.ttsExport.imageHost.urls.backImage'))" 
                                                     :disabled="!ttsInfo.backImageUrl">
                                                     <template #icon>
                                                         <n-icon :component="CopyOutline" />
@@ -241,7 +241,7 @@
 
                                     <!-- 上传进度显示 -->
                                     <div v-if="uploading" class="upload-progress">
-                                        <n-card title="正在上传..." class="progress-card">
+                                        <n-card :title="t('deckBuilder.ttsExport.upload.uploadingTitle')" class="progress-card">
                                             <div class="progress-item" v-for="(item, index) in uploadProgress" :key="index">
                                                 <div class="progress-info">
                                                     <span class="file-name">{{ item.name }}</span>
@@ -268,7 +268,7 @@
                                             <template #icon>
                                                 <n-icon :component="CloudUploadOutline" />
                                             </template>
-                                            {{ uploading ? '正在上传...' : '一键上传到GitHub' }}
+                                            {{ uploading ? t('deckBuilder.ttsExport.upload.uploading') : t('deckBuilder.actions.uploadToGithub') }}
                                         </n-button>
                                     </div>
 
@@ -277,8 +277,8 @@
                                             :title="uploadResult.title">
                                             {{ uploadResult.message }}
                                             <div v-if="uploadResult.success && uploadResult.urls" class="uploaded-info">
-                                                <p><strong>成功上传 {{ uploadResult.urls.length }} 张图片</strong></p>
-                                                <p>URL已自动填入上方输入框，可点击复制按钮进行复制。</p>
+                                                <p><strong>{{ t('deckBuilder.ttsExport.upload.uploadSuccess', { count: uploadResult.urls.length }) }}</strong></p>
+                                                <p>{{ t('deckBuilder.ttsExport.upload.urlsGenerated') }}</p>
                                             </div>
                                         </n-alert>
                                     </div>
@@ -292,10 +292,10 @@
                             <template #icon>
                                 <n-icon :component="ChevronBackOutline" />
                             </template>
-                            上一步
+                            {{ t('deckBuilder.actions.prev') }}
                         </n-button>
                         <n-button type="primary" @click="nextStep" :disabled="!isStep2Valid" size="large">
-                            下一步：生成TTS文件
+                            {{ t('deckBuilder.ttsExport.navigation.nextGenerate') }}
                             <template #icon>
                                 <n-icon :component="ChevronForwardOutline" />
                             </template>
@@ -306,26 +306,26 @@
                 <!-- 第三步：生成TTS文件 -->
                 <div v-if="currentStep === 3" class="step-panel">
                     <div class="step-header">
-                        <h3>🎯 第三步：生成TTS文件</h3>
-                        <p class="step-description">使用上传的图片URL生成桌游模拟器可导入的牌组文件。</p>
+                        <h3>{{ t('deckBuilder.ttsExport.steps.step3.header') }}</h3>
+                        <p class="step-description">{{ t('deckBuilder.ttsExport.steps.step3.description') }}</p>
                     </div>
 
                     <div class="generate-section">
-                        <n-card title="TTS文件配置" class="generate-card">
+                        <n-card :title="t('deckBuilder.ttsExport.generate.title')" class="generate-card">
                             <div class="tts-config">
                                 <n-descriptions bordered :column="2">
-                                    <n-descriptions-item label="牌库名称">
+                                    <n-descriptions-item :label="t('deckBuilder.ttsExport.generate.deckName')">
                                         {{ deck.name }}
                                     </n-descriptions-item>
-                                    <n-descriptions-item label="卡牌总数">
+                                    <n-descriptions-item :label="t('deckBuilder.ttsExport.generate.cardCount')">
                                         {{ cardCount }}
                                     </n-descriptions-item>
-                                    <n-descriptions-item label="正面图片URL">
+                                    <n-descriptions-item :label="t('deckBuilder.ttsExport.generate.frontImageUrl')">
                                         <n-ellipsis style="max-width: 200px;">
                                             {{ ttsInfo.frontImageUrl }}
                                         </n-ellipsis>
                                     </n-descriptions-item>
-                                    <n-descriptions-item label="背面图片URL">
+                                    <n-descriptions-item :label="t('deckBuilder.ttsExport.generate.backImageUrl')">
                                         <n-ellipsis style="max-width: 200px;">
                                             {{ ttsInfo.backImageUrl }}
                                         </n-ellipsis>
@@ -334,14 +334,14 @@
                             </div>
 
                             <div class="tts-info">
-                                <n-alert type="info" title="生成说明" closable>
-                                    TTS文件将会生成到以下位置：<br>
-                                    <strong>我的文档/My Games/Tabletop Simulator/Saves/Saved Objects/阿卡姬制作/</strong>
+                                <n-alert type="info" :title="t('deckBuilder.ttsExport.generate.description')" closable>
+                                    {{ t('deckBuilder.ttsExport.generate.description') }}<br>
+                                    <strong>{{ t('deckBuilder.ttsExport.generate.location') }}</strong>
                                     <br><br>
-                                    文件包含：
+                                    {{ t('deckBuilder.ttsExport.generate.includes') }}
                                     <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem;">
-                                        <li>TTS JSON配置文件（包含完整的牌组数据和脚本）</li>
-                                        <li>256x256像素的PNG封面图片</li>
+                                        <li>{{ t('deckBuilder.ttsExport.generate.includesList.config') }}</li>
+                                        <li>{{ t('deckBuilder.ttsExport.generate.includesList.thumbnail') }}</li>
                                     </ul>
                                 </n-alert>
                             </div>
@@ -353,13 +353,13 @@
                             <template #icon>
                                 <n-icon :component="ChevronBackOutline" />
                             </template>
-                            上一步
+                            {{ t('deckBuilder.actions.prev') }}
                         </n-button>
                         <n-button type="primary" @click="generateTTSFile" :loading="generating" size="large">
                             <template #icon>
                                 <n-icon :component="RocketOutline" />
                             </template>
-                            {{ generating ? '正在生成TTS文件...' : '生成TTS文件' }}
+                            {{ generating ? t('deckBuilder.ttsExport.generate.generating') : t('deckBuilder.actions.generateTTS') }}
                         </n-button>
                     </div>
 
@@ -370,17 +370,17 @@
                             <template v-if="generateResult.success" #footer>
                                 <n-space>
                                     <n-button type="primary" @click="handleBack">
-                                        完成并返回编辑
+                                        {{ t('deckBuilder.ttsExport.generate.complete') }}
                                     </n-button>
                                 </n-space>
                             </template>
                             <template v-else #footer>
                                 <n-space>
                                     <n-button type="primary" @click="generateTTSFile" :loading="generating">
-                                        重新生成
+                                        {{ t('deckBuilder.ttsExport.generate.retry') }}
                                     </n-button>
                                     <n-button @click="prevStep">
-                                        返回上一步
+                                        {{ t('deckBuilder.ttsExport.generate.backToStep') }}
                                     </n-button>
                                 </n-space>
                             </template>
@@ -395,6 +395,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
 import { useMessage } from 'naive-ui';
+import { useI18n } from 'vue-i18n';
 import {
     ArrowBackOutline,
     DownloadOutline,
@@ -410,6 +411,8 @@ import {
 } from '@vicons/ionicons5';
 import { TtsExportService, GitHubService, ConfigService } from '@/api';
 import type { GitHubStatus } from '@/api/types';
+
+const { t } = useI18n();
 
 interface DeckCard {
     index: number;
@@ -465,18 +468,20 @@ const exportResult = ref<{
     paths?: string[];
 } | null>(null);
 
-const formatOptions = [
-    { label: 'JPG (推荐)', value: 'JPG' },
+// 格式选项（支持多语言）
+const formatOptions = computed(() => [
+    { label: 'JPG (' + t('common.recommended') + ')', value: 'JPG' },
     { label: 'PNG', value: 'PNG' },
-];
+]);
 
-const qualityMarks = {
-    60: '低',
-    70: '中',
-    80: '高',
-    90: '极高',
-    100: '最高'
-};
+// 质量标记（支持多语言）
+const qualityMarks = computed(() => ({
+    60: t('deckBuilder.ttsExport.export.qualityMarks.60'),
+    70: t('deckBuilder.ttsExport.export.qualityMarks.70'),
+    80: t('deckBuilder.ttsExport.export.qualityMarks.80'),
+    90: t('deckBuilder.ttsExport.export.qualityMarks.90'),
+    100: t('deckBuilder.ttsExport.export.qualityMarks.100')
+}));
 
 // 第二步：上传图床
 const imageHostType = ref<'steam' | 'github'>('steam');
@@ -601,13 +606,13 @@ const selectImageHost = (type: 'steam' | 'github') => {
 // 复制到剪贴板
 const copyToClipboard = async (text: string, label: string) => {
     if (!text) {
-        message.warning(`${label}为空，无法复制`);
+        message.warning(t('deckBuilder.messages.urlEmpty', { label }));
         return;
     }
     
     try {
         await navigator.clipboard.writeText(text);
-        message.success(`${label}已复制到剪贴板`);
+        message.success(t('deckBuilder.messages.urlCopied', { label }));
     } catch (error) {
         // 如果 Clipboard API 不支持，使用传统方法
         try {
@@ -617,9 +622,9 @@ const copyToClipboard = async (text: string, label: string) => {
             textarea.select();
             document.execCommand('copy');
             document.body.removeChild(textarea);
-            message.success(`${label}已复制到剪贴板`);
+            message.success(t('deckBuilder.messages.urlCopied', { label }));
         } catch (fallbackError) {
-            message.error('复制失败，请手动复制');
+            message.error(t('deckBuilder.messages.copyFailed'));
             console.error('Copy failed:', fallbackError);
         }
     }
@@ -675,8 +680,8 @@ const exportImages = async () => {
 
         exportResult.value = {
             success: true,
-            title: '导出成功！',
-            message: '牌库图片已成功导出到DeckBuilder目录。',
+            title: t('deckBuilder.messages.tts.exportSuccess.title'),
+            message: t('deckBuilder.messages.tts.exportSuccess.message'),
             paths: [
                 `${props.deck.name}_front.${exportFormat.value.toLowerCase()}`,
                 `${props.deck.name}_back.${exportFormat.value.toLowerCase()}`
@@ -684,14 +689,14 @@ const exportImages = async () => {
         };
 
         ttsInfo.value.exportPath = 'DeckBuilder';
-        message.success('图片导出成功！');
+        message.success(t('deckBuilder.messages.exportSuccess'));
     } catch (error: any) {
         exportResult.value = {
             success: false,
-            title: '导出失败',
-            message: error?.message || '导出过程中发生错误，请重试。'
+            title: t('deckBuilder.messages.tts.exportFailed.title'),
+            message: t('deckBuilder.messages.tts.exportFailed.message')
         };
-        message.error('图片导出失败: ' + (error?.message || '未知错误'));
+        message.error(t('deckBuilder.messages.exportFailed', { error: error?.message || t('common.unknownError') }));
         console.error('Export error:', error);
     } finally {
         exporting.value = false;
@@ -702,9 +707,9 @@ const exportImages = async () => {
 const openExportDirectory = async () => {
     try {
         await TtsExportService.openDirectory('DeckBuilder');
-        message.success('已打开导出目录');
+        message.success(t('deckBuilder.messages.directoryOpened'));
     } catch (error: any) {
-        message.error('打开目录失败: ' + (error?.message || '未知错误'));
+        message.error(t('deckBuilder.messages.directoryOpenFailed', { error: error?.message || t('common.unknownError') }));
         console.error('Open directory error:', error);
     }
 };
@@ -719,10 +724,10 @@ const uploadToGitHub = async () => {
     uploading.value = true;
     uploadResult.value = null;
     
-    // 初始化进度
+    // 初始化进度（支持多语言）
     uploadProgress.value = [
-        { name: '正面图片', progress: 0, status: 'waiting' },
-        { name: '背面图片', progress: 0, status: 'waiting' }
+        { name: t('deckBuilder.ttsExport.upload.frontImage'), progress: 0, status: 'waiting' },
+        { name: t('deckBuilder.ttsExport.upload.backImage'), progress: 0, status: 'waiting' }
     ];
 
     try {
@@ -730,11 +735,11 @@ const uploadToGitHub = async () => {
         await checkGitHubStatus();
 
         if (!githubStatus.value.is_logged_in) {
-            throw new Error('GitHub未配置，请先在设置页面配置GitHub Token和仓库信息');
+            throw new Error(t('deckBuilder.ttsExport.imageHost.github.notConfigured'));
         }
 
         if (!exportResult.value?.success || !exportResult.value.paths) {
-            throw new Error('请先导出图片');
+            throw new Error(t('common.exportFirstTip'));
         }
 
         const uploadedUrls: string[] = [];
@@ -755,7 +760,7 @@ const uploadToGitHub = async () => {
             uploadProgress.value[0].status = 'success';
         } catch (error: any) {
             uploadProgress.value[0].status = 'error';
-            throw new Error(`上传正面图片失败: ${error?.message || '未知错误'}`);
+            throw new Error(t('common.uploadFrontImageFailed', { error: error?.message || t('common.unknownError') }));
         }
 
         // 上传背面图片
@@ -773,13 +778,13 @@ const uploadToGitHub = async () => {
             uploadProgress.value[1].status = 'success';
         } catch (error: any) {
             uploadProgress.value[1].status = 'error';
-            throw new Error(`上传背面图片失败: ${error?.message || '未知错误'}`);
+            throw new Error(t('common.uploadBackImageFailed', { error: error?.message || t('common.unknownError') }));
         }
 
         uploadResult.value = {
             success: true,
-            title: '上传成功！',
-            message: '图片已成功上传到GitHub图床，URL已自动填入。',
+            title: t('deckBuilder.messages.tts.uploadSuccess.title'),
+            message: t('deckBuilder.messages.tts.uploadSuccess.message'),
             urls: uploadedUrls
         };
 
@@ -787,14 +792,14 @@ const uploadToGitHub = async () => {
         imageHostType.value = 'github';
         ttsInfo.value.imageSource = 'github';
 
-        message.success('GitHub图床上传成功！');
+        message.success(t('deckBuilder.messages.uploadSuccess'));
     } catch (error: any) {
         uploadResult.value = {
             success: false,
-            title: '上传失败',
-            message: error?.message || '上传过程中发生错误，请重试。'
+            title: t('deckBuilder.messages.tts.uploadFailed.title'),
+            message: error?.message || t('deckBuilder.messages.tts.uploadFailed.message')
         };
-        message.error('GitHub图床上传失败: ' + (error?.message || '未知错误'));
+        message.error(t('deckBuilder.messages.uploadFailed', { error: error?.message || t('common.unknownError') }));
         console.error('GitHub upload error:', error);
     } finally {
         uploading.value = false;
@@ -813,7 +818,7 @@ const generateTTSFile = async () => {
     try {
         // 验证必要的参数
         if (!ttsInfo.value.frontImageUrl || !ttsInfo.value.backImageUrl) {
-            throw new Error('请先完成前面的步骤，获取图片URL');
+            throw new Error(t('common.completeStepsTip'));
         }
 
         // 构建牌库文件名
@@ -830,38 +835,38 @@ const generateTTSFile = async () => {
 
         generateResult.value = {
             success: true,
-            title: '🎉 TTS文件生成成功！',
-            message: `牌库 "${props.deck.name}" 已成功导出为TTS文件！文件已保存到TTS游戏目录，您现在可以在桌游模拟器中导入这个牌组了！`
+            title: t('deckBuilder.messages.tts.generateSuccess.title'),
+            message: t('deckBuilder.messages.tts.generateSuccess.message', { name: props.deck.name })
         };
 
         // 更新牌库的TTS信息
         ttsInfo.value.lastExportTime = new Date().toISOString();
         saveTTSInfo();
 
-        message.success('TTS文件生成成功！');
+        message.success(t('deckBuilder.messages.generateSuccess'));
     } catch (error: any) {
-        let errorMessage = '生成TTS文件时发生错误，请检查配置后重试。';
+        let errorMessage = t('deckBuilder.messages.tts.generateFailed.message');
         
         // 根据错误码提供更详细的错误信息
         if (error.code) {
             switch (error.code) {
                 case 11001:
-                    errorMessage = '缺少必要参数：请确保提供了牌库名称、正面URL和背面URL';
+                    errorMessage = t('common.ttsErrors.11001');
                     break;
                 case 11002:
-                    errorMessage = '正面图片URL格式无效，请检查URL是否正确';
+                    errorMessage = t('common.ttsErrors.11002');
                     break;
                 case 11003:
-                    errorMessage = '背面图片URL格式无效，请检查URL是否正确';
+                    errorMessage = t('common.ttsErrors.11003');
                     break;
                 case 11004:
-                    errorMessage = 'TTS物品导出失败，请检查牌库文件是否存在';
+                    errorMessage = t('common.ttsErrors.11004');
                     break;
                 case 11005:
-                    errorMessage = '导出TTS物品失败（系统错误），请重试';
+                    errorMessage = t('common.ttsErrors.11005');
                     break;
                 default:
-                    errorMessage = error.message || '未知错误';
+                    errorMessage = error.message || t('common.unknownError');
             }
         } else if (error.message) {
             errorMessage = error.message;
@@ -869,11 +874,11 @@ const generateTTSFile = async () => {
 
         generateResult.value = {
             success: false,
-            title: '生成失败',
+            title: t('deckBuilder.messages.tts.generateFailed.title'),
             message: errorMessage
         };
         
-        message.error('TTS文件生成失败: ' + errorMessage);
+        message.error(t('deckBuilder.messages.generateFailed', { error: errorMessage }));
         console.error('TTS generation error:', error);
     } finally {
         generating.value = false;

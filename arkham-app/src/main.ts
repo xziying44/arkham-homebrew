@@ -5,6 +5,8 @@ import App from './App.vue'
 import 'vfonts/Lato.css'
 // 等宽字体
 import 'vfonts/FiraCode.css'
+// 多语言支持
+import i18n from './locales'
 
 // 全局禁用右键菜单，但保留输入框等可编辑元素的右键菜单
 document.addEventListener('contextmenu', (event) => {
@@ -40,4 +42,6 @@ document.addEventListener('contextmenu', (event) => {
   }
 }, false);
 
-createApp(App).mount('#app')
+const app = createApp(App)
+app.use(i18n)
+app.mount('#app')

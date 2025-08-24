@@ -10,15 +10,15 @@
                         <template #icon>
                             <n-icon :component="DownloadOutline" />
                         </template>
-                        导出为TTS物品
+                        {{ t('deckBuilder.actions.exportTTS') }}
                     </n-button>
                     <!-- 显著的保存按钮 -->
                     <n-button type="primary" @click="handleSave" :loading="saving" size="large" class="save-button">
                         <template #icon>
                             <n-icon :component="SaveOutline" />
                         </template>
-                        保存牌库
-                        <span class="save-shortcut">(Ctrl+S)</span>
+                        {{ t('deckBuilder.actions.saveDeck') }}
+                        <span class="save-shortcut">{{ t('deckBuilder.editor.shortcuts.save') }}</span>
                     </n-button>
                 </div>
             </div>
@@ -26,20 +26,20 @@
             <!-- 正反面切换标签 -->
             <div class="deck-side-tabs">
                 <n-tabs v-model:value="currentSide" type="segment" size="large" @update:value="switchSide">
-                    <n-tab-pane name="front" tab="正面 🎯">
+                    <n-tab-pane name="front" :tab="t('deckBuilder.editor.sides.frontWithIcon')">
                         <template #tab>
                             <div class="side-tab">
                                 <n-icon :component="LayersOutline" />
-                                <span>正面</span>
+                                <span>{{ t('deckBuilder.editor.sides.front') }}</span>
                                 <n-badge :value="getFrontCardCount()" :max="99" show-zero type="info" />
                             </div>
                         </template>
                     </n-tab-pane>
-                    <n-tab-pane name="back" tab="背面 🎲">
+                    <n-tab-pane name="back" :tab="t('deckBuilder.editor.sides.backWithIcon')">
                         <template #tab>
                             <div class="side-tab">
                                 <n-icon :component="SwapHorizontalOutline" />
-                                <span>背面</span>
+                                <span>{{ t('deckBuilder.editor.sides.back') }}</span>
                                 <n-badge :value="getBackCardCount()" :max="99" show-zero type="warning" />
                             </div>
                         </template>
@@ -88,8 +88,8 @@
                                 </div>
                                 <div v-else class="empty-slot">
                                     <div class="slot-index">{{ index - 1 }}</div>
-                                    <div class="add-hint">点击添加内容</div>
-                                    <div class="side-indicator">{{ currentSide === 'front' ? '正面' : '背面' }}</div>
+                                    <div class="add-hint">{{ t('deckBuilder.editor.content.clickToAdd') }}</div>
+                                    <div class="side-indicator">{{ currentSide === 'front' ? t('deckBuilder.editor.content.sideIndicator.front') : t('deckBuilder.editor.content.sideIndicator.back') }}</div>
                                 </div>
                             </div>
                         </div>
@@ -115,10 +115,10 @@
             :block-scroll="false"
             :mask-closable="true"
         >
-            <n-drawer-content title="选择内容" closable>
+            <n-drawer-content :title="t('deckBuilder.editor.content.selectContent')" closable>
                 <template #header>
                     <div class="drawer-header">
-                        <h3>选择内容 - {{ currentSide === 'front' ? '正面' : '背面' }}</h3>
+                        <h3>{{ t('deckBuilder.editor.content.selectContentFor', { side: currentSide === 'front' ? t('deckBuilder.editor.sides.front') : t('deckBuilder.editor.sides.back') }) }}</h3>
                     </div>
                 </template>
                 
@@ -126,10 +126,10 @@
                 <div class="content-type-tabs">
                     <n-tabs v-model:value="contentType" type="line" @update:value="switchContentType"
                         class="full-height-tabs">
-                        <n-tab-pane name="cards" tab="🎯 卡牌" class="full-height-pane">
+                        <n-tab-pane name="cards" :tab="t('deckBuilder.editor.tabs.cards')" class="full-height-pane">
                             <!-- 搜索框 -->
                             <div class="search-container">
-                                <n-input v-model:value="searchKeyword" placeholder="搜索卡牌名称..." clearable>
+                                <n-input v-model:value="searchKeyword" :placeholder="t('deckBuilder.editor.search.cards')" clearable>
                                     <template #prefix>
                                         <n-icon :component="SearchOutline" />
                                     </template>
@@ -146,7 +146,7 @@
                                                 <div class="content-path">{{ card.path }}</div>
                                             </div>
                                         </div>
-                                        <n-empty v-if="filteredCards.length === 0" description="没有找到匹配的卡牌">
+                                        <n-empty v-if="filteredCards.length === 0" :description="t('deckBuilder.editor.empty.noCards')">
                                             <template #icon>
                                                 <n-icon :component="SearchOutline" />
                                             </template>
@@ -155,32 +155,32 @@
                                 </n-scrollbar>
                             </div>
                         </n-tab-pane>
-                        <n-tab-pane name="cardbacks" tab="🎴 卡背" class="full-height-pane">
+                        <n-tab-pane name="cardbacks" :tab="t('deckBuilder.editor.tabs.cardbacks')" class="full-height-pane">
                             <div class="scrollable-content">
                                 <n-scrollbar style="height: 100%;">
                                     <div class="cardback-grid">
                                         <div class="cardback-item" @click="assignContentToSlot('cardback', 'player')">
                                             <div class="cardback-preview">
-                                                <img src="../assets/cardbacks/player-back.jpg" alt="玩家卡背"
+                                                <img src="../assets/cardbacks/player-back.jpg" :alt="t('deckBuilder.editor.cardbacks.player')"
                                                     class="cardback-image" @error="handleCardbackError" />
                                             </div>
-                                            <div class="cardback-name">玩家卡背</div>
+                                            <div class="cardback-name">{{ t('deckBuilder.editor.cardbacks.player') }}</div>
                                         </div>
                                         <div class="cardback-item" @click="assignContentToSlot('cardback', 'encounter')">
                                             <div class="cardback-preview">
-                                                <img src="../assets/cardbacks/encounter-back.jpg" alt="遭遇卡背"
+                                                <img src="../assets/cardbacks/encounter-back.jpg" :alt="t('deckBuilder.editor.cardbacks.encounter')"
                                                     class="cardback-image" @error="handleCardbackError" />
                                             </div>
-                                            <div class="cardback-name">遭遇卡背</div>
+                                            <div class="cardback-name">{{ t('deckBuilder.editor.cardbacks.encounter') }}</div>
                                         </div>
                                     </div>
                                 </n-scrollbar>
                             </div>
                         </n-tab-pane>
-                        <n-tab-pane name="images" tab="🖼️ 图片" class="full-height-pane">
+                        <n-tab-pane name="images" :tab="t('deckBuilder.editor.tabs.images')" class="full-height-pane">
                             <!-- 图片搜索框 -->
                             <div class="search-container">
-                                <n-input v-model:value="imageSearchKeyword" placeholder="搜索图片文件..." clearable>
+                                <n-input v-model:value="imageSearchKeyword" :placeholder="t('deckBuilder.editor.search.images')" clearable>
                                     <template #prefix>
                                         <n-icon :component="SearchOutline" />
                                     </template>
@@ -197,7 +197,7 @@
                                                 <div class="content-path">{{ image.path }}</div>
                                             </div>
                                         </div>
-                                        <n-empty v-if="filteredImages.length === 0" description="没有找到匹配的图片">
+                                        <n-empty v-if="filteredImages.length === 0" :description="t('deckBuilder.editor.empty.noImages')">
                                             <template #icon>
                                                 <n-icon :component="ImageOutline" />
                                             </template>
@@ -216,6 +216,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
 import { useMessage } from 'naive-ui';
+import { useI18n } from 'vue-i18n';
 import {
     SaveOutline,
     ImageOutline,
@@ -288,6 +289,7 @@ interface Emits {
 const emit = defineEmits<Emits>();
 
 const message = useMessage();
+const { t } = useI18n();
 
 // 状态管理
 const currentSide = ref<'front' | 'back'>('front');
@@ -485,7 +487,7 @@ const getCardName = (path: string): string => {
     if (!item) return path;
 
     if (item.type === 'cardback') {
-        return item.path === 'player' ? '玩家卡背' : '遭遇卡背';
+        return item.path === 'player' ? t('deckBuilder.editor.cardbacks.player') : t('deckBuilder.editor.cardbacks.encounter');
     } else if (item.type === 'card') {
         const card = props.availableCards.find(c => c.path === path);
         return card ? card.name : path.split('/').pop()?.replace('.card', '') || '';
@@ -529,11 +531,10 @@ const assignContentToSlot = async (type: 'card' | 'cardback' | 'image', path: st
     emit('update:deck', updatedDeck);
     showCardSelector.value = false;
     selectedSlotIndex.value = null;
-    let typeName = '';
-    if (type === 'card') typeName = '卡牌';
-    else if (type === 'cardback') typeName = '卡背';
-    else if (type === 'image') typeName = '图片';
-    message.success(`${typeName}已添加到${currentSide.value === 'front' ? '正面' : '背面'}`);
+    
+    const typeName = t(`deckBuilder.messages.types.${type}`);
+    const sideName = currentSide.value === 'front' ? t('deckBuilder.editor.sides.front') : t('deckBuilder.editor.sides.back');
+    message.success(t('deckBuilder.messages.cardAdded', { type: typeName, side: sideName }));
 };
 
 // 从位置移除内容 - 修改版本
@@ -548,7 +549,7 @@ const removeCardFromSlot = (index: number, side: 'front' | 'back') => {
         backSlotCardImages.value.delete(index);
     }
     emit('update:deck', updatedDeck);
-    message.info('内容已移除');
+    message.info(t('deckBuilder.messages.contentRemoved'));
 };
 
 // 拖拽开始
@@ -612,7 +613,7 @@ const handleDrop = (targetIndex: number) => {
     emit('update:deck', updatedDeck);
     dragSourceIndex.value = null;
     dragOverIndex.value = null;
-    message.info('内容位置已调换');
+    message.info(t('deckBuilder.messages.positionSwapped'));
 };
 
 // 保存处理

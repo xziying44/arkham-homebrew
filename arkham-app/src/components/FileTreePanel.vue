@@ -6,7 +6,7 @@
           <n-button size="tiny" quaternary @click="$emit('go-back')" class="header-button">
             <n-icon :component="ArrowBackOutline" />
           </n-button>
-          <span class="pane-title">文件资源管理器</span>
+          <span class="pane-title">{{ $t('workspaceMain.fileTree.title') }}</span>
         </n-space>
         <n-space align="center" size="small">
           <n-button size="tiny" @click="refreshFileTree" class="header-button">
@@ -35,7 +35,7 @@
           expand-on-click 
           @update:selected-keys="handleFileSelect"
         />
-        <n-empty v-else description="暂无文件" />
+        <n-empty v-else :description="$t('workspaceMain.fileTree.emptyText')" />
       </n-spin>
     </div>
 
@@ -55,17 +55,17 @@
     <n-modal v-model:show="showCreateFolderDialog">
       <n-card
         style="width: 400px"
-        title="新建文件夹"
+        :title="$t('workspaceMain.fileTree.createFolder.title')"
         :bordered="false"
         size="huge"
         role="dialog"
         aria-modal="true"
       >
         <n-form ref="createFolderFormRef" :model="createFolderForm" :rules="createFolderRules">
-          <n-form-item path="name" label="文件夹名称">
+          <n-form-item path="name" :label="$t('workspaceMain.fileTree.createFolder.label')">
             <n-input
               v-model:value="createFolderForm.name"
-              placeholder="请输入文件夹名称"
+              :placeholder="$t('workspaceMain.fileTree.createFolder.placeholder')"
               @keydown.enter="handleCreateFolder"
               clearable
             />
@@ -73,8 +73,8 @@
         </n-form>
         <template #footer>
           <n-space justify="end">
-            <n-button @click="showCreateFolderDialog = false">取消</n-button>
-            <n-button type="primary" @click="handleCreateFolder" :loading="creating">确定</n-button>
+            <n-button @click="showCreateFolderDialog = false">{{ $t('workspaceMain.fileTree.createFolder.cancel') }}</n-button>
+            <n-button type="primary" @click="handleCreateFolder" :loading="creating">{{ $t('workspaceMain.fileTree.createFolder.confirm') }}</n-button>
           </n-space>
         </template>
       </n-card>
@@ -84,17 +84,17 @@
     <n-modal v-model:show="showCreateCardDialog">
       <n-card
         style="width: 400px"
-        title="新建卡牌"
+        :title="$t('workspaceMain.fileTree.createCard.title')"
         :bordered="false"
         size="huge"
         role="dialog"
         aria-modal="true"
       >
         <n-form ref="createCardFormRef" :model="createCardForm" :rules="createCardRules">
-          <n-form-item path="name" label="卡牌文件名">
+          <n-form-item path="name" :label="$t('workspaceMain.fileTree.createCard.label')">
             <n-input
               v-model:value="createCardForm.name"
-              placeholder="请输入卡牌文件名（自动添加.card扩展名）"
+              :placeholder="$t('workspaceMain.fileTree.createCard.placeholder')"
               @keydown.enter="handleCreateCard"
               clearable
             />
@@ -102,8 +102,8 @@
         </n-form>
         <template #footer>
           <n-space justify="end">
-            <n-button @click="showCreateCardDialog = false">取消</n-button>
-            <n-button type="primary" @click="handleCreateCard" :loading="creating">确定</n-button>
+            <n-button @click="showCreateCardDialog = false">{{ $t('workspaceMain.fileTree.createCard.cancel') }}</n-button>
+            <n-button type="primary" @click="handleCreateCard" :loading="creating">{{ $t('workspaceMain.fileTree.createCard.confirm') }}</n-button>
           </n-space>
         </template>
       </n-card>
@@ -113,24 +113,24 @@
     <n-modal v-model:show="showRenameDialog">
       <n-card
         style="width: 450px"
-        title="重命名"
+        :title="$t('workspaceMain.fileTree.rename.title')"
         :bordered="false"
         size="huge"
         role="dialog"
         aria-modal="true"
       >
         <n-form ref="renameFormRef" :model="renameForm" :rules="renameRules">
-          <n-form-item path="filename" label="文件名">
+          <n-form-item path="filename" :label="$t('workspaceMain.fileTree.rename.filenameLabel')">
             <n-input
               v-model:value="renameForm.filename"
-              placeholder="请输入文件名"
+              :placeholder="$t('workspaceMain.fileTree.rename.filenamePlaceholder')"
               clearable
             />
           </n-form-item>
-          <n-form-item path="extension" label="扩展名" v-if="showExtensionField">
+          <n-form-item path="extension" :label="$t('workspaceMain.fileTree.rename.extensionLabel')" v-if="showExtensionField">
             <n-input
               v-model:value="renameForm.extension"
-              placeholder="请输入扩展名（不含点号）"
+              :placeholder="$t('workspaceMain.fileTree.rename.extensionPlaceholder')"
               clearable
             >
               <template #prefix>.</template>
@@ -138,14 +138,14 @@
           </n-form-item>
           <n-space vertical size="small">
             <n-text depth="3" style="font-size: 12px;">
-              预览: {{ renamePreview }}
+              {{ $t('workspaceMain.fileTree.rename.preview') }} {{ renamePreview }}
             </n-text>
           </n-space>
         </n-form>
         <template #footer>
           <n-space justify="end">
-            <n-button @click="showRenameDialog = false">取消</n-button>
-            <n-button type="primary" @click="handleRename" :loading="renaming">确定</n-button>
+            <n-button @click="showRenameDialog = false">{{ $t('workspaceMain.fileTree.rename.cancel') }}</n-button>
+            <n-button type="primary" @click="handleRename" :loading="renaming">{{ $t('workspaceMain.fileTree.rename.confirm') }}</n-button>
           </n-space>
         </template>
       </n-card>
@@ -155,30 +155,30 @@
     <n-modal v-model:show="showDeleteDialog">
       <n-card
         style="width: 450px"
-        title="删除确认"
+        :title="$t('workspaceMain.fileTree.delete.title')"
         :bordered="false"
         size="huge"
         role="dialog"
         aria-modal="true"
       >
         <n-space vertical>
-          <n-alert type="warning" title="警告">
+          <n-alert type="warning" :title="$t('workspaceMain.fileTree.delete.warning')">
             <template #icon>
               <n-icon :component="WarningOutline" />
             </template>
-            此操作不可恢复，请确认是否删除？
+            {{ $t('workspaceMain.fileTree.delete.confirmText') }}
           </n-alert>
           <n-space vertical size="small">
             <p><strong>{{ deleteConfirmText }}</strong></p>
             <p style="color: #666; font-size: 12px;">
-              路径: {{ contextMenuTarget?.path }}
+              {{ $t('workspaceMain.fileTree.delete.pathLabel') }} {{ contextMenuTarget?.path }}
             </p>
           </n-space>
         </n-space>
         <template #footer>
           <n-space justify="end">
-            <n-button @click="showDeleteDialog = false">取消</n-button>
-            <n-button type="error" @click="handleDelete" :loading="deleting">删除</n-button>
+            <n-button @click="showDeleteDialog = false">{{ $t('workspaceMain.fileTree.delete.cancel') }}</n-button>
+            <n-button type="error" @click="handleDelete" :loading="deleting">{{ $t('workspaceMain.fileTree.delete.confirm') }}</n-button>
           </n-space>
         </template>
       </n-card>
@@ -189,6 +189,7 @@
 <script setup lang="ts">
 import { ref, h, onMounted, computed } from 'vue';
 import { NIcon, useMessage, NText } from 'naive-ui';
+import { useI18n } from 'vue-i18n';
 import type { TreeOption, FormInst, FormRules } from 'naive-ui';
 import {
   FolderOpenOutline,
@@ -222,6 +223,7 @@ const emit = defineEmits<{
   'file-select': [keys: Array<string | number>, option?: TreeOption];
 }>();
 
+const { t } = useI18n();
 const message = useMessage();
 
 // 状态管理
@@ -276,70 +278,71 @@ const renamePreview = computed(() => {
 });
 
 // 表单验证规则
-const createFolderRules: FormRules = {
+const createFolderRules = computed((): FormRules => ({
   name: [
-    { required: true, message: '请输入文件夹名称', trigger: ['input', 'blur'] },
-    { min: 1, max: 50, message: '文件夹名称长度在1-50个字符', trigger: ['input', 'blur'] },
+    { required: true, message: t('workspaceMain.fileTree.validation.folderNameRequired'), trigger: ['input', 'blur'] },
+    { min: 1, max: 50, message: t('workspaceMain.fileTree.validation.folderNameLength'), trigger: ['input', 'blur'] },
     { 
       pattern: /^[^\\/:*?"<>|]+$/, 
-      message: '文件夹名称不能包含特殊字符 \\/:*?"<>|', 
+      message: t('workspaceMain.fileTree.validation.folderNameInvalid'), 
       trigger: ['input', 'blur'] 
     }
   ]
-};
+}));
 
-const createCardRules: FormRules = {
+const createCardRules = computed((): FormRules => ({
   name: [
-    { required: true, message: '请输入卡牌文件名', trigger: ['input', 'blur'] },
-    { min: 1, max: 50, message: '卡牌文件名长度在1-50个字符', trigger: ['input', 'blur'] },
+    { required: true, message: t('workspaceMain.fileTree.validation.cardNameRequired'), trigger: ['input', 'blur'] },
+    { min: 1, max: 50, message: t('workspaceMain.fileTree.validation.cardNameLength'), trigger: ['input', 'blur'] },
     { 
       pattern: /^[^\\/:*?"<>|]+$/, 
-      message: '卡牌文件名不能包含特殊字符 \\/:*?"<>|', 
+      message: t('workspaceMain.fileTree.validation.cardNameInvalid'), 
       trigger: ['input', 'blur'] 
     }
   ]
-};
+}));
 
-const renameRules: FormRules = {
+const renameRules = computed((): FormRules => ({
   filename: [
-    { required: true, message: '请输入文件名', trigger: ['input', 'blur'] },
-    { min: 1, max: 50, message: '文件名长度在1-50个字符', trigger: ['input', 'blur'] },
+    { required: true, message: t('workspaceMain.fileTree.validation.filenameRequired'), trigger: ['input', 'blur'] },
+    { min: 1, max: 50, message: t('workspaceMain.fileTree.validation.filenameLength'), trigger: ['input', 'blur'] },
     { 
       pattern: /^[^\\/:*?"<>|.]+$/, 
-      message: '文件名不能包含特殊字符 \\/:*?"<>|.', 
+      message: t('workspaceMain.fileTree.validation.filenameInvalid'), 
       trigger: ['input', 'blur'] 
     }
   ],
   extension: [
     { 
       pattern: /^[^\\/:*?"<>|.]*$/, 
-      message: '扩展名不能包含特殊字符 \\/:*?"<>|.', 
+      message: t('workspaceMain.fileTree.validation.extensionInvalid'), 
       trigger: ['input', 'blur'] 
     }
   ]
-};
+}));
 
 // 删除确认文本
 const deleteConfirmText = computed(() => {
   if (!contextMenuTarget.value) return '';
   const isDirectory = contextMenuTarget.value.type === 'directory';
   const name = contextMenuTarget.value.label as string;
-  return `${isDirectory ? '文件夹' : '文件'}: ${name}`;
+  const prefix = isDirectory ? t('workspaceMain.fileTree.delete.folderPrefix') : t('workspaceMain.fileTree.delete.filePrefix');
+  return `${prefix} ${name}`;
 });
 
 // 创建选项
-const createOptions = [
+const createOptions = computed(() => [
   {
-    label: '新建文件夹',
+    label: t('workspaceMain.fileTree.contextMenu.newFolder'),
     key: 'folder',
     icon: () => h(NIcon, { component: FolderOutline })
   },
   {
-    label: '新建卡牌',
+    label: t('workspaceMain.fileTree.contextMenu.newCard'),
     key: 'card',
     icon: () => h(NIcon, { component: DocumentOutline })
   }
-];
+]);
 
 // 右键菜单选项
 const contextMenuOptions = computed(() => {
@@ -355,12 +358,12 @@ const contextMenuOptions = computed(() => {
   if (isWorkspace || isDirectory) {
     options.push(
       {
-        label: '新建文件夹',
+        label: t('workspaceMain.fileTree.contextMenu.newFolder'),
         key: 'create-folder',
         icon: () => h(NIcon, { component: FolderOutline })
       },
       {
-        label: '新建卡牌',
+        label: t('workspaceMain.fileTree.contextMenu.newCard'),
         key: 'create-card',
         icon: () => h(NIcon, { component: DocumentOutline })
       }
@@ -374,12 +377,12 @@ const contextMenuOptions = computed(() => {
     }
     options.push(
       {
-        label: '重命名',
+        label: t('workspaceMain.fileTree.contextMenu.rename'),
         key: 'rename',
         icon: () => h(NIcon, { component: CreateOutline })
       },
       {
-        label: '删除',
+        label: t('workspaceMain.fileTree.contextMenu.delete'),
         key: 'delete',
         icon: () => h(NIcon, { component: TrashOutline })
       }
@@ -543,9 +546,9 @@ const loadFileTree = async () => {
   } catch (error) {
     console.error('加载文件树失败:', error);
     if (error instanceof ApiError) {
-      message.error(`加载文件树失败: ${error.message}`);
+      message.error(`${t('workspaceMain.fileTree.messages.loadFailed')}: ${error.message}`);
     } else {
-      message.error('加载文件树失败，请检查服务连接');
+      message.error(t('workspaceMain.fileTree.messages.loadFailedNetwork'));
     }
     fileTreeData.value = [];
   } finally {
@@ -673,17 +676,17 @@ const handleCreateFolder = async () => {
     
     addNodeToTree(fileTreeData.value, parentPath, newNode);
   
-    message.success('文件夹创建成功');
+    message.success(t('workspaceMain.fileTree.messages.createFolderSuccess'));
     showCreateFolderDialog.value = false;
     createFolderForm.value.name = '';
   } catch (error) {
     console.error('创建文件夹失败:', error);
     if (error instanceof ApiError) {
-      message.error(`创建文件夹失败: ${error.message}`);
+      message.error(`${t('workspaceMain.fileTree.messages.createFolderFailed')}: ${error.message}`);
     } else if (error.errors) {
       // 表单验证错误，不显示消息
     } else {
-      message.error('创建文件夹失败，请重试');
+      message.error(t('workspaceMain.fileTree.messages.createFolderFailedRetry'));
     }
   } finally {
     creating.value = false;
@@ -724,17 +727,17 @@ const handleCreateCard = async () => {
     
     addNodeToTree(fileTreeData.value, parentPath, newNode);
   
-    message.success('卡牌创建成功');
+    message.success(t('workspaceMain.fileTree.messages.createCardSuccess'));
     showCreateCardDialog.value = false;
     createCardForm.value.name = '';
   } catch (error) {
     console.error('创建卡牌失败:', error);
     if (error instanceof ApiError) {
-      message.error(`创建卡牌失败: ${error.message}`);
+      message.error(`${t('workspaceMain.fileTree.messages.createCardFailed')}: ${error.message}`);
     } else if (error.errors) {
       // 表单验证错误，不显示消息
     } else {
-      message.error('创建卡牌失败，请重试');
+      message.error(t('workspaceMain.fileTree.messages.createCardFailedRetry'));
     }
   } finally {
     creating.value = false;
@@ -771,18 +774,18 @@ const handleRename = async () => {
       targetNode.type = getFileType(newName);
     }
   
-    message.success('重命名成功');
+    message.success(t('workspaceMain.fileTree.messages.renameSuccess'));
     showRenameDialog.value = false;
     renameForm.value.filename = '';
     renameForm.value.extension = '';
   } catch (error) {
     console.error('重命名失败:', error);
     if (error instanceof ApiError) {
-      message.error(`重命名失败: ${error.message}`);
+      message.error(`${t('workspaceMain.fileTree.messages.renameFailed')}: ${error.message}`);
     } else if (error.errors) {
       // 表单验证错误，不显示消息
     } else {
-      message.error('重命名失败，请重试');
+      message.error(t('workspaceMain.fileTree.messages.renameFailedRetry'));
     }
   } finally {
     renaming.value = false;
@@ -802,14 +805,14 @@ const handleDelete = async () => {
     // 直接从文件树中删除节点
     removeNodeFromTree(fileTreeData.value, pathToDelete);
   
-    message.success('删除成功');
+    message.success(t('workspaceMain.fileTree.messages.deleteSuccess'));
     showDeleteDialog.value = false;
   } catch (error) {
     console.error('删除失败:', error);
     if (error instanceof ApiError) {
-      message.error(`删除失败: ${error.message}`);
+      message.error(`${t('workspaceMain.fileTree.messages.deleteFailed')}: ${error.message}`);
     } else {
-      message.error('删除失败，请重试');
+      message.error(t('workspaceMain.fileTree.messages.deleteFailedRetry'));
     }
   } finally {
     deleting.value = false;
