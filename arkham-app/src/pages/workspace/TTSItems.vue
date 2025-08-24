@@ -2,6 +2,16 @@
   <div class="tts-items-container">
     <div class="tts-content">
       <h2>TTS物品管理</h2>
+      
+      <!-- 开发中提示 -->
+      <div class="dev-notice">
+        <div class="dev-icon">🚧</div>
+        <div class="dev-text">
+          <strong>此页面正在开发中</strong>
+          <span>功能可能不完整，部分特性正在完善中</span>
+        </div>
+      </div>
+
       <div class="items-grid">
         <div class="item-card" v-for="item in items" :key="item.id">
           <div class="item-icon">📦</div>
@@ -52,6 +62,40 @@ const addNewItem = () => {
   color: #2c3e50;
   margin-bottom: 2rem;
   font-size: 1.5rem;
+}
+
+/* 开发中提示样式 */
+.dev-notice {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(255, 193, 7, 0.15);
+}
+
+.dev-icon {
+  font-size: 1.5rem;
+  margin-right: 1rem;
+}
+
+.dev-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.dev-text strong {
+  color: #856404;
+  font-size: 0.95rem;
+}
+
+.dev-text span {
+  color: #856404;
+  font-size: 0.85rem;
+  opacity: 0.8;
 }
 
 .items-grid {

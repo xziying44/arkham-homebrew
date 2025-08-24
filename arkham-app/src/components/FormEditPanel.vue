@@ -13,6 +13,7 @@
                     </span>
                 </n-space>
                 <n-space size="small">
+                    <n-button size="tiny" @click="showImportJsonModal = true" class="header-button">导入JSON</n-button>
                     <n-button size="tiny" @click="showJsonModal = true" class="header-button"
                         v-if="selectedFile">查看JSON</n-button>
                     <n-button v-if="!showImagePreview" size="tiny" quaternary @click="$emit('toggle-image-preview')"
@@ -79,7 +80,9 @@
                                     <!-- JSON内容展示 -->
                                     <div v-if="aiJsonContent" class="ai-json-content">
                                         <n-text depth="3" style="font-size: 12px;">📋 生成的卡牌数据：</n-text>
-                                        <n-code :code="aiJsonContent" language="json" class="ai-json-code" />
+                                        <div class="ai-json-display">
+                                            <n-code :code="aiJsonContent" language="json" class="ai-json-code" />
+                                        </div>
                                     </div>
 
                                     <!-- 验证状态 -->
@@ -217,10 +220,49 @@
         </div>
 
         <!-- JSON查看模态框 -->
-        <n-modal v-model:show="showJsonModal" preset="dialog" title="当前JSON数据">
-            <n-code :code="filteredJsonData" language="json" />
+        <n-modal v-model:show="showJsonModal" style="width: 80%; max-width: 800px;">
+            <n-card title="当前JSON数据" :bordered="false" size="huge" role="dialog" aria-modal="true">
+                <div class="json-modal-content">
+                    <div class="json-display-container">
+                        <n-scrollbar style="max-height: 60vh;">
+                            <n-code :code="filteredJsonData" language="json" class="json-code-display" />
+                        </n-scrollbar>
+                    </div>
+                    <div class="json-actions">
+                        <n-button type="primary" @click="copyJsonToClipboard" class="copy-button">
+                            <template #icon>
+                                <n-icon :component="CopyOutline" />
+                            </template>
+                            复制JSON
+                        </n-button>
+                    </div>
+                </div>
+                <template #footer>
+                    <n-space justify="end">
+                        <n-button @click="showJsonModal = false">关闭</n-button>
+                    </n-space>
+                </template>
+            </n-card>
+        </n-modal>
+
+        <!-- 导入JSON模态框 -->
+        <n-modal v-model:show="showImportJsonModal" preset="dialog" title="导入JSON数据">
+            <div class="import-json-content">
+                <n-form-item label="请粘贴JSON数据">
+                    <n-input v-model:value="importJsonText" type="textarea" placeholder="请粘贴要导入的JSON数据..." :rows="10"
+                        maxlength="50000" show-count class="import-textarea" />
+                </n-form-item>
+                <div v-if="importJsonError" class="import-error">
+                    <n-alert type="error" :title="importJsonError" />
+                </div>
+            </div>
             <template #action>
-                <n-button @click="showJsonModal = false">关闭</n-button>
+                <n-space>
+                    <n-button @click="cancelImportJson">取消</n-button>
+                    <n-button type="primary" @click="importJsonData" :disabled="!importJsonText.trim()">
+                        导入
+                    </n-button>
+                </n-space>
             </template>
         </n-modal>
 
@@ -255,7 +297,7 @@
 
 <script setup lang="ts">
 import { ref, computed, reactive, watch, onMounted, onUnmounted, nextTick } from 'vue';
-import { FolderOpenOutline, ImageOutline, WarningOutline } from '@vicons/ionicons5';
+import { FolderOpenOutline, ImageOutline, WarningOutline, CopyOutline } from '@vicons/ionicons5';
 import {
     SparklesOutline as SparklesIcon,
     RefreshOutline as LoadingOutline, // 修改这里，使用 RefreshOutline 代替 LoadingOutline
@@ -309,10 +351,15 @@ const pendingSwitchFile = ref<TreeOption | null>(null);
 const currentCardType = ref('');
 const newStringValue = ref('');
 const showJsonModal = ref(false);
+const showImportJsonModal = ref(false);
 const showSaveConfirmDialog = ref(false);
 const saving = ref(false);
 const generating = ref(false);
 const exporting = ref(false);
+
+// 导入JSON相关状态
+const importJsonText = ref('');
+const importJsonError = ref('');
 
 // AI相关状态
 const aiEnabledInEditor = ref(false);
@@ -323,6 +370,102 @@ const aiThinking = ref('');
 const aiJsonContent = ref('');
 const aiValidationStatus = ref<{ isValid: boolean; errors: string[] } | null>(null);
 const aiAbortController = ref<AbortController | null>(null);
+
+// 复制JSON到剪贴板
+const copyJsonToClipboard = async () => {
+    try {
+        await navigator.clipboard.writeText(filteredJsonData.value);
+        message.success('JSON已复制到剪贴板');
+    } catch (error) {
+        console.error('复制失败:', error);
+        // 如果clipboard API不可用，使用备用方案
+        try {
+            const textArea = document.createElement('textarea');
+            textArea.value = filteredJsonData.value;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            message.success('JSON已复制到剪贴板');
+        } catch (fallbackError) {
+            message.error('复制失败，请手动选择文本复制');
+        }
+    }
+};
+
+// 导入JSON数据
+const importJsonData = async () => {
+    importJsonError.value = '';
+
+    if (!importJsonText.value.trim()) {
+        message.warning('请输入JSON数据');
+        return;
+    }
+
+    try {
+        // 解析JSON
+        const jsonData = JSON.parse(importJsonText.value.trim());
+
+        // 验证是否是有效的卡牌数据
+        if (typeof jsonData !== 'object' || jsonData === null) {
+            throw new Error('JSON数据格式无效');
+        }
+
+        // 保存当前的元数据
+        const metadata = {
+            id: currentCardData.id || '',
+            created_at: currentCardData.created_at || '',
+            version: currentCardData.version || '1.0',
+        };
+
+        // 合并数据
+        const newData = { ...metadata, ...jsonData };
+
+        // 清空当前数据
+        Object.keys(currentCardData).forEach(key => {
+            delete currentCardData[key];
+        });
+
+        // 等待DOM更新
+        await nextTick();
+
+        // 重新赋值
+        Object.keys(newData).forEach(key => {
+            currentCardData[key] = newData[key];
+        });
+
+        // 更新卡牌类型
+        if (jsonData.type) {
+            currentCardType.value = jsonData.type;
+        }
+
+        // 关闭模态框
+        showImportJsonModal.value = false;
+        importJsonText.value = '';
+
+        // 生成预览
+        await nextTick();
+        setTimeout(() => {
+            autoGeneratePreview();
+        }, 100);
+
+        message.success('JSON数据导入成功');
+    } catch (error) {
+        console.error('导入JSON失败:', error);
+        importJsonError.value = `导入失败: ${error.message || '无效的JSON格式'}`;
+    }
+};
+
+// 取消导入JSON
+const cancelImportJson = () => {
+    showImportJsonModal.value = false;
+    importJsonText.value = '';
+    importJsonError.value = '';
+};
 
 // 初始化配置
 onMounted(async () => {
@@ -645,7 +788,7 @@ const updateTtsScript = (ttsData: { GMNotes: string; LuaScript: string; config?:
 
     currentCardData.tts_script.GMNotes = ttsData.GMNotes;
     currentCardData.tts_script.LuaScript = ttsData.LuaScript;
-    
+
     // 新增：保存config配置
     if (ttsData.config) {
         currentCardData.tts_script.config = ttsData.config;
@@ -960,7 +1103,7 @@ const loadCardData = async () => {
         await nextTick();
         setTimeout(() => {
             saveOriginalData();
-            
+
             // 加载完成后自动生成预览
             autoGeneratePreview();
         }, 100); // 给TTS配置更新一点时间
@@ -1243,7 +1386,6 @@ onUnmounted(() => {
 });
 </script>
 
-
 <style scoped>
 .form-pane {
     flex: 1;
@@ -1344,7 +1486,6 @@ onUnmounted(() => {
 
 .ai-result-container {
     margin-top: 16px;
-    /* 确保容器不超出父容器 */
     width: 100%;
     overflow: hidden;
 }
@@ -1352,7 +1493,6 @@ onUnmounted(() => {
 .ai-result-card {
     background: rgba(255, 255, 255, 0.9);
     border: 1px solid rgba(139, 69, 19, 0.1);
-    /* 确保卡片不超出容器 */
     width: 100%;
     overflow: hidden;
 }
@@ -1363,7 +1503,6 @@ onUnmounted(() => {
     background: rgba(139, 69, 19, 0.05);
     border-radius: 8px;
     border-left: 4px solid rgba(139, 69, 19, 0.3);
-    /* 添加宽度和溢出控制 */
     width: 100%;
     overflow: hidden;
     box-sizing: border-box;
@@ -1375,7 +1514,6 @@ onUnmounted(() => {
     line-height: 1.5;
     color: #666;
     white-space: pre-wrap;
-    /* 添加文本换行和溢出处理 */
     word-wrap: break-word;
     word-break: break-all;
     max-width: 100%;
@@ -1384,7 +1522,11 @@ onUnmounted(() => {
 
 .ai-json-content {
     margin-bottom: 16px;
-    /* 确保JSON内容容器不溢出 */
+    width: 100%;
+    overflow: hidden;
+}
+
+.ai-json-display {
     width: 100%;
     overflow: hidden;
 }
@@ -1393,12 +1535,9 @@ onUnmounted(() => {
     max-height: 200px;
     overflow-y: auto;
     overflow-x: auto;
-    /* 添加水平滚动 */
     margin-top: 8px;
-    /* 确保代码块不超出容器 */
     width: 100%;
     box-sizing: border-box;
-    /* 添加边框来更好地显示滚动区域 */
     border: 1px solid rgba(0, 0, 0, 0.1);
     border-radius: 4px;
     background: #f8f9fa;
@@ -1429,6 +1568,66 @@ onUnmounted(() => {
     to {
         transform: rotate(360deg);
     }
+}
+
+/* JSON模态框样式 */
+.json-modal-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.json-display-container {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: #f8f9fa;
+    overflow: hidden;
+}
+
+.json-code-display {
+    width: 100%;
+    box-sizing: border-box;
+    white-space: pre;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    padding: 16px;
+    margin: 0;
+    background: transparent;
+}
+
+.json-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 12px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.copy-button {
+    background: #667eea;
+    border-color: #667eea;
+}
+
+.copy-button:hover {
+    background: #5a67d8;
+    border-color: #5a67d8;
+}
+
+/* 导入JSON模态框样式 */
+.import-json-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: 300px;
+}
+
+.import-textarea {
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+}
+
+.import-error {
+    margin-top: 12px;
 }
 
 .form-row {

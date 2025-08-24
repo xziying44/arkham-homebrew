@@ -68,6 +68,11 @@ const navItems = [
     key: 'settings',
     label: '其他设置',
     icon: '⚙️'
+  },
+  {
+    key: 'about', // 新增关于页面
+    label: '关于',
+    icon: 'ℹ️'
   }
 ];
 
@@ -85,7 +90,7 @@ const goBack = () => {
 </script>
 
 <style scoped>
-/* 样式保持不变 */
+/* 样式保持不变，这里省略... */
 .workspace-sidebar {
   width: 220px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);

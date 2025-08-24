@@ -372,7 +372,34 @@ class TTSCardConverter:
 
         print(f"最终生成了 {len(contained_objects)} 张卡牌")
 
-        # 如果有卡牌，创建牌堆
+        # *** 新增：单张卡牌特殊处理 ***
+        if len(contained_objects) == 1:
+            print("检测到只有1张卡牌，导出单张卡牌格式")
+
+            # 获取唯一的卡牌对象
+            single_card = contained_objects[0]
+
+            # 调整单张卡牌的Transform位置（参考示例）
+            single_card["Transform"] = {
+                "posX": 32.41374 + random.uniform(-0.1, 0.1),
+                "posY": 1.49510384,
+                "posZ": 26.9848671 + random.uniform(-0.1, 0.1),
+                "rotX": random.uniform(-1.8e-07, 1.8e-07),
+                "rotY": 270.0,
+                "rotZ": random.uniform(-6e-07, 6e-07),
+                "scaleX": 1.0,  # 单张卡牌使用标准缩放
+                "scaleY": 1.0,
+                "scaleZ": 1.0
+            }
+
+            # 直接将单张卡牌添加到ObjectStates
+            tts_object["ObjectStates"] = [single_card]
+            print("单张卡牌格式导出完成")
+
+            return tts_object
+
+        # *** 原有的牌堆处理逻辑 ***
+        # 如果有多张卡牌，创建牌堆
         if contained_objects:
             # 检查第一张卡牌是否为调查员卡，决定牌堆的缩放
             first_card_tags = contained_objects[0].get("Tags", [])

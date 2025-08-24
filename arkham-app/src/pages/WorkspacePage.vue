@@ -27,6 +27,7 @@ import WorkspaceMain from './workspace/WorkspaceMain.vue';
 import DeckBuilder from './workspace/DeckBuilder.vue';
 import TTSItems from './workspace/TTSItems.vue';
 import Settings from './workspace/Settings.vue';
+import About from './workspace/About.vue'; // 新增
 
 // Props
 defineProps<{
@@ -45,10 +46,11 @@ const activeTab = ref('workspace');
 
 // 组件映射
 const componentMap = {
-  'workspace': markRaw(WorkspaceMain),        // 原有的工作区内容
-  'deck-builder': markRaw(DeckBuilder),       // 新的牌库制作页面
+  'workspace': markRaw(WorkspaceMain),
+  'deck-builder': markRaw(DeckBuilder),
   'tts-items': markRaw(TTSItems),
-  'settings': markRaw(Settings)
+  'settings': markRaw(Settings),
+  'about': markRaw(About) // 新增
 };
 
 // 当前组件
