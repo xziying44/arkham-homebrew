@@ -1,8 +1,81 @@
 import json
 import os
+import random
 import re
+import sys
 
 from PIL import Image, ImageDraw, ImageFont
+
+
+def get_resource_path(relative_path):
+    """获取资源文件的绝对路径，适用于开发环境和打包后的环境"""
+    if hasattr(sys, '_MEIPASS'):
+        # PyInstaller 打包后的临时目录
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
+
+
+def generate_random_braille(size, seed=None, dot_color=(0, 0, 0, 255)):
+    """
+    生成随机盲文图片 - 真正贴边版本
+
+    参数:
+    size: 图片大小 (生成正方形图片)
+    seed: 随机种子，相同种子生成相同图片
+    dot_color: 点的颜色，RGBA格式元组，默认黑色 (0, 0, 0, 255)
+
+    返回:
+    PIL Image对象，透明背景
+    """
+    if seed is not None:
+        random.seed(seed)
+
+    # 将图片均匀分成7行，计算每一行的高度
+    row_height = size // 7
+
+    # 创建一个透明背景的图片
+    img = Image.new('RGBA', (row_height * 5, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+
+    # 计算点的大小
+    dot_size = int(row_height * 0.6)
+    small_dot_size = int(dot_size * 0.5)  # 中间分隔行点的大小
+
+    # 绘制上三行的盲文点
+    for row in range(3):
+        for col in range(5):
+            # 随机决定是否绘制点（50%的概率）
+            if random.random() > 0.6:
+                x = col * row_height
+                y = row * row_height
+                # 绘制一个实心圆点
+                draw.ellipse((x, y, x + dot_size, y + dot_size), fill=dot_color)
+
+    # 绘制中间一行分割点，大小要小一半，位置要居中
+    mid_row = 3
+
+    for col in range(5):
+        # 计算x轴中心对齐的位置
+        normal_dot_center_x = col * row_height + dot_size // 2  # 正常点的中心x坐标
+        small_dot_x = normal_dot_center_x - small_dot_size // 2  # 小点的起始x坐标
+
+        # y轴也要居中
+        small_dot_y = mid_row * row_height + (row_height - small_dot_size) // 2
+
+        draw.ellipse((small_dot_x, small_dot_y,
+                      small_dot_x + small_dot_size, small_dot_y + small_dot_size),
+                     fill=dot_color)
+
+    # 绘制下三行的盲文点
+    for row in range(4, 7):  # 第4、5、6行（索引4、5、6）
+        for col in range(5):
+            # 随机决定是否绘制点
+            if random.random() > 0.6:
+                x = col * row_height
+                y = row * row_height
+                draw.ellipse((x, y, x + dot_size, y + dot_size), fill=dot_color)
+
+    return img
 
 
 def parse_html(text):
@@ -30,7 +103,7 @@ def parse_html(text):
 
             tag_name = tag_match.group(1).lower()
             is_end = tag_part.startswith('</')
-            is_self_closing = tag_part.endswith('/>') or tag_name in {'hr', 'lr', 'br', 'img'}
+            is_self_closing = tag_part.endswith('/>') or tag_name in {'hr', 'lr', 'br', 'cyber'}
             attrs_str = tag_match.group(3) or ''
             attrs = dict(attr_pattern.findall(attrs_str))
 
@@ -81,20 +154,21 @@ class ImageManager:
         :param image_folder: 图片文件存放目录，默认为'images'
         """
         self.image_map = {}
-        self.image_folder = image_folder
-        self._load_images()
+        # self.image_folder = image_folder
+        self.load_images(image_folder)
 
-    def _load_images(self):
+    def load_images(self, image_folder):
         """加载图片目录下所有支持的图像文件"""
         supported_ext = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
+        image_folder = get_resource_path(image_folder)
         try:
-            for filename in os.listdir(self.image_folder):
+            for filename in os.listdir(image_folder):
                 name, ext = os.path.splitext(filename)
                 if ext.lower() in supported_ext:
                     # 统一使用小写文件名作为键
-                    self.image_map[name.lower()] = self.open(os.path.join(self.image_folder, filename))
+                    self.image_map[name.lower()] = self.open(os.path.join(image_folder, filename))
         except FileNotFoundError:
-            print(f"错误：图片目录 {self.image_folder} 不存在")
+            print(f"错误：图片目录 {image_folder} 不存在")
         except Exception as e:
             print(f"图片加载失败: {str(e)}")
 
@@ -151,8 +225,7 @@ icon_dict = {
     '🏕️': '<生存者>',
     '🛡️': '<守护者>',
     '🧘': '<潜修者>',
-    '🔍': '<探求者>',
-    '🌸': '<花>',
+    '🔍': '<探求者>'
 }
 
 
@@ -180,7 +253,7 @@ class FontManager:
                 '小字': '汉仪小隶书简',
             }
         self.font_map = {}
-        self.font_folder = font_folder
+        self.font_folder = get_resource_path(font_folder)
         self._load_fonts()
         self.lang = lang
 
@@ -194,6 +267,16 @@ class FontManager:
                     self.font_map[name.lower()] = os.path.join(self.font_folder, filename)
         except Exception as e:
             print(f"字体加载失败: {str(e)}")
+
+    def get_font(self, font_name, font_size):
+        """
+        获取字体对象
+        :param font_name:
+        :param font_size:
+        :return:
+        """
+        font_path = self.get_font_path(font_name)
+        return ImageFont.truetype(font_path, font_size)
 
     def get_font_path(self, font_name):
         """
@@ -283,6 +366,57 @@ class Card:
         self.subclass_num = 0  # 子类数量
         self.is_back = is_back  # 是否背面
 
+    def copy_circle_to_image(self, reference_image: Image, source_params, target_params):
+        """
+        从参考图复制圆形区域到底图
+
+        Args:
+            reference_image (PIL.Image): 参考图
+            source_params (tuple): 源圆形参数 (x, y, 半径)
+            target_params (tuple): 目标圆形参数 (x, y, 半径)
+
+        Returns:
+            PIL.Image: 处理后的图像
+        """
+        # 复制参考图并拉伸到和card图片大小一致
+        reference_copy = reference_image.copy()
+        reference_copy = reference_copy.resize((self.width, self.height), Image.Resampling.LANCZOS)
+
+        # 解析参数
+        src_x, src_y, src_radius = source_params
+        tgt_x, tgt_y, tgt_radius = target_params
+
+        result_image = self.image
+
+        # 计算源圆形的边界框
+        src_left = src_x - src_radius
+        src_top = src_y - src_radius
+        src_right = src_x + src_radius
+        src_bottom = src_y + src_radius
+
+        # 从调整大小后的参考图中裁剪出包含圆形的矩形区域
+        cropped_reference = reference_copy.crop((src_left, src_top, src_right, src_bottom))
+
+        # 如果目标半径与源半径不同，需要调整大小
+        if tgt_radius != src_radius:
+            new_size = tgt_radius * 2  # 直径
+            cropped_reference = cropped_reference.resize((new_size, new_size), Image.Resampling.LANCZOS)
+
+        # 创建圆形蒙版
+        mask_size = tgt_radius * 2  # 直径
+        mask = Image.new('L', (mask_size, mask_size), 0)
+        mask_draw = ImageDraw.Draw(mask)
+        mask_draw.ellipse([0, 0, mask_size, mask_size], fill=255)
+
+        # 计算目标位置
+        tgt_left = tgt_x - tgt_radius
+        tgt_top = tgt_y - tgt_radius
+
+        # 将圆形区域粘贴到底图上
+        result_image.paste(cropped_reference, (tgt_left, tgt_top), mask)
+
+        return result_image
+
     def final_processing(self):
         """生成卡图后最后要处理的操作"""
         if self.subclass_num == 0 and self.card_class in ['探求者', '潜修者', '生存者', '流浪者', '守护者']:
@@ -304,16 +438,23 @@ class Card:
                 }, True)
 
     def _extend_image_right(self, source_img, extension=800):
+        # 确保源图像是RGBA模式（如果原本不是，先转换）
+        if source_img.mode != 'RGBA':
+            source_img = source_img.convert('RGBA')
+
         # 截取右边5%的像素
         right_crop = 15
         img = source_img.crop((source_img.width - right_crop, 0, source_img.width, source_img.height))
+
         # 计算新尺寸（宽度翻倍）
         new_size = (img.width + extension, img.height)
         img = img.resize(new_size, resample=Image.BILINEAR)
-        # 拼接source_img和img
-        result_img = Image.new('RGB', (source_img.width + extension, source_img.height))
+
+        # 拼接source_img和img，使用RGBA模式保留透明度
+        result_img = Image.new('RGBA', (source_img.width + extension, source_img.height))
         result_img.paste(source_img, (0, 0))
         result_img.paste(img, (source_img.width - 15, 0))
+
         return result_img
 
     def paste_image(self, img, region, resize_mode='stretch', transparent_list=None, extension=0):
@@ -322,7 +463,7 @@ class Card:
 
         :param img: 图片
         :param region: 目标区域坐标和尺寸 (x, y, width, height)
-        :param resize_mode: 调整模式，可选'stretch'(拉伸)/'contain'(适应)/'cover'(覆盖)
+        :param resize_mode: 调整模式，可选 'stretch'(拉伸)/'contain'(适应)/'cover'(覆盖)
         :param transparent_list: 透明区域圆，为(x, y, r)
         """
         if transparent_list is None:
@@ -369,10 +510,8 @@ class Card:
         """预处理文本并解析为带标签的段列表"""
         text = text.replace('\n<hr>\n', '<hr>')
         text = text.replace('\n<hr>', '<hr>')
+        text = text.replace('</img>\n', '</img>')
         text = text.replace('\n', '<lr>')
-
-        # 将全角符号转换为半角符号
-        text = text.replace('＜', '<').replace('＞', '>').replace('？', '?').replace('｛', '{').replace('｝', '}')
 
         text = re.sub(r'【(.*?)】', r"<fonts name='思源黑体'>\1</fonts>", text)
         text = re.sub(r'\{(.*?)}', r"<fonts name='方正舒体'>\1</fonts>", text)
@@ -417,8 +556,6 @@ class Card:
         text = text.replace('<守护者>', "<fonts name='arkham-icons'>e</fonts>")
         text = text.replace('<潜修者>', "<fonts name='arkham-icons'>h</fonts>")
         text = text.replace('<探求者>', "<fonts name='arkham-icons'>f</fonts>")
-
-        text = text.replace('<花>', "<fonts name='BODONI-ORNAMENTS'>\u00C6</fonts>")
 
         return parse_html(text)
 
@@ -582,16 +719,26 @@ class Card:
 
     def unified_text_processing(self, text):
         """统一文本处理"""
+        if text is None:
+            return ''
         # 替换emoji
         for emoji_item in icon_dict:
             text = text.replace(emoji_item, icon_dict[emoji_item])
-
-        text = text.replace('·', "<fonts name='SourceHanSansSC-Regular' offset='-25'>\uff65</fonts>")
+        # text = text.replace('·', "<fonts name='SourceHanSansSC-Regular' offset='-25'>\uff65</fonts>")
         text = text.replace('】。', "】<fonts name='SourceHanSansSC-Bold' offset='-30'>\uff61</fonts>")
         return text
 
-    def draw_centered_text(self, position, text, font_name, font_size, font_color,
-                           has_border=False, border_width=1, border_color=(0, 0, 0)):
+    def draw_centered_text(
+            self, position,
+            text,
+            font_name,
+            font_size,
+            font_color,
+            has_border=False,
+            border_width=1,
+            border_color=(0, 0, 0),
+            underline=False
+    ):
         """
         在指定位置居中绘制文字，可选外边框
 
@@ -603,6 +750,7 @@ class Card:
         :param has_border: 是否添加外边框
         :param border_width: 边框粗细
         :param border_color: 边框颜色
+        :param underline: 是否添加下划线
         """
         text = self.unified_text_processing(text)
         font = self._get_font(font_name, font_size)
@@ -614,6 +762,11 @@ class Card:
 
         segments = self._parse_text_segments(text)
         for node in segments:
+            if node['tag'] == 'cyber':
+                # 计算文字宽度
+                cyber_num = int(node['attrs'].get('num', '1'))
+                text_width += cyber_num * font_size * 0.5  # 赛博文宽度估计
+
             if node['tag'] == 'text' or node['tag'] == 'fonts':
                 _font_name, content = node['attrs']['name'] if node['tag'] == 'fonts' else 'default', node['content']
 
@@ -624,16 +777,54 @@ class Card:
 
         x = position[0] - text_width / 2
         y = position[1] - text_height / 2
+        line_height = font_size
 
         current_x = x
 
         for node in segments:
+            if node['tag'] == 'cyber':
+                # 处理赛博文
+                cyber_num = int(node['attrs'].get('num', '1'))
+                seed = node['attrs'].get('seed', None)
+                if seed is not None:
+                    random.seed(int(seed))
+                for i in range(cyber_num):
+                    # 生成赛博文
+                    cyber_text = generate_random_braille(size=font_size, seed=random.random())
+
+                    # 计算原图的宽高比
+                    original_width, original_height = cyber_text.size
+                    aspect_ratio = original_width / original_height
+
+                    # 根据line_height计算新的宽度，保持比例
+                    new_height = int(line_height * 0.9)
+                    new_width = int(new_height * aspect_ratio)
+
+                    # 等比缩放
+                    cyber_text = cyber_text.resize((new_width, new_height))
+
+                    # 粘贴到图片上
+                    self.image.paste(cyber_text, (int(current_x), int(y + 2)), cyber_text)
+                    current_x += cyber_text.width
+                pass
+            if node['tag'] == 'img':
+                content = node['content']
+                # 内联模式
+                img = self.image_manager.get_image(content)
+                if img:
+                    print(line_height)
+                    # 将img大小等比缩放到line_height
+                    img = img.resize((line_height, line_height))
+                    self.image.paste(img, (int(current_x + 2), int(y + 3)), img)
+                    current_x += img.width + 4
+                pass
             if node['tag'] == 'text' or node['tag'] == 'fonts':
                 _font_name, content = node['attrs']['name'] if node['tag'] == 'fonts' else 'default', node['content']
 
                 font = self._get_font(font_name, font_size) if _font_name == 'default' else self._get_font(_font_name,
                                                                                                            font_size)
                 char_w, char_h = self._get_text_dimensions(content, font)
+                line_height = max(line_height, char_h)
                 offset = 0
                 if 'attrs' in node and 'offset' in node['attrs']:
                     offset = int(int(node['attrs']['offset']) / 100 * font_size)
@@ -654,6 +845,21 @@ class Card:
                     'text': self.get_font_text_emoji(font_name if _font_name == 'default' else _font_name, content)
                 }, font_name if _font_name == 'default' else _font_name)
                 current_x += char_w
+        # 是否添加下划线
+        if underline:
+            underline_y = y + text_height + 2
+            y_offset = 12
+            self.draw.line(
+                (x, underline_y + y_offset, x + text_width, underline_y + y_offset),
+                fill=font_color,
+                width=1
+            )
+            y_offset = 18
+            self.draw.line(
+                (x, underline_y + y_offset, x + text_width, underline_y + y_offset),
+                fill=font_color,
+                width=2
+            )
 
     def draw_left_text(self, position, text, font_name, font_size, font_color,
                        has_border=False, border_width=1, border_color=(0, 0, 0)):
@@ -672,15 +878,27 @@ class Card:
         x = position[0]
         y = position[1]
         current_x = x
+        line_height = font_size
 
         segments = self._parse_text_segments(text)
         for node in segments:
+            if node['tag'] == 'img':
+                content = node['content']
+                # 内联模式
+                img = self.image_manager.get_image(content)
+                if img:
+                    # 将img大小等比缩放到line_height
+                    img = img.resize((line_height, line_height))
+                    self.image.paste(img, (int(current_x + 2), int(y + 3)), img)
+                    current_x += img.width + 4
+                pass
             if node['tag'] == 'text' or node['tag'] == 'fonts':
                 _font_name, content = node['attrs']['name'] if node['tag'] == 'fonts' else 'default', node['content']
 
                 font = self._get_font(font_name, font_size) if _font_name == 'default' else self._get_font(_font_name,
                                                                                                            font_size)
                 char_w, char_h = self._get_text_dimensions(content, font)
+                line_height = char_h
                 offset = 0
                 if 'attrs' in node and 'offset' in node['attrs']:
                     offset = int(int(node['attrs']['offset']) / 100 * font_size)
@@ -702,12 +920,150 @@ class Card:
                 }, font_name if _font_name == 'default' else _font_name)
                 current_x += char_w
 
+    def create_left_text_mark(
+            self,
+            width,
+            text,
+            font_name,
+            font_size,
+            font_color=(0, 0, 0)
+    ):
+        """制作靠左文本透明图层"""
+        text = self.unified_text_processing(text)
+        segments = self._parse_text_segments(text)
+        x = 0
+        y = 0
+        current_x = x
+        line_start_x = x
+        line_end_x = width
+        line_height = int(font_size * 1.2)
+        line_number = 1
+        # 创建行高透明图层画板
+        line_height_img = Image.new('RGBA', (width, line_height), (0, 0, 0, 0))
+        line_height_draw = ImageDraw.Draw(line_height_img)
+
+        for node in segments:
+            _font_name, content = node['attrs']['name'] if node['tag'] == 'fonts' else 'default', node['content']
+            if node['tag'] == 'img':
+                if 'inline' in node['attrs'] and node['attrs']['inline'] == 'true':
+                    # 内联模式
+                    img = self.image_manager.get_image(content)
+                    if img:
+                        # 将img大小等比缩放到line_height
+                        img = img.resize((line_height, line_height))
+                        line_height_img.paste(img, (current_x + 2, y - 2), img)
+                        current_x += img.width + 4
+                    pass
+
+            if node['tag'] == 'text' or node['tag'] == 'fonts':
+                font = self._get_font(font_name, font_size) if _font_name == 'default' else self._get_font(_font_name,
+                                                                                                           font_size)
+                for char in list(content):
+                    char_w, char_h = self._get_text_dimensions(char, font)
+                    if current_x + char_w > width and char not in symbol_list:
+                        # 如果字符宽度大于宽度，换行
+                        current_x = 0
+                        y += line_height
+                        line_number += 1
+                        # 创建一个新的行高透明图层画板
+                        line_height_img_new = Image.new('RGBA', (width, line_height * line_number), (0, 0, 0, 0))
+                        # 将旧的粘贴到新的图片上
+                        line_height_img_new.paste(line_height_img, (0, 0))
+                        line_height_img = line_height_img_new
+                        line_height_draw = ImageDraw.Draw(line_height_img)
+                    offset = 0
+                    if 'attrs' in node and 'offset' in node['attrs']:
+                        offset = int(int(node['attrs']['offset']) / 100 * font_size)
+                    offset += self.font_manager.get_font_offset(font_name)
+                    line_height_draw.text((current_x, y + offset), char, font=font, fill=font_color)
+                    current_x += char_w
+        return line_height_img
+
+    def _get_draw_scenario_card_token(self, name):
+        """获取画冒险参考卡的图标"""
+        if name == 'skull':
+            return self.image_manager.get_image('冒险参考卡-骷髅')
+        elif name == 'cultist':
+            return self.image_manager.get_image('冒险参考卡-异教徒')
+        elif name == 'tablet':
+            return self.image_manager.get_image('冒险参考卡-石碑')
+        elif name == 'elder_thing':
+            return self.image_manager.get_image('冒险参考卡-古神')
+        return None
+
+    def draw_scenario_card(self, scenario_card, resource_name=''):
+        """画冒险参考卡"""
+        scenario_card_object = []
+        for token_type in ['skull', 'cultist', 'tablet', 'elder_thing']:
+            if scenario_card.get(token_type, '') != '':
+                img = self.create_left_text_mark(
+                    width=450,
+                    text=scenario_card[token_type],
+                    font_name="simfang",
+                    font_size=32,
+                    font_color=(0, 0, 0)
+                )
+                scenario_card_object.append({
+                    'token': token_type,
+                    'img': img,
+                })
+        # 计算坐标
+        remaining_height = 630
+        if resource_name != '':
+            remaining_height = 500
+            # 画资源名称
+            self.draw_centered_text(
+                (self.width // 2, 807),
+                text=resource_name,
+                font_name="汉仪小隶书简",
+                font_size=36,
+                font_color=(0, 0, 0)
+            )
+        for token_object in scenario_card_object:
+            img = token_object['img']
+            remaining_height -= max(img.height, 84)
+            pass
+        if remaining_height < 0:
+            remaining_height = 0
+        gap = remaining_height // len(scenario_card_object)
+        # 开始画
+        start_x = 88
+        start_y = 300
+        current_x = 0
+        current_y = 0
+        for token_object in scenario_card_object:
+            img = token_object['img']
+            token = token_object['token']
+            # 计算坐标
+            current_x = 0
+            height = max(img.height, 84)
+            token_img = self._get_draw_scenario_card_token(token)
+            # 粘贴token
+            token_gap = (height - 84) // 2
+            self.paste_image(
+                token_img,
+                (start_x + current_x, start_y + current_y + token_gap, token_img.width, token_img.height),
+                resize_mode='contain',
+                extension=0
+            )
+            current_x += 94
+            # 粘贴文本
+            text_gap = (height - img.height) // 2
+            self.paste_image(
+                img,
+                (start_x + current_x, start_y + current_y + text_gap, img.width, img.height),
+                resize_mode='contain',
+                extension=0
+            )
+            current_y += height
+            current_y += gap
+
     def optimization_icon_mark(self, mark_object, join_directly=False):
         text = mark_object.get('text', '')
         if not join_directly and text not in [
             '🏅', '⭕', '➡️', '⚡', '💀', '👤', '📜', '👹', '🐙',
             '⭐', '👊', '📚', '🦶', '🧠', '❓', '🔵', '🌑', '🌟',
-            '❄️', '🕵️', '🚶', '🏕️', '🛡️', '🧘', '🔍', '🌸'
+            '❄️', '🕵️', '🚶', '🏕️', '🛡️', '🧘', '🔍'
         ]:
             return
         # 将mark_object的坐标都转为整数
@@ -739,10 +1095,6 @@ class Card:
 
     @staticmethod
     def get_font_text_emoji(font_name, text):
-        if font_name == 'BODONI-ORNAMENTS':
-            if text == '\u00C6':
-                return '🌸'
-
         if font_name == 'arkham-icons':
             if text == 'w':
                 return '🏅'
@@ -839,10 +1191,110 @@ class Card:
 
         for node in segments:
             font_name, content = node['attrs']['name'] if node['tag'] == 'fonts' else 'default', node['content']
+            if node['tag'] == 'cyber':
+                # 处理赛博文
+                cyber_num = int(node['attrs'].get('num', '1'))
+                seed = node['attrs'].get('seed', None)
+                if seed is not None:
+                    random.seed(int(seed))
+                for i in range(cyber_num):
+                    # 生成赛博文
+                    cyber_text = generate_random_braille(size=size, seed=random.random())
+
+                    # 计算原图的宽高比
+                    original_width, original_height = cyber_text.size
+                    aspect_ratio = original_width / original_height
+
+                    # 根据line_height计算新的宽度，保持比例
+                    new_height = int(line_height * 0.9)
+                    new_width = int(new_height * aspect_ratio)
+
+                    # 等比缩放
+                    cyber_text = cyber_text.resize((new_width, new_height))
+
+                    # 计算是否换行
+                    if current_x + new_width > line_end_x:
+                        current_y += line_height
+                        last_text = ''
+                        eof_is_br = True
+                        # 计算新一行开始和结束
+                        line_start_x, line_end_x = self.calculate_padding_x(vertices, current_y,
+                                                                            current_y + line_height,
+                                                                            padding)
+                        last_line_start_x, last_line_end_x = line_start_x, line_end_x
+                        current_x = line_start_x
+
+                    # 粘贴到图片上
+                    self.image.paste(cyber_text, (current_x, current_y + 2), cyber_text)
+                    current_x += cyber_text.width
+
+                print(f"Processing node: {node['tag']} with num: {node['attrs']['num']}")
+                pass
+            if node['tag'] == 'img':
+                if 'inline' in node['attrs'] and node['attrs']['inline'] == 'true':
+                    # 内联模式
+                    img = self.image_manager.get_image(content)
+                    if img:
+                        # 将img大小等比缩放到line_height
+                        img = img.resize((line_height, line_height))
+                        self.image.paste(img, (current_x + 2, current_y - 2), img)
+                        current_x += img.width + 4
+                    pass
+                else:
+                    scale = 1
+                    if 'attrs' in node and 'scale' in node['attrs']:
+                        scale = float(node['attrs']['scale'])
+                    # 画图片
+                    img_names = content.split('|')
+                    # 读取图片
+                    img_list = []
+                    for img_name in img_names:
+                        img = self.image_manager.get_image(img_name)
+                        if img:
+                            # 将图片缩放比例
+                            img = img.resize((int(img.width * scale), int(img.height * scale)))
+                            img_list.append(img)
+                    # 生成合并图片
+                    if img_list:  # 确保有图片需要处理
+                        gap = 8  # 设置图片之间的间隙大小，可以根据需要调整
+
+                        # 计算总宽度和最大高度（总宽度需要加上间隙）
+                        total_width = sum(img.width for img in img_list) + (len(img_list) - 1) * gap
+                        max_height = max(img.height for img in img_list)
+
+                        # 创建透明背景的新图片
+                        new_img = Image.new('RGBA', (total_width, max_height), (0, 0, 0, 0))
+
+                        # 逐个粘贴图片，保持垂直居中
+                        x_offset = 0
+                        for img in img_list:
+                            # 计算垂直居中的y坐标
+                            y_offset = (max_height - img.height) // 2
+                            new_img.paste(img, (x_offset, y_offset))
+                            x_offset += img.width + gap  # 每次增加图片宽度和间隙
+
+                        # 粘贴到图片上
+                        # 计算在大图上的粘贴位置（水平居中）
+                        line_width = line_end_x - line_start_x
+                        x_position = line_start_x + (line_width - new_img.width) // 2
+                        # 确保位置不超出边界（可选）
+                        x_position = max(0, x_position)
+                        # 将合并后的图片粘贴到大图上
+                        self.image.paste(new_img, (x_position, current_y), new_img)  # 最后一个参数是蒙版，用于透明背景
+                        # 增加y值
+                        current_y += new_img.height + 8
+                        current_x = line_start_x
+
             if node['tag'] == 'hr' or node['tag'] == 'lr':
                 last_current_y = current_y
-                if node['tag'] == 'lr':
-                    current_y += line_height + line_height // 4
+                if node['tag'] == 'hr':
+                    current_y += line_height + line_height
+                    # 画横线
+                    self.draw.line(
+                        [(line_start_x, current_y - line_height // 2), (line_end_x, current_y - line_height // 2)],
+                        fill=color,
+                        width=2
+                    )
                 else:
                     current_y += line_height + line_height // 4
                 # 加入标记数据
@@ -913,12 +1365,22 @@ class Card:
             if node['tag'] == 'relish':
                 eof_is_br = True
                 center = True
+                border_width = None
+                border_color = None
                 if 'center' in node['attrs'] and node['attrs']['center'] == 'false':
                     center = False
                     pass
-                if self.card_type in ['场景卡', '密谋卡']:
+                if 'blood' in node['attrs'] and node['attrs']['blood'] == 'true':
+                    border_width = 1
+                    border_color = (125, 40, 38)
+
+                if self.card_type in ['场景卡', '密谋卡', '故事卡', '冒险参考卡']:
                     center = False
-                relish_font = self._get_font(default_font_name, size - 2)
+                relish_font_name = default_font_name
+                if 'font' in node['attrs']:
+                    relish_font_name = node['attrs']['font']
+
+                relish_font = self._get_font(relish_font_name, size - 2)
 
                 line_str = ''
                 for char in list(content):
@@ -926,7 +1388,7 @@ class Card:
                     if current_x + char_w > line_end_x and char not in symbol_list:
                         # 靠左对齐
                         temp_line_start_x = line_start_x
-                        if self.card_type in ['场景卡', '密谋卡'] and self.is_back:
+                        if self.card_type in ['场景卡', '密谋卡', '故事卡', '冒险参考卡'] and self.is_back:
                             temp_line_start_x = line_start_x + 20
                             # 在行行前画双竖线
                             self.draw.line(
@@ -944,7 +1406,9 @@ class Card:
                             left_x=temp_line_start_x,
                             left_y=current_y,
                             font=relish_font,
-                            fill=color
+                            fill=color,
+                            border_width=border_width,
+                            border_color=border_color
                         )
                         line_str = ''
 
@@ -962,12 +1426,14 @@ class Card:
                             center_x=(line_start_x + line_end_x) // 2,
                             center_y=current_y + line_height // 2,
                             font=relish_font,
-                            fill=color
+                            fill=color,
+                            border_width=border_width,
+                            border_color=border_color
                         )
                     else:
                         # 靠左对齐
                         temp_line_start_x = line_start_x
-                        if self.card_type in ['场景卡', '密谋卡'] and self.is_back:
+                        if self.card_type in ['场景卡', '密谋卡', '故事卡', '冒险参考卡'] and self.is_back:
                             temp_line_start_x = line_start_x + 20
                             # 在行行前画双竖线
                             self.draw.line(
@@ -985,7 +1451,9 @@ class Card:
                             left_x=temp_line_start_x,
                             left_y=current_y,
                             font=relish_font,
-                            fill=color
+                            fill=color,
+                            border_width=border_width,
+                            border_color=border_color
                         )
         if eof_is_br is False:
             # 加入标记数据
@@ -1000,7 +1468,19 @@ class Card:
             })
             pass
 
-    def _draw_italic_text(self, text, font, fill, center_x=None, center_y=None, left_x=0, left_y=0, shear_factor=0.2):
+    def _draw_italic_text(
+            self,
+            text,
+            font,
+            fill,
+            center_x=None,
+            center_y=None,
+            left_x=0,
+            left_y=0,
+            shear_factor=0.2,
+            border_width=None,
+            border_color=None
+    ):
         """
         绘制斜体文字
 
@@ -1020,7 +1500,14 @@ class Card:
 
         temp_img = Image.new('RGBA', (text_width * 2, text_height * 2), (0, 0, 0, 0))
         temp_draw = ImageDraw.Draw(temp_img)
-        temp_draw.text((-left + text_width // 2, -top + text_height // 2), text, font=font, fill=fill)
+        temp_draw.text(
+            (-left + text_width // 2, -top + text_height // 2),
+            text,
+            font=font,
+            fill=fill,
+            stroke_width=border_width,
+            stroke_fill=border_color
+        )
 
         sheared_img = temp_img.transform(
             (int(temp_img.width + text_height * shear_factor), temp_img.height),
@@ -1108,14 +1595,13 @@ class Card:
             position_level = (25, 77)
             position_none = (12, 12)
         img = self.image_manager.get_image(f'{self.card_type}-无等级')
-        level_text = str(level)
         if level is not None and 0 < level < 6:
             img = self.image_manager.get_image(f'{self.card_type}-等级{level}')
             self.paste_image(img, position_level, 'contain')
         elif level != 0:
             self.paste_image(img, position_none, 'contain')
-            level_text = '无'
         # 加入标记数据
+        level_text = str(level) if level is not None else '无'
         self.optimization_icon_mark({
             'points': [
                 (position_level[0] - 5, position_level[1] - 8),
@@ -1239,6 +1725,21 @@ class Card:
                 border_color=(1, 63, 114)
             )
             return
+        elif self.card_type == '地点卡':
+            curve = [(42, 623), (10, 653), (90, 610)]
+            if 0 < health < 4:
+                for i in range(health):
+                    img = self.image_manager.get_image('UI-伤害')
+                    self.paste_image(img, curve[i], 'contain')
+                pass
+            if 0 < horror < 4:
+                for i in range(horror):
+                    img = self.image_manager.get_image('UI-恐惧')
+                    # 计算curve[i]左右镜像坐标
+                    temp_curve = (self.image.width - curve[i][0] - img.width, curve[i][1])
+                    self.paste_image(img, temp_curve, 'contain')
+                pass
+            return
         elif self.card_type == '敌人卡':
             curve = [15, 6, 0, 4, 12]
             if 0 < health < 6:
@@ -1342,18 +1843,31 @@ class Card:
         }, True)
         pass
 
-    def set_number_value(self, position, text, font_size=1, color=(255, 255, 255), stroke_color=(0, 0, 0)):
+    def set_number_value(self, position, text, font_size=1, color='#f8f1e4', stroke_color='#060001'):
         """画数值"""
         font = self._get_font('Bolton', font_size)
         # 取出text中的数字
         number = ''
         r = re.findall(r'\d+', text)
+        if r and '赛博' in text:
+            # 渲染赛博数字
+            number = r[0]
+            cyber_text = generate_random_braille(45, seed=number, dot_color=(255, 255, 255, 255))
+            # 粘贴到图片上
+            x = position[0] - cyber_text.width // 2
+            y = position[1] - cyber_text.height // 2 + 5
+            self.image.paste(cyber_text, (x, y), cyber_text)
+            return
         if r:
             number = r[0]
         if 'X' in text or 'x' in text:
             number = 'X'
         if '?' in text or '？' in text:
             number = '?'
+        if '*' in text:
+            number = '*'
+            font_size = 42
+            font = self._get_font('simfang', font_size)
         if '-' in text or '一' in text or '无' in text:
             number = 'x'
             font = self._get_font('arkham-icons', font_size)
@@ -1374,7 +1888,9 @@ class Card:
         y = position[1] - text_height // 2
         if number == 'X':
             y -= 4
-        self.draw.text((x, y), number, font=font, fill=color, stroke_width=1, stroke_fill=stroke_color)
+        if number == 'x' and self.card_type in ['场景卡', '密谋卡']:
+            y -= 4
+        self.draw.text((x, y), number, font=font, fill=color, stroke_width=2, stroke_fill=stroke_color)
         # 加入标记数据
         if number == 'x':
             number = '无'
@@ -1467,7 +1983,7 @@ class Card:
         self.paste_image(dp, (0, card_height - 30, card_width, 30), 'stretch')
 
     def set_bottom_information_by_text(self, illustrator='', middle_text='', position=-1, pack_icon=None,
-                                       encounter_count=-1, encounter_position=1):
+                                       encounter_count=-1, encounter_position=1, font=None):
         """写底部信息"""
         card_width, card_height = self.image.size
         # 艺术家
@@ -1484,7 +2000,7 @@ class Card:
             self.draw_centered_text(
                 position=(card_width // 2, card_height - 25),
                 text=middle_text,
-                font_name='ArnoPro-Bold',
+                font_name='ArnoPro-Bold' if font is None else font,
                 font_size=20,
                 font_color=(255, 255, 255)
             )
@@ -1565,3 +2081,237 @@ class Card:
                 ],
                 'text': icon
             }, True)
+
+    def set_encounter_icon(self, icon_name: str | Image.Image, size=None):
+        """
+        画遭遇组
+
+        :param icon_name: 图标名称或PIL图像对象
+        :param size: 图标大小，格式为(width, height)或单个数值(正方形)，None表示使用默认大小
+        """
+        if icon_name is None:
+            return
+
+        if isinstance(icon_name, Image.Image):
+            im = icon_name
+        else:
+            im = self.image_manager.get_image(f'{icon_name}')
+
+        # 定义每种卡牌类型的中心点坐标和默认大小
+        icon_configs = {
+            '地点卡': {'center': (370, 518), 'default_size': (60, 60)},
+            '敌人卡': {'center': (369, 574), 'default_size': (60, 60)},
+            '诡计卡': {'center': (372, 536), 'default_size': (60, 60)},
+            '故事卡': {'center': (600, 98), 'default_size': (60, 60)},
+            '冒险参考卡': {'center': (372, 152), 'default_size': (60, 60)},
+            '密谋卡_正面': {'center': (742, 78), 'default_size': (60, 60)},
+            '场景卡_正面': {'center': (282, 76), 'default_size': (60, 60)},
+            '密谋卡_背面': {'center': (98, 140), 'default_size': (68, 68)},
+            '场景卡_背面': {'center': (98, 140), 'default_size': (68, 68)},
+            '密谋卡-大画': {'center': (106, 448), 'default_size': (72, 72)},
+            '场景卡-大画': {'center': (106, 503), 'default_size': (82, 82)},
+            '支援卡_中立': {'center': (672, 40), 'default_size': (60, 60)}
+        }
+
+        # 确定当前卡牌类型的配置键
+        config_key = None
+        if self.card_type == '地点卡':
+            config_key = '地点卡'
+        elif self.card_type == '敌人卡':
+            config_key = '敌人卡'
+        elif self.card_type == '诡计卡':
+            config_key = '诡计卡'
+            # 特殊处理弱点诡计卡的UI
+            if self.card_class == '弱点':
+                encounter_group_ui = self.image_manager.get_image('弱点-诡计卡-遭遇组')
+                self._paste_by_center(encounter_group_ui, (346, 527), (70, 70))
+        elif self.card_type == '故事卡':
+            config_key = '故事卡'
+        elif self.card_type == '冒险参考卡':
+            config_key = '冒险参考卡'
+        elif self.card_type == '密谋卡':
+            config_key = '密谋卡_背面' if self.is_back else '密谋卡_正面'
+        elif self.card_type == '场景卡':
+            config_key = '场景卡_背面' if self.is_back else '场景卡_正面'
+        elif self.card_type == '密谋卡-大画':
+            config_key = '密谋卡-大画'
+        elif self.card_type == '场景卡-大画':
+            config_key = '场景卡-大画'
+        elif self.card_type == '支援卡' and self.card_class == '中立':
+            config_key = '支援卡_中立'
+            # 特殊处理支援卡的UI
+            encounter_group_ui = self.image_manager.get_image('支援卡-遭遇组')
+            self._paste_by_center(encounter_group_ui, (671, 44), (88, 88))
+
+        # 如果找到了配置，则粘贴图标
+        if config_key and config_key in icon_configs:
+            config = icon_configs[config_key]
+            center = config['center']
+            actual_size = size if size is not None else config['default_size']
+
+            # 确保size格式正确
+            if isinstance(actual_size, (int, float)):
+                actual_size = (actual_size, actual_size)
+
+            self._paste_by_center(im, center, actual_size)
+
+    def _paste_by_center(self, image, center_point, size):
+        """
+        根据中心点坐标粘贴图片
+
+        :param image: 要粘贴的图片
+        :param center_point: 中心点坐标 (center_x, center_y)
+        :param size: 图片大小 (width, height)
+        """
+        center_x, center_y = center_point
+        width, height = size
+
+        # 计算左上角坐标
+        x = center_x - width // 2
+        y = center_y - height // 2
+
+        # 粘贴图片
+        self.paste_image(image, (x, y, width, height), 'contain')
+
+    @staticmethod
+    def invert_rgba_image(img):
+        """
+        对RGBA图像进行取反色，保持透明度不变
+
+        Args:
+            img: PIL.Image对象，支持RGBA模式
+
+        Returns:
+            取反色后的PIL.Image对象
+        """
+        # 确保图像是RGBA模式
+        if img.mode != 'RGBA':
+            img = img.convert('RGBA')
+
+        # 分离RGBA通道
+        r, g, b, a = img.split()
+
+        # 对RGB通道取反（255-原值）
+        r = r.point(lambda x: 255 - x)
+        g = g.point(lambda x: 255 - x)
+        b = b.point(lambda x: 255 - x)
+        # Alpha通道保持不变
+
+        # 重新合并通道
+        return Image.merge('RGBA', (r, g, b, a))
+
+    def set_footer_information(self,
+                               illustrator: str,
+                               footer_copyright: str,
+                               encounter_group_number: str,
+                               footer_icon: Image.Image,
+                               card_number: str):
+        """
+        写页脚信息
+        :param illustrator: 插画信息
+        :param footer_copyright: 版权信息
+        :param encounter_group_number: 遭遇组序号
+        :param footer_icon: 图标
+        :param card_number: 卡牌序号
+        :return:
+        """
+        if self.card_type in ['密谋卡', '场景卡'] and self.is_back:
+            return
+        if self.card_type == '调查员卡背':
+            return
+        left_text = ''
+        center_text = ''
+        encounter_text = ''
+        right_text = ''
+        footer_icon_copy = footer_icon
+
+        if illustrator and illustrator != '':
+            left_text = 'Illus. ' + illustrator
+        if footer_copyright and footer_copyright != '':
+            center_text = footer_copyright
+        if encounter_group_number and encounter_group_number != '':
+            encounter_text = encounter_group_number
+        if card_number and card_number != '':
+            right_text = card_number
+        if self.card_type in ['故事卡', '冒险参考卡']:
+            left_text = center_text
+            center_text = ''
+        # 通用位置点
+        card_width, card_height = self.image.size
+        pos_left = (40, card_height - 28)
+        pos_center = (card_width // 2, card_height - 28)
+        pos_icon = (card_width - 110, card_height - 34)
+        pos_right = (card_width - 80, card_height - 28)
+        pos_right_encounter_group_number = (card_width - 180, card_height - 28)
+        font_color = (255, 255, 255)
+        # 特殊卡牌位置点
+        if self.card_type in ['密谋卡', '场景卡']:
+            card_width = 1049 - 400
+            offset_x = 400 if self.card_type == '密谋卡' else 0
+            pos_left = (offset_x + 40, card_height - 28)
+            pos_center = (offset_x + card_width // 2, card_height - 28)
+            pos_icon = (offset_x + card_width - 110, card_height - 34)
+            pos_right = (offset_x + card_width - 80, card_height - 28)
+            pos_right_encounter_group_number = (offset_x + card_width - 180, card_height - 28)
+            pass
+        if self.card_type == '调查员卡':
+            card_width = 1049 - 580
+            offset_x = 580
+            end_x = 28
+            pos_left = (offset_x, card_height - 28)
+            pos_center = (offset_x + card_width // 2, card_height - 28)
+            pos_icon = (offset_x + card_width - 110 + end_x, card_height - 34)
+            pos_right = (offset_x + card_width - 80 + end_x, card_height - 28)
+            pos_right_encounter_group_number = (offset_x + card_width - 160 + end_x, card_height - 28)
+            pass
+        if self.card_type == '故事卡':
+            card_width = 570
+            offset_x = 80
+            offset_y = -44
+            pos_left = (offset_x + 40, offset_y + card_height - 28)
+            pos_center = (offset_x + card_width // 2, offset_y + card_height - 28)
+            pos_icon = (offset_x + card_width - 110, offset_y + card_height - 34)
+            pos_right = (offset_x + card_width - 80, offset_y + card_height - 28)
+            pos_right_encounter_group_number = (offset_x + card_width - 180, offset_y + card_height - 28)
+            font_color = (0, 0, 0)
+            footer_icon_copy = self.invert_rgba_image(footer_icon_copy)
+            pass
+        # 开始绘制
+        if left_text:
+            self.draw_left_text(
+                position=(pos_left[0], pos_left[1]),
+                text=left_text,
+                font_name='ArnoPro-Bold',
+                font_size=20,
+                font_color=font_color
+            )
+        if center_text:
+            self.draw_centered_text(
+                position=(pos_center[0], pos_center[1] + 8),
+                text=center_text,
+                font_name='ArnoPro-Bold',
+                font_size=20,
+                font_color=font_color
+            )
+        if encounter_text:
+            self.draw_centered_text(
+                position=(pos_right_encounter_group_number[0], pos_right_encounter_group_number[1] + 9),
+                text=encounter_text,
+                font_name='ArnoPro-Bold',
+                font_size=20,
+                font_color=font_color
+            )
+        if footer_icon_copy:
+            self.paste_image(
+                footer_icon_copy,
+                (pos_icon[0], pos_icon[1] + 3, 24, 24),
+                'stretch'
+            )
+        if right_text:
+            self.draw_left_text(
+                position=(pos_right[0], pos_right[1]),
+                text=right_text,
+                font_name='ArnoPro-Bold',
+                font_size=20,
+                font_color=font_color
+            )

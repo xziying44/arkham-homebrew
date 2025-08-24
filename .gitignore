@@ -16,3 +16,6 @@
 app.spec
 config.json
 output_card.png
+/icons/
+/test_dir/
+/arkham-app/.vscode/
