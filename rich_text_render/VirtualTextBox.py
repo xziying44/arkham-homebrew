@@ -23,6 +23,12 @@ class ImageObject:
 
 
 @dataclass
+class FlexObject:
+    """动态flex对象，用于占用剩余空间"""
+    y: int = 0  # 在get_render_list时会被重新计算
+
+
+@dataclass
 class RenderItem:
     """渲染项，包含对象和其左上角坐标"""
     obj: Union[TextObject, ImageObject]
@@ -65,6 +71,7 @@ class VirtualTextBox:
         self.cursor_y: int = self.min_y + padding
         self.cursor_x: int = 0
         self.render_list: List[RenderItem] = []
+        self.flex_list: List[FlexObject] = []
 
         self.current_line_left: int = 0
         self.current_line_right: int = 0
@@ -321,7 +328,17 @@ class VirtualTextBox:
         # 如果希望 get_render_list() 自动处理，可以取消下面的注释。
         # if self._is_line_centering_enabled:
         #     self._recenter_current_line()
-        return self.render_list.copy()
+
+        render_list = self.render_list.copy()
+        remaining_vertical_distance = self.get_remaining_vertical_distance()
+        # 赋予剩余的垂直距离给 flex
+        if len(self.flex_list) > 0 and remaining_vertical_distance > 0:
+            flex_height = int(remaining_vertical_distance / len(self.flex_list))
+            for flex in self.flex_list:
+                for item_render in render_list:
+                    if item_render.y >= flex.y:
+                        item_render.y += flex_height
+        return render_list
 
     # ==================== 新增方法 ====================
     def get_remaining_vertical_distance(self) -> int:
@@ -419,3 +436,13 @@ class VirtualTextBox:
             return min_x, max_x
         return round(final_left), round(final_right)
 
+    def add_flex(self):
+        """
+        添加动态虚拟块
+        """
+        # 检测指针是否在行首，如果不在立即换行
+        if self.cursor_x != self.current_line_left:
+            self.newline()
+        # 重置当前行指针
+        flex_obj = FlexObject(y=self.cursor_y)
+        self.flex_list.insert(0, flex_obj)
