@@ -242,7 +242,7 @@ class FontManager:
         self.font_map = {}
         self.font_folder = get_resource_path(font_folder)
         self._load_fonts()
-        self.lang = lang
+        self.lang = None
         self.set_lang(lang)
 
     def set_lang(self, lang='zh'):

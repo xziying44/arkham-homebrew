@@ -2219,9 +2219,11 @@ if __name__ == '__main__':
             "Scholar",
             "Genius Society"
         ],
-        "body": "You begin the game with 4 copies of Herta Puppet in play. When any amount of damage would be placed on you, place those damage on Herta Puppet (Online) instead.\n【Forced】 – When Herta Puppet (Online) is dealt damage: You take 1 direct horror.\n⚡Exhaust a copy of Herta Puppet at your location: You get +2 skill value during this test.\n⭐effect: +X. X is the number of Herta Puppet assets in play.",
+        "body":"",
+        # "body": "You begin the game with 4 copies of Herta Puppet in play. When any amount of damage would be placed on you, place those damage on Herta Puppet (Online) instead.\n【Forced】 – When Herta Puppet (Online) is dealt damage: You take 1 direct horror.\n⚡Exhaust a copy of Herta Puppet at your location: You get +2 skill value during this test.\n⭐effect: +X. X is the number of Herta Puppet assets in play.",
         "language": "en",
-        "flavor": "“If they dared to write that, then I would call myself THE Herta.”"
+        # "flavor": "“If they dared to write that, then I would call myself THE Herta.”"
+        "flavor": ""
     }
     fm = FontManager('fonts')
     im = ImageManager('images')
