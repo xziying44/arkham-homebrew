@@ -333,7 +333,7 @@ class VirtualTextBox:
         remaining_vertical_distance = self.get_remaining_vertical_distance()
         # 赋予剩余的垂直距离给 flex
         if len(self.flex_list) > 0 and remaining_vertical_distance > 0:
-            flex_height = int(remaining_vertical_distance / len(self.flex_list))
+            flex_height = int(remaining_vertical_distance / (len(self.flex_list) + 1))
             for flex in self.flex_list:
                 for item_render in render_list:
                     if item_render.y >= flex.y:

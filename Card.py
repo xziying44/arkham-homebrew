@@ -283,6 +283,7 @@ class FontManager:
         :return:
         """
         font_path = self.get_font_path(font_name)
+        # print(font_name,font_size)
         return ImageFont.truetype(font_path, font_size)
 
     def get_font_path(self, font_name):

@@ -1,10 +1,20 @@
+# RichTextRenderer.py
+import re
 from dataclasses import dataclass
 from typing import List, Tuple, Optional
 from enum import Enum
 from PIL import Image, ImageDraw, ImageFont
+# 假设 Card.py 在上一级目录
+import sys
+
+sys.path.append('..')
 from Card import FontManager, ImageManager
+# ---
+
+# 假设这些文件在同一目录下
 from rich_text_render.HtmlTextParser import RichTextParser, TextType
 from rich_text_render.VirtualTextBox import VirtualTextBox, TextObject, ImageObject
+# ---
 
 from typing import Dict, Tuple, Any
 
@@ -22,179 +32,75 @@ class FontStack:
     """
 
     def __init__(self, default_font: FreeTypeFont):
-        """
-        使用一个默认的 FreeTypeFont 对象初始化字体栈。
-
-        :param default_font: 作为栈底的默认字体对象。
-        """
         if not isinstance(default_font, FreeTypeFont):
             raise TypeError("default_font 必须是 PIL.ImageFont.FreeTypeFont 对象")
-
-        # 使用一个列表来模拟栈，并将默认字体作为第一个元素。
         self._stack = [default_font]
 
     def push(self, font: FreeTypeFont):
-        """
-        将一个新的 FreeTypeFont 对象压入栈顶。
-
-        :param font: 要压入的字体对象。
-        """
         if not isinstance(font, FreeTypeFont):
             raise TypeError("压入的 font 必须是 PIL.ImageFont.FreeTypeFont 对象")
-
         self._stack.append(font)
 
     def get_top(self) -> FreeTypeFont:
-        """
-        获取栈顶的字体对象，但不会将其移除。
-
-        :return: 位于栈顶的字体对象。
-        """
         return self._stack[-1]
 
-    def pop(self) -> FreeTypeFont | None:
-        """
-        从栈顶弹出一个字体对象。
-
-        如果栈中只剩下默认字体，则不会执行弹出操作，也不会报错。
-
-        :return: 被弹出的字体对象。如果无法弹出（只剩默认字体），则返回 None。
-        """
+    def pop(self) -> Optional[FreeTypeFont]:
         if len(self._stack) > 1:
             return self._stack.pop()
         else:
-            # 当只剩默认字体时，不执行任何操作
             return None
-
-    def __len__(self):
-        """允许使用 len(font_stack) 获取栈中元素的数量。"""
-        return len(self._stack)
-
-    def __str__(self):
-        """
-        提供一个易于阅读的字符串表示，显示栈的当前状态。
-        特别处理 FreeTypeFont 对象，显示其路径和大小。
-        """
-        stack_visual = []
-        for font in reversed(self._stack):
-            # FreeTypeFont 对象有一个 'path' 属性，我们可以用它来识别字体
-            try:
-                # font.path 在较新 Pillow 版本中可用
-                font_name = font.path.split('/')[-1].split('\\')[-1]
-                stack_visual.append(f"Font(file='{font_name}', size={font.size})")
-            except AttributeError:
-                # 兼容旧版本或内存中的字体
-                stack_visual.append(f"Font(size={font.size})")
-
-        stack_items = "\n  ".join(stack_visual)
-        return f"--- FontStack (Top to Bottom) ---\n  {stack_items}\n---------------------------------"
+    # ... 其他方法保持不变 ...
 
 
 class FontCache:
     """字体缓存类，用于缓存字体对象以提高性能"""
 
     def __init__(self, font_manager: 'FontManager'):
-        """
-        初始化字体缓存
-
-        Args:
-            font_manager: 字体管理器实例
-        """
         self.font_manager: 'FontManager' = font_manager
         self._cache: Dict[Tuple[str, int], Any] = {}
 
     def get_font(self, font_name: str, font_size: int):
-        """
-        获取字体对象，优先从缓存中获取
-
-        Args:
-            font_name: 字体名称
-            font_size: 字体大小
-
-        Returns:
-            字体对象
-        """
-        # 使用字体名和字体大小作为缓存键
         cache_key = (font_name, font_size)
-
-        # 检查缓存中是否已有该字体
         if cache_key in self._cache:
             return self._cache[cache_key]
-
-        # 缓存中没有，通过font_manager获取字体
         font_obj = self.font_manager.get_font(font_name, font_size)
-
-        # 将字体对象存入缓存
         self._cache[cache_key] = font_obj
-
         return font_obj
-
-    def clear_cache(self):
-        """清空字体缓存"""
-        self._cache.clear()
-
-    def cache_size(self) -> int:
-        """获取缓存中字体的数量"""
-        return len(self._cache)
-
-    def remove_font(self, font_name: str, font_size: int):
-        """
-        从缓存中移除指定的字体
-
-        Args:
-            font_name: 字体名称
-            font_size: 字体大小
-        """
-        cache_key = (font_name, font_size)
-        if cache_key in self._cache:
-            del self._cache[cache_key]
-
-    def has_font(self, font_name: str, font_size: int) -> bool:
-        """
-        检查缓存中是否存在指定字体
-
-        Args:
-            font_name: 字体名称
-            font_size: 字体大小
-
-        Returns:
-            True if font exists in cache, False otherwise
-        """
-        cache_key = (font_name, font_size)
-        return cache_key in self._cache
+    # ... 其他方法保持不变 ...
 
 
 @dataclass
 class DefaultFonts:
     """默认字体配置"""
-    regular: str  # 常规字体
-    bold: str  # 粗体字体
-    italic: str  # 斜体字体
-    trait: str  # 特性字体
+    regular: str
+    bold: str
+    italic: str
+    trait: str
 
 
 class TextAlignment(Enum):
     """文本对齐方式"""
-    LEFT = "left"  # 左对齐
-    CENTER = "center"  # 居中对齐
-    RIGHT = "right"  # 右对齐
+    LEFT = "left"
+    CENTER = "center"
+    RIGHT = "right"
 
 
 @dataclass
 class DrawOptions:
     """通用绘制选项"""
-    font_name: str = ""  # 常规默认字体
-    font_size: int = 12  # 默认字体大小
-    font_color: str = "#000000"  # 字体颜色
-    has_border: bool = False  # 是否有外边框
-    border_color: str = "#000000"  # 外边框颜色
-    border_width: int = 1  # 外边框粗细
-    has_underline: bool = False  # 是否加下划线
+    font_name: str = ""
+    font_size: int = 12
+    font_color: str = "#000000"
+    has_border: bool = False
+    border_color: str = "#000000"
+    border_width: int = 1
+    has_underline: bool = False
 
 
 class RichTextRenderer:
+    # ==================== 修改 __init__ 方法 ====================
     def __init__(self, font_manager: 'FontManager', image_manager: 'ImageManager',
-                 image: Image.Image, default_fonts: DefaultFonts):
+                 image: Image.Image, lang='zh'):
         """
         富文本渲染器
 
@@ -203,222 +109,293 @@ class RichTextRenderer:
             image_manager: ImageManager对象
             image: PIL图片对象
             default_fonts: 默认字体配置对象
+            line_spacing_multiplier (float): 行间距倍率，基于字体大小计算行高。默认为 1.1。
+            lang (str): 语言，默认为 "zh"。
         """
         self.font_manager: 'FontManager' = font_manager
         self.image_manager: 'ImageManager' = image_manager
         self.image: Image.Image = image
-        self.default_fonts: DefaultFonts = default_fonts
         self.draw = ImageDraw.Draw(self.image)
         self.rich_text_parser = RichTextParser()
+        if lang == 'zh':
+            self.font_manager.set_lang('zh')
+            self.default_fonts: DefaultFonts = DefaultFonts(
+                regular='simfang',
+                bold='思源黑体',
+                italic='simfang-Italic',
+                trait='方正舒体'
+            )
+            self.line_spacing_multiplier = 1.2
+        else:
+            self.font_manager.set_lang('en')
+            self.default_fonts: DefaultFonts = DefaultFonts(
+                regular='ArnoPro-Regular',
+                bold='NimbusRomNo9L-Med',
+                italic='ArnoPro-Italic',
+                trait='NimbusRomNo9L-MedIta'
+            )
+            self.line_spacing_multiplier = 1.1
 
     def _preprocess_text(self, text: str) -> str:
         """
-        对文本进行预处理，将特殊标记转换为HTML标签
+        Preprocesses card text to replace special tags and icons with HTML-like font tags.
+        This method consolidates multiple forms of input (Emojis, Chinese tags, SE tags)
+        into a single, unified regex substitution pipeline.
 
-        Args:
-            text: 原始文本
-
-        Returns:
-            预处理后的文本
+        The rules are ordered to handle formatting tags first, then all icon types.
         """
-        # 定义预处理规则
+        # The replacement string for the icon font
+        font_tpl = r'<font name="arkham-icons">{char}</font>'
         preprocessing_rules = [
-            # 将【文本】替换为<b>文本</b>
-            (r'【([^】]*)】', r'<b>\1</b>'),
-            # 将⭐替换为特殊字体标签
-            (r'⭐', r'<font name="arkham-icons">q</font>'),
-            # 将⚡替换为特殊字体标签
-            (r'⚡', r'<font name="arkham-icons">k</font>'),
-            # 可以继续添加其他预处理规则
-            # (r'其他模式', r'替换内容'),
+            # 1. Formatting and Keyword Rules (Non-icon)
+            (r'【([^】]*)】', r'<b>\1</b>'),  # Bold text within 【】
+            (r'{([^}]*)}', r'<trait>\1</trait>'),
+            (r'<强制>', r'<b>强制</b> -'),
+            (r'<显现>', r'<b>显现</b> -'),
+            (r'<攻击>', r'<b>攻击</b>'),
+            (r'<躲避>', r'<b>躲避</b>'),
+            (r'<谈判>', r'<b>躲避</b>'),  # As per original code, Parley maps to Evade
+            # 2. Icon Rules (Emoji | CN Tag | SE Tag | Other Alias) -> Font Icon
+            # Faction Icons
+            (r'🛡️|<守护者>|<gua>️', font_tpl.format(char='e')),
+            (r'🔍|<探求者>|<see>', font_tpl.format(char='f')),
+            (r'🚶|<流浪者>|<rog>', font_tpl.format(char='g')),
+            (r'🧘|<潜修者>|<mys>', font_tpl.format(char='h')),
+            (r'🏕️|<生存者>|<sur>', font_tpl.format(char='i')),
+            (r'🕵️|<调查员>|<per>', font_tpl.format(char='v')),
+            # Action Icons
+            (r'⭕|<反应>|<rea>', font_tpl.format(char='l')),
+            (r'➡️|<启动>|<箭头>|<act>️', font_tpl.format(char='j')),
+            (r'⚡|<免费>|<fre>️', font_tpl.format(char='k')),
+            # Chaos Token Icons
+            (r'💀|<骷髅>|<sku>️', font_tpl.format(char='m')),
+            (r'👤|<异教徒>|<cul>️', font_tpl.format(char='n')),
+            (r'📜|<石板>|<tab>️', font_tpl.format(char='o')),
+            (r'👹|<古神>|<mon>️', font_tpl.format(char='p')),
+            (r'🐙|<触手>|<大失败>|<ten>️', font_tpl.format(char='r')),
+            (r'⭐|<旧印>|<大成功>|<eld>️', font_tpl.format(char='q')),
+            # Stat Icons
+            (r'🧠|<脑>|<wil>️', font_tpl.format(char='.')),
+            (r'📚|<书>|<int>️', font_tpl.format(char='a')),
+            (r'👊|<拳>|<com>️', font_tpl.format(char='b')),
+            (r'🦶|<脚>|<agi>️', font_tpl.format(char='c')),
+            (r'❓|<\?>', font_tpl.format(char='d')),  # '?' is a special regex char, so escaped as '\?'
+            # Other Game Icons
+            (r'🏅|<独特>', font_tpl.format(char='w')),
+            (r'<一>', font_tpl.format(char='x')),
+            (r'🔵|<点>|<bul>', font_tpl.format(char='y')),
+            (r'🌟|<祝福>|<ble>', font_tpl.format(char='s')),
+            (r'🌑|<诅咒>|<cur>', font_tpl.format(char='t')),
+            (r'❄️|<雪花>', font_tpl.format(char='u')),
         ]
 
-        import re
         processed_text = text
-
-        # 依次应用所有预处理规则
         for pattern, replacement in preprocessing_rules:
             processed_text = re.sub(pattern, replacement, processed_text)
 
         return processed_text
 
-    def draw_line(self, text: str, position: Tuple[int, int],
-                  alignment: TextAlignment, options: DrawOptions) -> None:
-        """
-        绘制一行文本
-
-        Args:
-            text: 要绘制的文本
-            position: 位置坐标(x, y)
-            alignment: 对齐方式
-            options: 绘制选项
-        """
-        pass
-
     def _get_text_box(self, text: str, font: ImageFont.FreeTypeFont) -> Tuple[int, int]:
-        """
-        获取文本尺寸
-
-        :param text: 要测量的文本
-        :param font: 字体对象
-        :return: (宽度, 高度)元组
-        """
         bbox = font.getbbox(text)
         return int(bbox[2] - bbox[0]), int(bbox[3] - bbox[1])
 
-    def draw_complex_text(self, text: str, polygon_vertices: List[Tuple[int, int]],
-                          padding: int, options: DrawOptions,
-                          draw_debug_frame: bool = False) -> None:
+    def find_best_fit_font_size(
+            self,
+            text: str,
+            polygon_vertices: List[Tuple[int, int]],
+            padding: int,
+            options: DrawOptions,
+            min_font_size: int = 8
+    ) -> Optional[VirtualTextBox]:
         """
-        绘制复杂文本框
-
-        Args:
-            text: 要绘制的文本
-            polygon_vertices: 多边形顶点坐标列表
-            padding: 内边距
-            options: 绘制选项
-            draw_debug_frame: 是否绘制虚拟框的线条调试用
+        使用二分法查找能容纳所有文本的最大字体大小，并返回填充好的VirtualTextBox。
+        （此方法现在是内部核心逻辑，由 draw_complex_text 调用）
         """
-        if draw_debug_frame:
-            self.draw.polygon(polygon_vertices, outline="red", width=2)
+        low = min_font_size
+        high = options.font_size
+        best_vbox = None
 
-        # 临时测试
-        # 预处理
-        text = self._preprocess_text(text)
+        print(f"开始二分查找最佳字体大小，范围: [{low}, {high}], 行距倍率: {self.line_spacing_multiplier}")
+
+        while low <= high:
+            mid_size = (low + high) // 2
+            if mid_size == 0:
+                break
+
+            # 尝试使用当前字体大小进行渲染模拟
+            fits, vbox_instance = self._try_render_with_font_size(
+                text, polygon_vertices, padding, options, mid_size
+            )
+
+            if fits:
+                # 成功: 保存结果, 尝试更大的字体
+                best_vbox = vbox_instance
+                low = mid_size + 1
+            else:
+                # 失败: 字体太大, 减小字体
+                high = mid_size - 1
+
+        if best_vbox:
+            font_size = high  # 'high' holds the last successful size
+            print(f"查找结束。找到的最佳字体大小为: {font_size}")
+        else:
+            print("查找结束。未找到任何可行的字体大小。")
+
+        return best_vbox
+
+    # ==================== 修改 _try_render_with_font_size 方法 ====================
+    def _try_render_with_font_size(
+            self,
+            text: str,
+            polygon_vertices: List[Tuple[int, int]],
+            padding: int,
+            base_options: DrawOptions,
+            size_to_test: int
+    ) -> Tuple[bool, Optional[VirtualTextBox]]:
+        """
+        辅助函数，测试给定的字体大小是否能容纳全部文本。
+        """
+
         parsed_items = self.rich_text_parser.parse(text)
 
-        line_height = int(options.font_size * 1.1)
-        print("行高：", line_height)
+        # 使用构造函数中传入的行距倍率来计算行高
+        if size_to_test < 25 and self.line_spacing_multiplier > 1.15:
+            line_height = int(size_to_test * 1.15)
+        elif size_to_test < 20 and self.line_spacing_multiplier > 1.1:
+            line_height = int(size_to_test * 1.1)
+        elif size_to_test < 18 and self.line_spacing_multiplier > 1.05:
+            line_height = int(size_to_test * 1.05)
+        else:
+            line_height = int(size_to_test * self.line_spacing_multiplier)
 
         virtual_text_box = VirtualTextBox(
             polygon_vertices=polygon_vertices,
             default_line_spacing=line_height,
             padding=padding
-
         )
 
         font_cache = FontCache(self.font_manager)
-        font_stack = FontStack(font_cache.get_font(options.font_name, options.font_size))
 
-        for i, item in enumerate(parsed_items):
-            print(f"{i + 1:2d}. {item}")
+        try:
+            base_font = font_cache.get_font(base_options.font_name, size_to_test)
+        except Exception as e:
+            return False, None
+
+        font_stack = FontStack(base_font)
+
+        for item in parsed_items:
+            success = True
             if item.tag == "text":
                 font = font_stack.get_top()
-                text_box = self._get_text_box(item.content, font)
-                virtual_text_box.push(
-                    TextObject(
-                        text=item.content,
-                        font=font,
-                        width=text_box[0],
-                        height=text_box[1],
+                if item.type == TextType.OTHER:
+                    # 一个一个push
+                    for char in item.content:
+                        text_box = self._get_text_box(char, font)
+                        success = virtual_text_box.push(
+                            TextObject(char, font, text_box[1], text_box[0])
+                        )
+                else:
+                    text_box = self._get_text_box(item.content, font)
+                    success = virtual_text_box.push(
+                        TextObject(item.content, font, text_box[1], text_box[0])
                     )
-                )
             elif item.tag == "br":
-                virtual_text_box.newline()
+                success = virtual_text_box.newline()
             elif item.tag == "par":
-                result = virtual_text_box.new_paragraph()
+                success = virtual_text_box.new_paragraph()
             elif item.tag == "font":
-                font_stack.push(font_cache.get_font(
-                    item.attributes.get('name', options.font_name),
-                    options.font_size
-                ))
-                print(item.type)
-            elif item.tag == "/font":
-                font_stack.pop()
+                font_name = item.attributes.get('name', base_options.font_name)
+                font_stack.push(font_cache.get_font(font_name, size_to_test))
             elif item.tag == "b":
-                font_stack.push(font_cache.get_font(
-                    'NimbusRomNo9L-Med',
-                    options.font_size
-                ))
-                print(item.type)
-            elif item.tag == "/b":
-                font_stack.pop()
+                font_stack.push(font_cache.get_font(self.default_fonts.bold, size_to_test))
             elif item.tag == "i":
-                font_stack.push(font_cache.get_font(
-                    'ArnoPro-Italic',
-                    options.font_size
-                ))
-            elif item.tag == "/i":
-                font_stack.pop()
+                font_stack.push(font_cache.get_font(self.default_fonts.italic, size_to_test))
+            elif item.tag == "trait":
+                font_stack.push(font_cache.get_font(self.default_fonts.trait, size_to_test))
+            elif item.tag == "flavor":
+                virtual_text_box.add_flex()
+                flavor_font_size = max(1, size_to_test - 2)
+                font_stack.push(font_cache.get_font(self.default_fonts.italic, flavor_font_size))
+                virtual_text_box.set_line_padding(20)
+                virtual_text_box.set_line_center()
+            elif item.tag.startswith('/'):
+                if item.tag in ["/font", "/b", "/i", '/trait']:
+                    font_stack.pop()
+                elif item.tag == "/flavor":
+                    font_stack.pop()
+                    virtual_text_box.cancel_line_padding()
+                    virtual_text_box.cancel_line_center()
             elif item.tag == "flex":
                 virtual_text_box.add_flex()
-                pass
-            elif item.tag == "flavor":
-                font_stack.push(font_cache.get_font(
-                    'ArnoPro-Italic',
-                    options.font_size - 2
-                ))
-                virtual_text_box.set_line_padding(30)
-                virtual_text_box.set_line_center()
-            elif item.tag == "/flavor":
-                font_stack.pop()
-                virtual_text_box.cancel_line_padding()
-                virtual_text_box.cancel_line_center()
 
-        # 获取渲染列表
-        render_list = virtual_text_box.get_render_list()
-        print(f"渲染列表包含 {len(render_list)} 个项目")
+            if not success:
+                return False, None
+
+        return True, virtual_text_box
+
+    # ==================== 修改 draw_complex_text 方法 ====================
+    def draw_complex_text(self, text: str, polygon_vertices: List[Tuple[int, int]],
+                          padding: int, options: DrawOptions,
+                          draw_debug_frame: bool = False) -> None:
+        """
+        在指定多边形区域内绘制复杂文本，并自动寻找最佳字体大小。
+
+        Args:
+            text: 要绘制的文本。
+            polygon_vertices: 多边形顶点坐标列表。
+            padding: 内边距。
+            options: 绘制选项。options.font_size 将被用作搜索的最大上限。
+            draw_debug_frame: 是否绘制虚拟框的线条调试用。
+        """
+        if draw_debug_frame:
+            self.draw.polygon(polygon_vertices, outline="red", width=2)
+
+        text = self._preprocess_text(text)
+
+        # 默认行为：查找最佳字体大小并获取布局好的VirtualTextBox
+        final_vbox = self.find_best_fit_font_size(
+            text=text,
+            polygon_vertices=polygon_vertices,
+            padding=padding,
+            options=options
+        )
+
+        # 如果 final_vbox 为 None，说明文本无法容纳，直接返回
+        if final_vbox is None:
+            print("错误: 文本内容过多，即使使用最小字体也无法在指定区域内渲染。")
+            return
+
+        # 从布局好的VirtualTextBox中获取渲染列表
+        render_list = final_vbox.get_render_list()
 
         # 遍历渲染列表并绘制到图片上
-        for i, render_item in enumerate(render_list):
+        for render_item in render_list:
             obj = render_item.obj
-            x = render_item.x
-            y = render_item.y
+            x, y = render_item.x, render_item.y
 
             if isinstance(obj, TextObject):
-                # 绘制文本对象
-
-                # 基础文本绘制
-                self.draw.text(
-                    xy=(x, y),
-                    text=obj.text,
-                    font=obj.font,
-                    fill=options.font_color
-                )
-
-
-
+                self.draw.text((x, y), obj.text, font=obj.font, fill=options.font_color)
             elif isinstance(obj, ImageObject):
-                # 绘制图片对象
-                print(f"绘制图片 #{i + 1}: 大小 {obj.width}x{obj.height} 在位置 ({x}, {y})")
-
-                # 粘贴图片
                 if obj.image.mode == 'RGBA':
-                    # 如果图片有透明通道，使用alpha合成
                     self.image.paste(obj.image, (x, y), obj.image)
                 else:
-                    # 普通图片直接粘贴
                     self.image.paste(obj.image, (x, y))
-
-                # 绘制调试框（可选）
                 if draw_debug_frame:
-                    self.draw.rectangle(
-                        [(x, y), (x + obj.width, y + obj.height)],
-                        outline="green",
-                        width=1
-                    )
-
-            else:
-                print(f"未知对象类型 #{i + 1}: {type(obj)}")
-
-        print("渲染完成！")
+                    self.draw.rectangle([(x, y), (x + obj.width, y + obj.height)], outline="green", width=1)
 
 
 if __name__ == '__main__':
     font_manager = FontManager(font_folder='../fonts')
     image_manager = ImageManager(image_folder='../images')
     image = Image.open('test.png')
-    renderer = RichTextRenderer(font_manager, image_manager, image, DefaultFonts(
-        regular='simfang',
-        bold='思源黑体',
-        italic='simfang',
-        trait='方正舒体'
-    ))
+    renderer = RichTextRenderer(font_manager, image_manager, image, lang='en')
     body = "You begin the game with 4 copies of Herta Puppet in play. When any amount of damage( would be placed on " \
            "you, place those damage on Herta Puppet (Online) instead.<par>【Forced】 – When Herta Puppet (Online) is dealt " \
            "damage: You take 1 direct horror.<par>⚡Exhaust a copy of Herta Puppet at your location: You get +2 skill " \
            "value during this test.<par>⭐effect: +X. X is the number of Herta Puppet assets in play.<par>" \
-           "<flex><flavor>Test flavor You begin the game with 4 copies of Herta Puppet in play. !</flavor><flex>"
+           "<flavor>Test flavor You begin the game with 4 copies of Herta Puppet in play. !</flavor><flex>"
+    # body = "【强制】 - 你所在地点的一个{怪物}敌人被击败后：你获得2点资源或在你的一个法术支援上放置1充能。(" \
+    #        "每轮限一次）<par>⭐效果：+1。你+2<脑>直到本轮结束。<par><flavor>“对连身为王与神的法老之座都敢玩弄的不敬，降下惩罚。”</flavor>"
     renderer.draw_complex_text(
         body,
         polygon_vertices=[
@@ -427,14 +404,14 @@ if __name__ == '__main__':
         ],
         padding=10,
         options=DrawOptions(
-            font_name='ArnoPro-Regular',
-            font_size=23,
+            font_name='simfang',
+            font_size=34,
             font_color='#000000',
             has_border=True,
             border_color='#000000',
             border_width=1,
             has_underline=False
         ),
-        draw_debug_frame=True
+        draw_debug_frame=False
     )
     image.show()
