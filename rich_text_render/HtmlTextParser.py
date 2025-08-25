@@ -38,7 +38,7 @@ class RichTextParser:
         # HTML标签模式
         self.html_tag_pattern = r'<(/?)([a-zA-Z][a-zA-Z0-9]*)\s*([^>]*?)>'
         # 有效的HTML标签 - 新增par标签
-        self.valid_tags = ['b', 'i', 'u', 'font', 'span', 'div', 'p', 'strong', 'em', 'br', 'hr', 'par']
+        self.valid_tags = ['b', 'i', 'u', 'font', 'flavor', 'em', 'br', 'hr', 'par', 'flex']
 
     def parse_attributes(self, attr_string: str) -> Dict[str, str]:
         """解析标签属性"""
@@ -198,7 +198,7 @@ class RichTextParser:
                     attributes = self.parse_attributes(attr_string)
 
                     # 自闭合标签 - 新增par标签到自闭合标签列表
-                    if tag_name in ['br', 'hr', 'par'] or full_match.endswith('/>'):
+                    if tag_name in ['br', 'hr', 'par', 'flex'] or full_match.endswith('/>'):
                         result.append(ParsedItem(
                             tag=tag_name,
                             type_=TextType.HTML_SELF_CLOSE,

@@ -316,7 +316,7 @@ class RichTextRenderer:
             elif item.tag == "br":
                 virtual_text_box.newline()
             elif item.tag == "par":
-                virtual_text_box.new_paragraph()
+                result = virtual_text_box.new_paragraph()
             elif item.tag == "font":
                 font_stack.push(font_cache.get_font(
                     item.attributes.get('name', options.font_name),
@@ -333,6 +333,23 @@ class RichTextRenderer:
                 print(item.type)
             elif item.tag == "/b":
                 font_stack.pop()
+            elif item.tag == "i":
+                font_stack.push(font_cache.get_font(
+                    'ArnoPro-Italic',
+                    options.font_size
+                ))
+                print(item.type)
+            elif item.tag == "/i":
+                font_stack.pop()
+            elif item.tag == "flavor":
+                virtual_text_box.set_line_padding(30)
+                virtual_text_box.set_line_center()
+            elif item.tag == "/flavor":
+                virtual_text_box.cancel_line_padding()
+                virtual_text_box.cancel_line_center()
+
+        remaining_vertical_distance = virtual_text_box.get_remaining_vertical_distance()
+        print(f"剩余垂直距离: {remaining_vertical_distance}")
 
         # 获取渲染列表
         render_list = virtual_text_box.get_render_list()
@@ -396,7 +413,8 @@ if __name__ == '__main__':
     body = "You begin the game with 4 copies of Herta Puppet in play. When any amount of damage( would be placed on " \
            "you, place those damage on Herta Puppet (Online) instead.<par>【Forced】 – When Herta Puppet (Online) is dealt " \
            "damage: You take 1 direct horror.<par>⚡Exhaust a copy of Herta Puppet at your location: You get +2 skill " \
-           "value during this test.<par>⭐effect: +X. X is the number of Herta Puppet assets in play."
+           "value during this test.<par>⭐effect: +X. X is the number of Herta Puppet assets in play.<par>" \
+           "<flex><flavor>Test flavor !</flavor><flex>"
     renderer.draw_complex_text(
         body,
         polygon_vertices=[
@@ -406,7 +424,7 @@ if __name__ == '__main__':
         padding=10,
         options=DrawOptions(
             font_name='ArnoPro-Regular',
-            font_size=25,
+            font_size=24,
             font_color='#000000',
             has_border=True,
             border_color='#000000',
