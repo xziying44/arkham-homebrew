@@ -509,6 +509,8 @@ class RichTextRenderer:
                 font_stack.push(font_cache.get_font(self.default_fonts.italic, size_to_test))
             elif item.tag == "trait":
                 font_stack.push(font_cache.get_font(self.default_fonts.trait, size_to_test))
+            elif item.tag == "hr":
+                virtual_text_box.draw_line_to_end()
             elif item.tag == "p":
                 html_tag_stack.push("p")
             elif item.tag == "/p":
@@ -586,6 +588,15 @@ class RichTextRenderer:
         for segment in guide_line_segments:
             # segment 是一个 ((x1, y1), (x2, y2)) 元组
             self.draw.line(segment, fill=options.font_color, width=2)
+
+        # ==================== 新增代码开始 ====================
+        # 获取并绘制由 <hr> 标签生成的线条
+        drawn_lines = final_vbox.get_drawn_lines()
+        for line_segment in drawn_lines:
+            # line_segment is a ((x1, y1), (x2, y2)) tuple
+            # 通常 <hr> 的线宽可以设为1
+            self.draw.line(line_segment, fill=options.font_color, width=2)
+        # ==================== 新增代码结束 ====================
 
         # 遍历渲染列表并绘制到图片上
         for render_item in render_list:
@@ -809,3 +820,4 @@ if __name__ == '__main__':
     )
 
     image.show()
+

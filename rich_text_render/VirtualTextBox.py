@@ -72,6 +72,7 @@ class VirtualTextBox:
         self.cursor_x: int = 0
         self.render_list: List[RenderItem] = []
         self.flex_list: List[FlexObject] = []
+        self.drawn_lines: List[Tuple[Tuple[int, int], Tuple[int, int]]] = []
 
         self.current_line_left: int = 0
         self.current_line_right: int = 0
@@ -170,7 +171,17 @@ class VirtualTextBox:
         注意：如果辅助线仍处于活动状态，此方法不会包含当前未最终确定的行的线段。
         在调用此方法之前，请调用 `cancel_guide_lines` 以最终确定最后一个线段。
         """
+        # ==================== BUG修复 ====================
         return self._guide_line_segments
+        # ===============================================
+
+    def get_drawn_lines(self) -> List[Tuple[Tuple[int, int], Tuple[int, int]]]:
+        """
+        返回通过 `draw_line_to_end` 方法添加的所有用户绘制线条的列表。
+
+        列表中的每一项都是一个 ((x1, y1), (x2, y2)) 元组，代表一条线段。
+        """
+        return self.drawn_lines
 
     # --- 实际执行居中操作的私有方法 ---
     def _recenter_current_line(self) -> None:
@@ -310,6 +321,55 @@ class VirtualTextBox:
     def new_paragraph(self, spacing: Optional[int] = None) -> bool:
         para_spacing = spacing if spacing is not None else self.paragraph_spacing
         return self._move_to_next_line(extra_spacing=para_spacing)
+
+    def draw_line_to_end(self, v_align: str = 'center') -> bool:
+        """
+        从当前光标位置绘制一条线到行尾，不换行。
+
+        这条线是一个装饰性元素，它会消耗掉当前行剩余的水平空间，
+        但不会影响行高或参与对象流式布局。
+        线条被添加到单独的列表中，可以通过 `get_drawn_lines` 获取。
+
+        Args:
+            v_align (str): 线条在当前行框内的垂直对齐方式。
+                           可选值为 'top', 'center', 'bottom'。
+                           'top': 线条位于行框顶部。
+                           'center': 线条位于行框中部。
+                           'bottom': 线条位于行框底部。
+
+        Returns:
+            bool: 如果成功添加线条，返回 True；如果当前行没有剩余空间，返回 False。
+        """
+        start_x = self.cursor_x
+        end_x = self.current_line_right
+
+        # 如果光标已在行尾或超出，则没有空间绘制
+        if start_x >= end_x:
+            return False
+
+        # 计算当前行的有效高度，用于垂直对齐
+        # 如果行内已有内容，使用 current_line_height，否则使用默认行距
+        line_box_height = self.current_line_height or self.default_line_spacing
+
+        # 根据对齐方式计算线条的垂直位置 (y-coordinate)
+        y_pos = 0.0
+        if v_align == 'top':
+            y_pos = self.cursor_y
+        elif v_align == 'bottom':
+            y_pos = self.cursor_y + line_box_height
+        else:  # 默认为 'center'
+            y_pos = self.cursor_y + line_box_height / 2
+
+        y_pos = round(y_pos)
+
+        # 创建线段并添加到列表中
+        line_segment = ((start_x, y_pos), (end_x, y_pos))
+        self.drawn_lines.append(line_segment)
+
+        # 此操作消耗了行内剩余空间，将光标移动到行尾
+        self.cursor_x = end_x
+
+        return True
 
     def get_current_line_info(self) -> dict:
         return {

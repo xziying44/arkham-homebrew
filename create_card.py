@@ -2165,21 +2165,16 @@ def process_card_json(card_json, picture_path=None, font_manager=None, image_man
 
 if __name__ == '__main__':
     json_data = {
+        "is_back": True,
+        "serial_number": "3b",
         "type": "场景卡",
-        "name": "测试",
-        "id": "",
-        "created_at": "",
-        "version": "1.0",
-        "language": "zh",
-        "is_back": False,
-        "serial_number": "2",
-        "threshold": "2<调查员>",
-        "flavor": "这是风味效果",
-        "body": "11",
-        "victory": 1,
-        "illustrator": "tuyii",
-        "encounter_group_number": "",
-        "card_number": "12",
+        "id": 231,
+        "body": "【如果调查员们没有取回悬挂的人偶也没有复原废弃的人偶】：\n<relish>尽管你尽了最大努力，还是无法辨别祭坛后面那座奇怪雕塑的用途；脸部子午线上的一道发丝般的裂缝，几乎难以察觉，正嘲弄着你。你注意到它的两个眼窝都是空的，仿佛有什么东西本应放在那里……</relish>\n将此场景翻回背面。(你之后可以再次推进它。)\n<hr>\n【如果调查员们既取回了悬挂的人偶也复原了废弃的人偶】：\n<relish>你凭直觉将人偶们放入雕塑的眼窝。当你后退时，墙后的一个发条装置发出了沉闷的咔嗒声……然后孩子的脸滑开了，露出了一个隐藏的通道。你匆忙穿过开口，几乎没有注意到身后的雕塑正滑回原位……</relish>\n【(→结局1)】",
+        "name": "童稚之眼",
+        "subtitle": "",
+        "traits": [],
+        "picture_path": "D:\\BaiduSyncdisk\\PycharmProjects\\arkham_translate\\translation_space\\鬼河之魂\\factory\\000231-raw.jpg",
+        "class": "中立"
     }
     fm = FontManager('fonts')
     im = ImageManager('images')
