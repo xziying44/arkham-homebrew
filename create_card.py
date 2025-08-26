@@ -6,32 +6,6 @@ from PIL import Image, ImageEnhance
 
 from Card import Card, FontManager, ImageManager
 
-se_icon = {
-    '<rea>': '<反应>',
-    '<act>️': '<启动>',
-    '<fre>️': '<免费>',
-    '<sku>️': '<骷髅>',
-    '<cul>️': '<异教徒>',
-    '<tab>️': '<石板>',
-    '<mon>️': '<古神>',
-    '<ten>️': '<触手>',
-    '<eld>️': '<旧印>',
-    '<com>️': '<拳>',
-    '<int>️': '<书>',
-    '<agi>️': '<脚>',
-    '<wil>️': '<脑>',
-    '<?>': '<?>',
-    '<bul>': '<点>',
-    '<cur>': '<诅咒>',
-    '<ble>': '<祝福>',
-    '️<per>': '<调查员>',
-    '<rog>': '<流浪者>',
-    '<sur>': '<生存者>',
-    '<gua>️': '<守护者>',
-    '<mys>': '<潜修者>',
-    '<see>': '<探求者>'
-}
-
 
 def tidy_body_flavor(body, flavor, flavor_type=0, align='center', quote=False):
     """整理正文和风味，正确处理flavor字段中的<lr>标签"""
@@ -2048,10 +2022,6 @@ def preprocessing_json(card_json):
 
     def replace_bracketed_content(match):
         content = match.group(1)  # 获取括号内的内容
-        # 移除大括号
-        content = content.replace('{', '').replace('}', '')
-        # 分割成多行
-        lines = content.split('\n')
         # 每行用<flavor>标签包裹
         tag_name = 'flavor'
         if card_json.get('type', '') in ['密谋卡', '场景卡'] and card_json.get('is_back', False):
@@ -2060,9 +2030,7 @@ def preprocessing_json(card_json):
             tag_name += ' align="left" flex="false" padding="0"'
         elif card_json.get('type', '') in ['故事卡']:
             tag_name += ' align="left" flex="false" quote="true" padding="20"'
-        tagged_lines = [f'<{tag_name}>{line}</flavor>' for line in lines if line.strip()]
-        # 用换行符连接
-        return '\n'.join(tagged_lines)
+        return f'<{tag_name}>{content}</flavor>'
 
     if 'level' in card_json and card_json['level'] == '无':
         card_json['level'] = -1
@@ -2081,10 +2049,6 @@ def preprocessing_json(card_json):
     text = json.dumps(card_json, ensure_ascii=False)
     # 将全角符号转换为半角符号
     text = text.replace('＜', '<').replace('＞', '>').replace('？', '?').replace('｛', '{').replace('｝', '}')
-
-    # 替换se标签
-    for se_item in se_icon:
-        text = text.replace(se_item, se_icon[se_item])
 
     # 替换故事内容的换行
     if 'card_back' in card_json and 'story' in card_json['card_back']:
