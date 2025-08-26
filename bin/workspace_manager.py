@@ -14,7 +14,8 @@ from bin.tts_card_converter import TTSCardConverter
 
 # 导入卡牌生成相关模块
 try:
-    from create_card import process_card_json, FontManager, ImageManager
+    from ResourceManager import FontManager, ImageManager
+    from create_card import CardCreator
 
     CARD_GENERATION_AVAILABLE = True
 except ImportError:
@@ -47,6 +48,11 @@ class WorkspaceManager:
 
                 self.font_manager = FontManager(fonts_path)
                 self.image_manager = ImageManager(images_path)
+                self.creator = CardCreator(
+                    font_manager=self.font_manager,
+                    image_manager=self.image_manager,
+                )
+
             except Exception as e:
                 print(f"初始化字体和图像管理器失败: {e}")
                 self.font_manager = None
@@ -468,11 +474,10 @@ class WorkspaceManager:
             self.font_manager.set_lang(language)
 
             # 调用process_card_json生成卡牌
-            card = process_card_json(
+
+            card = self.creator.create_card(
                 json_data,
-                picture_path=picture_path,
-                font_manager=self.font_manager,
-                image_manager=self.image_manager
+                picture_path=picture_path
             )
 
             # 检测是否有遭遇组
