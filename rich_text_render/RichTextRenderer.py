@@ -53,6 +53,83 @@ class FontStack:
     # ... 其他方法保持不变 ...
 
 
+class HtmlTagStack:
+    """
+    一个管理 HTML 标签的栈结构。
+    这个栈的特点是它总有一个默认的"栈底"标签，该标签永远不会被弹出。
+    通常用于跟踪嵌套的 HTML 标签结构。
+    """
+
+    def __init__(self, default_tag: str = "body"):
+        if not isinstance(default_tag, str):
+            raise TypeError("default_tag 必须是字符串")
+        if not default_tag.strip():
+            raise ValueError("default_tag 不能为空字符串")
+        self._stack = [default_tag.strip().lower()]
+
+    def push(self, tag: str):
+        """压入一个新的 HTML 标签"""
+        if not isinstance(tag, str):
+            raise TypeError("压入的 tag 必须是字符串")
+        if not tag.strip():
+            raise ValueError("tag 不能为空字符串")
+        self._stack.append(tag.strip().lower())
+
+    def get_top(self) -> str:
+        """获取栈顶的 HTML 标签"""
+        return self._stack[-1]
+
+    def pop(self) -> Optional[str]:
+        """
+        弹出栈顶的 HTML 标签。
+        如果只剩下默认标签，则返回 None 而不弹出。
+        """
+        if len(self._stack) > 1:
+            return self._stack.pop()
+        else:
+            return None
+
+    def get_current_path(self) -> str:
+        """获取当前的标签路径，用 > 连接"""
+        return " > ".join(self._stack)
+
+    def size(self) -> int:
+        """返回栈的大小（包括默认标签）"""
+        return len(self._stack)
+
+    def depth(self) -> int:
+        """返回当前嵌套深度（不包括默认标签）"""
+        return len(self._stack) - 1
+
+    def is_empty(self) -> bool:
+        """检查是否只有默认标签"""
+        return len(self._stack) == 1
+
+    def get_default_tag(self) -> str:
+        """获取默认标签"""
+        return self._stack[0]
+
+    def clear_to_default(self):
+        """清空栈直到只剩默认标签"""
+        self._stack = [self._stack[0]]
+
+    def contains(self, tag: str) -> bool:
+        """检查栈中是否包含指定标签"""
+        if not isinstance(tag, str):
+            return False
+        return tag.strip().lower() in self._stack
+
+    def get_all_tags(self) -> list[str]:
+        """获取栈中所有标签的副本"""
+        return self._stack.copy()
+
+    def __str__(self) -> str:
+        return f"HtmlTagStack({self.get_current_path()})"
+
+    def __repr__(self) -> str:
+        return f"HtmlTagStack(stack={self._stack})"
+
+
 class FontCache:
     """字体缓存类，用于缓存字体对象以提高性能"""
 
@@ -145,13 +222,17 @@ class RichTextRenderer:
 
         The rules are ordered to handle formatting tags first, then all icon types.
         """
+
+        # 首先合并相邻的flavor标签
+        text = self._merge_adjacent_flavor_tags(text)
+
         # The replacement string for the icon font
         font_tpl = r'<font name="arkham-icons">{char}</font>'
         preprocessing_rules = [
             # 1. Formatting and Keyword Rules (Non-icon)
             (r'【([^】]*)】', r'<b>\1</b>'),  # Bold text within 【】
             (r'{([^}]*)}', r'<trait>\1</trait>'),
-            (r'<relish>(.*)</relish>', r'<flavor>\1</flavor> -'),
+            (r'<relish>(.*)</relish>', r'<flavor>\1</flavor>'),
             (r'<强制>', r'<b>强制</b> -'),
             (r'<显现>', r'<b>显现</b> -'),
             (r'<攻击>', r'<b>攻击</b>'),
@@ -196,6 +277,116 @@ class RichTextRenderer:
             processed_text = re.sub(pattern, replacement, processed_text)
 
         return processed_text
+
+    def _merge_adjacent_flavor_tags(self, text: str) -> str:
+        """
+        合并相邻的具有相同属性的flavor标签
+
+        Args:
+            text: 输入文本
+        Returns:
+            合并后的文本
+        """
+        import re
+        from collections import defaultdict
+
+        # 正则表达式匹配flavor标签
+        flavor_pattern = r'<flavor([^>]*)>(.*?)</flavor>'
+
+        def merge_flavors(text):
+            matches = list(re.finditer(flavor_pattern, text, re.DOTALL))
+            if len(matches) < 2:
+                return text
+
+            # 用于跟踪需要合并的标签组
+            merge_groups = []
+            current_group = [matches[0]]
+
+            # 解析属性的辅助函数
+            def parse_attributes(attr_string):
+                if not attr_string:
+                    return {}
+
+                attrs = {}
+                # 匹配 key="value" 格式的属性
+                attr_pattern = r'(\w+)="([^"]*)"'
+                for match in re.finditer(attr_pattern, attr_string):
+                    key, value = match.groups()
+                    attrs[key] = value
+                return attrs
+
+            # 检查两个属性字典是否相同
+            def attributes_equal(attrs1, attrs2):
+                return attrs1 == attrs2
+
+            # 分组相邻且属性相同的flavor标签
+            for i in range(1, len(matches)):
+                prev_match = matches[i - 1]
+                curr_match = matches[i]
+
+                # 检查是否相邻（中间只有空白字符）
+                between_text = text[prev_match.end():curr_match.start()].strip()
+
+                if between_text == "":  # 相邻
+                    prev_attrs = parse_attributes(prev_match.group(1))
+                    curr_attrs = parse_attributes(curr_match.group(1))
+
+                    if attributes_equal(prev_attrs, curr_attrs):
+                        # 属性相同，加入当前组
+                        current_group.append(curr_match)
+                    else:
+                        # 属性不同，开始新组
+                        if len(current_group) > 1:
+                            merge_groups.append(current_group)
+                        current_group = [curr_match]
+                else:
+                    # 不相邻，开始新组
+                    if len(current_group) > 1:
+                        merge_groups.append(current_group)
+                    current_group = [curr_match]
+
+            # 处理最后一组
+            if len(current_group) > 1:
+                merge_groups.append(current_group)
+
+            # 如果没有需要合并的组，返回原文本
+            if not merge_groups:
+                return text
+
+            # 从后往前替换，避免索引偏移问题
+            result_text = text
+            for group in reversed(merge_groups):
+                # 合并内容
+                merged_content = []
+                for match in group:
+                    content = match.group(2).strip()
+                    if content:
+                        merged_content.append(content)
+
+                # 构建合并后的标签
+                first_match = group[0]
+                last_match = group[-1]
+
+                merged_text = '\n'.join(merged_content)
+                new_tag = f'<flavor{first_match.group(1)}>{merged_text}</flavor>'
+
+                # 替换原始文本中的整个区域
+                start_pos = first_match.start()
+                end_pos = last_match.end()
+
+                result_text = result_text[:start_pos] + new_tag + result_text[end_pos:]
+
+            return result_text
+
+        # 持续合并直到没有更多可合并的标签
+        prev_text = ""
+        current_text = text
+
+        while current_text != prev_text:
+            prev_text = current_text
+            current_text = merge_flavors(current_text)
+
+        return current_text
 
     def _get_text_box(self, text: str, font: ImageFont.FreeTypeFont) -> Tuple[int, int]:
         bbox = font.getbbox(text)
@@ -284,6 +475,7 @@ class RichTextRenderer:
             return False, None
 
         font_stack = FontStack(base_font)
+        html_tag_stack = HtmlTagStack('body')
 
         for item in parsed_items:
             success = True
@@ -302,7 +494,10 @@ class RichTextRenderer:
                         TextObject(item.content, font, text_box[1], text_box[0])
                     )
             elif item.tag == "br":
-                success = virtual_text_box.newline()
+                if html_tag_stack.get_top() == 'body':
+                    success = virtual_text_box.new_paragraph()
+                else:
+                    success = virtual_text_box.newline()
             elif item.tag == "par":
                 success = virtual_text_box.new_paragraph()
             elif item.tag == "font":
@@ -314,22 +509,33 @@ class RichTextRenderer:
                 font_stack.push(font_cache.get_font(self.default_fonts.italic, size_to_test))
             elif item.tag == "trait":
                 font_stack.push(font_cache.get_font(self.default_fonts.trait, size_to_test))
+            elif item.tag == "p":
+                html_tag_stack.push("p")
+            elif item.tag == "/p":
+                html_tag_stack.pop()
             elif item.tag == "flavor":
-                align = item.attributes.get('align', 'center')
-                virtual_text_box.add_flex()
+                html_tag_stack.push("flavor")
+                # 是否添加引用线
+                if item.attributes.get('quote', 'false') == 'true':
+                    virtual_text_box.set_guide_lines()
+                # 是否响应布局
+                if item.attributes.get('flex', 'true') == 'true':
+                    virtual_text_box.add_flex()
                 flavor_font_size = max(1, size_to_test - 2)
                 font_stack.push(font_cache.get_font(self.default_fonts.italic, flavor_font_size))
-                virtual_text_box.set_line_padding(20)
+                virtual_text_box.set_line_padding(int(item.attributes.get('padding', 15)))
                 # 是否居中
-                if align == 'center':
+                if item.attributes.get('align', 'center') == 'center':
                     virtual_text_box.set_line_center()
             elif item.tag.startswith('/'):
                 if item.tag in ["/font", "/b", "/i", '/trait']:
                     font_stack.pop()
                 elif item.tag == "/flavor":
+                    html_tag_stack.pop()
                     font_stack.pop()
                     virtual_text_box.cancel_line_padding()
                     virtual_text_box.cancel_line_center()
+                    virtual_text_box.cancel_guide_lines()
             elif item.tag == "flex":
                 virtual_text_box.add_flex()
 
@@ -373,6 +579,13 @@ class RichTextRenderer:
 
         # 从布局好的VirtualTextBox中获取渲染列表
         render_list = final_vbox.get_render_list()
+
+        # 首先获取所有辅助线线段的坐标
+        guide_line_segments = final_vbox.get_guide_line_segments()
+        # 遍历并绘制每一条线段
+        for segment in guide_line_segments:
+            # segment 是一个 ((x1, y1), (x2, y2)) 元组
+            self.draw.line(segment, fill=options.font_color, width=2)
 
         # 遍历渲染列表并绘制到图片上
         for render_item in render_list:

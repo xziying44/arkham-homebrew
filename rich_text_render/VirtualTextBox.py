@@ -1,5 +1,5 @@
 # VirtualTextBox.py
-from typing import List, Tuple, Union, Optional
+from typing import List, Tuple, Union, Optional, Dict
 from dataclasses import dataclass
 from PIL import Image
 from PIL.ImageFont import FreeTypeFont
@@ -77,21 +77,24 @@ class VirtualTextBox:
         self.current_line_right: int = 0
         self.current_line_height: int = 0
 
-        # --- 新增：用于行居中状态的属性 ---
+        # --- 用于行居中状态的属性 ---
         self._is_line_centering_enabled: bool = False
-        # --- 新增结束 ---
+
+        # --- 用于辅助线状态的属性 ---
+        self._guide_lines_active: bool = False
+        self._guide_line_segments: List[Tuple[Tuple[int, int], Tuple[int, int]]] = []
 
         self.line_padding: int = 0
         self.use_line_padding: bool = False
 
-        self.cannot_be_line_start = {'。', '，', '！', '？', '；', '：', ')', '）',
+        self.cannot_be_line_start = {'。', '，', '！', '？', '；', '：', ')', '）', '、',
                                      '}', '】', '>', '》', '.', '!', '?'}
         self.cannot_be_line_end = {'(', '（', '{', '【', '<', '《'}
 
         self._update_line_bounds()
         self.cursor_x = self.current_line_left
 
-    # --- 新增：设置行居中方法 ---
+    # --- 设置行居中方法 ---
     def set_line_center(self) -> None:
         """
         启用行居中模式。
@@ -100,7 +103,7 @@ class VirtualTextBox:
         """
         self._is_line_centering_enabled = True
 
-    # --- 新增：取消行居中方法 ---
+    # --- 取消行居中方法 ---
     def cancel_line_center(self) -> None:
         """
         取消行居中模式。
@@ -113,7 +116,63 @@ class VirtualTextBox:
             self._recenter_current_line()
         self._is_line_centering_enabled = False
 
-    # --- 新增：实际执行居中操作的私有方法 ---
+    # --- 辅助线方法 ---
+    def _add_guide_segment_for_line(self, line_y: int, line_left: int, line_height: int):
+        """
+        内部辅助方法，用于为给定行的属性计算并添加辅助线段。
+        """
+        # 计算用于绘制的行高，确保空行也有最小高度
+        line_height_for_calc = max(line_height, self.default_line_spacing)
+        # 垂直延伸量，确保线条无缝连接
+        vertical_extension = 0
+        # 辅助线的水平位置，位于内容区域左侧10像素处
+        guide_x = line_left - 18
+
+        # 创建第一条垂直线段
+        p1_start = (guide_x, line_y - vertical_extension)
+        p1_end = (guide_x, line_y + line_height_for_calc + vertical_extension)
+        self._guide_line_segments.append((p1_start, p1_end))
+
+        # 创建第二条垂直线段（在第一条右侧6像素处）
+        p2_start = (guide_x + 6, line_y - vertical_extension)
+        p2_end = (guide_x + 6, line_y + line_height_for_calc + vertical_extension)
+        self._guide_line_segments.append((p2_start, p2_end))
+
+    def set_guide_lines(self) -> None:
+        """
+        设置辅助线。
+
+        启用后，系统将为每一新行文本生成两条垂直的辅助线，从当前行开始，
+        位置在文本边界左侧10像素处。这将清除任何先前生成的辅助线。
+        一行的辅助线是在该行完成时（即发生换行或调用 `cancel_guide_lines` 时）生成的。
+        """
+        self._guide_lines_active = True
+
+    def cancel_guide_lines(self) -> None:
+        """
+        取消辅助线，并最终确定当前行的辅助线。
+
+        如果辅助线处于激活状态，此方法将为当前行生成辅助线段，
+        从而结束辅助线的绘制过程。后续的新行将不再有辅助线。
+        """
+        if self._guide_lines_active:
+            # 为请求取消的当前行添加最后的线段
+            self._add_guide_segment_for_line(
+                self.cursor_y, self.current_line_left, self.current_line_height
+            )
+        self._guide_lines_active = False
+
+    def get_guide_line_segments(self) -> List[Tuple[Tuple[int, int], Tuple[int, int]]]:
+        """
+        返回已生成的辅助线线段列表。
+
+        列表中的每一项都是一个 `((x1, y1), (x2, y2))` 元组，用于绘制一条线。
+        注意：如果辅助线仍处于活动状态，此方法不会包含当前未最终确定的行的线段。
+        在调用此方法之前，请调用 `cancel_guide_lines` 以最终确定最后一个线段。
+        """
+        return self._guide_line_segments
+
+    # --- 实际执行居中操作的私有方法 ---
     def _recenter_current_line(self) -> None:
         """
         将当前行的所有对象（RenderItem）在其可用空间内水平居中。
@@ -190,10 +249,15 @@ class VirtualTextBox:
 
     def _move_to_next_line(self, obj_height: int = 0, extra_spacing: int = 0) -> bool:
         """移动到下一行，返回是否成功"""
-        # --- 修改：在移动到下一行之前，检查是否需要居中当前行 ---
+        # 在移动到下一行之前，检查是否需要居中当前行
         if self._is_line_centering_enabled:
             self._recenter_current_line()
-        # --- 修改结束 ---
+
+        # 如果辅助线功能已激活，为即将离开的行记录线段
+        if self._guide_lines_active:
+            self._add_guide_segment_for_line(
+                self.cursor_y, self.current_line_left, self.current_line_height
+            )
 
         base_y_jump = max(self.current_line_height, self.default_line_spacing)
         total_y_jump = base_y_jump + extra_spacing
@@ -257,8 +321,8 @@ class VirtualTextBox:
             'available_width': self.current_line_right - self.cursor_x,
             'using_line_padding': self.use_line_padding,
             'line_padding_value': self.line_padding if self.use_line_padding else 0,
-            # --- 新增：报告居中状态 ---
-            'is_line_centering': self._is_line_centering_enabled
+            'is_line_centering': self._is_line_centering_enabled,
+            'is_guide_lines_active': self._guide_lines_active,
         }
 
     def _handle_line_start_punctuation(self, obj: TextObject) -> bool:

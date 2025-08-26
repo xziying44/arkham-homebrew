@@ -33,12 +33,14 @@ se_icon = {
 }
 
 
-def tidy_body_flavor2(body, flavor, flavor_type=0, align='center'):
+def tidy_body_flavor(body, flavor, flavor_type=0, align='center', quote=False):
     """整理正文和风味，正确处理flavor字段中的<lr>标签"""
     body = body.strip()
-    tag_name = 'relish'
+    tag_name = 'flavor'
     if align == 'left':
-        tag_name = "relish center='false'"
+        tag_name = 'flavor align="left" flex="false" padding="0"'
+    if quote:
+        tag_name += ' quote="true" padding="20"'
 
     if flavor:
         flavor = flavor.strip()
@@ -62,57 +64,13 @@ def tidy_body_flavor2(body, flavor, flavor_type=0, align='center'):
                 if part == '<lr>':
                     result.append('<lr>')
                 elif part.strip():
-                    result.append(f"<{tag_name}>{part.strip()}</relish>")
+                    result.append(f"<{tag_name}>{part.strip()}</flavor>")
 
             flavor = ''.join(result)
         else:
             # 普通处理
             flavor = '\n'.join(
-                f"<{tag_name}>{line.strip()}</relish>"
-                for line in flavor.split('\n')
-                if line.strip()
-            )
-        if flavor_type == 0:
-            body += f'\n{flavor}'
-        else:
-            body = f'{flavor}\n{body}'
-
-    return body
-
-
-def tidy_body_flavor(data, flavor_type=0):
-    """整理正文和风味，正确处理flavor字段中的<lr>标签"""
-    body = data.get('body', '').strip()
-
-    if 'flavor' in data and data['flavor']:
-        flavor = data['flavor'].strip()
-
-        if '<lr>' in flavor:
-            # 分割字符串但保留分隔符
-            parts = []
-            remaining = flavor
-            while '<lr>' in remaining:
-                idx = remaining.index('<lr>')
-                if idx > 0:
-                    parts.append(remaining[:idx])
-                parts.append('<lr>')
-                remaining = remaining[idx + 4:]  # +4 是跳过'<lr>'
-            if remaining:
-                parts.append(remaining)
-
-            # 构建结果
-            result = []
-            for part in parts:
-                if part == '<lr>':
-                    result.append('<lr>')
-                elif part.strip():
-                    result.append(f"<relish>{part.strip()}</relish>")
-
-            flavor = ''.join(result)
-        else:
-            # 普通处理
-            flavor = '\n'.join(
-                f"<relish>{line.strip()}</relish>"
+                f"<{tag_name}>{line.strip()}</flavor>"
                 for line in flavor.split('\n')
                 if line.strip()
             )
@@ -132,7 +90,10 @@ def integrate_traits_text(font_manager, traits):
     if font_manager.lang == 'en':
         delimiter = '. '
 
-    return delimiter.join([font_manager.get_font_text(trait) for trait in traits])
+    result = delimiter.join([font_manager.get_font_text(trait) for trait in traits])
+    if font_manager.lang == 'en' and result != '':
+        result += '.'
+    return result
 
 
 def open_picture(card_json, path):
@@ -246,7 +207,7 @@ def create_location_card(card_json, picture_path=None, font_manager=None, image_
     )
 
     # 整合body和flavor
-    body = tidy_body_flavor(data)
+    body = tidy_body_flavor(data['body'], data['flavor'])
     # 写正文和风味
     card.draw_text(
         text=body,
@@ -386,7 +347,7 @@ def create_treachery_card(card_json, picture_path=None, font_manager=None, image
         font_color=(0, 0, 0)
     )
     # 整合body和flavor
-    body = tidy_body_flavor(data)
+    body = tidy_body_flavor(data['body'], data['flavor'])
     # 写正文和风味
     card.draw_text(
         text=body,
@@ -486,7 +447,7 @@ def create_enemy_card(card_json, picture_path=None, font_manager=None, image_man
         font_color=(0, 0, 0)
     )
     # 整合body和flavor
-    body = tidy_body_flavor(data)
+    body = tidy_body_flavor(data['body'], data['flavor'])
     # 写胜利点数和正文
     if 'victory' in data and isinstance(data['victory'], int):
         card.draw_centered_text(
@@ -615,7 +576,7 @@ def create_weakness_back(card_json, picture_path=None, font_manager=None, image_
     if data['type'] not in ['事件卡', '支援卡', '技能卡', '诡计卡', '敌人卡']:
         raise ValueError('卡牌类型错误')
     # 整合body和flavor
-    body = tidy_body_flavor(data)
+    body = tidy_body_flavor(data['body'], data['flavor'])
     if data['type'] == '事件卡':
         # 贴底图
         if picture_path is not None:
@@ -940,7 +901,7 @@ def create_weakness_back(card_json, picture_path=None, font_manager=None, image_
             font_color=(0, 0, 0)
         )
         # 整合body和flavor
-        body = tidy_body_flavor(data)
+        body = tidy_body_flavor(data['body'], data['flavor'])
         # 写胜利点数和正文
         if 'victory' in data and isinstance(data['victory'], int):
             card.draw_centered_text(
@@ -1085,7 +1046,7 @@ def create_investigators_card_back(card_json, picture_path=None, font_manager=No
     if 'other' in card_back and card_back['other'] != '':
         test_text += card_back['other'] + '\n'
     if 'story' in card_back and card_back['story'] != '':
-        test_text = tidy_body_flavor2(test_text, card_back['story'], align='left')
+        test_text = tidy_body_flavor(test_text, card_back['story'], align='left')
     vertices = [
         (385, 141), (1011, 141), (1011, 700), (36, 700),
         (36, 470), (170, 470), (182, 430), (358, 430)
@@ -1197,7 +1158,7 @@ def create_investigators_card(card_json, picture_path=None, font_manager=None, i
         font_color=(0, 0, 0)
     )
     # 整理body和风味
-    body = tidy_body_flavor(data)
+    body = tidy_body_flavor(data['body'], data['flavor'])
     card.draw_text(
         body,
         vertices=[
@@ -1356,7 +1317,7 @@ def create_player_cards(card_json, picture_path=None, font_manager=None, image_m
     if 'traits' in data and isinstance(data['traits'], list):
         traits = integrate_traits_text(font_manager, data['traits'])
     # 整理body和风味
-    body = tidy_body_flavor(data)
+    body = tidy_body_flavor(data['body'], data['flavor'])
     # 按不同类型画位置
     if data['type'] == '技能卡':
         # 画名称
@@ -1564,7 +1525,7 @@ def create_large_picture(
         font_color=(0, 0, 0)
     )
     # 整理body和风味
-    body = tidy_body_flavor(data)
+    body = tidy_body_flavor(data['body'], data['flavor'])
     # 写正文
     card.draw_text(
         body,
@@ -1684,7 +1645,7 @@ def create_act_card(
             (10 + 480 + offset_x, 574)
         ]
     # 写正文
-    body = tidy_body_flavor(data, flavor_type=1)
+    body = tidy_body_flavor(data['body'], data['flavor'], flavor_type=1, align='left')
     card.draw_text(
         body,
         vertices=vertices,
@@ -1768,7 +1729,7 @@ def create_act_back_card(
     title_img = title_img.rotate(90, expand=True)
     card.paste_image(title_img, (40, 208), 'cover')
     # 写正文
-    body = tidy_body_flavor(data, flavor_type=1)
+    body = tidy_body_flavor(data['body'], data['flavor'], flavor_type=1, align='left', quote=True)
     offset = -8
     card.draw_text(
         body,
@@ -1846,7 +1807,7 @@ def create_story_card(
         font_color=(0, 0, 0)
     )
     # 写正文
-    body = tidy_body_flavor(data)
+    body = tidy_body_flavor(data['body'], data['flavor'])
     card.draw_text(
         body,
         vertices=[
@@ -1935,7 +1896,7 @@ def create_action_card(
         font_color=(0, 0, 0)
     )
     # 写正文
-    body = tidy_body_flavor(data)
+    body = tidy_body_flavor(data['body'], data['flavor'])
     card.draw_text(
         body,
         vertices,
@@ -2006,7 +1967,7 @@ def create_scenario_card(
     if data.get('scenario_type', 0) == 2:
         # 辅助卡
         # 写正文
-        body = tidy_body_flavor(data)
+        body = tidy_body_flavor(data['body'], data['flavor'])
         card.draw_text(
             body,
             vertices=[
@@ -2070,6 +2031,8 @@ def sort_submit_icons(card_json):
 
 def preprocessing_json(card_json):
     """预处理json信息"""
+    card_json['body'] = card_json.get('body', '')
+    card_json['flavor'] = card_json.get('flavor', '')
 
     card_json = sort_submit_icons(card_json)
 
@@ -2089,21 +2052,24 @@ def preprocessing_json(card_json):
         content = content.replace('{', '').replace('}', '')
         # 分割成多行
         lines = content.split('\n')
-        # 每行用<relish>标签包裹
-        tagged_lines = [f'<relish>{line}</relish>' for line in lines if line.strip()]
+        # 每行用<flavor>标签包裹
+        tag_name = 'flavor'
+        if card_json.get('type', '') in ['密谋卡', '场景卡'] and card_json.get('is_back', False):
+            tag_name += ' align="left" flex="false" quote="true" padding="20"'
+        elif card_json.get('type', '') in ['密谋卡-大画', '场景卡-大画']:
+            tag_name += ' align="left" flex="false" padding="0"'
+        elif card_json.get('type', '') in ['故事卡']:
+            tag_name += ' align="left" flex="false" quote="true" padding="20"'
+        tagged_lines = [f'<{tag_name}>{line}</flavor>' for line in lines if line.strip()]
         # 用换行符连接
         return '\n'.join(tagged_lines)
 
     if 'level' in card_json and card_json['level'] == '无':
         card_json['level'] = -1
-    if 'body' in card_json and card_json['body'] != '':
+    if card_json['body'] != '':
         text = card_json['body']
         # 使用正则表达式匹配[XXX]格式的内容
-        text = re.sub(r'<relish>(.*?)</relish>', replace_bracketed_content, text, flags=re.DOTALL)
         text = re.sub(r'\[([^]]+)]', replace_bracketed_content, text, flags=re.DOTALL)
-        # 确保所有的<relish>都在行首，如果不是则加上换行
-        text = re.sub(r'(?<!\n)<relish>', '\n<relish>', text)
-        text = re.sub(r'<br>', '<lr>', text)
         card_json['body'] = text
     if card_json.get('class', '') == '弱点' and 'weakness_type' not in card_json:
         card_json['weakness_type'] = '弱点'
@@ -2199,14 +2165,21 @@ def process_card_json(card_json, picture_path=None, font_manager=None, image_man
 
 if __name__ == '__main__':
     json_data = {
-        "type": "故事卡",
+        "type": "场景卡",
+        "name": "测试",
+        "id": "",
+        "created_at": "",
+        "version": "1.0",
+        "language": "zh",
+        "is_back": False,
+        "serial_number": "2",
+        "threshold": "2<调查员>",
+        "flavor": "这是风味效果",
+        "body": "11",
         "victory": 1,
-        "id": 212,
-        "body": "\n<relish>你终于找到了直接访问褴褛之王号主控电脑K2-PS187的接口点。然而，你很快意识到禁用或重接它并不像预期那么简单。</relish>\n<relish>K2-PS187根本不是真正的电脑，而是一个赛博有机体。在舰桥机械深处是计算机核心，里面存放着六个幼童的分离大脑。这些大脑相互链接形成了一个极其强大的超级计算机。</relish>\n<relish>这个情况让你感到恶心。谁会做出这种事？将这些意识永远禁锢在计算飞船轨道和处理算法的命运中。你感到内疚，知道自己必定曾是这邪恶船员的一员。</relish>\n所有调查员在其“回忆”添加1个计数符号(无视所在地点)。\n推进至场景2b。\n将这张卡牌加入胜利区。",
-        "name": "K2-PS187赛博大脑",
-        "subtitle": "",
-        "traits": [],
-        "picture_path": "D:\\BaiduSyncdisk\\PycharmProjects\\arkham_translate\\translation_space\\暗物质\\factory\\000212-raw.jpg"
+        "illustrator": "tuyii",
+        "encounter_group_number": "",
+        "card_number": "12",
     }
     fm = FontManager('fonts')
     im = ImageManager('images')

@@ -422,9 +422,11 @@ class Card:
         """
         # 兼容旧格式
         if (self.card_type in ['密谋卡', '场景卡'] and self.is_back) or self.card_type == '故事卡':
-            text = re.sub(r'<relish>(.*?)</relish>', r'<flavor align="left" quotation="true">\1</flavor>', text)
+            text = re.sub(r'<relish>(.*?)</relish>', r'<flavor align="left" quote="true" flex="false">\1</flavor>',
+                          text)
         elif self.card_type in ['密谋卡', '场景卡'] and not self.is_back:
-            text = re.sub(r'<relish>(.*?)</relish>', r'<flavor align="left" padding="0">\1</flavor>', text)
+            text = re.sub(r'<relish>(.*?)</relish>', r'<flavor align="left" padding="0"  flex="false">\1</flavor>',
+                          text)
         self.rich_renderer.draw_complex_text(
             text,
             polygon_vertices=vertices,
