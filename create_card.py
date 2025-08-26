@@ -141,6 +141,11 @@ class CardCreator:
 
         card_json = self._sort_submit_icons(card_json)
 
+        if 'subclass' in card_json:
+            subclass = card_json.get('subclass', [])
+            # 清除subclass里的null
+            subclass = [item for item in subclass if item is not None]
+            card_json['subclass'] = subclass
         if 'body' not in card_json:
             card_json['body'] = ''
 
@@ -167,6 +172,9 @@ class CardCreator:
         if card_json['body'] != '':
             text = card_json['body']
             text = re.sub(r'\[([^]]+)]', replace_bracketed_content, text, flags=re.DOTALL)
+            text = text.replace('】。', '】<font name="思源黑体">\uff61</font>')
+            text = text.replace('。】', '】<font name="思源黑体">\uff61</font>')
+
             card_json['body'] = text
         if card_json.get('class', '') == '弱点' and 'weakness_type' not in card_json:
             card_json['weakness_type'] = '弱点'
@@ -696,9 +704,9 @@ class CardCreator:
         if 'slots' in data and isinstance(data['slots'], str):
             card.add_slots(data['slots'])
 
-        health = data.get('health', 0) if isinstance(data.get('health'), int) else 0
-        horror = data.get('horror', 0) if isinstance(data.get('horror'), int) else 0
-        if health > 0 or horror > 0:
+        health = data.get('health', -1) if isinstance(data.get('health'), int) else -1
+        horror = data.get('horror', -1) if isinstance(data.get('horror'), int) else -1
+        if health != -1 or horror != -1:
             card.set_health_and_horror(health, horror)
 
     def _create_weakness_skill_card(self, card, data, body, dp):
@@ -900,7 +908,8 @@ class CardCreator:
                     card.paste_image(dp, (0, 75, 579, 664), 'cover', extension=470)
 
         card.paste_image(self.image_manager.get_image(f'{data["type"]}-{data["class"]}-UI'), (0, 0), 'contain')
-        card.draw_centered_text((320, 38), data['name'], "汉仪小隶书简", 48, (0, 0, 0))
+        name_offset = 4 if self.font_manager.lang == 'en' else 0
+        card.draw_centered_text((320, 38 + name_offset), data['name'], "汉仪小隶书简", 48, (0, 0, 0))
         card.draw_centered_text((320, 90), data['subtitle'], "副标题", 32, (0, 0, 0))
 
         # 写四维
@@ -909,7 +918,10 @@ class CardCreator:
                 card.draw_centered_text((600 + 120 * i, 57), str(attr), "Bolton", 48, (0, 0, 0))
 
         traits = self._integrate_traits_text(data.get('traits', []))
-        card.draw_centered_text((810, 168), traits, "方正舒体", 32, (0, 0, 0))
+        if self.font_manager.lang == 'en':
+            card.draw_centered_text((810, 168), traits, "方正舒体", 26, (0, 0, 0))
+        else:
+            card.draw_centered_text((810, 168), traits, "方正舒体", 32, (0, 0, 0))
 
         body = self._tidy_body_flavor(data['body'], data['flavor'])
         card.draw_text(body, vertices=[(586, 178), (1026, 178), (1024, 600), (586, 600)],
@@ -1008,7 +1020,7 @@ class CardCreator:
 
         transparency_list = [(690, 50, 46)] if self.transparent_encounter else None
         card.paste_image(self.image_manager.get_image(frame_name), (0, 0), 'contain', transparency_list)
-        card.draw_centered_text((73, 130), self.font_manager.get_font_text("支援"), "小字", 24, (0, 0, 0))
+        card.draw_centered_text((73, 132), self.font_manager.get_font_text("支援"), "小字", 24, (0, 0, 0))
 
     def _setup_player_card_content(self, card, data):
         """设置玩家卡内容"""
@@ -1075,10 +1087,18 @@ class CardCreator:
 
     def _setup_support_card_content(self, card, data, traits, body):
         """设置支援卡内容"""
-        card.draw_centered_text((375, 48), data['name'], "汉仪小隶书简", 48, (0, 0, 0))
+
+        subclass = data.get('subclass', [])
+        name_offset = 0
+        if len(subclass) == 3:
+            name_offset = -80
+        elif len(subclass) == 2:
+            name_offset = -40
+
+        card.draw_centered_text((375 + name_offset, 48), data['name'], "汉仪小隶书简", 48, (0, 0, 0))
 
         if 'subtitle' in data and data['subtitle'] != '':
-            card.draw_centered_text((375, 101), data['subtitle'], "副标题", 32, (0, 0, 0))
+            card.draw_centered_text((375, 98), data['subtitle'], "副标题", 32, (0, 0, 0))
 
         card.draw_centered_text((375, 649), traits, "方正舒体", 32, (0, 0, 0))
         card.draw_text(body, vertices=[(19, 662), (718, 662), (718, 925), (19, 925)],
@@ -1092,9 +1112,9 @@ class CardCreator:
         if 'slots2' in data and isinstance(data['slots2'], str):
             card.add_slots(data['slots2'])
 
-        health = data.get('health', 0) if isinstance(data.get('health'), int) else 0
-        horror = data.get('horror', 0) if isinstance(data.get('horror'), int) else 0
-        if health > 0 or horror > 0:
+        health = data.get('health', -1) if isinstance(data.get('health'), int) else -1
+        horror = data.get('horror', -1) if isinstance(data.get('horror'), int) else -1
+        if health != -1 or horror != -1:
             card.set_health_and_horror(health, horror)
 
         victory = data.get('victory', None)
@@ -1439,15 +1459,30 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "is_back": True,
-        "serial_number": "3b",
-        "type": "场景卡",
-        "id": 231,
-        "body": "【如果调查员们没有取回悬挂的人偶也没有复原废弃的人偶】：\n<relish>尽管你尽了最大努力，还是无法辨别祭坛后面那座奇怪雕塑的用途；脸部子午线上的一道发丝般的裂缝，几乎难以察觉，正嘲弄着你。你注意到它的两个眼窝都是空的，仿佛有什么东西本应放在那里……</relish>\n将此场景翻回背面。(你之后可以再次推进它。)\n<hr>\n【如果调查员们既取回了悬挂的人偶也复原了废弃的人偶】：\n<relish>你凭直觉将人偶们放入雕塑的眼窝。当你后退时，墙后的一个发条装置发出了沉闷的咔嗒声……然后孩子的脸滑开了，露出了一个隐藏的通道。你匆忙穿过开口，几乎没有注意到身后的雕塑正滑回原位……</relish>\n【(→结局1)】",
-        "name": "童稚之眼",
-        "subtitle": "",
-        "traits": [],
-        "class": "中立"
+        "type": "支援卡",
+        "name": "<独特>小助手测试",
+        "id": "",
+        "created_at": "",
+        "version": "1.0",
+        "language": "zh",
+        "level": -1,
+        "cost": -1,
+        "body": "【攻击。】这次攻击 - 将本卡牌放置入场。\n<反应>本卡牌入场后：抽取2张卡牌。\n",
+        "subtitle": "阿卡姆姬",
+        "class": "多职阶",
+        "health": -2,
+        "horror": -2,
+        "slots": "盟友",
+        "flavor": "朴实无华！",
+
+        "traits": [
+            "盟友"
+        ],
+        "subclass": [
+            "守护者",
+            "探求者",
+            "流浪者"
+        ]
     }
 
     # 创建字体和图片管理器

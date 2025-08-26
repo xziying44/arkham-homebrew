@@ -603,6 +603,17 @@ class Card:
                 border_width=3,
                 border_color=(182, 31, 35)
             )
+        elif health == -2:
+            self.draw_centered_text(
+                position=(323, 970),
+                text='*',
+                font_name='star',
+                font_size=64,
+                font_color=(255, 255, 255),
+                has_border=True,
+                border_width=3,
+                border_color=(182, 31, 35)
+            )
         else:
             self.draw_centered_text(
                 position=(323, 952),
@@ -621,6 +632,17 @@ class Card:
                 text=str(horror),
                 font_name='Bolton',
                 font_size=58,
+                font_color=(255, 255, 255),
+                has_border=True,
+                border_width=3,
+                border_color=(1, 63, 114)
+            )
+        elif horror == -2:
+            self.draw_centered_text(
+                position=(434, 970),
+                text='*',
+                font_name='star',
+                font_size=64,
                 font_color=(255, 255, 255),
                 has_border=True,
                 border_width=3,

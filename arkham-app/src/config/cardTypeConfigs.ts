@@ -178,6 +178,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'half',
         options: [
           { label: '🚫 无生命值', value: -1 },
+          { label: '⭐ 无限生命值', value: -2 },
           { label: '💀 生命值-0', value: 0 },
           ...Array.from({ length: 99 }, (_, i) => ({ label: `❤️ 生命值-${i + 1}`, value: i + 1 }))
         ]
@@ -189,6 +190,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'half',
         options: [
           { label: '🚫 无理智值', value: -1 },
+          { label: '⭐ 无限理智值', value: -2 },
           { label: '😵 理智值-0', value: 0 },
           ...Array.from({ length: 99 }, (_, i) => ({ label: `🧠 理智值-${i + 1}`, value: i + 1 }))
         ]

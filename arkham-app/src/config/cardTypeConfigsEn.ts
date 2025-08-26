@@ -178,6 +178,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'half',
         options: [
           { label: '🚫 No Health', value: -1 },
+          { label: '⭐ Infinite Health', value: -2 },
           { label: '💀 Health-0', value: 0 },
           ...Array.from({ length: 99 }, (_, i) => ({ label: `❤️ Health-${i + 1}`, value: i + 1 }))
         ]
@@ -189,6 +190,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'half',
         options: [
           { label: '🚫 No Sanity', value: -1 },
+          { label: '⭐ Infinite Sanity', value: -2 },
           { label: '😵 Sanity-0', value: 0 },
           ...Array.from({ length: 99 }, (_, i) => ({ label: `🧠 Sanity-${i + 1}`, value: i + 1 }))
         ]
