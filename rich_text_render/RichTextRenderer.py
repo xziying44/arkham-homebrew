@@ -7,8 +7,9 @@ from PIL import Image, ImageDraw, ImageFont
 # 假设 Card.py 在上一级目录
 import sys
 
+from ResourceManager import FontManager, ImageManager
+
 sys.path.append('..')
-from Card import FontManager, ImageManager
 # ---
 
 # 假设这些文件在同一目录下
@@ -150,6 +151,7 @@ class RichTextRenderer:
             # 1. Formatting and Keyword Rules (Non-icon)
             (r'【([^】]*)】', r'<b>\1</b>'),  # Bold text within 【】
             (r'{([^}]*)}', r'<trait>\1</trait>'),
+            (r'<relish>(.*)</relish>', r'<flavor>\1</flavor> -'),
             (r'<强制>', r'<b>强制</b> -'),
             (r'<显现>', r'<b>显现</b> -'),
             (r'<攻击>', r'<b>攻击</b>'),
@@ -313,11 +315,14 @@ class RichTextRenderer:
             elif item.tag == "trait":
                 font_stack.push(font_cache.get_font(self.default_fonts.trait, size_to_test))
             elif item.tag == "flavor":
+                align = item.attributes.get('align', 'center')
                 virtual_text_box.add_flex()
                 flavor_font_size = max(1, size_to_test - 2)
                 font_stack.push(font_cache.get_font(self.default_fonts.italic, flavor_font_size))
                 virtual_text_box.set_line_padding(20)
-                virtual_text_box.set_line_center()
+                # 是否居中
+                if align == 'center':
+                    virtual_text_box.set_line_center()
             elif item.tag.startswith('/'):
                 if item.tag in ["/font", "/b", "/i", '/trait']:
                     font_stack.pop()
@@ -351,6 +356,7 @@ class RichTextRenderer:
             self.draw.polygon(polygon_vertices, outline="red", width=2)
 
         text = self._preprocess_text(text)
+        print(text)
 
         # 默认行为：查找最佳字体大小并获取布局好的VirtualTextBox
         final_vbox = self.find_best_fit_font_size(
@@ -382,20 +388,187 @@ class RichTextRenderer:
                     self.image.paste(obj.image, (x, y))
                 if draw_debug_frame:
                     self.draw.rectangle([(x, y), (x + obj.width, y + obj.height)], outline="green", width=1)
+        pass
+
+    def draw_line(self, text: str, position: Tuple[int, int],
+                  alignment: TextAlignment, options: DrawOptions) -> None:
+        """
+        绘制一行支持HTML语法的文本。
+        Args:
+            text: 要绘制的文本，支持<b>, <i>, <trait>, <font>等标签。
+            position: 位置坐标(x, y)。
+                      - Center: (x, y)是整行文本的中心点。
+                      - Left: (x, y)是整行文本的左上角顶点。
+                      - Right: (x, y)是整行文本的右上角顶点。
+            alignment: 对齐方式 (TextAlignment.LEFT, .CENTER, .RIGHT)。
+            options: 绘制选项，提供默认字体、大小和颜色。
+        """
+        # 预处理文本
+        text = self._preprocess_text(text)
+
+        # 解析HTML标签
+        parsed_items = self.rich_text_parser.parse(text)
+
+        # 创建字体缓存和字体栈
+        font_cache = FontCache(self.font_manager)
+        try:
+            base_font = font_cache.get_font(options.font_name, options.font_size)
+        except Exception as e:
+            print(f"字体加载失败: {e}")
+            return
+
+        font_stack = FontStack(base_font)
+
+        # 第一遍遍历：计算总宽度和高度，收集渲染信息
+        render_segments = []  # 存储每个文本片段的渲染信息
+        total_width = 0
+        max_height = 0
+
+        for item in parsed_items:
+            if item.tag == "text":
+                font = font_stack.get_top()
+                text_content = item.content
+
+                if item.type == TextType.OTHER:
+                    # 逐字符处理
+                    for char in text_content:
+                        text_box = self._get_text_box(char, font)
+                        render_segments.append({
+                            'text': char,
+                            'font': font,
+                            'width': text_box[0],
+                            'height': text_box[1],
+                            'color': options.font_color
+                        })
+                        total_width += text_box[0]
+                        max_height = max(max_height, text_box[1])
+                else:
+                    # 整块文本处理
+                    text_box = self._get_text_box(text_content, font)
+                    render_segments.append({
+                        'text': text_content,
+                        'font': font,
+                        'width': text_box[0],
+                        'height': text_box[1],
+                        'color': options.font_color
+                    })
+                    total_width += text_box[0]
+                    max_height = max(max_height, text_box[1])
+
+            elif item.tag == "font":
+                font_name = item.attributes.get('name', options.font_name)
+                try:
+                    font_stack.push(font_cache.get_font(font_name, options.font_size))
+                except Exception as e:
+                    print(f"字体切换失败: {e}")
+
+            elif item.tag == "b":
+                try:
+                    font_stack.push(font_cache.get_font(self.default_fonts.bold, options.font_size))
+                except Exception as e:
+                    print(f"粗体字体加载失败: {e}")
+
+            elif item.tag == "i":
+                try:
+                    font_stack.push(font_cache.get_font(self.default_fonts.italic, options.font_size))
+                except Exception as e:
+                    print(f"斜体字体加载失败: {e}")
+
+            elif item.tag == "trait":
+                try:
+                    font_stack.push(font_cache.get_font(self.default_fonts.trait, options.font_size))
+                except Exception as e:
+                    print(f"特质字体加载失败: {e}")
+
+            elif item.tag.startswith('/'):
+                if item.tag in ["/font", "/b", "/i", '/trait']:
+                    font_stack.pop()
+
+        # 根据对齐方式计算起始位置
+        x, y = position
+
+        if alignment == TextAlignment.CENTER:
+            # 中心对齐：position是文本中心点
+            start_x = x - total_width // 2
+            start_y = y - max_height // 2
+        elif alignment == TextAlignment.LEFT:
+            # 左对齐：position是左上角
+            start_x = x
+            start_y = y
+        elif alignment == TextAlignment.RIGHT:
+            # 右对齐：position是右上角
+            start_x = x - total_width
+            start_y = y
+        else:
+            # 默认左对齐
+            start_x = x
+            start_y = y
+        print("绘制文本:", text, "位置:", start_x, start_y)
+
+        # 第二遍：实际绘制文本
+        current_x = start_x
+
+        for segment in render_segments:
+            # 绘制文本
+            self.draw.text(
+                (current_x, start_y),
+                segment['text'],
+                font=segment['font'],
+                fill=segment['color']
+            )
+
+            # 如果有边框效果
+            if options.has_border:
+                # 绘制边框效果（描边）
+                for dx in [-options.border_width, 0, options.border_width]:
+                    for dy in [-options.border_width, 0, options.border_width]:
+                        if dx != 0 or dy != 0:  # 不重复绘制中心点
+                            self.draw.text(
+                                (current_x + dx, start_y + dy),
+                                segment['text'],
+                                font=segment['font'],
+                                fill=options.border_color
+                            )
+                # 重新绘制主文本（覆盖边框）
+                self.draw.text(
+                    (current_x, start_y),
+                    segment['text'],
+                    font=segment['font'],
+                    fill=segment['color']
+                )
+
+            # 更新x坐标
+            current_x += segment['width']
+
+        # 如果有下划线效果，在所有文本绘制完成后绘制整条下划线
+        if options.has_underline:
+            underline_y = start_y + max_height + 2
+            y_offset = 12
+            self.draw.line(
+                (start_x, underline_y + y_offset, start_x + total_width, underline_y + y_offset),
+                fill=options.font_color,
+                width=1
+            )
+            y_offset = 18
+            self.draw.line(
+                (start_x, underline_y + y_offset, start_x + total_width, underline_y + y_offset),
+                fill=options.font_color,
+                width=2
+            )
 
 
 if __name__ == '__main__':
     font_manager = FontManager(font_folder='../fonts')
     image_manager = ImageManager(image_folder='../images')
     image = Image.open('test.png')
-    renderer = RichTextRenderer(font_manager, image_manager, image, lang='en')
-    body = "You begin the game with 4 copies of Herta Puppet in play. When any amount of damage( would be placed on " \
-           "you, place those damage on Herta Puppet (Online) instead.<par>【Forced】 – When Herta Puppet (Online) is dealt " \
-           "damage: You take 1 direct horror.<par>⚡Exhaust a copy of Herta Puppet at your location: You get +2 skill " \
-           "value during this test.<par>⭐effect: +X. X is the number of Herta Puppet assets in play.<par>" \
-           "<flavor>Test flavor You begin the game with 4 copies of Herta Puppet in play. !</flavor><flex>"
-    # body = "【强制】 - 你所在地点的一个{怪物}敌人被击败后：你获得2点资源或在你的一个法术支援上放置1充能。(" \
-    #        "每轮限一次）<par>⭐效果：+1。你+2<脑>直到本轮结束。<par><flavor>“对连身为王与神的法老之座都敢玩弄的不敬，降下惩罚。”</flavor>"
+    renderer = RichTextRenderer(font_manager, image_manager, image, lang='zh')
+    # body = "You begin the game with 4 copies of Herta Puppet in play. When any amount of damage( would be placed on " \
+    #        "you, place those damage on Herta Puppet (Online) instead.<par>【Forced】 – When Herta Puppet (Online) is dealt " \
+    #        "damage: You take 1 direct horror.<par>⚡Exhaust a copy of Herta Puppet at your location: You get +2 skill " \
+    #        "value during this test.<par>⭐effect: +X. X is the number of Herta Puppet assets in play.<par>" \
+    #        "<flavor>Test flavor You begin the game with 4 copies of Herta Puppet in play. !</flavor><flex>"
+    body = "【强制】 - 你所在地点的一个{怪物}敌人被击败后：你获得2点资源或在你的一个法术支援上放置1充能。(" \
+           "每轮限一次）<par>⭐效果：+1。你+2<脑>直到本轮结束。<par><flavor>“对连身为王与神的法老之座都敢玩弄的不敬，降下惩罚。”</flavor>"
     renderer.draw_complex_text(
         body,
         polygon_vertices=[
@@ -406,12 +579,20 @@ if __name__ == '__main__':
         options=DrawOptions(
             font_name='simfang',
             font_size=34,
-            font_color='#000000',
-            has_border=True,
-            border_color='#000000',
-            border_width=1,
-            has_underline=False
+            font_color='#000000'
         ),
         draw_debug_frame=False
     )
+
+    renderer.draw_line(
+        text='测试测试',
+        position=(320, 38),
+        alignment=TextAlignment.CENTER,
+        options=DrawOptions(
+            font_name='汉仪小隶书简',
+            font_size=48,
+            font_color='#000000'
+        ),
+    )
+
     image.show()

@@ -2199,36 +2199,20 @@ def process_card_json(card_json, picture_path=None, font_manager=None, image_man
 
 if __name__ == '__main__':
     json_data = {
-        "id": "",
-        "created_at": "",
-        "version": "1.0",
-        "type": "调查员",
-        "name": "🏅The Herta",
-        "subtitle": "The Sorceress",
-        "class": "探求者",
-        "attribute": [
-            3,
-            6,
-            1,
-            1
-        ],
-        "health": 3,
-        "horror": 12,
-        "traits": [
-            "Scholar",
-            "Genius Society"
-        ],
-        "body":"",
-        # "body": "You begin the game with 4 copies of Herta Puppet in play. When any amount of damage would be placed on you, place those damage on Herta Puppet (Online) instead.\n【Forced】 – When Herta Puppet (Online) is dealt damage: You take 1 direct horror.\n⚡Exhaust a copy of Herta Puppet at your location: You get +2 skill value during this test.\n⭐effect: +X. X is the number of Herta Puppet assets in play.",
-        "language": "en",
-        # "flavor": "“If they dared to write that, then I would call myself THE Herta.”"
-        "flavor": ""
+        "type": "故事卡",
+        "victory": 1,
+        "id": 212,
+        "body": "\n<relish>你终于找到了直接访问褴褛之王号主控电脑K2-PS187的接口点。然而，你很快意识到禁用或重接它并不像预期那么简单。</relish>\n<relish>K2-PS187根本不是真正的电脑，而是一个赛博有机体。在舰桥机械深处是计算机核心，里面存放着六个幼童的分离大脑。这些大脑相互链接形成了一个极其强大的超级计算机。</relish>\n<relish>这个情况让你感到恶心。谁会做出这种事？将这些意识永远禁锢在计算飞船轨道和处理算法的命运中。你感到内疚，知道自己必定曾是这邪恶船员的一员。</relish>\n所有调查员在其“回忆”添加1个计数符号(无视所在地点)。\n推进至场景2b。\n将这张卡牌加入胜利区。",
+        "name": "K2-PS187赛博大脑",
+        "subtitle": "",
+        "traits": [],
+        "picture_path": "D:\\BaiduSyncdisk\\PycharmProjects\\arkham_translate\\translation_space\\暗物质\\factory\\000212-raw.jpg"
     }
     fm = FontManager('fonts')
     im = ImageManager('images')
     im.load_images('icons')
 
-    fm.set_lang('en')
+    # fm.set_lang('en')
     card = process_card_json(json_data, picture_path=json_data.get('picture_path', None),
                              font_manager=fm,
                              image_manager=im,
