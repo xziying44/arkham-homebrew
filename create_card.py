@@ -922,14 +922,12 @@ class CardCreator:
                 card.draw_centered_text((600 + 120 * i, 57), str(attr), "Bolton", 48, (0, 0, 0))
 
         traits = self._integrate_traits_text(data.get('traits', []))
-        if self.font_manager.lang == 'en':
-            card.draw_centered_text((810, 168), traits, "方正舒体", 26, (0, 0, 0))
-        else:
-            card.draw_centered_text((810, 168), traits, "方正舒体", 32, (0, 0, 0))
+        card.draw_centered_text((810, 160), traits, "方正舒体", 29, (0, 0, 0))
 
         body = self._tidy_body_flavor(data['body'], data['flavor'])
-        card.draw_text(body, vertices=[(586, 178), (1026, 178), (1024, 600), (586, 600)],
-                       default_font_name='simfang', default_size=32, padding=15, draw_virtual_box=False)
+        card.draw_text(body, vertices=[(596, 178), (1016, 178),
+                                       (1016, 600), (596, 600)],
+                       default_font_name='simfang', default_size=32, padding=10, draw_virtual_box=False)
 
         health = data.get('health', 0) if isinstance(data.get('health'), int) else 0
         horror = data.get('horror', 0) if isinstance(data.get('horror'), int) else 0

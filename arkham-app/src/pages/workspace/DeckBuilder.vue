@@ -530,13 +530,14 @@ const confirmDeleteDeck = async () => {
 
 // 键盘快捷键处理
 const handleKeydown = (event: KeyboardEvent) => {
-  if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+  if ((event.ctrlKey || event.metaKey) && event.code === 'KeyS') {
     event.preventDefault();
     if (selectedDeck.value && !saving.value) {
       saveDeck();
     }
   }
 };
+
 
 // 组件挂载时加载数据
 onMounted(() => {

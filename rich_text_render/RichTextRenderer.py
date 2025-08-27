@@ -225,7 +225,6 @@ class RichTextRenderer:
 
         # 首先合并相邻的flavor标签
         text = self._merge_adjacent_flavor_tags(text)
-        print( text)
 
         # The replacement string for the icon font
         font_tpl = r'<font name="arkham-icons">{char}</font>'
@@ -250,7 +249,7 @@ class RichTextRenderer:
             # Action Icons
             (r'⭕|<反应>|<rea>', font_tpl.format(char='l')),
             (r'➡️|<启动>|<箭头>|<act>', font_tpl.format(char='j')),
-            (r'⚡|<免费>|<fre>', font_tpl.format(char='k')),
+            (r'⚡|<免费>|<fre>️', font_tpl.format(char='k')),
             # Chaos Token Icons
             (r'💀|<骷髅>|<sku>', font_tpl.format(char='m')),
             (r'👤|<异教徒>|<cul>', font_tpl.format(char='n')),
@@ -265,7 +264,7 @@ class RichTextRenderer:
             (r'🦶|<脚>|<agi>', font_tpl.format(char='c')),
             (r'❓|<\?>', font_tpl.format(char='d')),  # '?' is a special regex char, so escaped as '\?'
             # Other Game Icons
-            (r'🏅|<独特>|<*>', font_tpl.format(char='w')),
+            (r'🏅|<独特>', font_tpl.format(char='w')),
             (r'<一>', font_tpl.format(char='x')),
             (r'🔵|<点>|<bul>', font_tpl.format(char='y')),
             (r'🌟|<祝福>|<ble>', font_tpl.format(char='s')),
@@ -565,7 +564,7 @@ class RichTextRenderer:
             self.draw.polygon(polygon_vertices, outline="red", width=2)
 
         text = self._preprocess_text(text)
-        print(text)
+        # print(text)
 
         # 默认行为：查找最佳字体大小并获取布局好的VirtualTextBox
         final_vbox = self.find_best_fit_font_size(

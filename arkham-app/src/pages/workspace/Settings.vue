@@ -2,7 +2,7 @@
   <div class="settings-container">
     <div class="settings-content">
       <h2>{{ $t('settings.title') }}</h2>
-      
+
       <!-- 加载状态 -->
       <div v-if="loading" class="loading-container">
         <div class="loading-spinner"></div>
@@ -15,34 +15,19 @@
           <h3>{{ $t('settings.sections.ai.title') }}</h3>
           <div class="setting-item">
             <label>{{ $t('settings.sections.ai.endpoint') }}</label>
-            <input 
-              v-model="config.ai_endpoint" 
-              type="text" 
-              placeholder="https://api.deepseek.com/v1"
-            />
+            <input v-model="config.ai_endpoint" type="text" placeholder="https://api.deepseek.com/v1" />
           </div>
           <div class="setting-item">
             <label>{{ $t('settings.sections.ai.model') }}</label>
-            <input 
-              v-model="config.ai_model" 
-              type="text" 
-              placeholder="deepseek-chat"
-            />
+            <input v-model="config.ai_model" type="text" placeholder="deepseek-chat" />
           </div>
           <div class="setting-item">
             <label>{{ $t('settings.sections.ai.apiKey') }}</label>
-            <input 
-              v-model="config.ai_api_key" 
-              type="password" 
-              :placeholder="$t('settings.sections.ai.apiKey')"
-            />
+            <input v-model="config.ai_api_key" type="password" :placeholder="$t('settings.sections.ai.apiKey')" />
           </div>
           <div class="setting-item">
             <label>{{ $t('settings.sections.ai.enableInEditor') }}</label>
-            <input 
-              v-model="config.ai_enabled_in_editor" 
-              type="checkbox"
-            />
+            <input v-model="config.ai_enabled_in_editor" type="checkbox" />
             <span class="setting-description">{{ $t('settings.sections.ai.enableInEditorDesc') }}</span>
           </div>
         </div>
@@ -50,29 +35,23 @@
         <!-- GitHub图床设置 -->
         <div class="settings-section">
           <h3>{{ $t('settings.sections.github.title') }}</h3>
-          
+
           <!-- GitHub Token -->
           <div class="setting-item">
             <label>{{ $t('settings.sections.github.token') }}</label>
             <div class="token-input-container">
-              <input 
-                v-model="githubConfig.github_token" 
-                type="password" 
-                :placeholder="$t('settings.sections.github.tokenPlaceholder')"
-                :disabled="githubVerifying"
-              />
-              <button 
-                @click="verifyGitHubToken" 
-                :disabled="!githubConfig.github_token || githubVerifying"
-                class="verify-btn"
-                :class="{ 'success': githubLoginSuccess, 'error': githubLoginError }"
-              >
-                {{ githubVerifying ? $t('settings.sections.github.verifying') : githubLoginSuccess ? $t('settings.sections.github.verified') : $t('settings.sections.github.verifyLogin') }}
+              <input v-model="githubConfig.github_token" type="password"
+                :placeholder="$t('settings.sections.github.tokenPlaceholder')" :disabled="githubVerifying" />
+              <button @click="verifyGitHubToken" :disabled="!githubConfig.github_token || githubVerifying"
+                class="verify-btn" :class="{ 'success': githubLoginSuccess, 'error': githubLoginError }">
+                {{ githubVerifying ? $t('settings.sections.github.verifying') : githubLoginSuccess ?
+                  $t('settings.sections.github.verified') : $t('settings.sections.github.verifyLogin') }}
               </button>
             </div>
             <span class="setting-description">
               {{ $t('settings.sections.github.tokenDesc') }}
-              <a href="https://github.com/settings/tokens" target="_blank" class="link">{{ $t('settings.sections.github.getToken') }}</a>
+              <a href="https://github.com/settings/tokens" target="_blank" class="link">{{
+                $t('settings.sections.github.getToken') }}</a>
             </span>
             <div v-if="githubLoginError" class="error-hint">
               {{ githubLoginError }}
@@ -87,24 +66,14 @@
             <div class="setting-item">
               <label>{{ $t('settings.sections.github.repo') }}</label>
               <div class="repo-selector">
-                <select 
-                  v-model="githubConfig.github_repo"
-                  :disabled="loadingRepositories"
-                >
+                <select v-model="githubConfig.github_repo" :disabled="loadingRepositories">
                   <option value="">{{ $t('settings.sections.github.selectRepo') }}</option>
-                  <option 
-                    v-for="repo in githubRepositories" 
-                    :key="repo.full_name" 
-                    :value="repo.full_name"
-                  >
-                    {{ repo.full_name }} {{ repo.private ? `(${$t('settings.sections.github.private')})` : `(${$t('settings.sections.github.public')})` }}
+                  <option v-for="repo in githubRepositories" :key="repo.full_name" :value="repo.full_name">
+                    {{ repo.full_name }} {{ repo.private ? `(${$t('settings.sections.github.private')})` :
+                      `(${$t('settings.sections.github.public')})` }}
                   </option>
                 </select>
-                <button 
-                  @click="loadGitHubRepositories" 
-                  :disabled="loadingRepositories"
-                  class="refresh-btn"
-                >
+                <button @click="loadGitHubRepositories" :disabled="loadingRepositories" class="refresh-btn">
                   {{ loadingRepositories ? $t('common.buttons.loading') : $t('common.buttons.refresh') }}
                 </button>
               </div>
@@ -113,21 +82,13 @@
 
             <div class="setting-item">
               <label>{{ $t('settings.sections.github.branch') }}</label>
-              <input 
-                v-model="githubConfig.github_branch" 
-                type="text" 
-                placeholder="main"
-              />
+              <input v-model="githubConfig.github_branch" type="text" placeholder="main" />
               <span class="setting-description">{{ $t('settings.sections.github.branchDesc') }}</span>
             </div>
 
             <div class="setting-item">
               <label>{{ $t('settings.sections.github.folder') }}</label>
-              <input 
-                v-model="githubConfig.github_folder" 
-                type="text" 
-                placeholder="images"
-              />
+              <input v-model="githubConfig.github_folder" type="text" placeholder="images" />
               <span class="setting-description">{{ $t('settings.sections.github.folderDesc') }}</span>
             </div>
           </template>
@@ -136,29 +97,17 @@
         <!-- 工作区配置 -->
         <div class="settings-section">
           <h3>{{ $t('settings.sections.workspace.title') }}</h3>
-          
+
           <div class="setting-item">
             <label>{{ $t('settings.sections.workspace.encounterGroups') }}</label>
             <div class="directory-selector">
-              <select 
-                v-model="selectedEncounterGroupsDir"
-                :disabled="!directories.length"
-                @change="onDirectoryChange"
-              >
+              <select v-model="selectedEncounterGroupsDir" :disabled="!directories.length" @change="onDirectoryChange">
                 <option value="">{{ $t('settings.sections.workspace.selectDirectory') }}</option>
-                <option 
-                  v-for="dir in directories" 
-                  :key="dir.key" 
-                  :value="dir.relativePath"
-                >
+                <option v-for="dir in directories" :key="dir.key" :value="dir.relativePath">
                   {{ dir.label }}
                 </option>
               </select>
-              <button 
-                @click="refreshDirectories" 
-                :disabled="refreshingDirs"
-                class="refresh-btn"
-              >
+              <button @click="refreshDirectories" :disabled="refreshingDirs" class="refresh-btn">
                 {{ refreshingDirs ? $t('common.buttons.loading') : $t('common.buttons.refresh') }}
               </button>
             </div>
@@ -170,25 +119,13 @@
           <div class="setting-item">
             <label>{{ $t('settings.sections.workspace.footerIcon') }}</label>
             <div class="directory-selector">
-              <select 
-                v-model="selectedFooterIcon"
-                :disabled="!rootImages.length"
-                @change="onImageChange"
-              >
+              <select v-model="selectedFooterIcon" :disabled="!rootImages.length" @change="onImageChange">
                 <option value="">{{ $t('settings.sections.workspace.selectImage') }}</option>
-                <option 
-                  v-for="img in rootImages" 
-                  :key="img.key" 
-                  :value="img.relativePath"
-                >
+                <option v-for="img in rootImages" :key="img.key" :value="img.relativePath">
                   {{ img.label }}
                 </option>
               </select>
-              <button 
-                @click="refreshDirectories" 
-                :disabled="refreshingDirs"
-                class="refresh-btn"
-              >
+              <button @click="refreshDirectories" :disabled="refreshingDirs" class="refresh-btn">
                 {{ refreshingDirs ? $t('common.buttons.loading') : $t('common.buttons.refresh') }}
               </button>
             </div>
@@ -200,11 +137,7 @@
 
           <div class="setting-item">
             <label>{{ $t('settings.sections.workspace.copyright') }}</label>
-            <input 
-              v-model="config.footer_copyright" 
-              type="text" 
-              placeholder="© 2025 DIY"
-            />
+            <input v-model="config.footer_copyright" type="text" placeholder="© 2025 DIY" />
           </div>
         </div>
 
@@ -223,18 +156,10 @@
 
       <!-- 操作按钮 -->
       <div v-if="!loading" class="settings-actions">
-        <button 
-          class="btn-primary" 
-          @click="saveSettings"
-          :disabled="saving"
-        >
+        <button class="btn-primary" @click="saveSettings" :disabled="saving">
           {{ saving ? $t('common.buttons.saving') : $t('settings.actions.save') }}
         </button>
-        <button 
-          class="btn-secondary" 
-          @click="resetSettings"
-          :disabled="saving"
-        >
+        <button class="btn-secondary" @click="resetSettings" :disabled="saving">
           {{ $t('settings.actions.reset') }}
         </button>
       </div>
@@ -257,7 +182,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch } from 'vue';
+import { ref, reactive, onMounted, onUnmounted, watch } from 'vue'; // 添加 onUnmounted
 import { useI18n } from 'vue-i18n';
 import { ConfigService, WorkspaceService } from '@/api';
 import { GitHubService } from '@/api/github-service';
@@ -324,6 +249,23 @@ const handleLanguageChange = () => {
 };
 
 /**
+ * 键盘快捷键处理
+ */
+const handleKeydown = async (event: KeyboardEvent) => {
+  // Ctrl+S 保存
+  if ((event.ctrlKey || event.metaKey) && event.code === 'KeyS') {
+    event.preventDefault();
+    event.stopPropagation();
+
+    // 防止重复保存
+    if (saving.value) {
+      return;
+    }
+
+    await saveSettings();
+  }
+};
+/**
  * 初始化设置页面
  */
 onMounted(async () => {
@@ -331,6 +273,13 @@ onMounted(async () => {
   await loadDirectories();
   await checkGitHubStatus();
   loading.value = false;
+
+  // 添加键盘事件监听器
+  document.addEventListener('keydown', handleKeydown);
+});
+// 组件卸载时移除键盘事件监听器
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeydown);
 });
 
 /**
@@ -339,7 +288,7 @@ onMounted(async () => {
 const loadSettings = async () => {
   try {
     const configData = await ConfigService.getConfig();
-    
+
     // 合并配置数据
     Object.assign(config, {
       ai_endpoint: configData.ai_endpoint || '',
@@ -375,7 +324,7 @@ const loadSettings = async () => {
 const checkGitHubStatus = async () => {
   try {
     const status = await GitHubService.getStatus();
-    
+
     if (status.data.status.is_logged_in) {
       githubLoginSuccess.value = true;
       githubUsername.value = status.data.status.username || '';
@@ -403,17 +352,17 @@ const verifyGitHubToken = async () => {
   try {
     // 1. 先调用登录接口验证token
     await GitHubService.login(githubConfig.github_token.trim());
-    
+
     // 2. 登录成功后获取GitHub状态来获取用户名
     const status = await GitHubService.getStatus();
-    
+
     githubLoginSuccess.value = true;
     githubUsername.value = status.data.status.username || '';
     githubLoginError.value = '';
-    
+
     // 3. 登录成功后自动加载仓库列表
     await loadGitHubRepositories();
-    
+
   } catch (err: any) {
     githubLoginError.value = err.message || t('settings.messages.githubLoginFailed');
     githubLoginSuccess.value = false;
@@ -453,13 +402,13 @@ const loadGitHubRepositories = async () => {
 const loadDirectories = async () => {
   try {
     const fileTree = await WorkspaceService.getFileTree();
-    
+
     // 保存工作空间根路径
     workspaceRootPath.value = fileTree.fileTree.path;
-    
+
     // 提取所有目录（包含相对路径）
     directories.value = extractDirectories(fileTree.fileTree, workspaceRootPath.value);
-    
+
     // 提取根目录下的PNG图片（包含相对路径）
     rootImages.value = extractRootImages(fileTree.fileTree, workspaceRootPath.value);
   } catch (err: any) {
@@ -473,17 +422,17 @@ const loadDirectories = async () => {
  */
 const getRelativePath = (absolutePath: string, rootPath: string): string => {
   if (!absolutePath || !rootPath) return '';
-  
+
   // 确保路径使用统一的分隔符
   const normalizedAbsolute = absolutePath.replace(/\\/g, '/');
   const normalizedRoot = rootPath.replace(/\\/g, '/');
-  
+
   if (normalizedAbsolute.startsWith(normalizedRoot)) {
     const relative = normalizedAbsolute.slice(normalizedRoot.length);
     // 移除开头的斜杠
     return relative.startsWith('/') ? relative.slice(1) : relative;
   }
-  
+
   return absolutePath; // 如果不能计算相对路径，返回原始路径
 };
 
@@ -492,7 +441,7 @@ const getRelativePath = (absolutePath: string, rootPath: string): string => {
  */
 const extractDirectories = (node: TreeOption, rootPath: string): ExtendedTreeOption[] => {
   const dirs: ExtendedTreeOption[] = [];
-  
+
   if (node.type === 'directory' && node.path) {
     const relativePath = getRelativePath(node.path, rootPath);
     dirs.push({
@@ -503,13 +452,13 @@ const extractDirectories = (node: TreeOption, rootPath: string): ExtendedTreeOpt
       relativePath: relativePath
     });
   }
-  
+
   if (node.children) {
     for (const child of node.children) {
       dirs.push(...extractDirectories(child, rootPath));
     }
   }
-  
+
   return dirs;
 };
 
@@ -518,7 +467,7 @@ const extractDirectories = (node: TreeOption, rootPath: string): ExtendedTreeOpt
  */
 const extractRootImages = (rootNode: TreeOption, rootPath: string): ExtendedTreeOption[] => {
   const images: ExtendedTreeOption[] = [];
-  
+
   if (rootNode.children) {
     for (const child of rootNode.children) {
       // 只查找根目录下的直接子文件，且类型为image
@@ -534,7 +483,7 @@ const extractRootImages = (rootNode: TreeOption, rootPath: string): ExtendedTree
       }
     }
   }
-  
+
   // 按名称排序
   return images.sort((a, b) => a.label.localeCompare(b.label));
 };
@@ -572,7 +521,7 @@ const saveSettings = async () => {
   saving.value = true;
   error.value = '';
   successMessage.value = '';
-  
+
   try {
     // 验证必填项
     if (config.ai_enabled_in_editor) {
@@ -580,7 +529,7 @@ const saveSettings = async () => {
         throw new Error(t('settings.messages.aiConfigRequired'));
       }
     }
-    
+
     // 合并所有配置
     const configToSave = {
       ...config,
@@ -589,19 +538,19 @@ const saveSettings = async () => {
       // GitHub配置
       ...githubConfig
     };
-    
+
     // 保存配置
     await ConfigService.saveConfig(configToSave);
-    
+
     // 更新本地配置
     config.encounter_groups_dir = selectedEncounterGroupsDir.value;
     config.footer_icon_dir = selectedFooterIcon.value;
-    
+
     successMessage.value = t('settings.messages.saveSuccess');
     setTimeout(() => {
       successMessage.value = '';
     }, 3000);
-    
+
   } catch (err: any) {
     error.value = err.message || t('common.messages.operationFailed');
   } finally {
@@ -632,7 +581,7 @@ const resetToDefaults = () => {
     footer_copyright: '© 2025 DIY',
     language: 'zh'
   });
-  
+
   // 重置GitHub配置
   Object.assign(githubConfig, {
     github_token: '',
@@ -640,13 +589,13 @@ const resetToDefaults = () => {
     github_branch: 'main',
     github_folder: 'images'
   });
-  
+
   // 重置GitHub状态
   githubLoginSuccess.value = false;
   githubLoginError.value = '';
   githubUsername.value = '';
   githubRepositories.value = [];
-  
+
   // 重置选中的相对路径
   selectedEncounterGroupsDir.value = '';
   selectedFooterIcon.value = '';
@@ -711,8 +660,13 @@ watch(() => githubConfig.github_token, () => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .settings-sections {
@@ -791,6 +745,7 @@ watch(() => githubConfig.github_token, () => {
 .link:hover {
   text-decoration: underline;
 }
+
 /* GitHub相关样式 */
 .token-input-container {
   display: flex;
@@ -899,7 +854,8 @@ watch(() => githubConfig.github_token, () => {
   padding: 1.5rem;
 }
 
-.btn-primary, .btn-secondary {
+.btn-primary,
+.btn-secondary {
   border: none;
   padding: 0.75rem 1.5rem;
   border-radius: 8px;
@@ -942,7 +898,8 @@ watch(() => githubConfig.github_token, () => {
   height: 6rem;
 }
 
-.error-message, .success-message {
+.error-message,
+.success-message {
   position: fixed;
   top: 20px;
   right: 20px;
@@ -985,22 +942,22 @@ watch(() => githubConfig.github_token, () => {
   .settings-container {
     padding: 1rem;
   }
-  
+
   .setting-item {
     gap: 0.25rem;
   }
-  
+
   .token-input-container,
   .repo-selector,
   .directory-selector {
     flex-direction: column;
     gap: 0.5rem;
   }
-  
+
   .settings-actions {
     flex-direction: column;
   }
-  
+
   .bottom-spacer {
     height: 8rem;
   }

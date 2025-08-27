@@ -854,16 +854,15 @@ const updateTtsScript = (ttsData: { GMNotes: string; LuaScript: string; config?:
 
 // 添加防抖标志
 const isProcessingKeydown = ref(false);
-// 键盘事件处理器
 const handleKeydown = async (event: KeyboardEvent) => {
     // Ctrl+S 保存
-    if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+    if ((event.ctrlKey || event.metaKey) && event.code === 'KeyS') {
         event.preventDefault();
-        event.stopPropagation(); // 阻止事件冒泡
-
+        event.stopPropagation();
+        
         // 防止重复处理
         if (isProcessingKeydown.value || saving.value) {
-            console.log('阻止重复保存'); // 调试用
+            console.log('阻止重复保存');
             return;
         }
 
@@ -872,7 +871,6 @@ const handleKeydown = async (event: KeyboardEvent) => {
             try {
                 await saveCard();
             } finally {
-                // 确保标志被重置
                 setTimeout(() => {
                     isProcessingKeydown.value = false;
                 }, 100);
@@ -880,6 +878,7 @@ const handleKeydown = async (event: KeyboardEvent) => {
         }
     }
 };
+
 
 // 检查显示条件
 const checkShowCondition = (condition: ShowCondition): boolean => {

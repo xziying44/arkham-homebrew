@@ -1,4 +1,5 @@
 import base64
+import io
 import json
 import mimetypes
 import os
@@ -430,8 +431,6 @@ class WorkspaceManager:
             print("字体或图像管理器未初始化")
             return None
 
-        temp_image_path = None  # 用于跟踪临时文件
-
         try:
             # 获取图片路径
             picture_path = json_data.get('picture_path', None)
@@ -450,19 +449,13 @@ class WorkspaceManager:
                         base64_data = picture_base64
 
                     image_data = base64.b64decode(base64_data)
-
-                    # 创建临时文件
-                    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
-                        temp_file.write(image_data)
-                        temp_image_path = temp_file.name
-                        picture_path = temp_image_path
-
-                    print(f"已将base64图片数据保存到临时文件: {temp_image_path}")
-
+                    # 2. 将二进制数据读入一个内存中的字节流对象
+                    image_stream = io.BytesIO(image_data)
+                    # 3. 使用 PIL 的 Image.open() 从字节流中打开图片
+                    picture_path = Image.open(image_stream)
                 except Exception as e:
                     print(f"解码base64图片数据失败: {e}")
                     return None
-
             # 如果picture_path是相对路径，转换为绝对路径
             elif picture_path and not os.path.isabs(picture_path):
                 full_picture_path = self._get_absolute_path(picture_path)
@@ -517,15 +510,6 @@ class WorkspaceManager:
         except Exception as e:
             print(f"生成卡图失败: {e}")
             return None
-
-        finally:
-            # 清理临时文件
-            if temp_image_path and os.path.exists(temp_image_path):
-                try:
-                    os.unlink(temp_image_path)
-                    print(f"已删除临时文件: {temp_image_path}")
-                except Exception as e:
-                    print(f"删除临时文件失败: {e}")
 
     def save_card_image(self, json_data: Dict[str, Any], filename: str, parent_path: Optional[str] = None) -> bool:
         """
