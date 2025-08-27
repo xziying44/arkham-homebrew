@@ -43,6 +43,7 @@
       v-if="showImagePreview && shouldShowImagePreview"
       :width="imageWidth"
       :current-image="currentImage"
+      :image-key="typeof selectedFile?.path === 'string' ? selectedFile.path : null"
       :is-mobile="isMobile"
       @toggle="toggleImagePreview"
       ref="imagePreviewRef"
@@ -94,6 +95,7 @@
         <ImagePreviewPanel
           :width="'100%'"
           :current-image="currentImage"
+          :image-key="typeof selectedFile?.path === 'string' ? selectedFile.path : null"
           :is-mobile="true"
           ref="mobileImagePreviewRef"
         />
@@ -271,20 +273,25 @@ const handleFileSelect = async (keys: Array<string | number>, option?: TreeOptio
       const imageData = await loadImageFromPath(option.path);
       if (imageData) {
         currentImage.value = imageData;
-        // 根据当前显示状态选择合适的预览区域
-        const previewRef = shouldShowImagePreview.value ? imagePreviewRef : mobileImagePreviewRef;
-        previewRef.value?.fitToContainer();
+        // 移除手动调用 fitToContainer
       }
     }
   } else {
-    currentImage.value = '';
+    // 如果选择的不是图片文件（比如一个 .card 文件），清空 currentImage
+    // FormEditPanel 会在生成预览时通过 updatePreviewImage 来更新它
+    // 这样可以避免切换文件时短暂显示旧图片
+    if (option?.type !== 'card') {
+      currentImage.value = '';
+    }
   }
 };
 
 const updatePreviewImage = (imageBase64: string) => {
   currentImage.value = imageBase64;
-  const previewRef = shouldShowImagePreview.value ? imagePreviewRef : mobileImagePreviewRef;
-  previewRef.value?.fitToContainer();
+  // 【重要修改】 移除这里的 fitToContainer 调用
+  // 因为子组件现在会根据 imageKey 的变化自动处理
+  // const previewRef = shouldShowImagePreview.value ? imagePreviewRef : mobileImagePreviewRef;
+  // previewRef.value?.fitToContainer();
 };
 
 const refreshFileTree = () => {
@@ -370,6 +377,7 @@ onUnmounted(() => {
 });
 </script>
 
+<!-- style 部分保持不变 -->
 <style scoped>
 :root {
   --resize-transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);

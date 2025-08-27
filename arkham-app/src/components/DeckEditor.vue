@@ -393,7 +393,8 @@ const generateSlotContentPreview = async (index: number, item: DeckCard, side: '
         if (item.type === 'card') {
             const content = await WorkspaceService.getFileContent(item.path);
             const cardData = JSON.parse(content);
-            imageBase64 = await CardService.generateCard(cardData);
+            const result_card = await CardService.generateCard(cardData)
+            imageBase64 = result_card?.image;
         } else if (item.type === 'cardback') {
             const cardbackPath = cardbackImages[item.path as 'player' | 'encounter'];
             if (cardbackPath) {

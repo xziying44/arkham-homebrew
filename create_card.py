@@ -1461,15 +1461,13 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "技能卡",
-        "name": "111",
+        "type": "定制卡",
+        "name": "测试定制卡",
         "id": "",
         "created_at": "",
         "version": "1.0",
-        "language": "en",
-        "level": -1,
-        "class": "探求者",
-        "body": "<act>:asads"
+        "language": "zh",
+        "body": "□□定制卡效果测试。\n□□□测试测试定位。"
     }
 
     # 创建字体和图片管理器
@@ -1488,10 +1486,10 @@ if __name__ == '__main__':
 
     # 创建卡牌 - 支持PIL图片对象
     # picture = Image.open("path/to/image.jpg")  # 也可以传入PIL图片对象
-    fm.set_lang('en')
-    card = creator.create_card(json_data, picture_path=None)
-    card.image.show()
-
-    # fm.set_lang('zh')
+    # fm.set_lang('en')
     # card = creator.create_card(json_data, picture_path=None)
     # card.image.show()
+
+    fm.set_lang('zh')
+    card = creator.create_card(json_data, picture_path=None)
+    card.image.show()

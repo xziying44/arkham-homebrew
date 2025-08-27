@@ -505,7 +505,7 @@ class WorkspaceManager:
                 footer_icon,
                 card_number
             )
-            return card.image
+            return card
 
         except Exception as e:
             print(f"生成卡图失败: {e}")
@@ -525,7 +525,7 @@ class WorkspaceManager:
         """
         try:
             # 生成卡图
-            card_image = self.generate_card_image(json_data)
+            card_image = self.generate_card_image(json_data).image
             if card_image is None:
                 return False
 
@@ -794,8 +794,8 @@ class WorkspaceManager:
             height = deck_data.get('height', 1)
 
             # 单元大小
-            card_width = 739
-            card_height = 1049
+            card_width = 750
+            card_height = 1050
 
             # 创建底图（黑色背景）
             canvas_width = width * card_width
@@ -911,7 +911,7 @@ class WorkspaceManager:
                 if os.path.exists(card_json_path):
                     with open(card_json_path, 'r', encoding='utf-8') as f:
                         card_json_data = json.load(f)
-                    return self.generate_card_image(card_json_data)
+                    return self.generate_card_image(card_json_data).image
 
             return None
 
@@ -1081,7 +1081,7 @@ class WorkspaceManager:
                 "Tabletop Simulator",
                 "Saves",
                 "Saved Objects",
-                "阿卡姬制作"
+                "阿卡姆姬制作"
             )
 
             # 创建目录（如果不存在）
@@ -1122,7 +1122,7 @@ class WorkspaceManager:
                                 card_json_data = json.load(f)
 
                             # 生成卡图
-                            source_image = self.generate_card_image(card_json_data)
+                            source_image = self.generate_card_image(card_json_data).image
 
                     elif card_type == 'image':
                         # 直接读取图片文件

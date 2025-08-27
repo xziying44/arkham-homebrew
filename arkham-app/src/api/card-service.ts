@@ -18,7 +18,7 @@ export class CardService {
      * @returns base64编码的图片数据
      * @throws {ApiError} 当生成失败时抛出错误
      */
-    public static async generateCard(cardData: CardData): Promise<string> {
+    public static async generateCard(cardData: CardData): Promise<any> {
         try {
             const requestData: GenerateCardRequest = {
                 json_data: cardData
@@ -32,7 +32,7 @@ export class CardService {
                 }
             );
 
-            return response.data.data!.image;
+            return response.data.data;
         } catch (error) {
             if (error instanceof ApiError) {
                 throw error;
@@ -90,7 +90,8 @@ export class CardService {
     ): Promise<{ image: string }> {
         try {
             // 先生成卡图
-            const image = await this.generateCard(cardData);
+            const result_card = await this.generateCard(cardData);
+            const image = result_card?.image
 
             // 再保存卡图
             await this.saveCard(cardData, filename, parentPath);

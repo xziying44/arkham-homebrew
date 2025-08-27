@@ -176,7 +176,7 @@ export default {
       frontImageUrl: 'Front Image URL',
       backImageUrl: 'Back Image URL',
       description: 'TTS file will be generated to the following location:',
-      location: 'My Documents/My Games/Tabletop Simulator/Saves/Saved Objects/ArcaneAssistant/',
+      location: 'My Documents/My Games/Tabletop Simulator/Saves/Saved Objects/阿卡姆姬制作/',
       includes: 'File includes:',
       includesList: {
         config: 'TTS JSON configuration file (contains complete deck data and scripts)',

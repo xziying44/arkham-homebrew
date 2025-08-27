@@ -14,7 +14,7 @@ sys.path.append('..')
 
 # 假设这些文件在同一目录下
 from rich_text_render.HtmlTextParser import RichTextParser, TextType
-from rich_text_render.VirtualTextBox import VirtualTextBox, TextObject, ImageObject
+from rich_text_render.VirtualTextBox import VirtualTextBox, TextObject, ImageObject, RenderItem
 # ---
 
 from typing import Dict, Tuple, Any
@@ -549,7 +549,7 @@ class RichTextRenderer:
     # ==================== 修改 draw_complex_text 方法 ====================
     def draw_complex_text(self, text: str, polygon_vertices: List[Tuple[int, int]],
                           padding: int, options: DrawOptions,
-                          draw_debug_frame: bool = False) -> None:
+                          draw_debug_frame: bool = False) -> list[RenderItem]:
         """
         在指定多边形区域内绘制复杂文本，并自动寻找最佳字体大小。
 
@@ -612,7 +612,7 @@ class RichTextRenderer:
                     self.image.paste(obj.image, (x, y))
                 if draw_debug_frame:
                     self.draw.rectangle([(x, y), (x + obj.width, y + obj.height)], outline="green", width=1)
-        pass
+        return render_list
 
     def draw_line(self, text: str, position: Tuple[int, int],
                   alignment: TextAlignment, options: DrawOptions) -> None:
@@ -820,4 +820,3 @@ if __name__ == '__main__':
     )
 
     image.show()
-

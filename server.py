@@ -24,7 +24,7 @@ is_selecting = False
 
 # 全局实例
 quick_start = QuickStart()
-current_workspace = None
+current_workspace: WorkspaceManager = None
 github_image_host = None
 
 
@@ -603,7 +603,8 @@ def generate_card():
         json_data = data['json_data']
 
         # 生成卡图
-        card_image = current_workspace.generate_card_image(json_data)
+        card = current_workspace.generate_card_image(json_data)
+        card_image = card.image
 
         if card_image is None:
             return jsonify(create_response(
@@ -621,7 +622,10 @@ def generate_card():
 
         return jsonify(create_response(
             msg="生成卡图成功",
-            data={"image": f"data:image/png;base64,{img_str}"}
+            data={
+                "image": f"data:image/png;base64,{img_str}",
+                "box_position": card.get_upgrade_card_box_position()
+            }
         ))
 
     except Exception as e:

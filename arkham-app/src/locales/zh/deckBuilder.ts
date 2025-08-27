@@ -176,7 +176,7 @@ export default {
       frontImageUrl: '正面图片URL',
       backImageUrl: '背面图片URL',
       description: 'TTS文件将会生成到以下位置：',
-      location: '我的文档/My Games/Tabletop Simulator/Saves/Saved Objects/阿卡姬制作/',
+      location: '我的文档/My Games/Tabletop Simulator/Saves/Saved Objects/阿卡姆姬制作/',
       includes: '文件包含：',
       includesList: {
         config: 'TTS JSON配置文件（包含完整的牌组数据和脚本）',

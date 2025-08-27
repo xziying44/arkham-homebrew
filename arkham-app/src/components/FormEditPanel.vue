@@ -345,6 +345,7 @@ import { WorkspaceService, CardService, ConfigService } from '@/api';
 import AIService from '@/api/ai-service';
 import type { CardData, GenerateCardInfoStreamRequest, ParseCardJsonRequest, StreamDataChunk } from '@/api/types';
 import TtsScriptEditor from './TtsScriptEditor.vue';
+import { generateUpgradePowerWordScript } from '@/config/upgrade-script-generator';
 
 interface Props {
     showFileTree: boolean;
@@ -427,6 +428,11 @@ const aiJsonContent = ref('');
 const aiValidationStatus = ref<{ isValid: boolean; errors: string[] } | null>(null);
 const aiAbortController = ref<AbortController | null>(null);
 
+// 防抖相关状态
+const debounceTimer = ref<number | null>(null);
+const isUserEditing = ref(false);
+const lastDataSnapshot = ref<string>('');
+
 // 复制JSON到剪贴板
 const copyJsonToClipboard = async () => {
     try {
@@ -503,11 +509,8 @@ const importJsonData = async () => {
         showImportJsonModal.value = false;
         importJsonText.value = '';
 
-        // 生成预览
-        await nextTick();
-        setTimeout(() => {
-            autoGeneratePreview();
-        }, 100);
+        // 触发防抖预览更新
+        triggerDebouncedPreviewUpdate();
 
         message.success(t('cardEditor.panel.jsonDataImportedSuccessfully'));
     } catch (error) {
@@ -521,6 +524,66 @@ const cancelImportJson = () => {
     showImportJsonModal.value = false;
     importJsonText.value = '';
     importJsonError.value = '';
+};
+
+// 防抖预览更新方法
+const triggerDebouncedPreviewUpdate = () => {
+    // 清除之前的定时器
+    if (debounceTimer.value !== null) {
+        clearTimeout(debounceTimer.value);
+        debounceTimer.value = null;
+    }
+
+    // 检查是否有有效数据
+    if (!hasValidCardData.value) {
+        return;
+    }
+
+    // 标记用户正在编辑
+    isUserEditing.value = true;
+
+    // 设置新的防抖定时器 - 1秒后执行
+    debounceTimer.value = window.setTimeout(async () => {
+        try {
+            console.log('🖼️ 防抖预览更新开始');
+            
+            // 只有数据真正发生变化才更新预览
+            const currentSnapshot = JSON.stringify(currentCardData);
+            if (currentSnapshot === lastDataSnapshot.value) {
+                console.log('🔄 数据未变化，跳过预览更新');
+                return;
+            }
+
+            lastDataSnapshot.value = currentSnapshot;
+            
+            // 检查是否正在生成中，避免重复生成
+            if (generating.value) {
+                console.log('⚠️ 正在生成中，跳过预览更新');
+                return;
+            }
+
+            const imageBase64 = await generateCardImage();
+            if (imageBase64) {
+                emit('update-preview-image', imageBase64);
+                console.log('✅ 防抖预览更新成功');
+            }
+        } catch (error) {
+            console.warn('⚠️ 防抖预览更新失败:', error);
+            // 不显示错误消息，避免打扰用户编辑体验
+        } finally {
+            isUserEditing.value = false;
+            debounceTimer.value = null;
+        }
+    }, 500); // 0.5秒防抖延迟
+};
+
+// 清除防抖定时器
+const clearDebounceTimer = () => {
+    if (debounceTimer.value !== null) {
+        clearTimeout(debounceTimer.value);
+        debounceTimer.value = null;
+    }
+    isUserEditing.value = false;
 };
 
 // 初始化配置
@@ -783,13 +846,11 @@ const importAIResult = async () => {
             console.log('🏷️ 更新卡牌类型:', aiData.type);
             currentCardType.value = aiData.type;
         }
-        // 强制触发自动预览
-        console.log('🖼️ 准备生成预览');
+        
+        // 触发防抖预览更新
         await nextTick();
-        setTimeout(() => {
-            console.log('🖼️ 开始生成预览');
-            autoGeneratePreview();
-        }, 100);
+        triggerDebouncedPreviewUpdate();
+        
         console.log('✅ AI生成的卡牌数据已成功导入到编辑器');
         message.success(t('cardEditor.panel.aiDataImportedSuccessfully'));
         clearAIResult();
@@ -850,6 +911,9 @@ const updateTtsScript = (ttsData: { GMNotes: string; LuaScript: string; config?:
     if (!ttsData.GMNotes && !ttsData.LuaScript && !ttsData.config) {
         delete currentCardData.tts_script;
     }
+    
+    // 触发防抖预览更新
+    triggerDebouncedPreviewUpdate();
 };
 
 // 添加防抖标志
@@ -878,7 +942,6 @@ const handleKeydown = async (event: KeyboardEvent) => {
         }
     }
 };
-
 
 // 检查显示条件
 const checkShowCondition = (condition: ShowCondition): boolean => {
@@ -999,6 +1062,9 @@ const setFieldValue = (field: FormField, value: any) => {
     } else {
         setDeepValue(currentCardData, field.key, value);
     }
+    
+    // 触发防抖预览更新
+    triggerDebouncedPreviewUpdate();
 };
 
 const setDeepValue = (obj: any, path: string, value: any) => {
@@ -1100,12 +1166,15 @@ const onCardTypeChange = (newType: string) => {
             }
         });
     }
+    
+    // 触发防抖预览更新
+    triggerDebouncedPreviewUpdate();
 };
-
 
 // 保存原始数据状态
 const saveOriginalData = () => {
     originalCardData.value = JSON.stringify(currentCardData);
+    lastDataSnapshot.value = originalCardData.value;
 };
 
 // 自动生成卡图（如果数据有效的话）
@@ -1114,7 +1183,8 @@ const autoGeneratePreview = async () => {
     if (currentCardData.name && currentCardData.name.trim() &&
         currentCardData.type && currentCardData.type.trim()) {
         try {
-            const imageBase64 = await CardService.generateCard(currentCardData as CardData);
+            const result_card = await CardService.generateCard(currentCardData as CardData);
+            const imageBase64 = result_card?.image;
             if (imageBase64) {
                 emit('update-preview-image', imageBase64);
             }
@@ -1131,6 +1201,9 @@ const loadCardData = async () => {
         return;
     }
     try {
+        // 清除防抖定时器
+        clearDebounceTimer();
+        
         const content = await WorkspaceService.getFileContent(props.selectedFile.path);
         const cardData = JSON.parse(content || '{}');
         // 清空当前数据
@@ -1171,7 +1244,8 @@ const generateCardImage = async (): Promise<string | null> => {
     }
 
     try {
-        const imageBase64 = await CardService.generateCard(currentCardData as CardData);
+        const result_card = await CardService.generateCard(currentCardData as CardData);
+        const imageBase64 = result_card?.image
         return imageBase64;
     } catch (error) {
         console.error('生成卡图失败:', error);
@@ -1180,37 +1254,61 @@ const generateCardImage = async (): Promise<string | null> => {
     }
 };
 
-// 修改 saveCard 方法，支持使用原始文件信息保存
+// 修改 saveCard 方法
 const saveCard = async () => {
     // 优先使用原始文件信息，如果没有则使用当前选中文件
     const fileToSave = originalFileInfo.value || props.selectedFile;
-
     if (!fileToSave || !fileToSave.path) {
         message.warning(t('cardEditor.panel.noFileSelected'));
         return false;
     }
-
     // 如果已经在保存，直接返回
     if (saving.value) {
         console.log('已在保存中，跳过');
         return false;
     }
-
     try {
         saving.value = true;
+        // 清除防抖定时器，避免保存时生成预览
+        clearDebounceTimer();
+        
+        // 生成卡片并检查box_position
+        const result_card = await CardService.generateCard(currentCardData as CardData);
+        
+        // 检查是否为定制卡且有box_position参数
+        if (currentCardData.type === '定制卡' && result_card?.box_position && result_card.box_position.length > 0) {
+            console.log('🎯 定制卡检测到box_position，生成Lua脚本:', result_card.box_position);
+            
+            try {
+                // 生成定制卡的Lua脚本
+                const luaScript = generateUpgradePowerWordScript(result_card.box_position);
+                
+                // 更新TTS脚本数据
+                if (!currentCardData.tts_script) {
+                    currentCardData.tts_script = {};
+                }
+                
+                // 保存生成的Lua脚本
+                currentCardData.tts_script.LuaScript = luaScript;
+                
+                console.log('✅ 定制卡Lua脚本生成成功');
+                // message.success(t('cardEditor.panel.customCardLuaGenerated'));
+            } catch (error) {
+                console.error('❌ 生成定制卡Lua脚本失败:', error);
+                message.warning(`生成定制卡脚本失败: ${error.message || '未知错误'}`);
+            }
+        }
+        
         // 保存JSON文件
         const jsonContent = JSON.stringify(currentCardData, null, 2);
         await WorkspaceService.saveFileContent(fileToSave.path, jsonContent);
-
         // 更新原始数据状态
         saveOriginalData();
-
-        // 生成并显示卡图
-        const imageBase64 = await generateCardImage();
+        // 显示卡图（使用已生成的结果）
+        const imageBase64 = result_card?.image;
         if (imageBase64) {
             emit('update-preview-image', imageBase64);
         }
-
         message.success(t('cardEditor.panel.cardSavedSuccessfully'));
         return true;
     } catch (error) {
@@ -1250,6 +1348,7 @@ const discardChanges = () => {
     showSaveConfirmDialog.value = false;
     originalFileInfo.value = null;
     pendingSwitchFile.value = null;
+    clearDebounceTimer();
 
     // 重新加载当前文件或清空数据
     if (props.selectedFile && props.selectedFile.type === 'card') {
@@ -1261,6 +1360,8 @@ const discardChanges = () => {
 
 // 清空表单数据
 const clearFormData = () => {
+    clearDebounceTimer();
+    
     Object.keys(currentCardData).forEach(key => {
         delete currentCardData[key];
     });
@@ -1322,6 +1423,9 @@ const previewCard = async () => {
 
     try {
         generating.value = true;
+        // 清除防抖定时器，避免重复生成
+        clearDebounceTimer();
+        
         const imageBase64 = await generateCardImage();
         if (imageBase64) {
             emit('update-preview-image', imageBase64);
@@ -1374,6 +1478,8 @@ const exportCard = async () => {
 };
 
 const resetForm = () => {
+    clearDebounceTimer();
+    
     // 将 language 添加到需要保留的字段中
     const hiddenFields = ['id', 'created_at', 'version', 'language'];
     const hiddenData = {};
@@ -1399,7 +1505,6 @@ const resetForm = () => {
     message.info(t('cardEditor.panel.formReset'));
 };
 
-
 // 监听选中文件变化
 watch(() => props.selectedFile, async (newFile, oldFile) => {
     // 如果当前有未保存的修改，显示确认对话框
@@ -1424,6 +1529,14 @@ watch(() => props.selectedFile, async (newFile, oldFile) => {
     }
 }, { immediate: true });
 
+// 监听卡牌数据变化，触发防抖预览更新
+watch(() => currentCardData, () => {
+    // 只在用户编辑时触发防抖更新，避免初始加载时触发
+    if (!saving.value && props.selectedFile) {
+        triggerDebouncedPreviewUpdate();
+    }
+}, { deep: true });
+
 // 在 script 中添加删除图片的方法
 const removeImage = (field: FormField) => {
     setFieldValue(field, '');
@@ -1434,12 +1547,12 @@ onMounted(() => {
     document.addEventListener('keydown', handleKeydown);
 });
 
-// 组件卸载时移除键盘事件监听器
+// 组件卸载时移除键盘事件监听器和清理定时器
 onUnmounted(() => {
     document.removeEventListener('keydown', handleKeydown);
+    clearDebounceTimer();
 });
 </script>
-
 
 <style scoped>
 .form-pane {

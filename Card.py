@@ -5,6 +5,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from ResourceManager import FontManager, ImageManager
 from rich_text_render.RichTextRenderer import RichTextRenderer, DrawOptions, TextAlignment
+from rich_text_render.VirtualTextBox import TextObject, RenderItem
 
 
 def generate_random_braille(size, seed=None, dot_color=(0, 0, 0, 255)):
@@ -107,6 +108,7 @@ class Card:
         self.subclass_num = 0  # 子类数量
         self.is_back = is_back  # 是否背面
         self.rich_renderer = RichTextRenderer(font_manager, image_manager, self.image, lang=font_manager.lang)
+        self.last_render_list: list[RenderItem] = []
 
     def copy_circle_to_image(self, reference_image: Image, source_params, target_params):
         """
@@ -429,7 +431,7 @@ class Card:
         elif self.card_type in ['密谋卡', '场景卡'] and not self.is_back:
             text = re.sub(r'<relish>(.*?)</relish>', r'<flavor align="left" padding="0"  flex="false">\1</flavor>',
                           text)
-        self.rich_renderer.draw_complex_text(
+        self.last_render_list = self.rich_renderer.draw_complex_text(
             text,
             polygon_vertices=vertices,
             padding=padding,
@@ -440,7 +442,16 @@ class Card:
             ),
             draw_debug_frame=draw_virtual_box
         )
-        pass
+
+    def get_upgrade_card_box_position(self):
+        box_position = []
+        if self.card_type == '升级卡':
+            for render_item in self.last_render_list:
+                obj = render_item.obj
+                x, y = render_item.x, render_item.y
+                if isinstance(obj, TextObject) and obj.text == '□':
+                    box_position.append([x + 10, y + 8])
+        return box_position
 
     def add_submit_icon(self, name):
         """
@@ -929,6 +940,8 @@ class Card:
         if self.card_type in ['密谋卡', '场景卡'] and self.is_back:
             return
         if self.card_type == '调查员卡背':
+            return
+        if self.card_type == '定制卡':
             return
         left_text = ''
         center_text = ''
