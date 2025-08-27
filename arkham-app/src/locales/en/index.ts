@@ -7,6 +7,8 @@ import ttsItems from './ttsItems'
 import about from './about'
 import deckBuilder from './deckBuilder'
 import cardEditor from './cardEditor'
+// 新增下面这一行
+import ttsScriptEditor from './ttsScriptEditor' // 确保路径正确
 
 export default {
   common,
@@ -17,5 +19,7 @@ export default {
   ttsItems,
   about,
   deckBuilder,
-  cardEditor
+  cardEditor,
+  // 新增下面这一行
+  ttsScriptEditor
 }
