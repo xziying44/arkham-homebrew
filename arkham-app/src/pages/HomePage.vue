@@ -1,13 +1,7 @@
 <template>
   <div class="welcome-container">
     <!-- 隐藏的文件夹选择元素 -->
-    <input
-      ref="folderInput"
-      type="file"
-      webkitdirectory
-      style="display: none"
-      @change="handleFolderSelected"
-    >
+    <input ref="folderInput" type="file" webkitdirectory style="display: none" @change="handleFolderSelected">
 
     <!-- ============================================= -->
     <!-- 左侧操作窗格 (Left Pane) -->
@@ -16,11 +10,7 @@
       <div class="left-content">
         <!-- 语言切换按钮 -->
         <div class="language-switcher-container">
-          <n-dropdown 
-            :options="languageOptions" 
-            @select="handleLanguageChange"
-            trigger="click"
-          >
+          <n-dropdown :options="languageOptions" @select="handleLanguageChange" trigger="click">
             <n-button quaternary size="small" class="language-btn">
               <template #icon>
                 <n-icon :component="LanguageOutline" />
@@ -43,11 +33,7 @@
 
         <!-- 主要操作按钮 -->
         <div class="primary-action">
-          <button 
-            class="open-folder-btn" 
-            @click="handleOpenFolder"
-            :disabled="isSelecting"
-          >
+          <button class="open-folder-btn" @click="handleOpenFolder" :disabled="isSelecting">
             <div class="btn-icon">
               <n-icon size="28" :component="FolderOpenOutline" />
             </div>
@@ -67,7 +53,8 @@
         <div class="service-status">
           <div class="status-item" :class="{ 'online': serviceOnline, 'offline': !serviceOnline }">
             <n-icon :component="serviceOnline ? CheckmarkCircle : AlertCircle" />
-            <span>{{ serviceOnline ? $t('home.serviceStatus.connected') : $t('home.serviceStatus.disconnected') }}</span>
+            <span>{{ serviceOnline ? $t('home.serviceStatus.connected') : $t('home.serviceStatus.disconnected')
+              }}</span>
           </div>
           <div v-if="serviceOnline && hasWorkspace" class="status-item workspace-info">
             <n-icon :component="FolderOpenOutline" />
@@ -105,12 +92,7 @@
               <p class="subtitle">{{ $t('home.recentProjects.subtitle') }}</p>
             </div>
             <div class="header-actions" v-if="recentDirectories.length > 0">
-              <n-button 
-                size="small" 
-                quaternary 
-                @click="handleClearRecent"
-                :loading="clearingRecent"
-              >
+              <n-button size="small" quaternary @click="handleClearRecent" :loading="clearingRecent">
                 <template #icon>
                   <n-icon :component="TrashOutline" />
                 </template>
@@ -130,11 +112,8 @@
 
           <!-- 最近目录列表 -->
           <n-list v-else-if="recentDirectories.length > 0" hoverable clickable>
-            <n-list-item 
-              v-for="directory in recentDirectories" 
-              :key="directory.path" 
-              @click="handleOpenRecent(directory)"
-            >
+            <n-list-item v-for="directory in recentDirectories" :key="directory.path"
+              @click="handleOpenRecent(directory)">
               <n-thing>
                 <template #header>{{ directory.name }}</template>
                 <template #description>
@@ -144,13 +123,8 @@
                   </div>
                 </template>
                 <template #action>
-                  <n-button 
-                    size="small" 
-                    quaternary 
-                    circle 
-                    @click.stop="handleRemoveRecent(directory)"
-                    :loading="removingRecentPath === directory.path"
-                  >
+                  <n-button size="small" quaternary circle @click.stop="handleRemoveRecent(directory)"
+                    :loading="removingRecentPath === directory.path">
                     <template #icon>
                       <n-icon :component="CloseOutline" />
                     </template>
@@ -164,12 +138,7 @@
           </n-list>
 
           <!-- 空状态 -->
-          <n-empty
-            v-else
-            :description="$t('home.recentProjects.emptyState')"
-            size="huge"
-            class="empty-state"
-          >
+          <n-empty v-else :description="$t('home.recentProjects.emptyState')" size="huge" class="empty-state">
             <template #icon>
               <n-icon :component="CubeOutline" />
             </template>
@@ -205,6 +174,7 @@ import {
 import { useMessage } from 'naive-ui';
 
 import { DirectoryService } from '@/api/directory-service';
+import { ConfigService } from '@/api'; // ConfigService 导入
 import { ApiError } from '@/api/http-client';
 import { setLanguage } from '@/locales';
 
@@ -253,10 +223,6 @@ const currentLanguageLabel = computed(() => {
   return current?.label || '中文';
 });
 
-const handleLanguageChange = (key: string) => {
-  setLanguage(key);
-};
-
 // ----------- 文件选择相关 -----------
 const folderInput = ref<HTMLInputElement>();
 const message = useMessage();
@@ -274,6 +240,104 @@ const loadingRecent = ref(false);
 const clearingRecent = ref(false);
 const removingRecentPath = ref<string | null>(null);
 
+// ----------- 语言切换保存状态 -----------
+const savingLanguage = ref(false);
+
+// ----------- 语言配置加载和保存 -----------
+
+/**
+ * 加载语言配置并自动切换
+ */
+const loadLanguageConfig = async () => {
+  try {
+    console.log('🌐 [语言配置] 开始加载语言配置...');
+    const config = await ConfigService.getConfig();
+
+    if (config && config.language) {
+      const savedLanguage = config.language;
+      console.log('🌐 [语言配置] 读取到保存的语言:', savedLanguage);
+
+      // 验证语言是否有效
+      const validLanguages = languageOptions.map(lang => lang.key);
+      if (validLanguages.includes(savedLanguage)) {
+        // 只有当保存的语言与当前语言不同时才切换
+        if (locale.value !== savedLanguage) {
+          console.log('🌐 [语言配置] 自动切换语言:', `${locale.value} -> ${savedLanguage}`);
+          setLanguage(savedLanguage);
+        } else {
+          console.log('🌐 [语言配置] 语言已是目标语言，无需切换:', savedLanguage);
+        }
+      } else {
+        console.warn('🌐 [语言配置] 保存的语言无效:', savedLanguage, '使用默认语言');
+      }
+    } else {
+      console.log('🌐 [语言配置] 未找到保存的语言配置，使用默认语言');
+    }
+  } catch (error) {
+    console.warn('🌐 [语言配置] 加载语言配置失败，使用默认语言:', error);
+    // 加载失败时静默处理，不影响主要功能
+  }
+};
+
+/**
+ * 保存语言配置
+ */
+const saveLanguageConfig = async (language: string) => {
+  if (savingLanguage.value) {
+    console.log('🌐 [语言配置] 正在保存中，跳过重复保存');
+    return;
+  }
+
+  savingLanguage.value = true;
+  try {
+    console.log('🌐 [语言配置] 开始保存语言配置:', language);
+
+    // 获取当前配置
+    const currentConfig = await ConfigService.getConfig();
+
+    // 更新语言配置
+    const updatedConfig = {
+      ...currentConfig,
+      language: language
+    };
+
+    // 保存配置
+    await ConfigService.saveConfig(updatedConfig);
+
+    console.log('🌐 [语言配置] 语言配置保存成功:', language);
+
+    // 显示保存成功提示
+    message.success(t('settings.messages.languageSaved'));
+
+  } catch (error) {
+    console.error('🌐 [语言配置] 保存语言配置失败:', error);
+
+    // 显示保存失败提示，但不阻止语言切换
+    if (error instanceof ApiError) {
+      message.warning(`${t('settings.messages.languageSaveFailed')}: ${error.message}`);
+    } else {
+      message.warning(t('settings.messages.languageSaveFailed'));
+    }
+  } finally {
+    savingLanguage.value = false;
+  }
+};
+
+/**
+ * 处理语言切换
+ */
+const handleLanguageChange = async (key: string) => {
+  const oldLanguage = locale.value;
+
+  console.log('🌐 [语言切换] 用户切换语言:', `${oldLanguage} -> ${key}`);
+
+  // 立即切换语言以获得即时反馈
+  setLanguage(key);
+
+  // 异步保存语言配置
+  await saveLanguageConfig(key);
+};
+
 // ----------- 服务状态检查 -----------
 
 /**
@@ -285,7 +349,7 @@ const checkServiceStatus = async () => {
     serviceOnline.value = true;
     isSelecting.value = status.is_selecting;
     hasWorkspace.value = status.has_workspace;
-    
+
     if (status.workspace_path) {
       workspaceName.value = status.workspace_path.split(/[/\\]/).pop() || status.workspace_path;
     } else {
@@ -327,7 +391,7 @@ const stopStatusCheck = () => {
  */
 const loadRecentDirectories = async () => {
   if (!serviceOnline.value) return;
-  
+
   loadingRecent.value = true;
   try {
     const result = await DirectoryService.getRecentDirectories();
@@ -384,13 +448,13 @@ const handleRemoveRecent = async (directory: RecentDirectory) => {
   removingRecentPath.value = directory.path;
   try {
     await DirectoryService.removeRecentDirectory(directory.path);
-    
+
     // 从本地列表中移除
     const index = recentDirectories.value.findIndex(d => d.path === directory.path);
     if (index > -1) {
       recentDirectories.value.splice(index, 1);
     }
-    
+
     message.success(t('home.recentProjects.removeSuccess', { name: directory.name }));
     console.log('✅ [移除最近目录] 操作成功:', directory.path);
   } catch (error) {
@@ -413,9 +477,9 @@ const handleRemoveRecent = async (directory: RecentDirectory) => {
 const selectDirectoryFromBackend = async (): Promise<string | null> => {
   try {
     console.log('🚀 [前端->后端] 请求选择目录');
-    
+
     const result = await DirectoryService.selectDirectory();
-    
+
     if (result && result.directory) {
       console.log('✅ [后端->前端] 目录选择成功:', result.directory);
       return result.directory;
@@ -446,23 +510,23 @@ const handleOpenFolder = async () => {
   }
 
   console.log('📁 [阿卡姆印牌姬] 用户点击：打开文件夹');
-  
+
   const loadingMessage = message.loading(t('home.messages.openingFolder'), {
     duration: 0 // 持续显示直到手动关闭
   });
 
   try {
     const selectedPath = await selectDirectoryFromBackend();
-    
+
     loadingMessage.destroy();
-    
+
     if (selectedPath) {
       const folderName = selectedPath.split(/[/\\]/).pop() || selectedPath;
       message.success(t('home.messages.folderOpened', { name: folderName }));
-      
+
       // 重新加载最近目录列表（因为选择目录会自动添加到最近记录）
       await loadRecentDirectories();
-      
+
       // 导航到工作空间
       emit('navigate-to-workspace', {
         mode: 'folder',
@@ -474,7 +538,7 @@ const handleOpenFolder = async () => {
     }
   } catch (error) {
     loadingMessage.destroy();
-    
+
     if (error instanceof ApiError) {
       // 处理特定的API错误
       switch (error.code) {
@@ -508,24 +572,24 @@ const handleOpenFolder = async () => {
 const handleFolderSelected = async (event: Event) => {
   const target = event.target as HTMLInputElement;
   const files = target.files;
-  
+
   if (files && files.length > 0) {
     const firstFile = files[0];
     const relativePath = firstFile.webkitRelativePath;
     const folderName = relativePath.split('/')[0];
-    
+
     console.log('📁 [浏览器文件夹选择] 已选择文件夹:', folderName);
     console.log('📁 [文件夹选择] 文件夹内包含文件数量:', files.length);
-    
+
     message.success(t('home.messages.folderOpened', { name: folderName }) + ` (${files.length} 个文件)`);
-    
+
     emit('navigate-to-workspace', {
       mode: 'folder',
       projectPath: folderName,
       projectName: folderName
     });
   }
-  
+
   target.value = '';
 };
 
@@ -540,29 +604,29 @@ const handleOpenRecent = async (directory: RecentDirectory) => {
 
   console.log('🔄 [阿卡姆印牌姬] 用户点击最近项目:', directory.name);
   console.log('🔄 [最近项目] 目录路径:', directory.path);
-  
+
   const loadingMessage = message.loading(t('home.messages.openingRecent', { name: directory.name }), {
     duration: 0
   });
-  
+
   try {
     // 调用后端API打开工作空间
     await DirectoryService.openWorkspace(directory.path);
-    
+
     loadingMessage.destroy();
     message.success(t('home.messages.opened', { name: directory.name }));
-    
+
     // 导航到工作空间
     emit('navigate-to-workspace', {
       mode: 'folder',
       projectPath: directory.path,
       projectName: directory.name
     });
-    
+
   } catch (error) {
     loadingMessage.destroy();
     console.error('❌ [打开最近项目] 失败:', error);
-    
+
     if (error instanceof ApiError) {
       switch (error.code) {
         case 3001:
@@ -584,8 +648,13 @@ const handleOpenRecent = async (directory: RecentDirectory) => {
 
 onMounted(async () => {
   console.log('🎯 [阿卡姆印牌姬] Welcome组件已挂载');
+
+  // 首先加载语言配置并自动切换
+  await loadLanguageConfig();
+
+  // 启动服务状态检查
   startStatusCheck();
-  
+
   // 等待服务连接后加载最近目录
   const checkAndLoad = async () => {
     await checkServiceStatus();
@@ -593,7 +662,7 @@ onMounted(async () => {
       await loadRecentDirectories();
     }
   };
-  
+
   await checkAndLoad();
 });
 
@@ -604,6 +673,12 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* 语言切换按钮加载状态样式 */
+.language-btn[loading] {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 /* =========== 顶级容器 =========== */
 .welcome-container {
   display: flex;
@@ -632,7 +707,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, transparent 50%);
+  background: linear-gradient(45deg, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
   pointer-events: none;
 }
 
@@ -675,7 +750,7 @@ onUnmounted(() => {
   font-size: 32px;
   font-weight: 700;
   margin: 0 0 8px 0;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .logo-text p {
@@ -718,7 +793,7 @@ onUnmounted(() => {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
   transition: left 0.6s ease;
 }
 
@@ -831,7 +906,7 @@ onUnmounted(() => {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
-  min-width: 0; 
+  min-width: 0;
   min-height: 0;
   padding: 40px 60px;
   background: #f8fafc;
@@ -900,13 +975,16 @@ onUnmounted(() => {
 .recent-list-container::-webkit-scrollbar {
   width: 6px;
 }
+
 .recent-list-container::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .recent-list-container::-webkit-scrollbar-thumb {
   background-color: #cbd5e1;
   border-radius: 3px;
 }
+
 .recent-list-container::-webkit-scrollbar-thumb:hover {
   background-color: #94a3b8;
 }
@@ -973,7 +1051,7 @@ onUnmounted(() => {
     width: 380px;
     padding: 30px 25px;
   }
-  
+
   .right-pane {
     padding: 30px 40px;
   }
@@ -983,7 +1061,7 @@ onUnmounted(() => {
   .welcome-container {
     flex-direction: column;
   }
-  
+
   .left-pane {
     width: 100%;
     padding: 30px 20px;
@@ -994,19 +1072,19 @@ onUnmounted(() => {
     text-align: right;
     margin-bottom: 20px;
   }
-  
+
   .right-pane {
     padding: 30px 20px;
   }
-  
+
   .logo-text h1 {
     font-size: 28px;
   }
-  
+
   .btn-title {
     font-size: 16px;
   }
-  
+
   .btn-desc {
     font-size: 13px;
   }

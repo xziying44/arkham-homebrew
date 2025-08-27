@@ -47,35 +47,36 @@ const bodyTip = `Input format:
 [] for flavor text, e.g.: [This is flavor text...]
 
 Available icon tags:
-🏅 <unique>
-⭕ <reaction>
-➡️ <action>
-⚡ <free>
-💀 <skull>
-👤 <cultist>
-📜 <tablet>
-👹 <elder>
-🐙 <tentacle>
-⭐ <seal>
-👊 <fist>
-📚 <book>
-🦶 <foot>
-🧠 <brain>
-❓ <?>
-🔵 <dot>
-🌑 <curse>
-🌟 <blessing>
-❄️ <frost>
-🕵️ <investigator>
-🚶 <rogue>
-🏕️ <survivor>
-🛡️ <guardian>
-🧘 <mystic>
-🔍 <seeker>
+🏅 <*> unique
+⭕ <rea> reaction
+➡️ <act> action
+⚡ <fre> free
+💀 <sku> skull
+👤 <cul> cultist
+📜 <tab> tablet
+👹 <mon> elder
+🐙 <ten> tentacle
+⭐ <eld> seal
+👊 <com> fist
+📚 <int> book
+🦶 <agi> foot
+🧠 <wil> brain
+❓ <\?> ?
+🔵 <bul> dot
+🌑 <cur> curse
+🌟 <ble> blessing
+❄️ <frost> frost
+🕵️ <per> investigator
+🚶 <rog> rogue
+🏕️ <sur> survivor
+🛡️ <gua> guardian
+🧘 <mys> mystic
+🔍 <see> seeker
 
 Special tags:
-<lr> line break
+<br> line break
 <hr> horizontal line
+<b></b> paragraph
 
 Support direct use of emoji or corresponding tag format
 `;

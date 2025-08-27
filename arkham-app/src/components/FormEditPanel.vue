@@ -233,7 +233,7 @@
                                 <span class="keyboard-shortcut">{{ $t('cardEditor.panel.ctrlS') }}</span>
                             </n-button>
                             <n-button @click="previewCard" :loading="generating">{{ $t('cardEditor.panel.previewCard')
-                                }}</n-button>
+                            }}</n-button>
                             <n-button @click="exportCard" :loading="exporting" :disabled="!hasValidCardData">{{
                                 $t('cardEditor.panel.exportImage') }}</n-button>
                             <n-button @click="resetForm">{{ $t('cardEditor.panel.reset') }}</n-button>
@@ -315,7 +315,7 @@
                         <n-button @click="discardChanges">{{ $t('cardEditor.panel.dontSave') }}</n-button>
                         <n-button @click="showSaveConfirmDialog = false">{{ $t('cardEditor.panel.cancel') }}</n-button>
                         <n-button type="primary" @click="saveAndSwitch" :loading="saving">{{ $t('cardEditor.panel.save')
-                            }}</n-button>
+                        }}</n-button>
                     </n-space>
                 </template>
             </n-card>
@@ -1073,7 +1073,8 @@ const removeStringArrayItem = (field: FormField, index: number) => {
 const onCardTypeChange = (newType: string) => {
     currentCardType.value = newType;
 
-    const hiddenFields = ['id', 'created_at', 'version', 'type', 'name'];
+    // 将 language 添加到需要保留的字段中
+    const hiddenFields = ['id', 'created_at', 'version', 'type', 'name', 'language'];
     const newData = {};
 
     hiddenFields.forEach(field => {
@@ -1101,6 +1102,7 @@ const onCardTypeChange = (newType: string) => {
         });
     }
 };
+
 
 // 保存原始数据状态
 const saveOriginalData = () => {
@@ -1372,29 +1374,32 @@ const exportCard = async () => {
     }
 };
 
-// 修改 resetForm 方法，保持语言设置
 const resetForm = () => {
-    const hiddenFields = ['id', 'created_at', 'version'];
+    // 将 language 添加到需要保留的字段中
+    const hiddenFields = ['id', 'created_at', 'version', 'language'];
     const hiddenData = {};
     hiddenFields.forEach(field => {
         if (currentCardData[field] !== undefined) {
             hiddenData[field] = currentCardData[field];
         }
     });
-    // 保持当前语言设置
-    const currentLanguage = currentCardData.language || 'zh';
+    
     Object.keys(currentCardData).forEach(key => {
         delete currentCardData[key];
     });
+    
     Object.assign(currentCardData, hiddenData, {
         type: '',
         name: '',
-        language: currentLanguage // 新增：保持语言设置
+        // 如果没有保存的语言设置，使用默认值
+        language: hiddenData.language || 'zh'
     });
+    
     currentCardType.value = '';
     saveOriginalData();
     message.info(t('cardEditor.panel.formReset'));
 };
+
 
 // 监听选中文件变化
 watch(() => props.selectedFile, async (newFile, oldFile) => {

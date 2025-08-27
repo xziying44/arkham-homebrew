@@ -690,12 +690,11 @@ def serve_static_files(path):
 @app.route('/api/config', methods=['GET'])
 def get_config():
     """获取配置项"""
-    error_response = check_workspace()
-    if error_response:
-        return error_response
-
     try:
-        config = current_workspace.get_config()
+        if current_workspace is None:
+            config = WorkspaceManager.get_global_config()
+        else:
+            config = current_workspace.get_config()
         return jsonify(create_response(
             msg="获取配置成功",
             data={"config": config}
@@ -710,10 +709,6 @@ def get_config():
 @app.route('/api/config', methods=['PUT'])
 def save_config():
     """保存配置项"""
-    error_response = check_workspace()
-    if error_response:
-        return error_response
-
     try:
         data = request.get_json()
         if not data or 'config' not in data:
@@ -723,7 +718,10 @@ def save_config():
             )), 400
 
         config = data['config']
-        success = current_workspace.save_config(config)
+        if current_workspace is None:
+            success = WorkspaceManager.save_global_config(config)
+        else:
+            success = current_workspace.save_config(config)
 
         if success:
             return jsonify(create_response(msg="保存配置成功"))

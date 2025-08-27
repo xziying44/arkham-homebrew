@@ -225,6 +225,7 @@ class RichTextRenderer:
 
         # 首先合并相邻的flavor标签
         text = self._merge_adjacent_flavor_tags(text)
+        print( text)
 
         # The replacement string for the icon font
         font_tpl = r'<font name="arkham-icons">{char}</font>'
@@ -240,7 +241,7 @@ class RichTextRenderer:
             (r'<谈判>', r'<b>躲避</b>'),  # As per original code, Parley maps to Evade
             # 2. Icon Rules (Emoji | CN Tag | SE Tag | Other Alias) -> Font Icon
             # Faction Icons
-            (r'🛡️|<守护者>|<gua>️', font_tpl.format(char='e')),
+            (r'🛡️|<守护者>|<gua>', font_tpl.format(char='e')),
             (r'🔍|<探求者>|<see>', font_tpl.format(char='f')),
             (r'🚶|<流浪者>|<rog>', font_tpl.format(char='g')),
             (r'🧘|<潜修者>|<mys>', font_tpl.format(char='h')),
@@ -248,28 +249,28 @@ class RichTextRenderer:
             (r'🕵️|<调查员>|<per>', font_tpl.format(char='v')),
             # Action Icons
             (r'⭕|<反应>|<rea>', font_tpl.format(char='l')),
-            (r'➡️|<启动>|<箭头>|<act>️', font_tpl.format(char='j')),
-            (r'⚡|<免费>|<fre>️', font_tpl.format(char='k')),
+            (r'➡️|<启动>|<箭头>|<act>', font_tpl.format(char='j')),
+            (r'⚡|<免费>|<fre>', font_tpl.format(char='k')),
             # Chaos Token Icons
-            (r'💀|<骷髅>|<sku>️', font_tpl.format(char='m')),
-            (r'👤|<异教徒>|<cul>️', font_tpl.format(char='n')),
-            (r'📜|<石板>|<tab>️', font_tpl.format(char='o')),
-            (r'👹|<古神>|<mon>️', font_tpl.format(char='p')),
-            (r'🐙|<触手>|<大失败>|<ten>️', font_tpl.format(char='r')),
-            (r'⭐|<旧印>|<大成功>|<eld>️', font_tpl.format(char='q')),
+            (r'💀|<骷髅>|<sku>', font_tpl.format(char='m')),
+            (r'👤|<异教徒>|<cul>', font_tpl.format(char='n')),
+            (r'📜|<石板>|<tab>', font_tpl.format(char='o')),
+            (r'👹|<古神>|<mon>', font_tpl.format(char='p')),
+            (r'🐙|<触手>|<大失败>|<ten>', font_tpl.format(char='r')),
+            (r'⭐|<旧印>|<大成功>|<eld>', font_tpl.format(char='q')),
             # Stat Icons
-            (r'🧠|<脑>|<wil>️', font_tpl.format(char='.')),
-            (r'📚|<书>|<int>️', font_tpl.format(char='a')),
-            (r'👊|<拳>|<com>️', font_tpl.format(char='b')),
-            (r'🦶|<脚>|<agi>️', font_tpl.format(char='c')),
+            (r'🧠|<脑>|<wil>', font_tpl.format(char='.')),
+            (r'📚|<书>|<int>', font_tpl.format(char='a')),
+            (r'👊|<拳>|<com>', font_tpl.format(char='b')),
+            (r'🦶|<脚>|<agi>', font_tpl.format(char='c')),
             (r'❓|<\?>', font_tpl.format(char='d')),  # '?' is a special regex char, so escaped as '\?'
             # Other Game Icons
-            (r'🏅|<独特>', font_tpl.format(char='w')),
+            (r'🏅|<独特>|<*>', font_tpl.format(char='w')),
             (r'<一>', font_tpl.format(char='x')),
             (r'🔵|<点>|<bul>', font_tpl.format(char='y')),
             (r'🌟|<祝福>|<ble>', font_tpl.format(char='s')),
             (r'🌑|<诅咒>|<cur>', font_tpl.format(char='t')),
-            (r'❄️|<雪花>', font_tpl.format(char='u')),
+            (r'❄️|<雪花>|<frost>', font_tpl.format(char='u')),
         ]
 
         processed_text = text
@@ -408,7 +409,7 @@ class RichTextRenderer:
         high = options.font_size
         best_vbox = None
 
-        print(f"开始二分查找最佳字体大小，范围: [{low}, {high}], 行距倍率: {self.line_spacing_multiplier}")
+        # print(f"开始二分查找最佳字体大小，范围: [{low}, {high}], 行距倍率: {self.line_spacing_multiplier}")
 
         while low <= high:
             mid_size = (low + high) // 2
@@ -430,7 +431,7 @@ class RichTextRenderer:
 
         if best_vbox:
             font_size = high  # 'high' holds the last successful size
-            print(f"查找结束。找到的最佳字体大小为: {font_size}")
+            # print(f"查找结束。找到的最佳字体大小为: {font_size}")
         else:
             print("查找结束。未找到任何可行的字体大小。")
 
@@ -727,7 +728,7 @@ class RichTextRenderer:
             # 默认左对齐
             start_x = x
             start_y = y
-        print("绘制文本:", text, "位置:", start_x, start_y)
+        # print("绘制文本:", text, "位置:", start_x, start_y)
 
         # 第二遍：实际绘制文本
         current_x = start_x

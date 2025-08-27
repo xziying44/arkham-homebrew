@@ -252,13 +252,14 @@ class Card:
         :param border_color: 边框颜色
         :param underline: 是否添加下划线
         """
+        offset = self.font_manager.get_font_offset(font_name)
         self.rich_renderer.draw_line(
             text=text,
-            position=position,
+            position=(position[0], position[1] + offset),
             alignment=TextAlignment.CENTER,
             options=DrawOptions(
                 font_name=font_name,
-                font_size=font_size,
+                font_size=self.font_manager.get_font_size_adaptive(font_name, font_size),
                 font_color=font_color,
                 has_border=has_border,
                 border_color=border_color,
@@ -281,13 +282,14 @@ class Card:
         :param border_width: 边框粗细
         :param border_color: 边框颜色
         """
+        offset = self.font_manager.get_font_offset(font_name)
         self.rich_renderer.draw_line(
             text=text,
-            position=position,
+            position=(position[0], position[1] + offset),
             alignment=TextAlignment.LEFT,
             options=DrawOptions(
                 font_name=font_name,
-                font_size=font_size,
+                font_size=self.font_manager.get_font_size_adaptive(font_name, font_size),
                 font_color=font_color,
                 has_border=has_border,
                 border_color=border_color,

@@ -653,10 +653,11 @@ class CardCreator:
                 card.paste_image(dp, (0, 0, 739, 580), 'cover')
 
         card.paste_image(self.image_manager.get_image(f'{data["class"]}-{data["type"]}'), (0, 0), 'contain')
-        card.draw_centered_text((76, 130), self.font_manager.get_font_text("事件"), "小字", 24, (0, 0, 0))
+        card.draw_centered_text((76, 130), self.font_manager.get_font_text("事件"), "小字", 22, (0, 0, 0))
         card.draw_centered_text((370, 618), data['name'], "汉仪小隶书简", 48, (0, 0, 0))
-        card.draw_centered_text((370, 670), data['weakness_type'], "汉仪小隶书简", 28, (0, 0, 0))
-        card.draw_centered_text((370, 715), self._integrate_traits_text(data.get('traits', [])), "方正舒体", 32,
+        card.draw_centered_text((370, 668), self.font_manager.get_font_text(data['weakness_type']), "小字", 28,
+                                (0, 0, 0))
+        card.draw_centered_text((370, 705), self._integrate_traits_text(data.get('traits', [])), "方正舒体", 32,
                                 (0, 0, 0))
 
         if 'cost' in data and isinstance(data['cost'], int):
@@ -664,7 +665,7 @@ class CardCreator:
 
         card.draw_text(
             body,
-            vertices=[(38, 726), (704, 726), (706, 757), (704, 817), (680, 887), (670, 952),
+            vertices=[(38, 720), (704, 720), (706, 757), (704, 817), (680, 887), (670, 952),
                       (598, 980), (135, 980), (77, 949), (61, 907), (31, 793)],
             default_font_name='simfang', default_size=32, padding=18, draw_virtual_box=False
         )
@@ -685,20 +686,21 @@ class CardCreator:
         else:
             card.paste_image(self.image_manager.get_image(f'{data["class"]}-{data["type"]}'), (0, 0), 'contain')
 
-        card.draw_centered_text((76, 130), self.font_manager.get_font_text("支援"), "小字", 24, (0, 0, 0))
+        card.draw_centered_text((76, 130), self.font_manager.get_font_text("支援"), "小字", 22, (0, 0, 0))
         card.draw_centered_text((370, 48), data['name'], "汉仪小隶书简", 48, (0, 0, 0))
 
         if 'subtitle' in data and data['subtitle'] != '':
-            card.draw_centered_text((370, 101), data['subtitle'], "副标题", 32, (0, 0, 0))
+            card.draw_centered_text((370, 98), data['subtitle'], "副标题", 31, (0, 0, 0))
 
-        card.draw_centered_text((370, 605), data['weakness_type'], "汉仪小隶书简", 28, (0, 0, 0))
-        card.draw_centered_text((370, 649), self._integrate_traits_text(data.get('traits', [])), "方正舒体", 32,
+        card.draw_centered_text((370, 605), self.font_manager.get_font_text(data['weakness_type']), "小字", 28,
+                                (0, 0, 0))
+        card.draw_centered_text((370, 635), self._integrate_traits_text(data.get('traits', [])), "方正舒体", 32,
                                 (0, 0, 0))
 
         if 'cost' in data and isinstance(data['cost'], int):
             card.set_card_cost(data['cost'])
 
-        card.draw_text(body, vertices=[(19, 662), (718, 662), (718, 910), (19, 910)],
+        card.draw_text(body, vertices=[(19, 660), (718, 660), (718, 910), (19, 910)],
                        default_font_name='simfang', default_size=32, padding=15, draw_virtual_box=False)
 
         if 'slots' in data and isinstance(data['slots'], str):
@@ -725,20 +727,23 @@ class CardCreator:
         else:
             card.paste_image(self.image_manager.get_image(f'{data["class"]}-{data["type"]}'), (0, 0), 'contain')
 
-        card.draw_centered_text((76, 130), self.font_manager.get_font_text("技能"), "小字", 24, (0, 0, 0))
+        card.draw_centered_text((76, 132), self.font_manager.get_font_text("技能"), "小字", 22, (0, 0, 0))
         card.draw_left_text((140, 34), data['name'], "汉仪小隶书简", 48, (0, 0, 0))
 
         if 'subtitle' in data and data['subtitle'] != '':
             card.draw_centered_text((378, 106), data['subtitle'], "副标题", 32, (0, 0, 0))
 
-        card.draw_centered_text((368, 705), data['weakness_type'], "汉仪小隶书简", 28, (0, 0, 0))
-        card.draw_centered_text((368, 742), self._integrate_traits_text(data.get('traits', [])), "方正舒体", 32,
+        card.draw_centered_text((368, 705), self.font_manager.get_font_text(data['weakness_type']), "小字", 28,
+                                (0, 0, 0))
+        card.draw_centered_text((368, 742), self._integrate_traits_text(data.get('traits', [])), "方正舒体", 30,
                                 (0, 0, 0))
 
+        offset = 16
         card.draw_text(
             body,
-            vertices=[(75, 754), (682, 754), (692, 770), (704, 838), (701, 914), (679, 986),
-                      (74, 986), (91, 920), (96, 844)],
+            vertices=[(75, 758), (682 + offset, 758), (692 + offset, 770), (704 + offset, 838), (701 + offset, 914),
+                      (679 + offset, 989),
+                      (74, 989), (91, 920), (96, 844)],
             default_font_name='simfang', default_size=32, padding=15, draw_virtual_box=False
         )
 
@@ -905,12 +910,11 @@ class CardCreator:
                 if self.image_mode == 1:
                     card.paste_image(dp, (0, 0, 1049, 739), 'cover')
                 else:
-                    card.paste_image(dp, (0, 75, 579, 664), 'cover', extension=470)
+                    card.paste_image(dp, (0, 75, 579, 664), 'cover')
 
         card.paste_image(self.image_manager.get_image(f'{data["type"]}-{data["class"]}-UI'), (0, 0), 'contain')
-        name_offset = 4 if self.font_manager.lang == 'en' else 0
-        card.draw_centered_text((320, 38 + name_offset), data['name'], "汉仪小隶书简", 48, (0, 0, 0))
-        card.draw_centered_text((320, 90), data['subtitle'], "副标题", 32, (0, 0, 0))
+        card.draw_centered_text((320, 36), data['name'], "汉仪小隶书简", 48, (0, 0, 0))
+        card.draw_centered_text((320, 88), data['subtitle'], "副标题", 32, (0, 0, 0))
 
         # 写四维
         if 'attribute' in data and isinstance(data['attribute'], list):
@@ -983,7 +987,7 @@ class CardCreator:
                     card.paste_image(dp, (0, 88, 739, 600), 'cover')
 
         card.paste_image(self.image_manager.get_image(f'{data["type"]}-{data["class"]}'), (0, 0), 'contain')
-        card.draw_centered_text((73, 132), self.font_manager.get_font_text("技能"), "小字", 24, (0, 0, 0))
+        card.draw_centered_text((73, 134), self.font_manager.get_font_text("技能"), "小字", 22, (0, 0, 0))
 
     def _setup_event_card_base(self, card, data, picture_path):
         """设置事件卡基础"""
@@ -999,7 +1003,7 @@ class CardCreator:
                     card.paste_image(dp, (0, 0, 739, 589), 'cover')
 
         card.paste_image(self.image_manager.get_image(f'{data["type"]}-{data["class"]}'), (0, 0), 'contain')
-        card.draw_centered_text((73, 130), self.font_manager.get_font_text("事件"), "小字", 24, (0, 0, 0))
+        card.draw_centered_text((73, 134), self.font_manager.get_font_text("事件"), "小字", 22, (0, 0, 0))
 
     def _setup_support_card_base(self, card, data, picture_path):
         """设置支援卡基础"""
@@ -1020,7 +1024,7 @@ class CardCreator:
 
         transparency_list = [(690, 50, 46)] if self.transparent_encounter else None
         card.paste_image(self.image_manager.get_image(frame_name), (0, 0), 'contain', transparency_list)
-        card.draw_centered_text((73, 132), self.font_manager.get_font_text("支援"), "小字", 24, (0, 0, 0))
+        card.draw_centered_text((73, 134), self.font_manager.get_font_text("支援"), "小字", 22, (0, 0, 0))
 
     def _setup_player_card_content(self, card, data):
         """设置玩家卡内容"""
@@ -1068,14 +1072,14 @@ class CardCreator:
 
     def _setup_event_card_content(self, card, data, traits, body):
         """设置事件卡内容"""
-        offset = {'潜修者': -8, '守护者': -3, '中立': -5}.get(data.get('class', ''), 0)
-        card.draw_centered_text((370, 625 + offset), data['name'], "汉仪小隶书简", 48, (0, 0, 0))
-        card.draw_centered_text((368, 682), traits, "方正舒体", 32, (0, 0, 0))
+        offset = {'潜修者': -8, '守护者': -1, '生存者': -1, '中立': -5}.get(data.get('class', ''), 0)
+        card.draw_centered_text((370, 621 + offset), data['name'], "汉仪小隶书简", 48, (0, 0, 0))
+        card.draw_centered_text((368, 675), traits, "方正舒体", 32, (0, 0, 0))
         card.draw_text(
             body,
-            vertices=[(43, 700), (694, 700), (706, 757), (704, 817), (680, 887), (670, 952),
-                      (598, 1000), (135, 1000), (77, 949), (61, 907), (31, 793)],
-            default_font_name='simfang', default_size=32, padding=15, draw_virtual_box=False
+            vertices=[(45, 690), (694, 690), (706, 757), (704, 817), (680, 887), (670, 952),
+                      (598, 992), (135, 992), (77, 949), (61, 907), (31, 793)],
+            default_font_name='simfang', default_size=32, padding=18, draw_virtual_box=False
         )
 
         if 'cost' in data and isinstance(data['cost'], int):
@@ -1095,12 +1099,12 @@ class CardCreator:
         elif len(subclass) == 2:
             name_offset = -40
 
-        card.draw_centered_text((375 + name_offset, 48), data['name'], "汉仪小隶书简", 48, (0, 0, 0))
+        card.draw_centered_text((375 + name_offset, 46), data['name'], "汉仪小隶书简", 48, (0, 0, 0))
 
         if 'subtitle' in data and data['subtitle'] != '':
-            card.draw_centered_text((375, 98), data['subtitle'], "副标题", 32, (0, 0, 0))
+            card.draw_centered_text((375, 98), data['subtitle'], "副标题", 31, (0, 0, 0))
 
-        card.draw_centered_text((375, 649), traits, "方正舒体", 32, (0, 0, 0))
+        card.draw_centered_text((375, 643), traits, "方正舒体", 32, (0, 0, 0))
         card.draw_text(body, vertices=[(19, 662), (718, 662), (718, 925), (19, 925)],
                        default_font_name='simfang', default_size=32, padding=15, draw_virtual_box=False)
 
@@ -1459,30 +1463,15 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "支援卡",
-        "name": "<独特>小助手测试",
+        "type": "技能卡",
+        "name": "111",
         "id": "",
         "created_at": "",
         "version": "1.0",
-        "language": "zh",
+        "language": "en",
         "level": -1,
-        "cost": -1,
-        "body": "【攻击。】这次攻击 - 将本卡牌放置入场。\n<反应>本卡牌入场后：抽取2张卡牌。\n",
-        "subtitle": "阿卡姆姬",
-        "class": "多职阶",
-        "health": -2,
-        "horror": -2,
-        "slots": "盟友",
-        "flavor": "朴实无华！",
-
-        "traits": [
-            "盟友"
-        ],
-        "subclass": [
-            "守护者",
-            "探求者",
-            "流浪者"
-        ]
+        "class": "探求者",
+        "body": "<act>:asads"
     }
 
     # 创建字体和图片管理器
@@ -1501,5 +1490,10 @@ if __name__ == '__main__':
 
     # 创建卡牌 - 支持PIL图片对象
     # picture = Image.open("path/to/image.jpg")  # 也可以传入PIL图片对象
+    fm.set_lang('en')
     card = creator.create_card(json_data, picture_path=None)
     card.image.show()
+
+    # fm.set_lang('zh')
+    # card = creator.create_card(json_data, picture_path=None)
+    # card.image.show()

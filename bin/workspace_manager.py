@@ -567,7 +567,8 @@ class WorkspaceManager:
             print(f"保存卡图失败: {e}")
             return False
 
-    def _get_global_config_path(self) -> str:
+    @staticmethod
+    def _get_global_config_path() -> str:
         """获取全局配置文件路径"""
         if hasattr(sys, '_MEIPASS'):
             # PyInstaller 打包后的临时目录
@@ -576,7 +577,7 @@ class WorkspaceManager:
 
     def get_github_config(self) -> Dict[str, Any]:
         """获取GitHub配置"""
-        global_config = self._get_global_config()
+        global_config = self.get_global_config()
         return {
             "github_token": global_config.get("github_token", ""),
             "github_repo": global_config.get("github_repo", ""),
@@ -588,7 +589,7 @@ class WorkspaceManager:
         """保存GitHub配置"""
         try:
             # 读取现有全局配置
-            existing_global_config = self._get_global_config()
+            existing_global_config = self.get_global_config()
 
             # 更新GitHub相关配置
             github_keys = ["github_token", "github_repo", "github_branch", "github_folder"]
@@ -597,15 +598,16 @@ class WorkspaceManager:
                     existing_global_config[key] = github_config[key]
 
             # 保存全局配置
-            return self._save_global_config(existing_global_config)
+            return self.save_global_config(existing_global_config)
         except Exception as e:
             print(f"保存GitHub配置失败: {e}")
             return False
 
-    def _get_global_config(self) -> Dict[str, Any]:
+    @staticmethod
+    def get_global_config() -> Dict[str, Any]:
         """获取全局配置（更新默认配置）"""
         try:
-            global_config_path = self._get_global_config_path()
+            global_config_path = WorkspaceManager._get_global_config_path()
             if os.path.exists(global_config_path):
                 with open(global_config_path, 'r', encoding='utf-8') as f:
                     return json.load(f)
@@ -618,7 +620,8 @@ class WorkspaceManager:
                     "github_token": "",
                     "github_repo": "",
                     "github_branch": "main",
-                    "github_folder": "images"
+                    "github_folder": "images",
+                    "language": "zh"
                 }
         except Exception as e:
             print(f"读取全局配置文件失败: {e}")
@@ -629,13 +632,15 @@ class WorkspaceManager:
                 "github_token": "",
                 "github_repo": "",
                 "github_branch": "main",
-                "github_folder": "images"
+                "github_folder": "images",
+                "language": "zh"
             }
 
-    def _save_global_config(self, global_config: Dict[str, Any]) -> bool:
+    @staticmethod
+    def save_global_config(global_config: Dict[str, Any]) -> bool:
         """保存全局配置"""
         try:
-            global_config_path = self._get_global_config_path()
+            global_config_path = WorkspaceManager._get_global_config_path()
             with open(global_config_path, 'w', encoding='utf-8') as f:
                 json.dump(global_config, f, ensure_ascii=False, indent=2)
             return True
@@ -654,7 +659,7 @@ class WorkspaceManager:
                     workspace_config = json.load(f)
 
             # 读取全局配置
-            global_config = self._get_global_config()
+            global_config = self.get_global_config()
 
             # 合并配置，全局配置的AI相关配置优先
             combined_config = workspace_config.copy()
@@ -666,6 +671,7 @@ class WorkspaceManager:
                 "github_repo": global_config.get("github_repo", ""),
                 "github_branch": global_config.get("github_branch", "main"),
                 "github_folder": global_config.get("github_folder", "images"),
+                "language": global_config.get("language", "zh")
             })
 
             return combined_config
@@ -680,7 +686,8 @@ class WorkspaceManager:
                 "github_token": "",
                 "github_repo": "",
                 "github_branch": "main",
-                "github_folder": "images"
+                "github_folder": "images",
+                "language": "zh"
             }
 
     def save_config(self, config: Dict[str, Any]) -> bool:
@@ -694,7 +701,8 @@ class WorkspaceManager:
                 "github_token",
                 "github_repo",
                 "github_branch",
-                "github_folder"
+                "github_folder",
+                "language"
             ]
 
             # 分离全局配置和工作目录配置
@@ -710,10 +718,10 @@ class WorkspaceManager:
             # 保存全局配置
             if global_config:
                 # 读取现有全局配置，然后更新
-                existing_global_config = self._get_global_config()
+                existing_global_config = self.get_global_config()
                 existing_global_config.update(global_config)
 
-                if not self._save_global_config(existing_global_config):
+                if not self.save_global_config(existing_global_config):
                     return False
 
             # 保存工作目录配置

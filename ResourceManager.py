@@ -148,8 +148,19 @@ class FontManager:
         if self.lang == 'en' and font_name == '副标题':
             return 3
         if self.lang == 'en' and font_name == '小字':
-            return 5
+            return 3
+        if self.lang == 'en' and font_name == '方正舒体':
+            return 9
         return 0
+
+    def get_font_size_adaptive(self, font_name, font_size):
+        if self.lang == 'en' and font_name == '汉仪小隶书简':
+            return font_size - 1
+        if self.lang == 'en' and font_name == '小字':
+            return font_size - 2
+        if self.lang == 'en' and font_name == '方正舒体':
+            return font_size - 3
+        return font_size
 
     def get_font_text(self, text):
         """
@@ -171,5 +182,9 @@ class FontManager:
                 return 'TREACHERY'
             elif text == '敌人':
                 return 'ENEMY'
+            elif text == '弱点':
+                return 'WEAKNESS'
+            elif text == '基础弱点':
+                return 'BASIC WEAKNESS'
 
         return text
