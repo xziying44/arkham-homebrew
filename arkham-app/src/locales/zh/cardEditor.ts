@@ -22,6 +22,7 @@ export default {
 
   // FormEditPanel 组件
   panel: {
+    close: '关闭',
     cardEditor: '卡牌编辑器',
     importJson: '导入JSON',
     viewJson: '查看JSON',

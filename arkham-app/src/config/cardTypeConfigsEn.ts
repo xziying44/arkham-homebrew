@@ -45,6 +45,7 @@ const bodyTip = `Input format:
 【】for bold text, e.g.: 【Investigation】
 {} for traits, e.g.: {Ally}
 [] for flavor text, e.g.: [This is flavor text...]
+ □ generates a TTS checkbox script for custom cards.
 
 Available icon tags:
 🏅 <*> unique

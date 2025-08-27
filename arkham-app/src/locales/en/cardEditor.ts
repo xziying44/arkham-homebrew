@@ -22,6 +22,7 @@ export default {
 
   // FormEditPanel component
   panel: {
+    close:'close',
     cardEditor: 'Card Editor',
     importJson: 'Import JSON',
     viewJson: 'View JSON',
