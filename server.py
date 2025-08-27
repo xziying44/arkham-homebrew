@@ -2,6 +2,7 @@ import json
 import sys
 from typing import Optional
 
+import webview
 from flask import Flask, jsonify, request, send_from_directory, Response
 import tkinter as tk
 from tkinter import filedialog
@@ -17,6 +18,8 @@ from bin.workspace_manager import WorkspaceManager
 from bin.gitHub_image import GitHubImageHost
 
 app = Flask(__name__)
+if not hasattr(app, 'window'):
+    app.window = None
 
 # 全局状态锁，防止同时打开多个选择对话框
 selection_lock = threading.Lock()
@@ -37,101 +40,106 @@ def create_response(code=0, msg="操作成功", data=None):
     }
 
 
-def select_directory():
-    """打开目录选择对话框"""
-    root = tk.Tk()
-    root.withdraw()
-    root.lift()
-    root.attributes("-topmost", True)
-
-    try:
-        selected_directory = filedialog.askdirectory(
-            title="请选择目录",
-            initialdir=os.getcwd()
-        )
-        return selected_directory
-    finally:
-        root.destroy()
+# 【重构】将选择目录后的处理逻辑提取出来，方便复用
+def _handle_directory_selection(selected_directory: Optional[str]):
+    """处理选定的目录，无论是来自pywebview还是tkinter"""
+    global current_workspace
+    if selected_directory:
+        # 添加到最近记录
+        quick_start.add_recent_directory(selected_directory)
+        # 创建工作空间实例
+        try:
+            current_workspace = WorkspaceManager(selected_directory)
+            return jsonify(create_response(
+                msg="目录选择成功",
+                data={"directory": selected_directory}
+            ))
+        except Exception as e:
+            return jsonify(create_response(
+                code=1007,
+                msg=f"创建工作空间失败: {str(e)}"
+            )), 500
+    else:
+        # 用户取消了选择
+        return jsonify(create_response(
+            code=1003,
+            msg="用户取消了选择"
+        ))
 
 
 # ================= 快速开始相关接口 =================
-
 @app.route('/api/select-directory', methods=['GET'])
 def api_select_directory():
-    """API接口：打开目录选择对话框"""
-    global is_selecting, current_workspace
-
-    if not selection_lock.acquire(blocking=False):
-        return jsonify(create_response(
-            code=1001,
-            msg="目录选择操作正在进行中，请稍后再试"
-        )), 409
-
-    try:
-        is_selecting = True
-        result_queue = queue.Queue()
-
-        def worker():
-            try:
-                directory = select_directory()
-                result_queue.put(('success', directory))
-            except Exception as e:
-                result_queue.put(('error', str(e)))
-
-        thread = threading.Thread(target=worker, daemon=True)
-        thread.start()
-        thread.join(timeout=300)
-
-        if thread.is_alive():
-            return jsonify(create_response(
-                code=1002,
-                msg="操作超时，请重试"
-            )), 408
-
+    """
+    API接口：打开目录选择对话框。
+    - 在 pywebview 环境下，使用原生的对话框。
+    - 在独立的 server 模式下，回退到 tkinter 对话框。
+    """
+    global is_selecting
+    # 【★★★ 核心修改逻辑 ★★★】
+    # 判断是否在 pywebview 环境中运行
+    if hasattr(app, 'window') and app.window:
+        # --- pywebview 模式 ---
         try:
-            status, result = result_queue.get_nowait()
-            if status == 'success':
-                if result:
-                    # 添加到最近记录
-                    quick_start.add_recent_directory(result)
+            # create_file_dialog 是一个阻塞调用，会等待用户操作完成
+            result = app.window.create_file_dialog(webview.FOLDER_DIALOG)
+            # result 是一个元组，如果用户选择了一个目录，元组里会有一个元素
+            selected_dir = result[0] if result and len(result) > 0 else None
 
-                    # 创建工作空间实例
-                    try:
-                        current_workspace = WorkspaceManager(result)
-                        return jsonify(create_response(
-                            msg="目录选择成功",
-                            data={"directory": result}
-                        ))
-                    except Exception as e:
-                        return jsonify(create_response(
-                            code=1007,
-                            msg=f"创建工作空间失败: {str(e)}"
-                        )), 500
-                else:
-                    return jsonify(create_response(
-                        code=1003,
-                        msg="用户取消了选择"
-                    ))
-            else:
-                return jsonify(create_response(
-                    code=1004,
-                    msg=f"选择目录时出错: {result}"
-                )), 500
-
-        except queue.Empty:
+            # 使用统一的处理函数返回结果
+            return _handle_directory_selection(selected_dir)
+        except Exception as e:
+            # pywebview 对话框也可能出错
             return jsonify(create_response(
-                code=1005,
-                msg="未能获取选择结果"
+                code=1006,
+                msg=f"服务器错误: {str(e)}"
             )), 500
+    else:
+        # --- server 模式 (回退到 tkinter) ---
+        if not selection_lock.acquire(blocking=False):
+            return jsonify(create_response(
+                code=1001,
+                msg="目录选择操作正在进行中，请稍后再试"
+            )), 409
+        try:
+            is_selecting = True
+            result_queue = queue.Queue()
 
-    except Exception as e:
-        return jsonify(create_response(
-            code=1006,
-            msg=f"服务器错误: {str(e)}"
-        )), 500
-    finally:
-        is_selecting = False
-        selection_lock.release()
+            def worker():
+                # 这个 select_directory 函数是原来的 tkinter 实现
+                root = tk.Tk()
+                root.withdraw()
+                root.lift()
+                root.attributes("-topmost", True)
+                try:
+                    directory = filedialog.askdirectory(
+                        title="请选择目录 (调试模式)",
+                        initialdir=os.getcwd()
+                    )
+                    result_queue.put(('success', directory))
+                except Exception as e:
+                    result_queue.put(('error', str(e)))
+                finally:
+                    root.destroy()
+
+            thread = threading.Thread(target=worker, daemon=True)
+            thread.start()
+            thread.join(timeout=300)  # 等待线程完成
+            if thread.is_alive():
+                return jsonify(create_response(code=1002, msg="操作超时，请重试")), 408
+            try:
+                status, result = result_queue.get_nowait()
+                if status == 'success':
+                    return _handle_directory_selection(result)
+                else:
+                    return jsonify(create_response(code=1004, msg=f"选择目录时出错: {result}")), 500
+            except queue.Empty:
+                return jsonify(create_response(code=1005, msg="未能获取选择结果")), 500
+        except Exception as e:
+            return jsonify(create_response(code=1006, msg=f"服务器错误: {str(e)}")), 500
+        finally:
+            is_selecting = False
+            selection_lock.release()
 
 
 @app.route('/api/recent-directories', methods=['GET'])
