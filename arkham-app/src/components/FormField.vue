@@ -395,7 +395,14 @@ const handleFileChange = async (data: { file: UploadFileInfo; fileList: UploadFi
   word-wrap: break-word;
   font-size: 14px;
   color: #333;
+  
+  /* --- 新增的核心代码 --- */
+  -webkit-user-select: text; /* 兼容 WebKit (pywebview 在 macOS/Linux 上常用) */
+  -moz-user-select: text;    /* 兼容 Firefox */
+  -ms-user-select: text;     /* 兼容 IE/旧版 Edge */
+  user-select: text;         /* 标准属性 */
 }
+
 
 /* 图片上传相关样式 */
 .image-preview {
