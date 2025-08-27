@@ -1,3 +1,5 @@
+**简体中文** | [English](./README_en.md)
+
 # 阿卡姆印牌姬
 
 一个基于Flask的自动化卡牌生成工具，支持通过OpenAI生成卡牌JSON数据并转换为精美卡牌图像。
@@ -8,13 +10,13 @@
 - 🤖 集成OpenAI智能生成卡牌内容
 - 🎨 支持自定义字体、图片资源和样式模板
 - 📦 提供多种卡牌类型支持：
-  - 调查员卡
-  - 技能卡
-  - 支援卡
-  - 事件卡
-  - 弱点卡
-  - 升级卡
-- 🌐 基于Web的桌面应用程序（使用Flaskwebgui）
+    - 调查员卡
+    - 技能卡
+    - 支援卡
+    - 事件卡
+    - 弱点卡
+    - 升级卡
+- 🌐 基于Web的桌面应用程序（使用Pywebview）
 
 ## 快速开始
 
@@ -23,7 +25,7 @@
 1. 访问 [Releases页面](https://github.com/xziying44/arkham-homebrew/releases)
 2. 下载最新版本的 `arkham-homebrew-windows-x64.zip`
 3. 解压到任意目录
-4. 双击运行 `app.exe`
+4. 双击运行 `Arkham Card Maker.exe`
 
 #### 目录结构说明
 
@@ -38,11 +40,13 @@
 ```
 
 ### 环境要求
+
 - Python 3.9+
 - [要求字体文件](fonts/)
 - [必要图片资源](images/)
 
 ### 安装步骤
+
 ```bash
 # 克隆仓库
 git clone https://github.com/xziying44/arkham-homebrew.git
@@ -51,24 +55,14 @@ git clone https://github.com/xziying44/arkham-homebrew.git
 pip install -r requirements.txt
 ```
 
-### 配置说明
-1. 复制`config.json.example`为`config.json`
-2. 填写OpenAI配置：
-```json
-{
-  "openai": {
-    "base_url": "https://api.deepseek.com",
-    "api_key": "your_api_key",
-    "model": "deepseek-chat"
-  }
-}
-```
-
 ### 启动应用
+
 ```bash
 python app.py
 ```
+
 ## 项目结构
+
 ```
 .
 ├── app.py                 # 主程序入口
@@ -85,18 +79,15 @@ python app.py
 ## 开发指南
 
 ### 扩展卡牌类型
+
 1. 在`create_card.py`中添加新的处理函数
 2. 在`Card.py`中扩展`Card`类的渲染方法
 3. 添加对应的图片模板到`images/`目录
 
-### API接口说明
-- `POST /api/generate-json` 生成卡牌JSON
-- `POST /api/generate-image` 生成卡牌图片
-- `GET/POST /api/config` 配置管理
-
 ## 贡献方式
 
 欢迎通过Issue和PR参与贡献！请遵循以下流程：
+
 1. Fork本仓库
 2. 创建特性分支 (`git checkout -b feature/your-feature`)
 3. 提交修改 (`git commit -m 'Add some feature'`)
