@@ -63,7 +63,7 @@ class CardCreator:
             card_data: 卡牌数据
             dp: 已打开的图片对象(可选)
         """
-        if picture_path is None:
+        if picture_path is None and dp is None:
             return
 
         if dp is None:

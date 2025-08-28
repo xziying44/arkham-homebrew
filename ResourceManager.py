@@ -94,7 +94,7 @@ class FontManager:
                 '思源黑体': 'NimbusRomNo9L-Med',
                 '方正舒体': 'NimbusRomNo9L-MedIta',
                 'simfang': 'ArnoPro-Regular',
-                '汉仪小隶书简': 'Teutonic',
+                '汉仪小隶书简': 'Arkhamic',
                 '副标题': 'ArnoPro-Smbd',
                 '小字': 'ArnoPro-Smbd'
             }

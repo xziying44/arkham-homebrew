@@ -563,7 +563,7 @@ class Card:
             self.draw_centered_text(
                 position=default_position[0],
                 text=str(cost),
-                font_name='Teutonic',
+                font_name='Arkhamic',
                 font_size=62,
                 font_color=(255, 255, 255),
                 has_border=True,
@@ -575,7 +575,7 @@ class Card:
             self.draw_centered_text(
                 position=default_position[0],
                 text='X',
-                font_name='Teutonic',
+                font_name='Arkhamic',
                 font_size=62,
                 font_color=(255, 255, 255),
                 has_border=True,
@@ -587,7 +587,7 @@ class Card:
             self.draw_centered_text(
                 position=default_position[1],
                 text='—',
-                font_name='Teutonic',
+                font_name='Arkhamic',
                 font_size=68,
                 font_color=(255, 255, 255),
                 has_border=True,

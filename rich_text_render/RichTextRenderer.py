@@ -232,6 +232,7 @@ class RichTextRenderer:
             # 1. Formatting and Keyword Rules (Non-icon)
             (r'【([^】]*)】', r'<b>\1</b>'),  # Bold text within 【】
             (r'{([^}]*)}', r'<trait>\1</trait>'),
+            (r'<t>(.*?)</t>', r'<trait>\1</trait>'),
             (r'<relish>(.*)</relish>', r'<flavor>\1</flavor>'),
             (r'<强制>', r'<b>强制</b> -'),
             (r'<显现>', r'<b>显现</b> -'),
