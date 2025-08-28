@@ -167,6 +167,12 @@
                         </n-form>
                     </n-card>
 
+                    <!-- 【新增】插画布局编辑器 -->
+                    <IllustrationLayoutEditor v-if="currentCardData.picture_base64"
+                        :image-src="currentCardData.picture_base64" :layout="currentCardData.picture_layout"
+                        :card_type="currentCardData.type"
+                        @update:layout="updateIllustrationLayout" />
+
                     <!-- 卡牌信息 -->
                     <n-card v-if="currentCardType" :title="$t('cardEditor.panel.cardInfo')" size="small"
                         class="form-card">
@@ -335,6 +341,8 @@ import {
 import { useMessage } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import type { TreeOption } from 'naive-ui';
+// 【新增】导入新的组件
+import IllustrationLayoutEditor from './IllustrationLayoutEditor.vue';
 
 // 导入中文和英文配置
 import { cardTypeConfigs as cardTypeConfigsZh, cardTypeOptions as cardTypeOptionsZh, type FormField, type CardTypeConfig, type ShowCondition } from '@/config/cardTypeConfigs';
@@ -432,6 +440,13 @@ const aiAbortController = ref<AbortController | null>(null);
 const debounceTimer = ref<number | null>(null);
 const isUserEditing = ref(false);
 const lastDataSnapshot = ref<string>('');
+
+// 【新增】处理插画布局更新的函数
+const updateIllustrationLayout = (newLayout) => {
+    currentCardData.picture_layout = newLayout;
+    // 触发防抖预览更新，以便实时看到布局变化效果
+    triggerDebouncedPreviewUpdate();
+};
 
 // 复制JSON到剪贴板
 const copyJsonToClipboard = async () => {
@@ -546,7 +561,7 @@ const triggerDebouncedPreviewUpdate = () => {
     debounceTimer.value = window.setTimeout(async () => {
         try {
             console.log('🖼️ 防抖预览更新开始');
-            
+
             // 只有数据真正发生变化才更新预览
             const currentSnapshot = JSON.stringify(currentCardData);
             if (currentSnapshot === lastDataSnapshot.value) {
@@ -555,7 +570,7 @@ const triggerDebouncedPreviewUpdate = () => {
             }
 
             lastDataSnapshot.value = currentSnapshot;
-            
+
             // 检查是否正在生成中，避免重复生成
             if (generating.value) {
                 console.log('⚠️ 正在生成中，跳过预览更新');
@@ -846,11 +861,11 @@ const importAIResult = async () => {
             console.log('🏷️ 更新卡牌类型:', aiData.type);
             currentCardType.value = aiData.type;
         }
-        
+
         // 触发防抖预览更新
         await nextTick();
         triggerDebouncedPreviewUpdate();
-        
+
         console.log('✅ AI生成的卡牌数据已成功导入到编辑器');
         message.success(t('cardEditor.panel.aiDataImportedSuccessfully'));
         clearAIResult();
@@ -911,7 +926,7 @@ const updateTtsScript = (ttsData: { GMNotes: string; LuaScript: string; config?:
     if (!ttsData.GMNotes && !ttsData.LuaScript && !ttsData.config) {
         delete currentCardData.tts_script;
     }
-    
+
     // 触发防抖预览更新
     triggerDebouncedPreviewUpdate();
 };
@@ -923,7 +938,7 @@ const handleKeydown = async (event: KeyboardEvent) => {
     if ((event.ctrlKey || event.metaKey) && event.code === 'KeyS') {
         event.preventDefault();
         event.stopPropagation();
-        
+
         // 防止重复处理
         if (isProcessingKeydown.value || saving.value) {
             console.log('阻止重复保存');
@@ -1062,7 +1077,7 @@ const setFieldValue = (field: FormField, value: any) => {
     } else {
         setDeepValue(currentCardData, field.key, value);
     }
-    
+
     // 触发防抖预览更新
     triggerDebouncedPreviewUpdate();
 };
@@ -1166,7 +1181,7 @@ const onCardTypeChange = (newType: string) => {
             }
         });
     }
-    
+
     // 触发防抖预览更新
     triggerDebouncedPreviewUpdate();
 };
@@ -1203,7 +1218,7 @@ const loadCardData = async () => {
     try {
         // 清除防抖定时器
         clearDebounceTimer();
-        
+
         const content = await WorkspaceService.getFileContent(props.selectedFile.path);
         const cardData = JSON.parse(content || '{}');
         // 清空当前数据
@@ -1271,26 +1286,26 @@ const saveCard = async () => {
         saving.value = true;
         // 清除防抖定时器，避免保存时生成预览
         clearDebounceTimer();
-        
+
         // 生成卡片并检查box_position
         const result_card = await CardService.generateCard(currentCardData as CardData);
-        
+
         // 检查是否为定制卡且有box_position参数
         if (currentCardData.type === '定制卡' && result_card?.box_position && result_card.box_position.length > 0) {
             console.log('🎯 定制卡检测到box_position，生成Lua脚本:', result_card.box_position);
-            
+
             try {
                 // 生成定制卡的Lua脚本
                 const luaScript = generateUpgradePowerWordScript(result_card.box_position);
-                
+
                 // 更新TTS脚本数据
                 if (!currentCardData.tts_script) {
                     currentCardData.tts_script = {};
                 }
-                
+
                 // 保存生成的Lua脚本
                 currentCardData.tts_script.LuaScript = luaScript;
-                
+
                 console.log('✅ 定制卡Lua脚本生成成功');
                 // message.success(t('cardEditor.panel.customCardLuaGenerated'));
             } catch (error) {
@@ -1298,7 +1313,7 @@ const saveCard = async () => {
                 message.warning(`生成定制卡脚本失败: ${error.message || '未知错误'}`);
             }
         }
-        
+
         // 保存JSON文件
         const jsonContent = JSON.stringify(currentCardData, null, 2);
         await WorkspaceService.saveFileContent(fileToSave.path, jsonContent);
@@ -1361,7 +1376,7 @@ const discardChanges = () => {
 // 清空表单数据
 const clearFormData = () => {
     clearDebounceTimer();
-    
+
     Object.keys(currentCardData).forEach(key => {
         delete currentCardData[key];
     });
@@ -1425,7 +1440,7 @@ const previewCard = async () => {
         generating.value = true;
         // 清除防抖定时器，避免重复生成
         clearDebounceTimer();
-        
+
         const imageBase64 = await generateCardImage();
         if (imageBase64) {
             emit('update-preview-image', imageBase64);
@@ -1479,7 +1494,7 @@ const exportCard = async () => {
 
 const resetForm = () => {
     clearDebounceTimer();
-    
+
     // 将 language 添加到需要保留的字段中
     const hiddenFields = ['id', 'created_at', 'version', 'language'];
     const hiddenData = {};
@@ -1488,18 +1503,18 @@ const resetForm = () => {
             hiddenData[field] = currentCardData[field];
         }
     });
-    
+
     Object.keys(currentCardData).forEach(key => {
         delete currentCardData[key];
     });
-    
+
     Object.assign(currentCardData, hiddenData, {
         type: '',
         name: '',
         // 如果没有保存的语言设置，使用默认值
         language: hiddenData.language || 'zh'
     });
-    
+
     currentCardType.value = '';
     saveOriginalData();
     message.info(t('cardEditor.panel.formReset'));

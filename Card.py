@@ -230,6 +230,70 @@ class Card:
         except Exception as e:
             print(f"贴图失败: {str(e)}")
 
+    def paste_image_with_transform(self, img, region, transform_params):
+        """
+        在指定区域粘贴图片，支持缩放、裁剪和相对region中心点的偏移
+
+        :param img: 要粘贴的图片
+        :param region: 目标区域坐标和尺寸 (x, y, width, height)
+        :param transform_params: 变换参数字典，包含:
+            - mode: 模式 ('custom' 等)
+            - offset: 偏移量 {'x': float, 'y': float}
+            - scale: 缩放比例 (float)
+            - crop: 裁剪参数 {'top': int, 'right': int, 'bottom': int, 'left': int}
+        """
+        try:
+            # 解析区域参数
+            if len(region) == 4:
+                region_x, region_y, region_width, region_height = region
+            else:
+                region_x, region_y = region
+                region_width, region_height = img.width, img.height
+
+            # 计算region中心点
+            region_center_x = region_x + region_width / 2
+            region_center_y = region_y + region_height / 2
+
+            # 复制图片以避免修改原图
+            processed_img = img.copy()
+
+            # 1. 应用缩放
+            scale = transform_params.get('scale', 1.0)
+            if scale != 1.0:
+                new_width = int(processed_img.width * scale)
+                new_height = int(processed_img.height * scale)
+                processed_img = processed_img.resize((new_width, new_height), Image.LANCZOS)
+
+            # 记录当时长度和宽度
+            original_width, original_height = processed_img.width, processed_img.height
+
+            # 2. 应用裁剪
+            crop_params = transform_params.get('crop', {})
+            if any(crop_params.values()):
+                left = crop_params.get('left', 0) * scale
+                top = crop_params.get('top', 0) * scale
+                right = processed_img.width - crop_params.get('right', 0) * scale
+                bottom = processed_img.height - crop_params.get('bottom', 0) * scale
+                processed_img = processed_img.crop((left, top, right, bottom))
+
+            # 3. 计算偏移后的粘贴位置（相对于region中心点）
+            offset = transform_params.get('offset', {'x': 0, 'y': 0})
+            offset_x = offset.get('x', 0)
+            offset_y = offset.get('y', 0)
+
+            # 计算最终的粘贴位置（图片中心对齐到偏移后的region中心）
+            paste_x = int(region_center_x + offset_x - original_width / 2)
+            paste_y = int(region_center_y + offset_y - original_height / 2)
+
+            # 4. 粘贴图片
+            if processed_img.mode == 'RGBA':
+                self.image.paste(processed_img, (paste_x, paste_y), processed_img)
+            else:
+                self.image.paste(processed_img, (paste_x, paste_y))
+
+        except Exception as e:
+            print(f"图片变换粘贴失败: {str(e)}")
+
     def draw_centered_text(
             self, position,
             text,
@@ -552,26 +616,51 @@ class Card:
         :return:
         """
         if self.card_type == '调查员卡':
-            self.draw_centered_text(
-                position=(760, 635),
-                text=str(health),
-                font_name='Bolton',
-                font_size=58,
-                font_color=(255, 255, 255),
-                has_border=True,
-                border_width=3,
-                border_color=(182, 31, 35)
-            )
-            self.draw_centered_text(
-                position=(870, 635),
-                text=str(horror),
-                font_name='Bolton',
-                font_size=58,
-                font_color=(255, 255, 255),
-                has_border=True,
-                border_width=3,
-                border_color=(1, 63, 114)
-            )
+            if 0 < health < 100:
+                self.draw_centered_text(
+                    position=(760, 635),
+                    text=str(health),
+                    font_name='Bolton',
+                    font_size=58,
+                    font_color=(255, 255, 255),
+                    has_border=True,
+                    border_width=3,
+                    border_color=(182, 31, 35)
+                )
+            else:
+                self.draw_centered_text(
+                    position=(760, 635 - 7),
+                    text='x',
+                    font_name='arkham-icons',
+                    font_size=58,
+                    font_color=(255, 255, 255),
+                    has_border=True,
+                    border_width=3,
+                    border_color=(182, 31, 35)
+                )
+            if 0 < horror < 100:
+                self.draw_centered_text(
+                    position=(870, 635),
+                    text=str(horror),
+                    font_name='Bolton',
+                    font_size=58,
+                    font_color=(255, 255, 255),
+                    has_border=True,
+                    border_width=3,
+                    border_color=(1, 63, 114)
+                )
+            else:
+                self.draw_centered_text(
+                    position=(870, 635 - 7),
+                    text='x',
+                    font_name='arkham-icons',
+                    font_size=58,
+                    font_color=(255, 255, 255),
+                    has_border=True,
+                    border_width=3,
+                    border_color=(1, 63, 114)
+                )
+
             return
         elif self.card_type == '地点卡':
             curve = [(42, 623), (10, 653), (90, 610)]

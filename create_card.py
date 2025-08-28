@@ -52,6 +52,102 @@ class CardCreator:
             print(f"Error opening image: {e}")
             return None
 
+    def _paste_background_image(self, card: Card, picture_path: Union[str, Image.Image, None],
+                                card_data: dict, dp: Optional[Image.Image] = None) -> None:
+        """
+        统一贴底图方法
+
+        Args:
+            card: 卡牌对象
+            picture_path: 图片路径或PIL图片对象
+            card_data: 卡牌数据
+            dp: 已打开的图片对象(可选)
+        """
+        if picture_path is None:
+            return
+
+        if dp is None:
+            dp = self._open_picture(card_data, picture_path)
+            if dp is None:
+                return
+
+        card_type = card_data.get('type', '')
+
+        # 透明遭遇组的特殊处理
+        if self.transparent_encounter:
+            if dp.size[1] > dp.size[0]:
+                dp = dp.rotate(90, expand=True)
+            card.paste_image(dp, (0, 0, card.width, card.height), 'cover')
+            return
+
+        # 常规贴底图逻辑
+        image_mode = self.image_mode
+        picture_layout = card_data.get('picture_layout', {})
+        if picture_layout.get('mode', 'auto') == 'custom':
+            image_mode = 3
+
+        # 如果图片尺寸与卡牌尺寸几乎一致，使用覆盖模式
+        if dp and abs(dp.size[0] - card.width) < 3 and abs(dp.size[1] - card.height) < 3:
+            image_mode = 1
+
+        if image_mode == 1:
+            # 全覆盖模式
+            if card_type in ['调查员卡', '调查员卡背'] and dp.size[0] < dp.size[1]:
+                dp = dp.rotate(90, expand=True)
+            elif card_type in ['场景卡', '密谋卡', '场景卡-大画', '密谋卡-大画'] and dp.size[1] > dp.size[0]:
+                dp = dp.rotate(90, expand=True)
+
+            card.paste_image(dp, (0, 0, card.width, card.height), 'cover')
+        elif image_mode == 3:
+            # 自定义模式
+            paste_area = self._get_paste_area(card_type, card_data)
+            if card_type in ['调查员卡']:
+                paste_area = (0, 0, 1049, 739)
+            card.paste_image_with_transform(dp, paste_area, picture_layout)
+        else:
+            # 部分覆盖模式 - 根据卡牌类型确定粘贴区域
+            paste_area = self._get_paste_area(card_type, card_data)
+            card.paste_image(dp, paste_area, 'cover')
+
+    def _get_paste_area(self, card_type: str, card_data: dict) -> tuple:
+        """
+        获取不同卡牌类型的粘贴区域
+
+        Args:
+            card_type: 卡牌类型
+            card_data: 卡牌数据
+
+        Returns:
+            tuple: (x, y, width, height) 粘贴区域
+        """
+        # 卡牌粘贴区域配置
+        paste_areas = {
+            # 竖向卡牌 (739x1049)
+            '地点卡': (0, 80, 739, 562),
+            '敌人卡': (0, 456, 739, 593),
+            '诡计卡': (0, 0, 739, 605),
+            '技能卡': (0, 88, 739, 600),
+            '事件卡': (0, 0, 739, 589),
+            '支援卡': (0, 80, 739, 540),
+            '故事卡': (0, 0, 739, 1049),  # 全覆盖
+            '行动卡': (0, 0, 747, 1043),  # 全覆盖
+            '冒险参考卡': (0, 0, 739, 1049),  # 全覆盖
+
+            # 横向卡牌 (1049x739)
+            '调查员卡': (0, 75, 579, 664),
+            '调查员卡背': (0, 0, 373, 405),
+            '场景卡-大画': (0, 0, 1049, 739),  # 全覆盖
+            '密谋卡-大画': (0, 0, 1049, 739),  # 全覆盖
+        }
+
+        # 场景卡和密谋卡的特殊处理
+        if card_type == '场景卡':
+            return (1049 - 626, 0, 626, 739)
+        elif card_type == '密谋卡':
+            return (0, 0, 626, 739)
+
+        return paste_areas.get(card_type, (0, 0, 739, 1049))  # 默认全覆盖
+
     def _tidy_body_flavor(self, body: str, flavor: str, flavor_type: int = 0,
                           align: str = 'center', quote: bool = False) -> str:
         """整理正文和风味，正确处理flavor字段中的<lr>标签"""
@@ -136,8 +232,11 @@ class CardCreator:
 
     def _preprocessing_json(self, card_json: dict) -> dict:
         """预处理json信息"""
+        card_json['name'] = card_json.get('name', '')
+        card_json['name'] = card_json.get('name', '')
         card_json['body'] = card_json.get('body', '')
         card_json['flavor'] = card_json.get('flavor', '')
+        card_json['subtitle'] = card_json.get('subtitle', '')
 
         card_json = self._sort_submit_icons(card_json)
 
@@ -210,17 +309,11 @@ class CardCreator:
         is_enemy = bool(data.get('enemy_health', ''))
 
         if not self.transparent_background:
-            if picture_path is not None:
-                image_mode = self.image_mode
-                if dp and abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
-                    image_mode = 1
-                if image_mode == 1:
-                    card.paste_image(dp, (0, 0, 739, 1049), 'cover')
-                else:
-                    card.paste_image(dp, (0, 80, 739, 562), 'cover')
+            # 贴底图
+            self._paste_background_image(card, picture_path, data, dp)
 
             if 'location_type' not in data or data['location_type'] not in ['未揭示', '已揭示']:
-                raise ValueError('说明地点类型为未揭示或已揭示')
+                data['location_type'] = '已揭示'
 
             if is_enemy:
                 if 'subtitle' in data and data['subtitle'] != '':
@@ -364,15 +457,8 @@ class CardCreator:
         dp = self._open_picture(card_json, picture_path)
 
         if not self.transparent_background:
-            if picture_path is not None:
-                image_mode = self.image_mode
-                if dp and abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
-                    image_mode = 1
-                if image_mode == 1:
-                    card.paste_image(dp, (0, 0, 739, 1049), 'cover')
-                else:
-                    card.paste_image(dp, (0, 0, 739, 605), 'cover')
-
+            # 贴底图
+            self._paste_background_image(card, picture_path, data, dp)
             # 贴牌框
             card.paste_image(self.image_manager.get_image(f'{data["type"]}'), (0, 0), 'contain')
 
@@ -450,14 +536,8 @@ class CardCreator:
         dp = self._open_picture(card_json, picture_path)
 
         if not self.transparent_background:
-            if picture_path is not None:
-                image_mode = self.image_mode
-                if dp and abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
-                    image_mode = 1
-                if image_mode == 1:
-                    card.paste_image(dp, (0, 0, 739, 1049), 'cover')
-                else:
-                    card.paste_image(dp, (0, 456, 739, 593), 'cover')
+            # 贴底图
+            self._paste_background_image(card, picture_path, data, dp)
 
             # 贴牌框
             if 'subtitle' in data and data['subtitle'] != '':
@@ -644,13 +724,8 @@ class CardCreator:
     def _create_weakness_event_card(self, card, data, body, dp):
         """创建弱点事件卡"""
         if dp:
-            image_mode = self.image_mode
-            if abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
-                image_mode = 1
-            if image_mode == 1:
-                card.paste_image(dp, (0, 0, 739, 1049), 'cover')
-            else:
-                card.paste_image(dp, (0, 0, 739, 580), 'cover')
+            # 贴底图
+            self._paste_background_image(card, None, data, dp)
 
         card.paste_image(self.image_manager.get_image(f'{data["class"]}-{data["type"]}'), (0, 0), 'contain')
         card.draw_centered_text((76, 130), self.font_manager.get_font_text("事件"), "小字", 22, (0, 0, 0))
@@ -673,13 +748,8 @@ class CardCreator:
     def _create_weakness_support_card(self, card, data, body, dp):
         """创建弱点支援卡"""
         if dp:
-            image_mode = self.image_mode
-            if abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
-                image_mode = 1
-            if image_mode == 1:
-                card.paste_image(dp, (0, 0, 739, 1049), 'cover')
-            else:
-                card.paste_image(dp, (0, 85, 739, 510), 'cover')
+            # 贴底图
+            self._paste_background_image(card, None, data, dp)
 
         if 'subtitle' in data and data['subtitle'] != '':
             card.paste_image(self.image_manager.get_image(f'{data["class"]}-{data["type"]}-副标题'), (0, 0), 'contain')
@@ -714,13 +784,8 @@ class CardCreator:
     def _create_weakness_skill_card(self, card, data, body, dp):
         """创建弱点技能卡"""
         if dp:
-            image_mode = self.image_mode
-            if abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
-                image_mode = 1
-            if image_mode == 1:
-                card.paste_image(dp, (0, 0, 739, 1049), 'cover')
-            else:
-                card.paste_image(dp, (0, 88, 739, 600), 'cover')
+            # 贴底图
+            self._paste_background_image(card, None, data, dp)
 
         if 'subtitle' in data and data['subtitle'] != '':
             card.paste_image(self.image_manager.get_image(f'{data["class"]}-{data["type"]}-副标题'), (0, 0), 'contain')
@@ -754,13 +819,8 @@ class CardCreator:
     def _create_weakness_treachery_card(self, card, data, body, dp):
         """创建弱点诡计卡"""
         if dp:
-            image_mode = self.image_mode
-            if abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
-                image_mode = 1
-            if image_mode == 1:
-                card.paste_image(dp, (0, 0, 739, 1049), 'cover')
-            else:
-                card.paste_image(dp, (0, 0, 739, 605), 'cover')
+            # 贴底图
+            self._paste_background_image(card, None, data, dp)
 
         card.paste_image(self.image_manager.get_image(f'{data["class"]}-{data["type"]}'), (0, 0), 'contain')
         card.draw_centered_text((370, 576), self.font_manager.get_font_text("诡计"), "小字", 24, (0, 0, 0))
@@ -775,13 +835,8 @@ class CardCreator:
     def _create_weakness_enemy_card(self, card, data, body, dp):
         """创建弱点敌人卡"""
         if dp:
-            image_mode = self.image_mode
-            if abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
-                image_mode = 1
-            if image_mode == 1:
-                card.paste_image(dp, (0, 0, 739, 1049), 'cover')
-            else:
-                card.paste_image(dp, (0, 456, 739, 593), 'cover')
+            # 贴底图
+            self._paste_background_image(card, None, data, dp)
 
         card.paste_image(self.image_manager.get_image(f'{data["class"]}-{data["type"]}'), (0, 0), 'contain')
         card.draw_centered_text((370, 620), self.font_manager.get_font_text("敌人"), "小字", 24, (0, 0, 0))
@@ -840,16 +895,11 @@ class CardCreator:
             card_class=data['class']
         )
 
+        dp = self._open_picture(card_json, picture_path)
+
         # 贴底图
-        if picture_path is not None:
-            dp = self._open_picture(card_json, picture_path)
-            if dp:
-                if self.image_mode == 1:
-                    if dp.size[0] < dp.size[1]:
-                        dp = dp.rotate(90, expand=True)
-                    card.paste_image(dp, (0, 0, 1049, 739), 'cover')
-                else:
-                    card.paste_image(dp, (0, 0, 373, 405), 'cover')
+        if not self.transparent_background:
+            self._paste_background_image(card, picture_path, data, dp)
 
         card.paste_image(self.image_manager.get_image(f'调查员卡-{data["class"]}-卡背'), (0, 0), 'contain')
         card.draw_centered_text((750, 36), data['name'], "汉仪小隶书简", 48, (0, 0, 0))
@@ -902,15 +952,13 @@ class CardCreator:
             card_class=data['class']
         )
 
+        dp = self._open_picture(card_json, picture_path)
+
         card.paste_image(self.image_manager.get_image(f'{data["type"]}-{data["class"]}-底图'), (0, 0), 'contain')
 
-        if picture_path is not None:
-            dp = self._open_picture(card_json, picture_path)
-            if dp:
-                if self.image_mode == 1:
-                    card.paste_image(dp, (0, 0, 1049, 739), 'cover')
-                else:
-                    card.paste_image(dp, (0, 75, 579, 664), 'cover')
+        # 贴底图
+        if not self.transparent_background:
+            self._paste_background_image(card, picture_path, data, dp)
 
         card.paste_image(self.image_manager.get_image(f'{data["type"]}-{data["class"]}-UI'), (0, 0), 'contain')
         card.draw_centered_text((320, 36), data['name'], "汉仪小隶书简", 48, (0, 0, 0))
@@ -931,8 +979,7 @@ class CardCreator:
 
         health = data.get('health', 0) if isinstance(data.get('health'), int) else 0
         horror = data.get('horror', 0) if isinstance(data.get('horror'), int) else 0
-        if health > 0 or horror > 0:
-            card.set_health_and_horror(health, horror)
+        card.set_health_and_horror(health, horror)
 
         return card
 
@@ -973,48 +1020,33 @@ class CardCreator:
 
     def _setup_skill_card_base(self, card, data, picture_path):
         """设置技能卡基础"""
-        if picture_path is not None:
-            dp = self._open_picture(data, picture_path)
-            if dp:
-                image_mode = self.image_mode
-                if abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
-                    image_mode = 1
-                if image_mode == 1:
-                    card.paste_image(dp, (0, 0, 739, 1049), 'cover')
-                else:
-                    card.paste_image(dp, (0, 88, 739, 600), 'cover')
+        dp = self._open_picture(data, picture_path)
+
+        if not self.transparent_background:
+            # 贴底图
+            self._paste_background_image(card, picture_path, data, dp)
 
         card.paste_image(self.image_manager.get_image(f'{data["type"]}-{data["class"]}'), (0, 0), 'contain')
         card.draw_centered_text((73, 134), self.font_manager.get_font_text("技能"), "小字", 22, (0, 0, 0))
 
     def _setup_event_card_base(self, card, data, picture_path):
         """设置事件卡基础"""
-        if picture_path is not None:
-            dp = self._open_picture(data, picture_path)
-            if dp:
-                image_mode = self.image_mode
-                if abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
-                    image_mode = 1
-                if image_mode == 1:
-                    card.paste_image(dp, (0, 0, 739, 1049), 'cover')
-                else:
-                    card.paste_image(dp, (0, 0, 739, 589), 'cover')
+        dp = self._open_picture(data, picture_path)
+
+        if not self.transparent_background:
+            # 贴底图
+            self._paste_background_image(card, picture_path, data, dp)
 
         card.paste_image(self.image_manager.get_image(f'{data["type"]}-{data["class"]}'), (0, 0), 'contain')
         card.draw_centered_text((73, 134), self.font_manager.get_font_text("事件"), "小字", 22, (0, 0, 0))
 
     def _setup_support_card_base(self, card, data, picture_path):
         """设置支援卡基础"""
-        if picture_path is not None:
-            dp = self._open_picture(data, picture_path)
-            if dp:
-                image_mode = self.image_mode
-                if abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
-                    image_mode = 1
-                if image_mode == 1:
-                    card.paste_image(dp, (0, 0, 739, 1049), 'cover')
-                else:
-                    card.paste_image(dp, (0, 80, 739, 540), 'cover')
+        dp = self._open_picture(data, picture_path)
+
+        if not self.transparent_background:
+            # 贴底图
+            self._paste_background_image(card, picture_path, data, dp)
 
         frame_name = f'{data["type"]}-{data["class"]}'
         if 'subtitle' in data and data['subtitle'] != '':
@@ -1026,10 +1058,6 @@ class CardCreator:
 
     def _setup_player_card_content(self, card, data):
         """设置玩家卡内容"""
-        if 'name' not in data or data['name'] == '':
-            raise ValueError('卡牌名称不能为空')
-        if 'body' not in data or data['body'] == '':
-            raise ValueError('正文内容不能为空')
 
         # 画投入图标
         if 'submit_icon' in data and isinstance(data['submit_icon'], list):
@@ -1133,13 +1161,11 @@ class CardCreator:
             raise ValueError('卡牌类型错误')
 
         card = Card(1049, 739, self.font_manager, self.image_manager, data['type'])
+        dp = self._open_picture(card_json, picture_path)
 
-        if picture_path is not None:
-            dp = self._open_picture(card_json, picture_path)
-            if dp:
-                if dp.size[1] > dp.size[0]:
-                    dp = dp.rotate(90, expand=True)
-                card.paste_image(dp, (0, 0, 1049, 739), 'cover')
+        # 贴底图
+        if not self.transparent_background:
+            self._paste_background_image(card, picture_path, data, dp)
 
         # 透明列表
         encounter_list = [(105, 499, 42)] if data['type'] == '场景卡-大画' else [(105, 459, 42), (953, 447, 52)]
@@ -1173,17 +1199,8 @@ class CardCreator:
         dp = self._open_picture(card_json, picture_path)
 
         # 贴底图
-        if picture_path is not None:
-            image_mode = self.image_mode
-            if dp and abs(dp.size[0] - card.image.size[0]) < 3 and abs(dp.size[1] - card.image.size[1]) < 3:
-                image_mode = 1
-            if image_mode == 1:
-                if dp.size[1] > dp.size[0]:
-                    dp = dp.rotate(90, expand=True)
-                card.paste_image(dp, (0, 0, 1049, 739), 'cover')
-            else:
-                area = (1049 - 626, 0, 626, 739) if data['type'] == '场景卡' else (0, 0, 626, 739)
-                card.paste_image(dp, area, 'cover')
+        if not self.transparent_background:
+            self._paste_background_image(card, picture_path, data, dp)
 
         # 透明列表
         encounter_list = [[(533, 628, 42), (528, 622, 42)], [(270, 74, 34), (288, 74, 34)]]
@@ -1240,10 +1257,8 @@ class CardCreator:
         dp = self._open_picture(card_json, picture_path)
 
         # 贴底图
-        if picture_path is not None and self.transparent_encounter and dp:
-            if dp.size[1] > dp.size[0]:
-                dp = dp.rotate(90, expand=True)
-            card.paste_image(dp, (0, 0, 1049, 739), 'cover')
+        if self.transparent_encounter and dp:
+            self._paste_background_image(card, picture_path, data, dp)
 
         card.paste_image(self.image_manager.get_image(f'{data["type"]}-卡背'), (0, 0), 'contain')
 
@@ -1290,8 +1305,8 @@ class CardCreator:
         dp = self._open_picture(card_json, picture_path)
 
         if not self.transparent_background:
-            if picture_path is not None and dp:
-                card.paste_image(dp, (0, 0, 739, 1049), 'cover')
+            # 贴底图
+            self._paste_background_image(card, picture_path, data, dp)
             card.paste_image(self.image_manager.get_image(f'{data["type"]}'), (0, 0), 'contain')
 
         # 贴遭遇组
@@ -1330,12 +1345,11 @@ class CardCreator:
             vertices = [(56, 470), (685, 470), (685, 670), (56, 670)]
 
         card = Card(747, 1043, self.font_manager, self.image_manager, data['type'], is_back=True)
+        dp = self._open_picture(card_json, picture_path)
 
         # 贴底图
-        if picture_path is not None:
-            dp = self._open_picture(card_json, picture_path)
-            if dp:
-                card.paste_image(dp, (0, 0, 747, 1043), 'cover')
+        if not self.transparent_background:
+            self._paste_background_image(card, picture_path, data, dp)
 
         transparency_list = [(374, 180, 32)] if self.transparent_encounter else None
         card.paste_image(self.image_manager.get_image(ui_name), (0, 0), 'contain', transparency_list)
@@ -1365,8 +1379,8 @@ class CardCreator:
         dp = self._open_picture(card_json, picture_path)
 
         if not self.transparent_background:
-            if picture_path is not None and dp:
-                card.paste_image(dp, (0, 0, 739, 1049), 'cover')
+            # 贴底图
+            self._paste_background_image(card, picture_path, data, dp)
 
             if data.get('scenario_type', 0) == 1:
                 card.paste_image(self.image_manager.get_image(f'{data["type"]}-资源区'), (0, 0), 'contain')
@@ -1461,13 +1475,44 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "定制卡",
-        "name": "测试定制卡",
+        "type": "支援卡",
+        "name": "<独特>小助手测试",
         "id": "",
         "created_at": "",
         "version": "1.0",
         "language": "zh",
-        "body": "□□定制卡效果测试。\n□□□测试测试定位。"
+        "level": -1,
+        "cost": -1,
+        "body": "【显现】 - 将本卡牌放置入场。\n<反应>本卡牌入场后：抽取2张卡牌。\n<启动>：【攻击】。这次攻击巴拉巴拉巴拉。\n",
+        "subtitle": "阿卡姆姬",
+        "class": "多职阶",
+        "health": -2,
+        "horror": -2,
+        "slots": "盟友",
+        "flavor": "朴实无华！",
+
+        "traits": [
+            "盟友"
+        ],
+        "subclass": [
+            "守护者",
+            "探求者",
+            None
+        ],
+        "picture_layout": {
+            "mode": "custom",
+            "offset": {
+                "x": -52,
+                "y": -32
+            },
+            "scale": 0.4,
+            "crop": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+            }
+        }
     }
 
     # 创建字体和图片管理器
