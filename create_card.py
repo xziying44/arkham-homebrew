@@ -1475,44 +1475,18 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "支援卡",
-        "name": "<独特>小助手测试",
-        "id": "",
+        "type": "故事卡",
+        "name": "矿工",
+        "id": 330,
         "created_at": "",
         "version": "1.0",
         "language": "zh",
-        "level": -1,
-        "cost": -1,
-        "body": "【显现】 - 将本卡牌放置入场。\n<反应>本卡牌入场后：抽取2张卡牌。\n<启动>：【攻击】。这次攻击巴拉巴拉巴拉。\n",
-        "subtitle": "阿卡姆姬",
-        "class": "多职阶",
-        "health": -2,
-        "horror": -2,
-        "slots": "盟友",
-        "flavor": "朴实无华！",
-
-        "traits": [
-            "盟友"
-        ],
-        "subclass": [
-            "守护者",
-            "探求者",
-            None
-        ],
-        "picture_layout": {
-            "mode": "custom",
-            "offset": {
-                "x": -52,
-                "y": -32
-            },
-            "scale": 0.4,
-            "crop": {
-                "top": 0,
-                "right": 0,
-                "bottom": 0,
-                "left": 0
-            }
-        }
+        "victory": 1,
+        "body": "\n<relish>当通讯器连接到脑缸时，你只听到尖叫声。“啊啊啊！我在坠落！我在坠落！”也许脱离肉体对脆弱的人类心智来说太过难以承受。</relish>\n<hr>\n【如果太空漂流在胜利区：】\n<relish>你温柔地让他们相信他们不再漂浮在太空中——他们终于安息了。不知何故，那个声音感到宽慰并叹了口气。当你询问绑架他们的邪教徒时，他们告诉你所有记得的事情。</relish>\n将该卡牌加入胜利区。\n<hr>\n【否则：】\n<relish>你试图安抚他们并询问关于邪教徒的事，但他们从未停止尖叫。</relish>\n受到1点恐惧并将该卡牌洗回扫描牌库。",
+        "subtitle": "",
+        "traits": [],
+        "picture_path": "D:\\BaiduSyncdisk\\PycharmProjects\\arkham_translate\\translation_space\\暗物质\\factory\\000330-raw.jpg",
+        "class": "中立"
     }
 
     # 创建字体和图片管理器

@@ -995,6 +995,8 @@ class Card:
         Returns:
             取反色后的PIL.Image对象
         """
+        if img is None:
+            return None
         # 确保图像是RGBA模式
         if img.mode != 'RGBA':
             img = img.convert('RGBA')

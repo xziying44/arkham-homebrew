@@ -6,6 +6,7 @@ import os
 import sys
 import tempfile  # 添加这个导入
 import time
+import traceback
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
@@ -508,6 +509,8 @@ class WorkspaceManager:
             return card
 
         except Exception as e:
+            # 打印异常栈
+            traceback.print_exc()
             print(f"生成卡图失败: {e}")
             return None
 

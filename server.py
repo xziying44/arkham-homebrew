@@ -1,5 +1,6 @@
 import json
 import sys
+import traceback
 from typing import Optional
 
 import webview
@@ -637,6 +638,7 @@ def generate_card():
         ))
 
     except Exception as e:
+        # 打印异常栈
         return jsonify(create_response(
             code=4003,
             msg=f"生成卡图失败: {str(e)}"

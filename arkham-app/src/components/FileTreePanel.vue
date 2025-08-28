@@ -1,3 +1,6 @@
+我来帮你优化FileTreePanel.vue，添加获取CPU核心数和多线程批量处理功能。
+
+```vue
 <template>
   <div class="file-tree-pane" :style="{ width: width + 'px' }">
     <div class="pane-header">
@@ -26,55 +29,34 @@
 
     <div class="file-tree-content">
       <n-spin :show="loading">
-        <n-tree 
-          v-if="fileTreeData && fileTreeData.length > 0"
-          :data="fileTreeData" 
-          :render-label="renderTreeLabel" 
-          :render-prefix="renderTreePrefix" 
-          selectable
-          expand-on-click 
-          @update:selected-keys="handleFileSelect"
-        />
+        <n-tree v-if="fileTreeData && fileTreeData.length > 0" :data="fileTreeData" :render-label="renderTreeLabel"
+          :render-prefix="renderTreePrefix" selectable expand-on-click @update:selected-keys="handleFileSelect" />
         <n-empty v-else :description="$t('workspaceMain.fileTree.emptyText')" />
       </n-spin>
     </div>
 
     <!-- 右键菜单 -->
-    <n-dropdown
-      placement="bottom-start"
-      trigger="manual"
-      :x="contextMenuX"
-      :y="contextMenuY"
-      :options="contextMenuOptions"
-      :show="showContextMenu"
-      @clickoutside="showContextMenu = false"
-      @select="handleContextMenuSelect"
-    />
+    <n-dropdown placement="bottom-start" trigger="manual" :x="contextMenuX" :y="contextMenuY"
+      :options="contextMenuOptions" :show="showContextMenu" @clickoutside="showContextMenu = false"
+      @select="handleContextMenuSelect" />
 
     <!-- 新建文件夹对话框 -->
     <n-modal v-model:show="showCreateFolderDialog">
-      <n-card
-        style="width: 400px"
-        :title="$t('workspaceMain.fileTree.createFolder.title')"
-        :bordered="false"
-        size="huge"
-        role="dialog"
-        aria-modal="true"
-      >
+      <n-card style="width: 400px" :title="$t('workspaceMain.fileTree.createFolder.title')" :bordered="false"
+        size="huge" role="dialog" aria-modal="true">
         <n-form ref="createFolderFormRef" :model="createFolderForm" :rules="createFolderRules">
           <n-form-item path="name" :label="$t('workspaceMain.fileTree.createFolder.label')">
-            <n-input
-              v-model:value="createFolderForm.name"
-              :placeholder="$t('workspaceMain.fileTree.createFolder.placeholder')"
-              @keydown.enter="handleCreateFolder"
-              clearable
-            />
+            <n-input v-model:value="createFolderForm.name"
+              :placeholder="$t('workspaceMain.fileTree.createFolder.placeholder')" @keydown.enter="handleCreateFolder"
+              clearable />
           </n-form-item>
         </n-form>
         <template #footer>
           <n-space justify="end">
-            <n-button @click="showCreateFolderDialog = false">{{ $t('workspaceMain.fileTree.createFolder.cancel') }}</n-button>
-            <n-button type="primary" @click="handleCreateFolder" :loading="creating">{{ $t('workspaceMain.fileTree.createFolder.confirm') }}</n-button>
+            <n-button @click="showCreateFolderDialog = false">{{ $t('workspaceMain.fileTree.createFolder.cancel')
+            }}</n-button>
+            <n-button type="primary" @click="handleCreateFolder" :loading="creating">{{
+              $t('workspaceMain.fileTree.createFolder.confirm') }}</n-button>
           </n-space>
         </template>
       </n-card>
@@ -82,28 +64,21 @@
 
     <!-- 新建卡牌对话框 -->
     <n-modal v-model:show="showCreateCardDialog">
-      <n-card
-        style="width: 400px"
-        :title="$t('workspaceMain.fileTree.createCard.title')"
-        :bordered="false"
-        size="huge"
-        role="dialog"
-        aria-modal="true"
-      >
+      <n-card style="width: 400px" :title="$t('workspaceMain.fileTree.createCard.title')" :bordered="false" size="huge"
+        role="dialog" aria-modal="true">
         <n-form ref="createCardFormRef" :model="createCardForm" :rules="createCardRules">
           <n-form-item path="name" :label="$t('workspaceMain.fileTree.createCard.label')">
-            <n-input
-              v-model:value="createCardForm.name"
-              :placeholder="$t('workspaceMain.fileTree.createCard.placeholder')"
-              @keydown.enter="handleCreateCard"
-              clearable
-            />
+            <n-input v-model:value="createCardForm.name"
+              :placeholder="$t('workspaceMain.fileTree.createCard.placeholder')" @keydown.enter="handleCreateCard"
+              clearable />
           </n-form-item>
         </n-form>
         <template #footer>
           <n-space justify="end">
-            <n-button @click="showCreateCardDialog = false">{{ $t('workspaceMain.fileTree.createCard.cancel') }}</n-button>
-            <n-button type="primary" @click="handleCreateCard" :loading="creating">{{ $t('workspaceMain.fileTree.createCard.confirm') }}</n-button>
+            <n-button @click="showCreateCardDialog = false">{{ $t('workspaceMain.fileTree.createCard.cancel')
+            }}</n-button>
+            <n-button type="primary" @click="handleCreateCard" :loading="creating">{{
+              $t('workspaceMain.fileTree.createCard.confirm') }}</n-button>
           </n-space>
         </template>
       </n-card>
@@ -111,28 +86,17 @@
 
     <!-- 重命名对话框 -->
     <n-modal v-model:show="showRenameDialog">
-      <n-card
-        style="width: 450px"
-        :title="$t('workspaceMain.fileTree.rename.title')"
-        :bordered="false"
-        size="huge"
-        role="dialog"
-        aria-modal="true"
-      >
+      <n-card style="width: 450px" :title="$t('workspaceMain.fileTree.rename.title')" :bordered="false" size="huge"
+        role="dialog" aria-modal="true">
         <n-form ref="renameFormRef" :model="renameForm" :rules="renameRules">
           <n-form-item path="filename" :label="$t('workspaceMain.fileTree.rename.filenameLabel')">
-            <n-input
-              v-model:value="renameForm.filename"
-              :placeholder="$t('workspaceMain.fileTree.rename.filenamePlaceholder')"
-              clearable
-            />
+            <n-input v-model:value="renameForm.filename"
+              :placeholder="$t('workspaceMain.fileTree.rename.filenamePlaceholder')" clearable />
           </n-form-item>
-          <n-form-item path="extension" :label="$t('workspaceMain.fileTree.rename.extensionLabel')" v-if="showExtensionField">
-            <n-input
-              v-model:value="renameForm.extension"
-              :placeholder="$t('workspaceMain.fileTree.rename.extensionPlaceholder')"
-              clearable
-            >
+          <n-form-item path="extension" :label="$t('workspaceMain.fileTree.rename.extensionLabel')"
+            v-if="showExtensionField">
+            <n-input v-model:value="renameForm.extension"
+              :placeholder="$t('workspaceMain.fileTree.rename.extensionPlaceholder')" clearable>
               <template #prefix>.</template>
             </n-input>
           </n-form-item>
@@ -145,7 +109,8 @@
         <template #footer>
           <n-space justify="end">
             <n-button @click="showRenameDialog = false">{{ $t('workspaceMain.fileTree.rename.cancel') }}</n-button>
-            <n-button type="primary" @click="handleRename" :loading="renaming">{{ $t('workspaceMain.fileTree.rename.confirm') }}</n-button>
+            <n-button type="primary" @click="handleRename" :loading="renaming">{{
+              $t('workspaceMain.fileTree.rename.confirm') }}</n-button>
           </n-space>
         </template>
       </n-card>
@@ -153,14 +118,8 @@
 
     <!-- 删除确认对话框 -->
     <n-modal v-model:show="showDeleteDialog">
-      <n-card
-        style="width: 450px"
-        :title="$t('workspaceMain.fileTree.delete.title')"
-        :bordered="false"
-        size="huge"
-        role="dialog"
-        aria-modal="true"
-      >
+      <n-card style="width: 450px" :title="$t('workspaceMain.fileTree.delete.title')" :bordered="false" size="huge"
+        role="dialog" aria-modal="true">
         <n-space vertical>
           <n-alert type="warning" :title="$t('workspaceMain.fileTree.delete.warning')">
             <template #icon>
@@ -178,17 +137,103 @@
         <template #footer>
           <n-space justify="end">
             <n-button @click="showDeleteDialog = false">{{ $t('workspaceMain.fileTree.delete.cancel') }}</n-button>
-            <n-button type="error" @click="handleDelete" :loading="deleting">{{ $t('workspaceMain.fileTree.delete.confirm') }}</n-button>
+            <n-button type="error" @click="handleDelete" :loading="deleting">{{
+              $t('workspaceMain.fileTree.delete.confirm') }}</n-button>
           </n-space>
         </template>
       </n-card>
     </n-modal>
+
+    <!-- 批量导出进度对话框 -->
+    <n-modal v-model:show="showBatchExportDialog">
+      <n-card style="width: 600px" :title="$t('workspaceMain.fileTree.batchExport.title')" :bordered="false" size="huge"
+        role="dialog" aria-modal="true">
+        <n-space vertical size="large">
+          <n-space vertical size="small">
+            <n-text depth="3">{{ $t('workspaceMain.fileTree.batchExport.directory') }}: {{ batchExportTarget?.path
+            }}</n-text>
+            <n-text depth="3">{{ $t('workspaceMain.fileTree.batchExport.foundCards') }}: {{ batchExportCards.length
+            }}</n-text>
+            <n-text depth="3">{{ $t('workspaceMain.fileTree.batchExport.cpuCores') }}: {{ cpuCores }}</n-text>
+            <n-text depth="3">{{ $t('workspaceMain.fileTree.batchExport.threadsUsing') }}: {{ activeThreads }}</n-text>
+          </n-space>
+
+          <n-progress v-if="batchExporting" type="line" :percentage="batchExportProgress" :show-indicator="true"
+            status="active" :stroke-width="8" :color="'#667eea'" />
+
+          <div class="batch-export-status">
+            <n-text v-if="batchExporting" style="font-weight: 600;">
+              {{ $t('workspaceMain.fileTree.batchExport.processing') }}
+            </n-text>
+            <n-text v-if="batchExporting" depth="3" style="font-size: 12px; margin-top: 4px;">
+              {{ $t('workspaceMain.fileTree.batchExport.progressDetail') }}: {{ batchExportedCount }} / {{
+                batchExportCards.length }}
+              ({{ batchExportProgress }}%)
+            </n-text>
+            <n-text v-else-if="batchExportCompleted">
+              {{ $t('workspaceMain.fileTree.batchExport.completed') }}
+            </n-text>
+
+            <!-- 并发处理状态显示 -->
+            <div v-if="batchExporting && activeExportTasks.length > 0" class="concurrent-status">
+              <n-text depth="3" style="font-size: 12px; margin-top: 8px;">
+                {{ $t('workspaceMain.fileTree.batchExport.currentTasks') }}:
+              </n-text>
+              <div class="active-tasks">
+                <n-tag 
+                  v-for="task in activeExportTasks" 
+                  :key="task.cardPath" 
+                  size="small" 
+                  type="info"
+                  style="margin: 2px;"
+                >
+                  {{ task.cardName }}
+                </n-tag>
+              </div>
+            </div>
+          </div>
+
+          <!-- 导出日志 -->
+          <div v-if="batchExportLogs.length > 0" class="export-logs">
+            <n-text depth="3" style="font-size: 12px;">{{ $t('workspaceMain.fileTree.batchExport.logs') }}:</n-text>
+            <n-scrollbar style="max-height: 200px; margin-top: 8px;">
+              <div class="log-content">
+                <div v-for="(log, index) in batchExportLogs" :key="index" class="log-item" :class="log.type">
+                  <n-text :type="log.type === 'error' ? 'error' : log.type === 'warning' ? 'warning' : 'success'">
+                    {{ log.message }}
+                  </n-text>
+                </div>
+              </div>
+            </n-scrollbar>
+          </div>
+        </n-space>
+
+        <template #footer>
+          <n-space justify="end">
+            <n-button v-if="!batchExporting && !batchExportCompleted" @click="showBatchExportDialog = false">
+              {{ $t('workspaceMain.fileTree.batchExport.cancel') }}
+            </n-button>
+            <n-button v-if="batchExporting" @click="stopBatchExport" type="error">
+              {{ $t('workspaceMain.fileTree.batchExport.stop') }}
+            </n-button>
+            <n-button v-if="!batchExporting && !batchExportCompleted" type="primary" @click="startBatchExport"
+              :disabled="batchExportCards.length === 0">
+              {{ $t('workspaceMain.fileTree.batchExport.start') }}
+            </n-button>
+            <n-button v-if="batchExportCompleted" type="primary" @click="closeBatchExportDialog">
+              {{ $t('workspaceMain.fileTree.batchExport.close') }}
+            </n-button>
+          </n-space>
+        </template>
+      </n-card>
+    </n-modal>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, h, onMounted, computed } from 'vue';
-import { NIcon, useMessage, NText } from 'naive-ui';
+import { ref, h, onMounted, computed, nextTick } from 'vue';
+import { NIcon, useMessage, NText, NTag } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import type { TreeOption, FormInst, FormRules } from 'naive-ui';
 import {
@@ -209,7 +254,8 @@ import {
 } from '@vicons/ionicons5';
 
 // 导入API服务
-import { WorkspaceService, ApiError } from '@/api';
+import { WorkspaceService, ApiError, CardService } from '@/api';
+import type { CardData } from '@/api/types';
 
 interface Props {
   width: number;
@@ -221,16 +267,37 @@ const emit = defineEmits<{
   'toggle': [];
   'go-back': [];
   'file-select': [keys: Array<string | number>, option?: TreeOption];
+  'refresh-file-tree': [];
 }>();
 
 const { t } = useI18n();
 const message = useMessage();
+
+// 获取CPU核心数
+const cpuCores = ref(navigator.hardwareConcurrency || 4);
+const activeThreads = ref(Math.min(cpuCores.value, 4)); // 限制最大并发数为4
 
 // 状态管理
 const loading = ref(false);
 const creating = ref(false);
 const renaming = ref(false);
 const deleting = ref(false);
+
+// 批量导出相关状态
+const showBatchExportDialog = ref(false);
+const batchExporting = ref(false);
+const batchExportCompleted = ref(false);
+const batchExportTarget = ref<TreeOption | null>(null);
+const batchExportCards = ref<string[]>([]);
+const batchExportedCount = ref(0);
+const batchExportProgress = ref(0);
+const batchExportLogs = ref<{ type: 'success' | 'error' | 'warning', message: string }[]>([]);
+const batchExportAborted = ref(false);
+
+// 多线程并发相关状态
+const activeExportTasks = ref<{cardPath: string, cardName: string}[]>([]);
+const exportQueue = ref<string[]>([]);
+const completedTasks = ref(0);
 
 // 文件树数据
 const fileTreeData = ref<TreeOption[]>([]);
@@ -250,9 +317,9 @@ const showDeleteDialog = ref(false);
 // 表单数据
 const createFolderForm = ref({ name: '' });
 const createCardForm = ref({ name: '' });
-const renameForm = ref({ 
-  filename: '', 
-  extension: '' 
+const renameForm = ref({
+  filename: '',
+  extension: ''
 });
 
 // 表单引用
@@ -262,14 +329,14 @@ const renameFormRef = ref<FormInst | null>(null);
 
 // 是否显示扩展名字段（文件夹不显示）
 const showExtensionField = computed(() => {
-  return contextMenuTarget.value?.type !== 'directory' && 
-         contextMenuTarget.value?.type !== 'workspace';
+  return contextMenuTarget.value?.type !== 'directory' &&
+    contextMenuTarget.value?.type !== 'workspace';
 });
 
 // 重命名预览
 const renamePreview = computed(() => {
   if (!renameForm.value.filename) return '';
-  
+
   if (showExtensionField.value && renameForm.value.extension) {
     return `${renameForm.value.filename}.${renameForm.value.extension}`;
   } else {
@@ -282,10 +349,10 @@ const createFolderRules = computed((): FormRules => ({
   name: [
     { required: true, message: t('workspaceMain.fileTree.validation.folderNameRequired'), trigger: ['input', 'blur'] },
     { min: 1, max: 50, message: t('workspaceMain.fileTree.validation.folderNameLength'), trigger: ['input', 'blur'] },
-    { 
-      pattern: /^[^\\/:*?"<>|]+$/, 
-      message: t('workspaceMain.fileTree.validation.folderNameInvalid'), 
-      trigger: ['input', 'blur'] 
+    {
+      pattern: /^[^\\/:*?"<>|]+$/,
+      message: t('workspaceMain.fileTree.validation.folderNameInvalid'),
+      trigger: ['input', 'blur']
     }
   ]
 }));
@@ -294,10 +361,10 @@ const createCardRules = computed((): FormRules => ({
   name: [
     { required: true, message: t('workspaceMain.fileTree.validation.cardNameRequired'), trigger: ['input', 'blur'] },
     { min: 1, max: 50, message: t('workspaceMain.fileTree.validation.cardNameLength'), trigger: ['input', 'blur'] },
-    { 
-      pattern: /^[^\\/:*?"<>|]+$/, 
-      message: t('workspaceMain.fileTree.validation.cardNameInvalid'), 
-      trigger: ['input', 'blur'] 
+    {
+      pattern: /^[^\\/:*?"<>|]+$/,
+      message: t('workspaceMain.fileTree.validation.cardNameInvalid'),
+      trigger: ['input', 'blur']
     }
   ]
 }));
@@ -306,17 +373,17 @@ const renameRules = computed((): FormRules => ({
   filename: [
     { required: true, message: t('workspaceMain.fileTree.validation.filenameRequired'), trigger: ['input', 'blur'] },
     { min: 1, max: 50, message: t('workspaceMain.fileTree.validation.filenameLength'), trigger: ['input', 'blur'] },
-    { 
-      pattern: /^[^\\/:*?"<>|.]+$/, 
-      message: t('workspaceMain.fileTree.validation.filenameInvalid'), 
-      trigger: ['input', 'blur'] 
+    {
+      pattern: /^[^\\/:*?"<>|.]+$/,
+      message: t('workspaceMain.fileTree.validation.filenameInvalid'),
+      trigger: ['input', 'blur']
     }
   ],
   extension: [
-    { 
-      pattern: /^[^\\/:*?"<>|.]*$/, 
-      message: t('workspaceMain.fileTree.validation.extensionInvalid'), 
-      trigger: ['input', 'blur'] 
+    {
+      pattern: /^[^\\/:*?"<>|.]*$/,
+      message: t('workspaceMain.fileTree.validation.extensionInvalid'),
+      trigger: ['input', 'blur']
     }
   ]
 }));
@@ -368,6 +435,13 @@ const contextMenuOptions = computed(() => {
         icon: () => h(NIcon, { component: DocumentOutline })
       }
     );
+
+    // 为目录添加批量导出选项
+    options.push({
+      label: t('workspaceMain.fileTree.contextMenu.batchExport'),
+      key: 'batch-export',
+      icon: () => h(NIcon, { component: ImageOutline })
+    });
   }
 
   // 非工作空间节点可以重命名和删除
@@ -402,7 +476,7 @@ const parseFileName = (fileName: string) => {
       extension: ''
     };
   }
-  
+
   return {
     filename: fileName.substring(0, lastDotIndex),
     extension: fileName.substring(lastDotIndex + 1)
@@ -412,16 +486,16 @@ const parseFileName = (fileName: string) => {
 // 根据文件扩展名获取文件类型
 const getFileType = (fileName: string): string => {
   if (!fileName.includes('.')) return 'file';
-  
+
   const extension = fileName.split('.').pop()?.toLowerCase() || '';
-  
+
   if (extension === 'card') return 'card';
   if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(extension)) return 'image';
   if (['json', 'yml', 'yaml', 'toml'].includes(extension)) return 'config';
   if (['csv', 'tsv', 'dat'].includes(extension)) return 'data';
   if (['css', 'scss', 'sass', 'less'].includes(extension)) return 'style';
   if (['txt', 'md', 'markdown'].includes(extension)) return 'text';
-  
+
   return 'file';
 };
 
@@ -636,6 +710,9 @@ const handleContextMenuSelect = (key: string) => {
       createCardForm.value.name = '';
       showCreateCardDialog.value = true;
       break;
+    case 'batch-export':
+      startBatchExportProcess();
+      break;
     case 'rename':
       const currentName = contextMenuTarget.value?.label as string || '';
       const parsed = parseFileName(currentName);
@@ -656,15 +733,15 @@ const handleCreateFolder = async () => {
   try {
     await createFolderFormRef.value.validate();
     creating.value = true;
-  
+
     const parentPath = contextMenuTarget.value?.path;
     await WorkspaceService.createDirectory(createFolderForm.value.name, parentPath);
-    
+
     // 构建新节点路径
-    const newPath = parentPath 
+    const newPath = parentPath
       ? `${parentPath}/${createFolderForm.value.name}`
       : createFolderForm.value.name;
-    
+
     // 直接在文件树中添加新节点
     const newNode: TreeOption = {
       label: createFolderForm.value.name,
@@ -673,9 +750,9 @@ const handleCreateFolder = async () => {
       path: newPath,
       children: []
     };
-    
+
     addNodeToTree(fileTreeData.value, parentPath, newNode);
-  
+
     message.success(t('workspaceMain.fileTree.messages.createFolderSuccess'));
     showCreateFolderDialog.value = false;
     createFolderForm.value.name = '';
@@ -700,23 +777,23 @@ const handleCreateCard = async () => {
   try {
     await createCardFormRef.value.validate();
     creating.value = true;
-  
-    const fileName = createCardForm.value.name.endsWith('.card') 
-      ? createCardForm.value.name 
+
+    const fileName = createCardForm.value.name.endsWith('.card')
+      ? createCardForm.value.name
       : `${createCardForm.value.name}.card`;
-  
+
     const parentPath = contextMenuTarget.value?.path;
-  
+
     // 创建空的JSON对象
     const defaultContent = '{}';
-  
+
     await WorkspaceService.createFile(fileName, defaultContent, parentPath);
-    
+
     // 构建新节点路径
-    const newPath = parentPath 
+    const newPath = parentPath
       ? `${parentPath}/${fileName}`
       : fileName;
-    
+
     // 直接在文件树中添加新节点
     const newNode: TreeOption = {
       label: fileName,
@@ -724,9 +801,9 @@ const handleCreateCard = async () => {
       type: 'card',
       path: newPath
     };
-    
+
     addNodeToTree(fileTreeData.value, parentPath, newNode);
-  
+
     message.success(t('workspaceMain.fileTree.messages.createCardSuccess'));
     showCreateCardDialog.value = false;
     createCardForm.value.name = '';
@@ -751,29 +828,29 @@ const handleRename = async () => {
   try {
     await renameFormRef.value.validate();
     renaming.value = true;
-  
+
     // 构建新文件名
     const newName = showExtensionField.value && renameForm.value.extension
       ? `${renameForm.value.filename}.${renameForm.value.extension}`
       : renameForm.value.filename;
-  
+
     const oldPath = contextMenuTarget.value.path;
     await WorkspaceService.renameItem(oldPath, newName);
-    
+
     // 构建新路径
     const pathParts = oldPath.split('/');
     pathParts[pathParts.length - 1] = newName;
     const newPath = pathParts.join('/');
-    
+
     // 直接在文件树中更新节点
     updateNodeInTree(fileTreeData.value, oldPath, newName, newPath);
-    
+
     // 如果是文件，更新类型
     const targetNode = findNodeByPath(fileTreeData.value, newPath);
     if (targetNode && targetNode.type !== 'directory' && targetNode.type !== 'workspace') {
       targetNode.type = getFileType(newName);
     }
-  
+
     message.success(t('workspaceMain.fileTree.messages.renameSuccess'));
     showRenameDialog.value = false;
     renameForm.value.filename = '';
@@ -799,12 +876,12 @@ const handleDelete = async () => {
   try {
     deleting.value = true;
     const pathToDelete = contextMenuTarget.value.path;
-    
+
     await WorkspaceService.deleteItem(pathToDelete);
-    
+
     // 直接从文件树中删除节点
     removeNodeFromTree(fileTreeData.value, pathToDelete);
-  
+
     message.success(t('workspaceMain.fileTree.messages.deleteSuccess'));
     showDeleteDialog.value = false;
   } catch (error) {
@@ -819,9 +896,256 @@ const handleDelete = async () => {
   }
 };
 
+// 递归查找目录下的所有卡牌文件
+const findAllCardFiles = async (directoryPath: string): Promise<string[]> => {
+  try {
+    // 通过API获取目录的完整文件树
+    const fileTree = await WorkspaceService.getFileTree(false);
+
+    const findCardsInNode = (node: any, targetPath: string): string[] => {
+      const cards: string[] = [];
+
+      if (node.path === targetPath && node.children) {
+        // 找到目标目录，遍历其所有子项
+        const traverseChildren = (children: any[]): string[] => {
+          const result: string[] = [];
+          for (const child of children) {
+            if (child.type === 'card') {
+              result.push(child.path);
+            } else if (child.children) {
+              result.push(...traverseChildren(child.children));
+            }
+          }
+          return result;
+        };
+        return traverseChildren(node.children);
+      }
+
+      // 递归搜索子节点
+      if (node.children) {
+        for (const child of node.children) {
+          cards.push(...findCardsInNode(child, targetPath));
+        }
+      }
+
+      return cards;
+    };
+
+    return findCardsInNode(fileTree.fileTree, directoryPath);
+  } catch (error) {
+    console.error('获取目录下卡牌文件失败:', error);
+    return [];
+  }
+};
+
+// 开始批量导出流程
+const startBatchExportProcess = async () => {
+  if (!contextMenuTarget.value) return;
+
+  try {
+    batchExportTarget.value = contextMenuTarget.value;
+    batchExportLogs.value = [];
+    batchExportedCount.value = 0;
+    batchExportProgress.value = 0;
+    batchExportCompleted.value = false;
+    batchExportAborted.value = false;
+    activeExportTasks.value = [];
+    exportQueue.value = [];
+    completedTasks.value = 0;
+
+    message.info(t('workspaceMain.fileTree.batchExport.scanning'));
+
+    // 获取目录下所有卡牌文件
+    batchExportCards.value = await findAllCardFiles(contextMenuTarget.value.path as string);
+
+    if (batchExportCards.value.length === 0) {
+      message.warning(t('workspaceMain.fileTree.batchExport.noCardsFound'));
+      return;
+    }
+
+    // 根据卡牌数量调整并发数量
+    activeThreads.value = Math.min(
+      Math.max(1, Math.min(cpuCores.value, 4)), 
+      batchExportCards.value.length
+    );
+
+    showBatchExportDialog.value = true;
+
+    addBatchExportLog('info', `${t('workspaceMain.fileTree.batchExport.foundCardsLog')}: ${batchExportCards.value.length}`);
+    addBatchExportLog('info', `${t('workspaceMain.fileTree.batchExport.usingThreads')}: ${activeThreads.value}`);
+  } catch (error) {
+    console.error('扫描目录失败:', error);
+    message.error(`${t('workspaceMain.fileTree.batchExport.scanFailed')}: ${error.message}`);
+  }
+};
+
+// 单个卡牌导出任务
+const exportCardTask = async (cardPath: string): Promise<{success: boolean, cardName: string, error?: string}> => {
+  const cardName = cardPath.split('/').pop()?.replace('.card', '') || `card_${Date.now()}`;
+
+  try {
+    // 添加到活动任务列表
+    activeExportTasks.value.push({cardPath, cardName});
+  
+    // 读取卡牌文件内容
+    const content = await WorkspaceService.getFileContent(cardPath);
+    const cardData = JSON.parse(content || '{}') as CardData;
+
+    // 验证卡牌数据
+    const validation = CardService.validateCardData(cardData);
+    if (!validation.isValid) {
+      throw new Error(`验证失败: ${validation.errors.join(', ')}`);
+    }
+
+    // 导出图片到同目录
+    const parentPath = cardPath.substring(0, cardPath.lastIndexOf('/'));
+    const filename = `${cardName}.png`;
+
+    await CardService.saveCard(cardData, filename, parentPath);
+
+    return { success: true, cardName };
+  } catch (error) {
+    return { success: false, cardName, error: error.message };
+  } finally {
+    // 从活动任务列表中移除
+    const index = activeExportTasks.value.findIndex(task => task.cardPath === cardPath);
+    if (index > -1) {
+      activeExportTasks.value.splice(index, 1);
+    }
+  }
+};
+
+// 多线程批量导出
+const startBatchExport = async () => {
+  if (batchExportCards.value.length === 0) return;
+
+  batchExporting.value = true;
+  batchExportedCount.value = 0;
+  batchExportProgress.value = 0;
+  batchExportCompleted.value = false;
+  batchExportAborted.value = false;
+  activeExportTasks.value = [];
+  completedTasks.value = 0;
+
+  // 初始化导出队列
+  exportQueue.value = [...batchExportCards.value];
+
+  addBatchExportLog('info', t('workspaceMain.fileTree.batchExport.startLog'));
+  addBatchExportLog('info', `使用 ${activeThreads.value} 个线程并发处理`);
+
+  let successCount = 0;
+  let errorCount = 0;
+
+  // 创建工作线程函数
+  const worker = async (): Promise<void> => {
+    while (exportQueue.value.length > 0 && !batchExportAborted.value) {
+      const cardPath = exportQueue.value.shift();
+      if (!cardPath) break;
+
+      const result = await exportCardTask(cardPath);
+    
+      if (result.success) {
+        successCount++;
+        addBatchExportLog('success', `✓ ${result.cardName}: ${t('workspaceMain.fileTree.batchExport.exportSuccess')}`);
+      } else {
+        errorCount++;
+        addBatchExportLog('error', `✗ ${result.cardName}: ${t('workspaceMain.fileTree.batchExport.exportFailed')} - ${result.error}`);
+      }
+
+      // 更新进度
+      completedTasks.value++;
+      batchExportedCount.value = completedTasks.value;
+      batchExportProgress.value = Math.round((completedTasks.value / batchExportCards.value.length) * 100);
+
+      // 强制更新DOM
+      await nextTick();
+    
+      console.log(`进度更新: ${completedTasks.value}/${batchExportCards.value.length} (${batchExportProgress.value}%)`);
+    }
+  };
+
+  try {
+    // 启动多个并发工作线程
+    const workers: Promise<void>[] = [];
+    for (let i = 0; i < activeThreads.value; i++) {
+      workers.push(worker());
+    }
+
+    // 等待所有工作线程完成
+    await Promise.all(workers);
+
+    batchExporting.value = false;
+    batchExportCompleted.value = true;
+    activeExportTasks.value = [];
+
+    // 确保进度条显示100%
+    batchExportProgress.value = 100;
+    await nextTick();
+
+    if (!batchExportAborted.value) {
+      addBatchExportLog('success', `${t('workspaceMain.fileTree.batchExport.completedLog')}: ${successCount}/${batchExportCards.value.length}`);
+
+      if (errorCount > 0) {
+        addBatchExportLog('warning', `${t('workspaceMain.fileTree.batchExport.failedExports')}: ${errorCount}`);
+      }
+
+      // 批量导出完成后刷新文件树
+      console.log('批量导出完成，正在刷新文件树...');
+      emit('refresh-file-tree');
+
+      // 延迟显示成功消息，确保文件树刷新完成
+      setTimeout(() => {
+        if (successCount > 0) {
+          message.success(t('workspaceMain.fileTree.batchExport.allCompleted', { successCount, totalCount: batchExportCards.value.length }));
+        }
+        if (errorCount > 0) {
+          message.warning(t('workspaceMain.fileTree.batchExport.partialSuccess', { successCount, errorCount }));
+        }
+      }, 500);
+    }
+  } catch (error) {
+    console.error('批量导出过程中出现错误:', error);
+    addBatchExportLog('error', `批量导出过程中出现错误: ${error.message}`);
+    batchExporting.value = false;
+    activeExportTasks.value = [];
+  }
+};
+
+// 停止批量导出
+const stopBatchExport = () => {
+  batchExportAborted.value = true;
+  exportQueue.value = []; // 清空队列
+  addBatchExportLog('warning', t('workspaceMain.fileTree.batchExport.userStopped'));
+  message.info(t('workspaceMain.fileTree.batchExport.stopping'));
+};
+
+// 关闭批量导出对话框
+const closeBatchExportDialog = () => {
+  showBatchExportDialog.value = false;
+  batchExportTarget.value = null;
+  batchExportCards.value = [];
+  batchExportLogs.value = [];
+  batchExportedCount.value = 0;
+  batchExportProgress.value = 0;
+  batchExportCompleted.value = false;
+  batchExportAborted.value = false;
+  activeExportTasks.value = [];
+  exportQueue.value = [];
+  completedTasks.value = 0;
+};
+
+// 添加导出日志
+const addBatchExportLog = (type: 'success' | 'error' | 'warning' | 'info', message: string) => {
+  batchExportLogs.value.push({
+    type: type === 'info' ? 'success' : type,
+    message: `[${new Date().toLocaleTimeString()}] ${message}`
+  });
+};
+
 // 组件挂载时加载数据
 onMounted(() => {
   loadFileTree();
+  console.log(`检测到 CPU 核心数: ${cpuCores.value}`);
 });
 
 // 导出方法供父组件调用
@@ -831,6 +1155,108 @@ defineExpose({
 </script>
 
 <style scoped>
+/* 批量导出相关样式 */
+/* 进度相关样式 */
+.batch-export-status {
+  text-align: center;
+  padding: 16px;
+  background: rgba(102, 126, 234, 0.05);
+  border-radius: 8px;
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* 并发任务状态显示 */
+.concurrent-status {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(102, 126, 234, 0.08);
+  border-radius: 6px;
+  border-left: 4px solid #667eea;
+}
+
+.active-tasks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+  max-height: 80px;
+  overflow-y: auto;
+}
+
+.active-tasks::-webkit-scrollbar {
+  width: 4px;
+}
+
+.active-tasks::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 2px;
+}
+
+.active-tasks::-webkit-scrollbar-thumb {
+  background: #667eea;
+  border-radius: 2px;
+}
+
+.export-statistics {
+  margin-top: 12px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 6px;
+}
+
+/* 进度条动画 */
+:deep(.n-progress-graph-line-fill) {
+  transition: width 0.3s ease;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+}
+
+:deep(.n-progress-text) {
+  font-weight: 600;
+  color: #667eea;
+}
+
+.export-logs {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+  background: #f8f9fa;
+}
+
+.log-content {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+}
+
+.log-item {
+  margin-bottom: 4px;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+
+.log-item.error {
+  color: #d32f2f;
+}
+
+.log-item.warning {
+  color: #ed6c02;
+}
+
+.log-item.success {
+  color: #2e7d32;
+}
+
+/* 进度条样式优化 */
+:deep(.n-progress-text) {
+  font-weight: 600;
+}
+
+:deep(.n-progress-graph-line-fill) {
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+}
+
 .file-tree-pane {
   display: flex;
   flex-direction: column;
@@ -963,5 +1389,21 @@ defineExpose({
 :deep(.n-button--error:hover) {
   background: linear-gradient(90deg, #dc2626 0%, #b91c1c 100%);
   transform: translateY(-1px);
+}
+
+/* 并发任务标签动画 */
+:deep(.n-tag) {
+  animation: tagFadeIn 0.3s ease-in-out;
+}
+
+@keyframes tagFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 </style>
