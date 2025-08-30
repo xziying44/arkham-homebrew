@@ -503,7 +503,7 @@ if __name__ == '__main__':
     # 步骤三：检查地点图标是否有新增
     # task.read_metadata_and_extract_icons()
 
-    test_data = task.remake_card('02002')
+    test_data = task.remake_card('10104')
     print(json.dumps(test_data, ensure_ascii=False, indent=4))
 
     # 创建卡牌创建器

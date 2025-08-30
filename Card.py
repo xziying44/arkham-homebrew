@@ -526,7 +526,7 @@ class Card:
         if name not in ['意志', '战力', '敏捷', '智力', '狂野']:
             return
         img = self.image_manager.get_image(f'投入-{self.card_class}-{name}')
-        self.paste_image(img, (0, 167 + self.submit_index * 85), 'contain')
+        self.paste_image(img, (0, 167 + self.submit_index * 80), 'contain')
         self.submit_index += 1
 
     def set_card_level(self, level=None):
