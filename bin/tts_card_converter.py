@@ -307,7 +307,7 @@ class TTSCardConverter:
 
                     # 判断是否需要UniqueBack
                     card_type = card_data.get("type", "")
-                    unique_back = card_type in ["调查员", "Investigator"]
+                    unique_back = True
 
                     # 如果这个CustomDeck还没有被创建，创建它
                     if current_custom_deck_id not in custom_decks:

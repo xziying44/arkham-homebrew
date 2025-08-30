@@ -238,6 +238,9 @@ class CardCreator:
         card_json['flavor'] = card_json.get('flavor', '')
         card_json['subtitle'] = card_json.get('subtitle', '')
 
+        if card_json.get('class', '') == '守卫者':
+            card_json['class'] = '守护者'
+
         card_json = self._sort_submit_icons(card_json)
 
         if 'subclass' in card_json:
@@ -1423,6 +1426,9 @@ class CardCreator:
         # 预处理
         card_json = self._preprocessing_json(card_json)
 
+        if picture_path is None:
+            picture_path = card_json.get('picture_path', None)
+
         if 'msg' in card_json and card_json['msg'] != '':
             raise ValueError(card_json['msg'])
         if 'type' not in card_json:
@@ -1475,18 +1481,26 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "故事卡",
-        "name": "矿工",
-        "id": 330,
-        "created_at": "",
-        "version": "1.0",
-        "language": "zh",
-        "victory": 1,
-        "body": "\n<relish>当通讯器连接到脑缸时，你只听到尖叫声。“啊啊啊！我在坠落！我在坠落！”也许脱离肉体对脆弱的人类心智来说太过难以承受。</relish>\n<hr>\n【如果太空漂流在胜利区：】\n<relish>你温柔地让他们相信他们不再漂浮在太空中——他们终于安息了。不知何故，那个声音感到宽慰并叹了口气。当你询问绑架他们的邪教徒时，他们告诉你所有记得的事情。</relish>\n将该卡牌加入胜利区。\n<hr>\n【否则：】\n<relish>你试图安抚他们并询问关于邪教徒的事，但他们从未停止尖叫。</relish>\n受到1点恐惧并将该卡牌洗回扫描牌库。",
-        "subtitle": "",
-        "traits": [],
-        "picture_path": "D:\\BaiduSyncdisk\\PycharmProjects\\arkham_translate\\translation_space\\暗物质\\factory\\000330-raw.jpg",
-        "class": "中立"
+        "type": "调查员",
+        "name": "🏅 罗兰·班克斯",
+        "subtitle": "联邦调查员",
+        "class": "守护者",
+        "attribute": [
+            3,
+            3,
+            4,
+            2
+        ],
+        "health": 9,
+        "horror": 5,
+        "traits": [
+            "特工",
+            "侦探"
+        ],
+        "body": "⭕在你击败一名敌人后：发现所在地点的一个线索。(每轮限制1次)<lr>⭐效果：你所在地点每个线索，+1。",
+        "flavor": "所有的书在我眼中跟儿歌无异。它们过去可能有用，但现在，需要一种全新的解释了。",
+        "picture_url": "https://zh.arkhamdb.com/bundles/cards/01001.png",
+        "picture_path": "D:\\arkham-json-diy\\remaek_card\\官方卡重置\\所有玩家卡\\factory\\01001-a.jpg"
     }
 
     # 创建字体和图片管理器
@@ -1510,5 +1524,5 @@ if __name__ == '__main__':
     # card.image.show()
 
     fm.set_lang('zh')
-    card = creator.create_card(json_data, picture_path=None)
+    card = creator.create_card(json_data, picture_path=json_data.get('picture_path', None))
     card.image.show()
