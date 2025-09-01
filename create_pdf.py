@@ -5,6 +5,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+# 假设 ResourceManager.py 和 FontManager 类存在且工作正常
 from ResourceManager import FontManager
 
 
@@ -12,7 +13,7 @@ class PDFVectorDrawer:
     """
     一个PDF矢量绘图器。
     它可以加载背景图片，并根据JSON数据在其上绘制矢量文字。
-    JSON中的每个文本对象都可以有自己独立的字体和字号。
+    JSON中的每个文本对象都可以有自己独立的字体、字号、颜色和边框。
     """
 
     def __init__(self, output_filename, font_manager: 'FontManager'):
@@ -38,35 +39,31 @@ class PDFVectorDrawer:
             try:
                 pdfmetrics.registerFont(TTFont(font_name, font_path))
                 self._registered_fonts.add(font_name)
-                # print(f"字体 '{font_name}' 从 '{font_path}' 注册成功。") # 可以取消注释来调试
             except Exception as e:
                 print(f"警告: 无法注册字体 '{font_name}' 从路径 '{font_path}'. 错误: {e}")
                 print("将使用默认字体代替。")
                 return False
         return True
 
-    def add_page(self, image_path, text_data, font_dir='fonts'):
+    def add_page(self, image_path, text_data):
         """
         向PDF添加一个新页面。
 
         Args:
             image_path (str): 背景图片的路径。
             text_data (list): 包含文本信息的JSON对象列表。
-            font_dir (str): 存放字体文件的目录。
         """
         if not os.path.exists(image_path):
             print(f"错误: 背景图片 '{image_path}' 不存在。")
             return
 
-        # 预注册此页面需要的所有字体
         unique_fonts = {item.get('font') for item in text_data if item.get('font')}
         for font_name in unique_fonts:
             font_path = self.font_manager.get_font_path(font_name)
-            font_name = font_name.replace("-", "_")
-            print(f"正在注册字体 '{font_name}' 从 '{font_path}'...")
-            self._register_font(font_name, font_path)
+            if font_path:
+                print(f"正在注册字体 '{font_name}' 从 '{font_path}'...")
+                self._register_font(font_name, font_path)
 
-        # 存储页面数据以供后续生成
         self.pages_data.append({
             'image_path': image_path,
             'text_data': text_data,
@@ -83,7 +80,6 @@ class PDFVectorDrawer:
 
         print("开始生成PDF...")
 
-        # 获取第一页的尺寸来初始化Canvas
         try:
             with Image.open(self.pages_data[0]['image_path']) as img:
                 width, height = img.size
@@ -95,7 +91,6 @@ class PDFVectorDrawer:
         for i, page in enumerate(self.pages_data):
             print(f"正在绘制第 {i + 1}/{len(self.pages_data)} 页...")
 
-            # 1. 设置当前页面的尺寸
             try:
                 with Image.open(page['image_path']) as img:
                     width, height = img.size
@@ -104,41 +99,62 @@ class PDFVectorDrawer:
                 print(f"警告: 无法加载页面 {i + 1} 的图片 '{page['image_path']}'。跳过此页面。错误: {e}")
                 continue
 
-            # 2. 绘制背景图片
             c.drawImage(page['image_path'], 0, 0, width=width, height=height)
 
-            # 3. 绘制所有矢量文字
             for item in page['text_data']:
                 text = item.get('text', '')
                 x = item.get('x', 0)
                 y = item.get('y', 0)
                 font = item.get('font', 'Helvetica')
-                font = font.replace("-", "_")
+                font_size = item.get('font_size', 12)
                 color_hex = item.get('color', '#000000')
-                # --- 主要修改点 ---
-                # 从每个JSON对象中获取独立的font_size
-                font_size = item.get('font_size', 12)  # 提供一个默认值以防万一
 
-                # 设置字体和该字符的特定大小
-                if font in self._registered_fonts:
-                    c.setFont(font, font_size)  # <<< 使用 item 的 font_size
+                # --- 修正部分开始 ---
+
+                border_width = item.get('border_width', 0)
+                border_color_hex = item.get('border_color', '#000000')
+
+                pdf_y = height - y - font_size * 0.9
+
+                if border_width > 0:
+                    # 使用 saveState 和 restoreState 来隔离对画布状态的修改
+                    c.saveState()
+
+                    # 1. 在画布(c)上设置线宽
+                    c.setLineWidth(border_width)
+
+                    # 2. 创建和设置文本对象
+                    text_obj = c.beginText()
+                    text_obj.setTextOrigin(x, pdf_y)
+
+                    if font in self._registered_fonts:
+                        text_obj.setFont(font, font_size)
+                    else:
+                        text_obj.setFont('Helvetica', font_size)
+
+                    text_obj.setFillColor(colors.HexColor(color_hex))
+                    text_obj.setStrokeColor(colors.HexColor(border_color_hex))
+                    text_obj.setTextRenderMode(2)  # 2 = 填充并描边
+
+                    text_obj.textLine(text)
+                    c.drawText(text_obj)
+
+                    # 3. 恢复画布状态，以免影响其他元素的绘制
+                    c.restoreState()
                 else:
-                    c.setFont('Helvetica', font_size)
+                    # 如果不需要边框，继续使用简单高效的 drawString 方法
+                    if font in self._registered_fonts:
+                        c.setFont(font, font_size)
+                    else:
+                        c.setFont('Helvetica', font_size)
 
-                # 设置颜色
-                c.setFillColor(colors.HexColor(color_hex))
+                    c.setFillColor(colors.HexColor(color_hex))
+                    c.drawString(x, pdf_y, text)
 
-                # 绘制文字
-                # reportlab的坐标系原点(0,0)在左下角。
-                # 假设JSON中的(x, y)是文字左上角的坐标。
-                # 转换Y坐标: pdf_y = page_height - json_y - font_size
-                pdf_y = height - y - font_size  # <<< 使用 item 的 font_size 进行定位
-                c.drawString(x, pdf_y, text)
+                # --- 修正部分结束 ---
 
-            # 完成当前页
             c.showPage()
 
-        # 4. 保存文件
         c.save()
         print(f"PDF文件已成功保存到: {self.output_filename}")
 
@@ -148,9 +164,9 @@ if __name__ == '__main__':
 
     # 1. 定义输入和输出文件
     JSON_FILE = 'text_information.json'
-    # 请确保你有一个名为 background.png 的图片文件在同一个目录下
     BACKGROUND_IMAGE = 'background.png'
-    OUTPUT_PDF = 'output_document_v2.pdf'
+    OUTPUT_PDF = 'output_with_borders.pdf'
+    # 假设 FontManager 可以找到你的字体
     font_manager = FontManager()
 
     # 2. 从JSON文件加载文本数据
@@ -168,11 +184,7 @@ if __name__ == '__main__':
     drawer = PDFVectorDrawer(OUTPUT_PDF, font_manager)
 
     # 4. 添加页面
-    # 添加一个页面，它会使用JSON中为每个字符指定的字号
     drawer.add_page(BACKGROUND_IMAGE, text_info)
-
-    # 你可以继续添加更多页面
-    # drawer.add_page('background_page2.png', other_text_info)
 
     # 5. 保存PDF
     drawer.save()

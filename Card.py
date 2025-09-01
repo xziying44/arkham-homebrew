@@ -615,6 +615,8 @@ class Card:
         :param horror:  恐怖值
         :return:
         """
+        if health == -999 and horror == -999:
+            return
         if self.card_type == '调查员卡':
             if 0 < health < 100:
                 self.draw_centered_text(

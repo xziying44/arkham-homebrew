@@ -1417,6 +1417,18 @@ class CardCreator:
 
         return card
 
+    def create_card_bottom_map(self, card_json: dict, picture_path: Union[str, Image.Image, None] = None) -> Card:
+        """制作底图"""
+        card_json['name'] = ''
+        card_json['subtitle'] = ''
+        card_json['body'] = ''
+        card_json['flavor'] = ''
+        card_json['health'] = -999
+        card_json['horror'] = -999
+        card_json['attribute'] = []
+        card_json['traits'] = []
+        return self.create_card(card_json, picture_path)
+
     def create_card(self, card_json: dict, picture_path: Union[str, Image.Image, None] = None) -> Card:
         """
         入口函数 - 根据卡牌类型创建对应的卡牌
@@ -1531,7 +1543,7 @@ if __name__ == '__main__':
     fm.set_lang('zh')
     card = creator.create_card(json_data, picture_path=json_data.get('picture_path', None))
     card.image.show()
-    card.image.save('background.png')
+    # card.image.save('background.png')
 
     # 输出坐标列表 card.last_render_list
     from rich_text_render.VirtualTextBox import TextObject
@@ -1545,9 +1557,17 @@ if __name__ == '__main__':
                 "y": item.y,
                 "font": item.obj.font_name,
                 "font_size": item.obj.font_size,
-                "color": '#1E1F22'
+                "height": item.obj.height,
+                "width": item.obj.width,
+                "color": item.obj.color,
+                "border_width": item.obj.border_width,
+                "border_color": item.obj.border_color,
             })
     # 保存到文件
-    # json_file_path = 'text_information.json'
-    # with open(json_file_path, 'w', encoding='utf-8') as json_file:
-    #     json.dump(text_information, json_file, ensure_ascii=False, indent=4)
+    json_file_path = 'text_information.json'
+    with open(json_file_path, 'w', encoding='utf-8') as json_file:
+        json.dump(text_information, json_file, ensure_ascii=False, indent=4)
+
+    card = creator.create_card_bottom_map(json_data, picture_path=json_data.get('picture_path', None))
+    card.image.show()
+    card.image.save('background.png')

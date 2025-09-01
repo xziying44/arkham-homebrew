@@ -497,12 +497,14 @@ class RichTextRenderer:
                     for char in item.content:
                         text_box = self._get_text_box(char, font)
                         success = virtual_text_box.push(
-                            TextObject(char, font, font_name, font.size, text_box[1], text_box[0])
+                            TextObject(char, font, font_name, font.size, text_box[1], text_box[0],
+                                       base_options.font_color)
                         )
                 else:
                     text_box = self._get_text_box(item.content, font)
                     success = virtual_text_box.push(
-                        TextObject(item.content, font, font_name, font.size, text_box[1], text_box[0])
+                        TextObject(item.content, font, font_name, font.size, text_box[1], text_box[0],
+                                   base_options.font_color)
                     )
             elif item.tag == "br":
                 if html_tag_stack.get_top() == 'body':
@@ -753,6 +755,11 @@ class RichTextRenderer:
         # 第二遍：实际绘制文本，同时创建RenderItem列表
         current_x = start_x
         render_items = []  # 用于存储RenderItem对象
+        border_width = 0
+        border_color = None
+        if options.has_border:
+            border_width = options.border_width
+            border_color = options.border_color
 
         for segment in render_segments:
             # 创建TextObject
@@ -762,7 +769,10 @@ class RichTextRenderer:
                 font_name=segment['font_name'],
                 font_size=segment['font'].size,
                 height=segment['height'],
-                width=segment['width']
+                width=segment['width'],
+                color=segment['color'],
+                border_width=border_width,
+                border_color=border_color
             )
 
             # 创建RenderItem并添加到列表

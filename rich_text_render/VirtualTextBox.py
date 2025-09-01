@@ -14,6 +14,25 @@ class TextObject:
     font_size: float
     height: int
     width: int
+    color: Union[str, Tuple[int, int, int], Tuple[int, int, int, int]]
+    border_width: int = 0
+    border_color: Union[str, Tuple[int, int, int], Tuple[int, int, int, int]] = "#000000"
+
+    def __post_init__(self):
+        self.color = self._convert_color(self.color)
+        self.border_color = self._convert_color(self.border_color)
+
+    @staticmethod
+    def _convert_color(color) -> str:
+        """将颜色转换为十六进制字符串格式"""
+        if isinstance(color, (tuple, list)):
+            if len(color) == 3:  # RGB
+                r, g, b = color
+                return f"#{r:02x}{g:02x}{b:02x}"
+            elif len(color) == 4:  # RGBA
+                r, g, b, a = color
+                return f"#{r:02x}{g:02x}{b:02x}{a:02x}"
+        return color  # 如果已经是字符串格式，直接返回
 
 
 @dataclass
