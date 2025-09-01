@@ -8,7 +8,7 @@ import tempfile  # 添加这个导入
 import time
 import traceback
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 
 from PIL import Image
 
@@ -48,11 +48,14 @@ class WorkspaceManager:
                 if not os.path.exists(images_path):
                     images_path = 'images'  # 使用相对路径
 
+                app_mode = os.environ.get('APP_MODE', 'normal')
+
                 self.font_manager = FontManager(fonts_path)
                 self.image_manager = ImageManager(images_path)
                 self.creator = CardCreator(
                     font_manager=self.font_manager,
                     image_manager=self.image_manager,
+                    image_mode=0 if app_mode == 'normal' else 1
                 )
 
             except Exception as e:
@@ -414,6 +417,46 @@ class WorkspaceManager:
             print(f"保存文件内容失败: {e}")
             return False
 
+    def get_card_base64(self, json_data: Dict[str, Any]) -> Union[str, Image.Image, None]:
+        """
+        获取卡牌的base64图片数据
+
+        Args:
+            json_data: 卡牌数据的JSON字典
+
+        Returns:
+            str: base64格式的图片数据（包含data URL前缀），失败时返回None
+        """
+        # 获取图片路径
+        picture_path = json_data.get('picture_path', None)
+
+        # 检查 picture_base64 字段
+        picture_base64 = json_data.get('picture_base64', '')
+
+        if picture_base64 and picture_base64.strip():
+            try:
+                # 解码base64数据
+                if picture_base64.startswith('data:image/'):
+                    # 去掉data URL前缀
+                    base64_data = picture_base64.split(',', 1)[1]
+                else:
+                    base64_data = picture_base64
+
+                image_data = base64.b64decode(base64_data)
+                # 2. 将二进制数据读入一个内存中的字节流对象
+                image_stream = io.BytesIO(image_data)
+                # 3. 使用 PIL 的 Image.open() 从字节流中打开图片
+                picture_path = Image.open(image_stream)
+            except Exception as e:
+                print(f"解码base64图片数据失败: {e}")
+                return None
+        # 如果picture_path是相对路径，转换为绝对路径
+        elif picture_path and not os.path.isabs(picture_path):
+            full_picture_path = self._get_absolute_path(picture_path)
+            if os.path.exists(full_picture_path):
+                picture_path = full_picture_path
+        return picture_path
+
     def generate_card_image(self, json_data: Dict[str, Any]):
         """
         生成卡图
@@ -433,35 +476,6 @@ class WorkspaceManager:
             return None
 
         try:
-            # 获取图片路径
-            picture_path = json_data.get('picture_path', None)
-
-            # 检查 picture_base64 字段
-            picture_base64 = json_data.get('picture_base64', '')
-
-            if picture_base64 and picture_base64.strip():
-                # 如果有base64数据，转换为临时图片文件
-                try:
-                    # 解码base64数据
-                    if picture_base64.startswith('data:image/'):
-                        # 去掉data URL前缀
-                        base64_data = picture_base64.split(',', 1)[1]
-                    else:
-                        base64_data = picture_base64
-
-                    image_data = base64.b64decode(base64_data)
-                    # 2. 将二进制数据读入一个内存中的字节流对象
-                    image_stream = io.BytesIO(image_data)
-                    # 3. 使用 PIL 的 Image.open() 从字节流中打开图片
-                    picture_path = Image.open(image_stream)
-                except Exception as e:
-                    print(f"解码base64图片数据失败: {e}")
-                    return None
-            # 如果picture_path是相对路径，转换为绝对路径
-            elif picture_path and not os.path.isabs(picture_path):
-                full_picture_path = self._get_absolute_path(picture_path)
-                if os.path.exists(full_picture_path):
-                    picture_path = full_picture_path
 
             # 检测卡牌语言
             language = json_data.get('language', 'zh')
@@ -471,7 +485,7 @@ class WorkspaceManager:
 
             card = self.creator.create_card(
                 json_data,
-                picture_path=picture_path
+                picture_path=self.get_card_base64(json_data)
             )
 
             # 检测是否有遭遇组

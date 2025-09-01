@@ -80,6 +80,32 @@ class ArkhamDBConverter:
         r'\[survivor\]': '🏕️',
     }
 
+    # span图标映射
+    SPAN_ICON_MAP = {
+        "icon-reaction": "⭕",
+        "icon-action": "➡️",
+        "icon-free": "⚡",
+        "icon-fast": "⚡",
+        "icon-willpower": "🧠",
+        "icon-intellect": "📚",
+        "icon-combat": "👊",
+        "icon-agility": "🦶",
+        "icon-wild": "❓",
+        "icon-skull": "💀",
+        "icon-cultist": "👤",
+        "icon-tablet": "📜",
+        "icon-elder_thing": "👹",
+        "icon-auto_fail": "🐙",
+        "icon-elder_sign": "⭐",
+        "icon-bless": "🌟",
+        "icon-curse": "🌑",
+        "icon-guardian": "🛡️",
+        "icon-seeker": "🔍",
+        "icon-rogue": "🚶",
+        "icon-mystic": "🧘",
+        "icon-survivor": "🏕️",
+    }
+
     def __init__(self, arkhamdb_json: Dict[str, Any]):
         """
         构造函数
@@ -88,6 +114,8 @@ class ArkhamDBConverter:
         if not arkhamdb_json or not isinstance(arkhamdb_json, dict):
             raise ValueError("输入的 arkhamdb_json 必须是一个非空字典")
         self.data = arkhamdb_json
+        # 将所有null字段删除
+        self.data = {k: v for k, v in self.data.items() if v is not None}
         self._format_global()
 
     def _format_global(self):
@@ -98,6 +126,7 @@ class ArkhamDBConverter:
 
         # 转换 [[Trait]] 为 {Trait}
         formatted_text = re.sub(r'\[\[(.*?)]]', r'{\1}', formatted_text)
+        formatted_text = formatted_text.replace('‧', '·')
 
         self.data = json.loads(formatted_text)
 
@@ -110,11 +139,30 @@ class ArkhamDBConverter:
         if not text:
             return ""
 
+        # 1. 处理span图标标签
+        def replace_span_icon(match):
+            class_attr = match.group(1)
+            # 提取class属性中的图标类名
+            class_match = re.search(r'class="([^"]*)"', class_attr)
+            if class_match:
+                classes = class_match.group(1).split()
+                for cls in classes:
+                    if cls in self.SPAN_ICON_MAP:
+                        return self.SPAN_ICON_MAP[cls]
+            return ""  # 如果找不到对应图标，返回空字符串
+
+        formatted_text = re.sub(r'<span([^>]*)></span>', replace_span_icon, text)
         # 1. 替换HTML粗体标签为【】
-        formatted_text = re.sub(r'<b>(.*?)</b>', r'【\1】', text)
+        formatted_text = re.sub(r'<b><i>(.*?)</i></b>', r'{\1}', formatted_text)
+        formatted_text = re.sub(r'<b>(.*?)</b>', r'【\1】', formatted_text)
+        formatted_text = re.sub(r'<p>(.*?)</p>', r'\1\n', formatted_text)
 
         # 2. 替换HTML斜体标签为[]（风味文本格式）
+        formatted_text = re.sub(r'<i>.*?(?:FAQ|Erratum).*?</i>', '', formatted_text, flags=re.IGNORECASE)
         formatted_text = re.sub(r'<i>(.*?)</i>', r'[\1]', formatted_text)
+        formatted_text = formatted_text.replace('\n<cite>', '<cite>')
+        formatted_text = re.sub(r'<cite>(.*?)</cite>', r'<br>[-\1]', formatted_text)
+        formatted_text = re.sub(r'\[([^]]+)]', r'<i>\1</i>', formatted_text)
 
         formatted_text = re.sub(r'\n- ', r"\n<点> ", formatted_text)
         formatted_text = re.sub(r'\n-', r"\n<点> ", formatted_text)
@@ -131,13 +179,16 @@ class ArkhamDBConverter:
         # 标题、副标题
         card_data["name"] = self.data.get("name", "")
         if self.data.get("is_unique"):
-            card_data["name"] = f"🏅 {card_data['name']}"
+            card_data["name"] = f"🏅{card_data['name']}"
         if self.data.get("subname"):
             card_data["subtitle"] = self.data.get("subname")
 
         # 职阶 (处理弱点和多职阶)
         if self.data.get("subtype_code") == 'weakness':
             card_data["class"] = '弱点'
+        elif self.data.get("subtype_code") == 'basicweakness':
+            card_data["class"] = '弱点'
+            card_data["weakness_type"] = '基础弱点'
         else:
             faction_codes = ["faction_code", "faction2_code", "faction3_code"]
             factions = [
@@ -185,6 +236,10 @@ class ArkhamDBConverter:
         else:
             card_data["traits"] = []
 
+        # 遭遇组
+        if self.data.get("encounter_code"):
+            card_data["is_encounter"] = True
+
         return card_data
 
     # -----------------------------------------------------
@@ -196,26 +251,29 @@ class ArkhamDBConverter:
         转换卡牌正面数据。
         """
         type_code = self.data.get("type_code")
+        if self.data.get('real_name') == self.data.get('name'):
+            return None
         if not type_code:
             return None
-
         card_type_name = self.TYPE_MAP_FRONT.get(type_code)
         if not card_type_name:
             print(f"警告：未知的正面卡牌类型代码 '{type_code}'")
             return None
-
         if type_code == "investigator":
             card_data = self._convert_investigator_front()
         elif type_code == "asset":
             card_data = self._convert_asset_front()
-        # elif type_code == "event":
-        #     card_data = self._convert_event_front()  # 未来可在此处添加
-        # elif type_code == "skill":
-        #     card_data = self._convert_skill_front()  # 未来可在此处添加
+        elif type_code == "event":
+            card_data = self._convert_event_front()
+        elif type_code == "skill":
+            card_data = self._convert_skill_front()
+        elif type_code == "treachery":
+            card_data = self._convert_treachery_front()
+        elif type_code == "enemy":
+            card_data = self._convert_enemy_front()
         else:
             print(f"警告：尚未实现对 '{type_code}' 类型的正面转换")
             return None
-
         card_data['type'] = card_type_name
         return card_data
 
@@ -223,6 +281,9 @@ class ArkhamDBConverter:
         """
         转换卡牌背面数据。
         """
+        if 'linked_card' in self.data:
+            back_data = ArkhamDBConverter(self.data['linked_card'])
+            return back_data.convert_front()
         if not self.data.get("double_sided"):
             return None
 
@@ -300,7 +361,7 @@ class ArkhamDBConverter:
         # 基础信息
         card_data["name"] = self.data.get("name", "")
         if self.data.get("is_unique"):
-            card_data["name"] = f"🏅 {card_data['name']}"
+            card_data["name"] = f"🏅{card_data['name']}"
         card_data["subtitle"] = self.data.get("subname", "")
         card_data["class"] = self.FACTION_MAP.get(self.data.get("faction_code"))
 
@@ -338,7 +399,7 @@ class ArkhamDBConverter:
         # 背面基础信息
         card_data["name"] = self.data.get("name", "")
         if self.data.get("is_unique"):
-            card_data["name"] = f"🏅 {card_data['name']}"
+            card_data["name"] = f"🏅{card_data['name']}"
         card_data["subtitle"] = self.data.get("subname", "")
         card_data["class"] = self.FACTION_MAP.get(self.data.get("faction_code"))
 
@@ -349,4 +410,96 @@ class ArkhamDBConverter:
         card_back_data["story"] = self._format_text(self.data.get("back_flavor", ""))
         card_data["card_back"] = card_back_data
 
+        return card_data
+
+    def _convert_event_front(self) -> Dict[str, Any]:
+        """
+        私有方法，专门用于转换事件卡正面。
+        """
+        # 1. 获取所有玩家卡通用属性
+        card_data = self._extract_common_player_card_properties()
+        # 2. 添加事件卡特有的属性
+        # 效果、风味文本、胜利点和遭遇组
+        card_data["body"] = self._format_text(self.data.get("text"))
+        card_data["flavor"] = self._format_text(self.data.get("flavor"))
+        if self.data.get("victory") is not None:
+            card_data["victory"] = self.data.get("victory")
+        if self.data.get("encounter_code"):
+            card_data["encounter_group"] = self.data.get("encounter_name")
+        return card_data
+
+    def _convert_skill_front(self) -> Dict[str, Any]:
+        """
+        私有方法，专门用于转换技能卡正面。
+        """
+        # 1. 获取所有玩家卡通用属性
+        card_data = self._extract_common_player_card_properties()
+        # 2. 添加技能卡特有的属性
+        # 效果、风味文本、胜利点和遭遇组
+        card_data["body"] = self._format_text(self.data.get("text"))
+        card_data["flavor"] = self._format_text(self.data.get("flavor"))
+        if self.data.get("victory") is not None:
+            card_data["victory"] = self.data.get("victory")
+        if self.data.get("encounter_code"):
+            card_data["encounter_group"] = self.data.get("encounter_name")
+        return card_data
+
+    def _convert_treachery_front(self) -> Dict[str, Any]:
+        """
+        私有方法，专门用于转换诡计卡正面。
+        """
+        # 1. 获取所有玩家卡通用属性
+        card_data = self._extract_common_player_card_properties()
+        # 效果、风味文本和胜利点
+        card_data["body"] = self._format_text(self.data.get("text"))
+        card_data["flavor"] = self._format_text(self.data.get("flavor"))
+        if self.data.get("victory") is not None:
+            card_data["victory"] = self.data.get("victory")
+        return card_data
+
+    def _format_compound_number(self, value_key: str, per_investigator_key: str) -> Optional[str]:
+        """
+        格式化一个可能为 "X" 或 "每位调查员" 的数值。
+        :param value_key: ArkhamDB JSON 中基础数值的键名 (e.g., 'health')
+        :param per_investigator_key: ArkhamDB JSON 中 "每位调查员" 标记的键名 (e.g., 'health_per_investigator')
+        :return: 格式化后的字符串 (e.g., '3', 'X', '2<调查员>')
+        """
+        if value_key not in self.data:
+            return None
+        value = self.data.get(value_key)
+        if value is None:
+            return "X"  # ArkhamDB 使用 null 来表示 'X'
+        value_str = str(value)
+        if self.data.get(per_investigator_key, False):
+            return f"{value_str}<调查员>"
+        return value_str
+
+    def _convert_enemy_front(self) -> Dict[str, Any]:
+        """
+        私有方法，专门用于转换敌人卡正面。
+        """
+        # 1. 获取所有玩家卡通用属性
+        card_data = self._extract_common_player_card_properties()
+        # 敌人数值 (攻击、生命、躲避)
+        # 注意: ArkhamDB JSON 通常只对 health 有 per_investigator 标记
+        card_data["attack"] = self._format_compound_number("enemy_fight", "fight_per_investigator")
+        card_data["enemy_health"] = self._format_compound_number("health", "health_per_investigator")
+        card_data["evade"] = self._format_compound_number("enemy_evade", "evade_per_investigator")
+        # 伤害和恐惧
+        if self.data.get("enemy_damage") is not None:
+            card_data["enemy_damage"] = self.data.get("enemy_damage")
+        if self.data.get("enemy_horror") is not None:
+            # 前端 key 是 'enemy_damage_horror'
+            card_data["enemy_damage_horror"] = self.data.get("enemy_horror")
+        # 特性
+        traits_str = self.data.get("traits", "")
+        if traits_str:
+            card_data["traits"] = [trait.strip() for trait in traits_str.replace('.', ' ').split() if trait.strip()]
+        else:
+            card_data["traits"] = []
+        # 效果、风味文本和胜利点
+        card_data["body"] = self._format_text(self.data.get("text"))
+        card_data["flavor"] = self._format_text(self.data.get("flavor"))
+        if self.data.get("victory") is not None:
+            card_data["victory"] = self.data.get("victory")
         return card_data

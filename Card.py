@@ -319,7 +319,7 @@ class Card:
         :param underline: 是否添加下划线
         """
         offset = self.font_manager.get_font_offset(font_name)
-        self.rich_renderer.draw_line(
+        self.last_render_list.extend(self.rich_renderer.draw_line(
             text=text,
             position=(position[0], position[1] + offset),
             alignment=TextAlignment.CENTER,
@@ -332,7 +332,7 @@ class Card:
                 border_width=border_width,
                 has_underline=underline
             ),
-        )
+        ))
         pass
 
     def draw_left_text(self, position, text, font_name, font_size, font_color,
@@ -349,7 +349,7 @@ class Card:
         :param border_color: 边框颜色
         """
         offset = self.font_manager.get_font_offset(font_name)
-        self.rich_renderer.draw_line(
+        self.last_render_list.extend(self.rich_renderer.draw_line(
             text=text,
             position=(position[0], position[1] + offset),
             alignment=TextAlignment.LEFT,
@@ -361,7 +361,7 @@ class Card:
                 border_color=border_color,
                 border_width=border_width,
             ),
-        )
+        ))
         pass
 
     def _get_draw_scenario_card_token(self, name):
@@ -495,7 +495,7 @@ class Card:
         elif self.card_type in ['密谋卡', '场景卡'] and not self.is_back:
             text = re.sub(r'<relish>(.*?)</relish>', r'<flavor align="left" padding="0"  flex="false">\1</flavor>',
                           text)
-        self.last_render_list = self.rich_renderer.draw_complex_text(
+        self.last_render_list.extend(self.rich_renderer.draw_complex_text(
             text,
             polygon_vertices=vertices,
             padding=padding,
@@ -505,7 +505,7 @@ class Card:
                 font_color=color
             ),
             draw_debug_frame=draw_virtual_box
-        )
+        ))
 
     def get_upgrade_card_box_position(self):
         box_position = []

@@ -25,6 +25,13 @@ from PIL import ImageFont
 FreeTypeFont = ImageFont.FreeTypeFont
 
 
+@dataclass
+class FontStackObject:
+    """字体对象"""
+    font: FreeTypeFont
+    font_name: str
+
+
 class FontStack:
     """
     一个管理 PIL.ImageFont.FreeTypeFont 对象的栈结构。
@@ -32,25 +39,27 @@ class FontStack:
     这个栈的特点是它总有一个默认的“栈底”字体，该字体永远不会被弹出。
     """
 
-    def __init__(self, default_font: FreeTypeFont):
+    def __init__(self, default_font: FreeTypeFont, font_name: str):
         if not isinstance(default_font, FreeTypeFont):
             raise TypeError("default_font 必须是 PIL.ImageFont.FreeTypeFont 对象")
-        self._stack = [default_font]
+        self._stack = [FontStackObject(default_font, font_name)]
 
-    def push(self, font: FreeTypeFont):
+    def push(self, font: FreeTypeFont, font_name: str):
         if not isinstance(font, FreeTypeFont):
             raise TypeError("压入的 font 必须是 PIL.ImageFont.FreeTypeFont 对象")
-        self._stack.append(font)
+        self._stack.append(FontStackObject(font, font_name))
 
     def get_top(self) -> FreeTypeFont:
-        return self._stack[-1]
+        return self._stack[-1].font
+
+    def get_top_font_name(self) -> str:
+        return self._stack[-1].font_name
 
     def pop(self) -> Optional[FreeTypeFont]:
         if len(self._stack) > 1:
-            return self._stack.pop()
+            return self._stack.pop().font
         else:
             return None
-    # ... 其他方法保持不变 ...
 
 
 class HtmlTagStack:
@@ -475,24 +484,25 @@ class RichTextRenderer:
         except Exception as e:
             return False, None
 
-        font_stack = FontStack(base_font)
+        font_stack = FontStack(base_font, base_options.font_name)
         html_tag_stack = HtmlTagStack('body')
 
         for item in parsed_items:
             success = True
             if item.tag == "text":
                 font = font_stack.get_top()
+                font_name = font_stack.get_top_font_name()
                 if item.type == TextType.OTHER:
                     # 一个一个push
                     for char in item.content:
                         text_box = self._get_text_box(char, font)
                         success = virtual_text_box.push(
-                            TextObject(char, font, text_box[1], text_box[0])
+                            TextObject(char, font, font_name, font.size, text_box[1], text_box[0])
                         )
                 else:
                     text_box = self._get_text_box(item.content, font)
                     success = virtual_text_box.push(
-                        TextObject(item.content, font, text_box[1], text_box[0])
+                        TextObject(item.content, font, font_name, font.size, text_box[1], text_box[0])
                     )
             elif item.tag == "br":
                 if html_tag_stack.get_top() == 'body':
@@ -503,13 +513,13 @@ class RichTextRenderer:
                 success = virtual_text_box.new_paragraph()
             elif item.tag == "font":
                 font_name = item.attributes.get('name', base_options.font_name)
-                font_stack.push(font_cache.get_font(font_name, size_to_test))
+                font_stack.push(font_cache.get_font(font_name, size_to_test), font_name)
             elif item.tag == "b":
-                font_stack.push(font_cache.get_font(self.default_fonts.bold, size_to_test))
+                font_stack.push(font_cache.get_font(self.default_fonts.bold, size_to_test), self.default_fonts.bold)
             elif item.tag == "i":
-                font_stack.push(font_cache.get_font(self.default_fonts.italic, size_to_test))
+                font_stack.push(font_cache.get_font(self.default_fonts.italic, size_to_test), self.default_fonts.italic)
             elif item.tag == "trait":
-                font_stack.push(font_cache.get_font(self.default_fonts.trait, size_to_test))
+                font_stack.push(font_cache.get_font(self.default_fonts.trait, size_to_test), self.default_fonts.trait)
             elif item.tag == "hr":
                 virtual_text_box.draw_line_to_end()
             elif item.tag == "p":
@@ -525,7 +535,8 @@ class RichTextRenderer:
                 if item.attributes.get('flex', 'true') == 'true':
                     virtual_text_box.add_flex()
                 flavor_font_size = max(1, size_to_test - 2)
-                font_stack.push(font_cache.get_font(self.default_fonts.italic, flavor_font_size))
+                font_stack.push(font_cache.get_font(self.default_fonts.italic, flavor_font_size),
+                                self.default_fonts.italic)
                 virtual_text_box.set_line_padding(int(item.attributes.get('padding', 15)))
                 # 是否居中
                 if item.attributes.get('align', 'center') == 'center':
@@ -616,7 +627,7 @@ class RichTextRenderer:
         return render_list
 
     def draw_line(self, text: str, position: Tuple[int, int],
-                  alignment: TextAlignment, options: DrawOptions) -> None:
+                  alignment: TextAlignment, options: DrawOptions) -> list[RenderItem]:
         """
         绘制一行支持HTML语法的文本。
         Args:
@@ -627,6 +638,9 @@ class RichTextRenderer:
                       - Right: (x, y)是整行文本的右上角顶点。
             alignment: 对齐方式 (TextAlignment.LEFT, .CENTER, .RIGHT)。
             options: 绘制选项，提供默认字体、大小和颜色。
+
+        Returns:
+            list[RenderItem]: 渲染项列表，包含绘制的文本对象及其位置信息
         """
         # 预处理文本
         text = self._preprocess_text(text)
@@ -640,9 +654,9 @@ class RichTextRenderer:
             base_font = font_cache.get_font(options.font_name, options.font_size)
         except Exception as e:
             print(f"字体加载失败: {e}")
-            return
+            return []
 
-        font_stack = FontStack(base_font)
+        font_stack = FontStack(base_font, options.font_name)
 
         # 第一遍遍历：计算总宽度和高度，收集渲染信息
         render_segments = []  # 存储每个文本片段的渲染信息
@@ -652,6 +666,7 @@ class RichTextRenderer:
         for item in parsed_items:
             if item.tag == "text":
                 font = font_stack.get_top()
+                font_name = font_stack.get_top_font_name()
                 text_content = item.content
 
                 if item.type == TextType.OTHER:
@@ -661,6 +676,7 @@ class RichTextRenderer:
                         render_segments.append({
                             'text': char,
                             'font': font,
+                            'font_name': font_name,
                             'width': text_box[0],
                             'height': text_box[1],
                             'color': options.font_color
@@ -673,6 +689,7 @@ class RichTextRenderer:
                     render_segments.append({
                         'text': text_content,
                         'font': font,
+                        'font_name': font_name,
                         'width': text_box[0],
                         'height': text_box[1],
                         'color': options.font_color
@@ -683,25 +700,28 @@ class RichTextRenderer:
             elif item.tag == "font":
                 font_name = item.attributes.get('name', options.font_name)
                 try:
-                    font_stack.push(font_cache.get_font(font_name, options.font_size))
+                    font_stack.push(font_cache.get_font(font_name, options.font_size), font_name)
                 except Exception as e:
                     print(f"字体切换失败: {e}")
 
             elif item.tag == "b":
                 try:
-                    font_stack.push(font_cache.get_font(self.default_fonts.bold, options.font_size))
+                    font_stack.push(font_cache.get_font(self.default_fonts.bold, options.font_size),
+                                    self.default_fonts.bold)
                 except Exception as e:
                     print(f"粗体字体加载失败: {e}")
 
             elif item.tag == "i":
                 try:
-                    font_stack.push(font_cache.get_font(self.default_fonts.italic, options.font_size))
+                    font_stack.push(font_cache.get_font(self.default_fonts.italic, options.font_size),
+                                    self.default_fonts.italic)
                 except Exception as e:
                     print(f"斜体字体加载失败: {e}")
 
             elif item.tag == "trait":
                 try:
-                    font_stack.push(font_cache.get_font(self.default_fonts.trait, options.font_size))
+                    font_stack.push(font_cache.get_font(self.default_fonts.trait, options.font_size),
+                                    self.default_fonts.trait)
                 except Exception as e:
                     print(f"特质字体加载失败: {e}")
 
@@ -730,10 +750,29 @@ class RichTextRenderer:
             start_y = y
         # print("绘制文本:", text, "位置:", start_x, start_y)
 
-        # 第二遍：实际绘制文本
+        # 第二遍：实际绘制文本，同时创建RenderItem列表
         current_x = start_x
+        render_items = []  # 用于存储RenderItem对象
 
         for segment in render_segments:
+            # 创建TextObject
+            text_obj = TextObject(
+                text=segment['text'],
+                font=segment['font'],
+                font_name=segment['font_name'],
+                font_size=segment['font'].size,
+                height=segment['height'],
+                width=segment['width']
+            )
+
+            # 创建RenderItem并添加到列表
+            render_item = RenderItem(
+                obj=text_obj,
+                x=current_x,
+                y=start_y
+            )
+            render_items.append(render_item)
+
             # 绘制文本
             self.draw.text(
                 (current_x, start_y),
@@ -780,6 +819,8 @@ class RichTextRenderer:
                 fill=options.font_color,
                 width=2
             )
+
+        return render_items
 
 
 if __name__ == '__main__':

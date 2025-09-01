@@ -4,6 +4,7 @@ import traceback
 from typing import Optional
 
 import webview
+from PIL import Image
 from flask import Flask, jsonify, request, send_from_directory, Response
 import tkinter as tk
 from tkinter import filedialog
@@ -614,6 +615,37 @@ def generate_card():
         # 生成卡图
         card = current_workspace.generate_card_image(json_data)
         card_image = card.image
+
+        # 判断是否为勘误模式
+        if os.environ.get('APP_MODE', 'normal') == 'check':
+            try:
+                original_image = current_workspace.get_card_base64(json_data)
+                # 如果picture_path为str则读取PIL图片
+                if isinstance(original_image, str):
+                    original_image = Image.open(original_image)
+
+                # 处理图片旋转
+                if card_image.width > card_image.height and original_image.width < original_image.height:
+                    original_image = original_image.rotate(90, expand=True)
+
+                # 缩放到图片大小
+                original_image = original_image.resize((card_image.width, card_image.height))
+
+                # 判断是否为横向图片
+                if card_image.width > card_image.height:
+                    # 横向图片：上下拼接（原图在上，生成图在下）
+                    card_errata = Image.new('RGB', (card_image.width, card_image.height * 2), (255, 255, 255))
+                    card_errata.paste(original_image, (0, 0))
+                    card_errata.paste(card_image, (0, card_image.height))
+                else:
+                    # 纵向图片：左右拼接（原图在左，生成图在右）
+                    card_errata = Image.new('RGB', (card_image.width * 2, card_image.height), (255, 255, 255))
+                    card_errata.paste(original_image, (0, 0))
+                    card_errata.paste(card_image, (card_image.width, 0))
+
+                card_image = card_errata
+            except Exception as e:
+                pass
 
         if card_image is None:
             return jsonify(create_response(

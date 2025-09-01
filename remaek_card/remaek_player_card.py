@@ -37,6 +37,7 @@ class RemakeCardsTranslationTask:
     ) -> None:
         # 构建work_dir的绝对路径
         self.work_dir = os.path.abspath(work_dir)
+
         # 查询目录下的objects文件夹，搜索所有json文件
         object_files = []
         for root, dirs, files in os.walk(os.path.join(self.work_dir, 'objects')):
@@ -64,6 +65,23 @@ class RemakeCardsTranslationTask:
                 self.db_cards = []
         else:
             print("db_cards.json 文件不存在，将创建新的数据库")
+
+        # 在初始化时读取metadata.json
+        self.metadata = {}
+        metadata_file = os.path.join(self.work_dir, 'metadata.json')
+        if os.path.exists(metadata_file):
+            try:
+                with open(metadata_file, 'r', encoding='utf-8') as f:
+                    self.metadata = json.load(f)
+                print(f"成功加载 metadata.json，包含 {len(self.metadata)} 条记录")
+            except json.JSONDecodeError as e:
+                print(f"读取 metadata.json 时发生JSON解析错误: {e}")
+                self.metadata = {}
+            except Exception as e:
+                print(f"读取 metadata.json 时发生错误: {e}")
+                self.metadata = {}
+        else:
+            print("metadata.json 文件不存在，请先运行 arrange_metadata() 方法")
 
     @staticmethod
     def _get_alnum_str(s):
@@ -361,6 +379,9 @@ class RemakeCardsTranslationTask:
         with open(metadata_file, 'w', encoding='utf-8') as f:
             json.dump(metadata, f, ensure_ascii=False, indent=4)
 
+        # 更新实例的metadata
+        self.metadata = metadata
+
     @staticmethod
     def extract_location_icons(json_data):
         """
@@ -413,19 +434,15 @@ class RemakeCardsTranslationTask:
         :param card_id: 卡牌ID
         :return: 包含转换后卡牌数据的字典
         """
-        # 读取metadata.json
-        metadata_file = os.path.join(self.work_dir, 'metadata.json')
-        if not os.path.exists(metadata_file):
-            raise FileNotFoundError(f"未找到元数据文件: {metadata_file}")
-
-        with open(metadata_file, 'r', encoding='utf-8') as f:
-            metadata = json.load(f)
+        # 从实例变量中读取metadata
+        if not self.metadata:
+            raise FileNotFoundError(f"metadata 为空，请确保已正确初始化或运行 arrange_metadata() 方法")
 
         # 检查card_id是否存在
-        if card_id not in metadata:
+        if card_id not in self.metadata:
             raise ValueError(f"未找到卡牌ID: {card_id}")
 
-        card_metadata = metadata[card_id]
+        card_metadata = self.metadata[card_id]
         db_card = card_metadata.get('db_card')
 
         if not db_card:
@@ -445,17 +462,10 @@ class RemakeCardsTranslationTask:
         front_data = converter.convert_front()
         if front_data:
             result['converted_data']['front'] = front_data.copy()
-
             # 如果有正面图片路径，添加到数据中
             if 'face_path' in card_metadata and os.path.exists(card_metadata['face_path']):
                 # 这里可以选择添加图片路径或转换为base64
                 result['converted_data']['front']['picture_path'] = card_metadata['face_path']
-
-                # 如果需要转换为base64，可以取消注释下面的代码
-                # import base64
-                # with open(card_metadata['face_path'], 'rb') as img_file:
-                #     img_base64 = base64.b64encode(img_file.read()).decode('utf-8')
-                #     result['converted_data']['front']['data']['picture_base64'] = img_base64
 
             print(f"✓ 成功转换正面数据: {card_id} -> {result['converted_data']['front'].get('name')}")
         else:
@@ -474,16 +484,9 @@ class RemakeCardsTranslationTask:
             back_data = converter.convert_back()
             if back_data:
                 result['converted_data']['back'] = back_data.copy()
-
                 # 如果有背面图片路径，添加到数据中
                 if has_unique_back:
                     result['converted_data']['back']['picture_path'] = back_path
-
-                    # 如果需要转换为base64，可以取消注释下面的代码
-                    # import base64
-                    # with open(back_path, 'rb') as img_file:
-                    #     img_base64 = base64.b64encode(img_file.read()).decode('utf-8')
-                    #     result['converted_data']['back']['data']['picture_base64'] = img_base64
 
                 print(f"✓ 成功转换背面数据: {card_id} -> {result['converted_data']['back'].get('name')}")
             else:
@@ -493,9 +496,286 @@ class RemakeCardsTranslationTask:
 
         return result
 
+    def batch_remake_cards(self, card_creator: CardCreator, output_dir: str = None, thread_count: int = 4) -> dict:
+        """
+        批量重置卡牌功能
+
+        :param card_creator: CardCreator 实例
+        :param output_dir: 输出目录，默认为工作目录下的 remade_cards 目录
+        :param thread_count: 线程数量，默认为4
+        :return: 包含成功和失败信息的字典
+        """
+        if not self.metadata:
+            raise ValueError("metadata为空，请确保已正确初始化")
+
+        # 设置输出目录
+        if output_dir is None:
+            output_dir = os.path.join(self.work_dir, 'remade_cards')
+
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+            print(f"创建输出目录: {output_dir}")
+
+        # 统计信息
+        total_cards = len(self.metadata)
+        success_count = 0
+        error_count = 0
+        success_cards = []
+        error_cards = []
+
+        print(f"开始批量重置 {total_cards} 张卡牌...")
+
+        def process_single_card(card_id: str, index: int) -> tuple:
+            """处理单张卡牌的函数"""
+            try:
+                # 重制卡牌数据
+                remake_result = self.remake_card(card_id)
+                converted_data = remake_result['converted_data']
+
+                # 处理正面
+                front_saved = False
+                if 'front' in converted_data and converted_data['front'] is not None:
+                    if converted_data['front'].get('is_encounter'):
+                        creator.transparent_encounter = True
+                    else:
+                        creator.transparent_encounter = False
+                    front_card = card_creator.create_card(converted_data['front'])
+                    if front_card and front_card.image:
+                        front_filename = f"{card_id}-a.jpg"
+                        front_output_path = os.path.join(output_dir, front_filename)
+                        # 转为RGB
+                        front_card.image = front_card.image.convert('RGB')
+                        front_card.image.save(front_output_path, quality=95)
+                        front_saved = True
+
+                # 处理背面
+                back_saved = False
+                if 'back' in converted_data and converted_data['back'] is not None:
+                    if converted_data['back'].get('is_encounter'):
+                        creator.transparent_encounter = True
+                    else:
+                        creator.transparent_encounter = False
+                    back_card = card_creator.create_card(converted_data['back'])
+                    if back_card and back_card.image:
+                        back_filename = f"{card_id}-b.jpg"
+                        back_output_path = os.path.join(output_dir, back_filename)
+                        # 转为RGB
+                        back_card.image = back_card.image.convert('RGB')
+                        back_card.image.save(back_output_path, quality=95)
+                        back_saved = True
+
+                # 更新进度条
+                self._print_progress_bar(
+                    index + 1, total_cards,
+                    prefix='进度:',
+                    suffix=f'完成 {index + 1}/{total_cards} - {card_id}',
+                    length=30
+                )
+
+                return ('success', card_id, front_saved, back_saved, None)
+
+            except Exception as e:
+                error_msg = f"处理卡牌 {card_id} 时出错: {str(e)}"
+                print(f"\n{error_msg}")
+                return ('error', card_id, False, False, str(e))
+
+        # 使用线程池处理卡牌
+        card_ids = list(self.metadata.keys())
+
+        # 单线程处理（因为进度条显示问题）
+        if thread_count == 1:
+            for i, card_id in enumerate(card_ids):
+                result = process_single_card(card_id, i)
+                status, card_id, front_saved, back_saved, error = result
+
+                if status == 'success':
+                    success_count += 1
+                    success_cards.append({
+                        'card_id': card_id,
+                        'front_saved': front_saved,
+                        'back_saved': back_saved
+                    })
+                else:
+                    error_count += 1
+                    error_cards.append({
+                        'card_id': card_id,
+                        'error': error
+                    })
+        else:
+            # 多线程处理
+            print("使用多线程处理可能会影响进度条显示...")
+            with ThreadPoolExecutor(max_workers=thread_count) as executor:
+                # 提交所有任务
+                future_to_card = {
+                    executor.submit(process_single_card, card_id, i): (card_id, i)
+                    for i, card_id in enumerate(card_ids)
+                }
+
+                # 收集结果
+                for future in as_completed(future_to_card):
+                    result = future.result()
+                    status, card_id, front_saved, back_saved, error = result
+
+                    if status == 'success':
+                        success_count += 1
+                        success_cards.append({
+                            'card_id': card_id,
+                            'front_saved': front_saved,
+                            'back_saved': back_saved
+                        })
+                    else:
+                        error_count += 1
+                        error_cards.append({
+                            'card_id': card_id,
+                            'error': error
+                        })
+
+        # 打印统计结果
+        print(f"\n批量重置完成!")
+        print(f"总计: {total_cards} 张卡牌")
+        print(f"成功: {success_count} 张")
+        print(f"失败: {error_count} 张")
+        print(f"输出目录: {output_dir}")
+
+        # 保存处理日志
+        log_data = {
+            'timestamp': str(json.dumps(None, default=str)),  # 当前时间
+            'total_cards': total_cards,
+            'success_count': success_count,
+            'error_count': error_count,
+            'output_directory': output_dir,
+            'success_cards': success_cards,
+            'error_cards': error_cards
+        }
+
+        log_file = os.path.join(output_dir, 'batch_remake_log.json')
+        with open(log_file, 'w', encoding='utf-8') as f:
+            json.dump(log_data, f, ensure_ascii=False, indent=4)
+        print(f"处理日志已保存到: {log_file}")
+
+        return log_data
+
+    def batch_remake_specific_cards(self, card_ids: list, card_creator: CardCreator, output_dir: str = None) -> dict:
+        """
+        重置指定的卡牌
+
+        :param card_ids: 要重置的卡牌ID列表
+        :param card_creator: CardCreator 实例
+        :param output_dir: 输出目录，默认为工作目录下的 remade_cards 目录
+        :return: 包含成功和失败信息的字典
+        """
+        if not self.metadata:
+            raise ValueError("metadata为空，请确保已正确初始化")
+
+        # 检查卡牌ID是否存在
+        valid_card_ids = []
+        invalid_card_ids = []
+        for card_id in card_ids:
+            if card_id in self.metadata:
+                valid_card_ids.append(card_id)
+            else:
+                invalid_card_ids.append(card_id)
+
+        if invalid_card_ids:
+            print(f"警告: 以下卡牌ID不存在: {invalid_card_ids}")
+
+        if not valid_card_ids:
+            print("错误: 没有有效的卡牌ID")
+            return {'error': 'No valid card IDs'}
+
+        # 设置输出目录
+        if output_dir is None:
+            output_dir = os.path.join(self.work_dir, 'remade_cards')
+
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+            print(f"创建输出目录: {output_dir}")
+
+        # 统计信息
+        total_cards = len(valid_card_ids)
+        success_count = 0
+        error_count = 0
+        success_cards = []
+        error_cards = []
+
+        print(f"开始重置指定的 {total_cards} 张卡牌...")
+
+        for i, card_id in enumerate(valid_card_ids):
+            try:
+                # 重制卡牌数据
+                remake_result = self.remake_card(card_id)
+                converted_data = remake_result['converted_data']
+
+                # 处理正面
+                front_saved = False
+                if 'front' in converted_data and converted_data['front'] is not None:
+                    front_card = card_creator.create_card(converted_data['front'])
+                    if front_card and front_card.image:
+                        front_filename = f"{card_id}-a.jpg"
+                        front_output_path = os.path.join(output_dir, front_filename)
+                        # 转为JPEG
+                        front_card.image = front_card.image.convert('RGB')
+                        front_card.image.save(front_output_path, quality=95)
+                        front_saved = True
+
+                # 处理背面
+                back_saved = False
+                if 'back' in converted_data and converted_data['back'] is not None:
+                    back_card = card_creator.create_card(converted_data['back'])
+                    if back_card and back_card.image:
+                        back_filename = f"{card_id}-b.jpg"
+                        back_output_path = os.path.join(output_dir, back_filename)
+                        back_card.image = back_card.image.convert('RGB')
+                        back_card.image.save(back_output_path, quality=95)
+                        back_saved = True
+
+                success_count += 1
+                success_cards.append({
+                    'card_id': card_id,
+                    'front_saved': front_saved,
+                    'back_saved': back_saved
+                })
+
+                # 更新进度条
+                self._print_progress_bar(
+                    i + 1, total_cards,
+                    prefix='进度:',
+                    suffix=f'完成 {i + 1}/{total_cards} - {card_id}',
+                    length=30
+                )
+
+            except Exception as e:
+                error_count += 1
+                error_msg = f"处理卡牌 {card_id} 时出错: {str(e)}"
+                print(f"\n{error_msg}")
+                error_cards.append({
+                    'card_id': card_id,
+                    'error': str(e)
+                })
+
+        # 打印统计结果
+        print(f"\n指定卡牌重置完成!")
+        print(f"总计: {total_cards} 张卡牌")
+        print(f"成功: {success_count} 张")
+        print(f"失败: {error_count} 张")
+        print(f"输出目录: {output_dir}")
+
+        # 返回结果
+        return {
+            'total_cards': total_cards,
+            'success_count': success_count,
+            'error_count': error_count,
+            'output_directory': output_dir,
+            'success_cards': success_cards,
+            'error_cards': error_cards,
+            'invalid_card_ids': invalid_card_ids
+        }
+
 
 if __name__ == '__main__':
+    # 创建任务实例
     task = RemakeCardsTranslationTask('官方卡重置/所有玩家卡')
+
     # 步骤一：下载卡牌图片
     # task.download_cards()
     # 步骤二：整理元数据
@@ -503,10 +783,6 @@ if __name__ == '__main__':
     # 步骤三：检查地点图标是否有新增
     # task.read_metadata_and_extract_icons()
 
-    test_data = task.remake_card('10104')
-    print(json.dumps(test_data, ensure_ascii=False, indent=4))
-
-    # 创建卡牌创建器
     # 创建字体和图片管理器
     fm = FontManager('../fonts')
     im = ImageManager('../images')
@@ -517,5 +793,49 @@ if __name__ == '__main__':
         transparent_encounter=False,
         transparent_background=False
     )
-    creator.create_card(test_data['converted_data']['front']).image.show()
-    creator.create_card(test_data['converted_data']['back']).image.show()
+
+    # 批量重置所有卡牌
+    # result = task.batch_remake_cards(creator, thread_count=1)
+    # print(f"批量重置结果: {result}")
+
+    # 或者重置指定卡牌
+    specific_cards = ['01014', '06030']  # 替换为您要重置的卡牌ID
+    result = task.batch_remake_specific_cards(specific_cards, creator)
+    print(f"指定卡牌重置结果: {result}")
+
+# if __name__ == '__main__':
+#     task = RemakeCardsTranslationTask('官方卡重置/所有玩家卡')
+#     # 步骤一：下载卡牌图片
+#     # task.download_cards()
+#     # 步骤二：整理元数据
+#     # task.arrange_metadata()
+#     # 步骤三：检查地点图标是否有新增
+#     # task.read_metadata_and_extract_icons()
+#
+#     test_data = task.remake_card('08728')
+#     print(json.dumps(test_data['converted_data'], ensure_ascii=False, indent=4))
+#
+#     # 创建卡牌创建器
+#     # 创建字体和图片管理器
+#     fm = FontManager('../fonts')
+#     im = ImageManager('../images')
+#     creator = CardCreator(
+#         font_manager=fm,
+#         image_manager=im,
+#         image_mode=1,
+#         transparent_encounter=True,
+#         transparent_background=False
+#     )
+#     # encounter_icon = test_data.get('encounter_icon', {})
+#     if test_data['converted_data']['front'].get('is_encounter'):
+#         creator.transparent_encounter = True
+#     else:
+#         creator.transparent_encounter = False
+#     card = creator.create_card(test_data['converted_data']['front'])
+#     # if 'front' in encounter_icon:
+#     #     card.set_encounter_icon(encounter_icon['front'])
+#     card.image.show()
+#     # back_card = creator.create_card(test_data['converted_data']['back'])
+#     # if 'back' in encounter_icon:
+#     #     card.set_encounter_icon(encounter_icon['back'])
+#     # back_card.image.show()

@@ -74,11 +74,11 @@ class CardCreator:
         card_type = card_data.get('type', '')
 
         # 透明遭遇组的特殊处理
-        if self.transparent_encounter:
-            if dp.size[1] > dp.size[0]:
-                dp = dp.rotate(90, expand=True)
-            card.paste_image(dp, (0, 0, card.width, card.height), 'cover')
-            return
+        # if self.transparent_encounter:
+        #     if dp.size[1] > dp.size[0]:
+        #         dp = dp.rotate(90, expand=True)
+        #     card.paste_image(dp, (0, 0, card.width, card.height), 'cover')
+        #     return
 
         # 常规贴底图逻辑
         image_mode = self.image_mode
@@ -763,11 +763,11 @@ class CardCreator:
         card.draw_centered_text((370, 48), data['name'], "汉仪小隶书简", 48, (0, 0, 0))
 
         if 'subtitle' in data and data['subtitle'] != '':
-            card.draw_centered_text((370, 98), data['subtitle'], "副标题", 31, (0, 0, 0))
+            card.draw_centered_text((370, 103), data['subtitle'], "副标题", 31, (0, 0, 0))
 
         card.draw_centered_text((370, 605), self.font_manager.get_font_text(data['weakness_type']), "小字", 28,
                                 (0, 0, 0))
-        card.draw_centered_text((370, 635), self._integrate_traits_text(data.get('traits', [])), "方正舒体", 32,
+        card.draw_centered_text((370, 645), self._integrate_traits_text(data.get('traits', [])), "方正舒体", 32,
                                 (0, 0, 0))
 
         if 'cost' in data and isinstance(data['cost'], int):
@@ -840,8 +840,13 @@ class CardCreator:
         if dp:
             # 贴底图
             self._paste_background_image(card, None, data, dp)
+        ui_name = f'{data["class"]}-{data["type"]}'
+        if data.get('is_encounter', False) or data['weakness_type'] == '基础弱点':
+            ui_name += '-遭遇'
+        card.paste_image(self.image_manager.get_image(ui_name), (0, 0), 'contain')
 
-        card.paste_image(self.image_manager.get_image(f'{data["class"]}-{data["type"]}'), (0, 0), 'contain')
+        if data['weakness_type'] == '基础弱点':
+            card.draw_centered_text((367, 572), '0', "arkham-icons", 50, (0, 0, 0))
         card.draw_centered_text((370, 620), self.font_manager.get_font_text("敌人"), "小字", 24, (0, 0, 0))
         card.draw_centered_text((370, 28), data['name'], "汉仪小隶书简", 48, (0, 0, 0))
         card.draw_centered_text((370, 78), data['weakness_type'], "汉仪小隶书简", 32, (0, 0, 0))
@@ -850,11 +855,11 @@ class CardCreator:
 
         if 'victory' in data and isinstance(data['victory'], int):
             card.draw_centered_text((380, 512), f"胜利{data['victory']}。", "思源黑体", 28, (0, 0, 0))
-            vertices = [(90, 230), (645, 230), (699, 267), (727, 340), (688, 454),
-                        (538, 504), (370, 504), (190, 504), (47, 454), (5, 340), (32, 267)]
+            vertices = [(90, 230), (645, 230), (716, 270), (716, 450),
+                        (538, 510), (190, 510), (20, 450), (20, 270)]
         else:
-            vertices = [(90, 230), (645, 230), (699, 267), (727, 340), (688, 454),
-                        (538, 540), (370, 540), (190, 540), (47, 454), (5, 340), (32, 267)]
+            vertices = [(90, 230), (645, 230), (716, 270), (716, 450),
+                        (538, 540), (190, 540), (20, 450), (20, 270)]
 
         card.draw_text(body, vertices=vertices, default_font_name='simfang', default_size=32, padding=15,
                        draw_virtual_box=False)
@@ -1497,7 +1502,7 @@ if __name__ == '__main__':
             "特工",
             "侦探"
         ],
-        "body": "⭕在你击败一名敌人后：发现所在地点的一个线索。(每轮限制1次)<lr>⭐效果：你所在地点每个线索，+1。",
+        "body": "⭕在你击败一名敌人后：发现所在地点的一个线索。(每轮限制1次)<br>⭐效果：你所在地点每个线索，+1。",
         "flavor": "所有的书在我眼中跟儿歌无异。它们过去可能有用，但现在，需要一种全新的解释了。",
         "picture_url": "https://zh.arkhamdb.com/bundles/cards/01001.png",
         "picture_path": "D:\\arkham-json-diy\\remaek_card\\官方卡重置\\所有玩家卡\\factory\\01001-a.jpg"
@@ -1526,3 +1531,23 @@ if __name__ == '__main__':
     fm.set_lang('zh')
     card = creator.create_card(json_data, picture_path=json_data.get('picture_path', None))
     card.image.show()
+    card.image.save('background.png')
+
+    # 输出坐标列表 card.last_render_list
+    from rich_text_render.VirtualTextBox import TextObject
+
+    text_information = []
+    for item in card.last_render_list:
+        if isinstance(item.obj, TextObject):
+            text_information.append({
+                "text": item.obj.text,
+                "x": item.x,
+                "y": item.y,
+                "font": item.obj.font_name,
+                "font_size": item.obj.font_size,
+                "color": '#1E1F22'
+            })
+    # 保存到文件
+    # json_file_path = 'text_information.json'
+    # with open(json_file_path, 'w', encoding='utf-8') as json_file:
+    #     json.dump(text_information, json_file, ensure_ascii=False, indent=4)

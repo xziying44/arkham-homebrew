@@ -10,6 +10,8 @@ class TextObject:
     """文本对象"""
     text: str
     font: FreeTypeFont
+    font_name: str
+    font_size: float
     height: int
     width: int
 
