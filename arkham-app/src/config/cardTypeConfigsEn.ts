@@ -708,7 +708,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'card_back.option',
         name: '🎯 Deck Building Options',
-        type: 'string-array',
+        type: 'textarea',
         layout: 'full'
       },
       {

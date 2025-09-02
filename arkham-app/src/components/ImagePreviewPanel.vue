@@ -44,6 +44,7 @@
           <n-button @click="copyImageToClipboard" :loading="isCopying"
             :title="$t('workspaceMain.imagePreview.controls.copyImage')">
             <n-icon :component="CopyOutline" />
+            <span style="margin-left: 8px;">{{ $t('workspaceMain.imagePreview.controls.copyImage') }}</span>
           </n-button>
         </n-button-group>
       </div>

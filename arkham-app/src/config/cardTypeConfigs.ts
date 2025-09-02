@@ -583,8 +583,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         name: '🧠 意志',
         type: 'number',
         layout: 'quarter',
-        min: 1,
-        max: 9
+        min: 0,
+        max: 19
       },
       {
         key: 'attribute',
@@ -592,8 +592,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         name: '📚 智力',
         type: 'number',
         layout: 'quarter',
-        min: 1,
-        max: 9
+        min: 0,
+        max: 19
       },
       {
         key: 'attribute',
@@ -601,8 +601,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         name: '⚔️ 战力',
         type: 'number',
         layout: 'quarter',
-        min: 1,
-        max: 9
+        min: 0,
+        max: 19
       },
       {
         key: 'attribute',
@@ -610,8 +610,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         name: '⚡ 敏捷',
         type: 'number',
         layout: 'quarter',
-        min: 1,
-        max: 9
+        min: 0,
+        max: 19
       },
       {
         key: 'health',
@@ -703,7 +703,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'card_back.option',
         name: '🎯 牌库构建选项',
-        type: 'string-array',
+        type: 'textarea',
         layout: 'full'
       },
       {

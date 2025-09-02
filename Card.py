@@ -318,14 +318,14 @@ class Card:
         :param border_color: 边框颜色
         :param underline: 是否添加下划线
         """
-        offset = self.font_manager.get_font_offset(font_name)
+        lang_font = self.font_manager.get_lang_font(font_name)
         self.last_render_list.extend(self.rich_renderer.draw_line(
             text=text,
-            position=(position[0], position[1] + offset),
+            position=(position[0], position[1] + lang_font.vertical_offset),
             alignment=TextAlignment.CENTER,
             options=DrawOptions(
-                font_name=font_name,
-                font_size=self.font_manager.get_font_size_adaptive(font_name, font_size),
+                font_name=lang_font.name,
+                font_size=int(font_size * lang_font.size_percent),
                 font_color=font_color,
                 has_border=has_border,
                 border_color=border_color,
@@ -348,14 +348,14 @@ class Card:
         :param border_width: 边框粗细
         :param border_color: 边框颜色
         """
-        offset = self.font_manager.get_font_offset(font_name)
+        lang_font = self.font_manager.get_lang_font(font_name)
         self.last_render_list.extend(self.rich_renderer.draw_line(
             text=text,
-            position=(position[0], position[1] + offset),
+            position=(position[0], position[1] + lang_font.vertical_offset),
             alignment=TextAlignment.LEFT,
             options=DrawOptions(
-                font_name=font_name,
-                font_size=self.font_manager.get_font_size_adaptive(font_name, font_size),
+                font_name=lang_font.name,
+                font_size=int(font_size * lang_font.size_percent),
                 font_color=font_color,
                 has_border=has_border,
                 border_color=border_color,
@@ -495,13 +495,14 @@ class Card:
         elif self.card_type in ['密谋卡', '场景卡'] and not self.is_back:
             text = re.sub(r'<relish>(.*?)</relish>', r'<flavor align="left" padding="0"  flex="false">\1</flavor>',
                           text)
+        lang_font = self.font_manager.get_lang_font(default_font_name)
         self.last_render_list.extend(self.rich_renderer.draw_complex_text(
             text,
             polygon_vertices=vertices,
             padding=padding,
             options=DrawOptions(
-                font_name=default_font_name,
-                font_size=default_size,
+                font_name=lang_font.name,
+                font_size=int(default_size * lang_font.size_percent),
                 font_color=color
             ),
             draw_debug_frame=draw_virtual_box
@@ -1030,11 +1031,10 @@ class Card:
         :param card_number: 卡牌序号
         :return:
         """
-        if self.card_type in ['密谋卡', '场景卡'] and self.is_back:
+        print(self.card_type)
+        if self.card_type in ['密谋卡', '场景卡', '调查员卡'] and self.is_back:
             return
-        if self.card_type == '调查员卡背':
-            return
-        if self.card_type == '定制卡':
+        if self.card_type == '升级卡':
             return
         left_text = ''
         center_text = ''
@@ -1132,3 +1132,22 @@ class Card:
                 font_size=20,
                 font_color=font_color
             )
+
+    def get_text_layer_metadata(self):
+        """获取文字层元数据"""
+        text_layer_metadata = []
+        for item in self.last_render_list:
+            if isinstance(item.obj, TextObject):
+                text_layer_metadata.append({
+                    "text": item.obj.text,
+                    "x": item.x,
+                    "y": item.y,
+                    "font": item.obj.font_name,
+                    "font_size": item.obj.font_size,
+                    "height": item.obj.height,
+                    "width": item.obj.width,
+                    "color": item.obj.color,
+                    "border_width": item.obj.border_width,
+                    "border_color": item.obj.border_color,
+                })
+        return text_layer_metadata
