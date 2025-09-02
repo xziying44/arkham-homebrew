@@ -12,6 +12,13 @@
                         </template>
                         {{ t('deckBuilder.actions.exportTTS') }}
                     </n-button>
+                    <!-- 导出无损PDF按钮 -->
+                    <n-button type="info" @click="showPdfExportDialog" size="large" class="export-pdf-button">
+                        <template #icon>
+                            <n-icon :component="DocumentTextOutline" />
+                        </template>
+                        {{ t('deckBuilder.actions.exportPDF', '导出无损PDF') }}
+                    </n-button>
                     <!-- 显著的保存按钮 -->
                     <n-button type="primary" @click="handleSave" :loading="saving" size="large" class="save-button">
                         <template #icon>
@@ -71,12 +78,14 @@
                                         <img v-if="getCardPreviewImage(index - 1, currentSide)"
                                             :src="getCardPreviewImage(index - 1, currentSide)"
                                             :alt="getCardName(getCardAtIndex(index - 1, currentSide)!)"
-                                            class="card-preview-image" @error="handleImageError(index - 1, currentSide)" />
+                                            class="card-preview-image"
+                                            @error="handleImageError(index - 1, currentSide)" />
                                         <div v-else class="card-placeholder">
                                             <n-icon :component="ImageOutline" size="24" />
                                         </div>
                                     </div>
-                                    <div class="card-name">{{ getCardName(getCardAtIndex(index - 1, currentSide)!) }}</div>
+                                    <div class="card-name">{{ getCardName(getCardAtIndex(index - 1, currentSide)!) }}
+                                    </div>
                                     <!-- 改进的删除按钮 -->
                                     <div class="remove-card-btn-wrapper">
                                         <n-button class="remove-card-btn"
@@ -89,7 +98,9 @@
                                 <div v-else class="empty-slot">
                                     <div class="slot-index">{{ index - 1 }}</div>
                                     <div class="add-hint">{{ t('deckBuilder.editor.content.clickToAdd') }}</div>
-                                    <div class="side-indicator">{{ currentSide === 'front' ? t('deckBuilder.editor.content.sideIndicator.front') : t('deckBuilder.editor.content.sideIndicator.back') }}</div>
+                                    <div class="side-indicator">{{ currentSide === 'front' ?
+                                        t('deckBuilder.editor.content.sideIndicator.front') :
+                                        t('deckBuilder.editor.content.sideIndicator.back') }}</div>
                                 </div>
                             </div>
                         </div>
@@ -98,30 +109,24 @@
             </div>
         </div>
 
+
+
         <!-- TTS导出引导页面 -->
-        <TTSExportGuide 
-            v-if="deck && showTTSExport"
-            :deck="deck"
-            @back="showTTSExport = false"
-            @update:deck="handleTTSInfoUpdate"
-        />
+        <TTSExportGuide v-if="deck && showTTSExport" :deck="deck" @back="showTTSExport = false"
+            @update:deck="handleTTSInfoUpdate" />
 
         <!-- 内容选择抽屉 -->
-        <n-drawer
-            v-model:show="showCardSelector"
-            :width="420"
-            placement="right"
-            :trap-focus="false"
-            :block-scroll="false"
-            :mask-closable="true"
-        >
+        <n-drawer v-model:show="showCardSelector" :width="420" placement="right" :trap-focus="false"
+            :block-scroll="false" :mask-closable="true">
             <n-drawer-content :title="t('deckBuilder.editor.content.selectContent')" closable>
                 <template #header>
                     <div class="drawer-header">
-                        <h3>{{ t('deckBuilder.editor.content.selectContentFor', { side: currentSide === 'front' ? t('deckBuilder.editor.sides.front') : t('deckBuilder.editor.sides.back') }) }}</h3>
+                        <h3>{{ t('deckBuilder.editor.content.selectContentFor', {
+                            side: currentSide === 'front' ?
+                                t('deckBuilder.editor.sides.front') : t('deckBuilder.editor.sides.back') }) }}</h3>
                     </div>
                 </template>
-                
+
                 <!-- 选择类型的标签页 -->
                 <div class="content-type-tabs">
                     <n-tabs v-model:value="contentType" type="line" @update:value="switchContentType"
@@ -129,7 +134,8 @@
                         <n-tab-pane name="cards" :tab="t('deckBuilder.editor.tabs.cards')" class="full-height-pane">
                             <!-- 搜索框 -->
                             <div class="search-container">
-                                <n-input v-model:value="searchKeyword" :placeholder="t('deckBuilder.editor.search.cards')" clearable>
+                                <n-input v-model:value="searchKeyword"
+                                    :placeholder="t('deckBuilder.editor.search.cards')" clearable>
                                     <template #prefix>
                                         <n-icon :component="SearchOutline" />
                                     </template>
@@ -146,7 +152,8 @@
                                                 <div class="content-path">{{ card.path }}</div>
                                             </div>
                                         </div>
-                                        <n-empty v-if="filteredCards.length === 0" :description="t('deckBuilder.editor.empty.noCards')">
+                                        <n-empty v-if="filteredCards.length === 0"
+                                            :description="t('deckBuilder.editor.empty.noCards')">
                                             <template #icon>
                                                 <n-icon :component="SearchOutline" />
                                             </template>
@@ -155,23 +162,29 @@
                                 </n-scrollbar>
                             </div>
                         </n-tab-pane>
-                        <n-tab-pane name="cardbacks" :tab="t('deckBuilder.editor.tabs.cardbacks')" class="full-height-pane">
+                        <n-tab-pane name="cardbacks" :tab="t('deckBuilder.editor.tabs.cardbacks')"
+                            class="full-height-pane">
                             <div class="scrollable-content">
                                 <n-scrollbar style="height: 100%;">
                                     <div class="cardback-grid">
                                         <div class="cardback-item" @click="assignContentToSlot('cardback', 'player')">
                                             <div class="cardback-preview">
-                                                <img src="../assets/cardbacks/player-back.jpg" :alt="t('deckBuilder.editor.cardbacks.player')"
+                                                <img src="../assets/cardbacks/player-back.jpg"
+                                                    :alt="t('deckBuilder.editor.cardbacks.player')"
                                                     class="cardback-image" @error="handleCardbackError" />
                                             </div>
-                                            <div class="cardback-name">{{ t('deckBuilder.editor.cardbacks.player') }}</div>
+                                            <div class="cardback-name">{{ t('deckBuilder.editor.cardbacks.player') }}
+                                            </div>
                                         </div>
-                                        <div class="cardback-item" @click="assignContentToSlot('cardback', 'encounter')">
+                                        <div class="cardback-item"
+                                            @click="assignContentToSlot('cardback', 'encounter')">
                                             <div class="cardback-preview">
-                                                <img src="../assets/cardbacks/encounter-back.jpg" :alt="t('deckBuilder.editor.cardbacks.encounter')"
+                                                <img src="../assets/cardbacks/encounter-back.jpg"
+                                                    :alt="t('deckBuilder.editor.cardbacks.encounter')"
                                                     class="cardback-image" @error="handleCardbackError" />
                                             </div>
-                                            <div class="cardback-name">{{ t('deckBuilder.editor.cardbacks.encounter') }}</div>
+                                            <div class="cardback-name">{{ t('deckBuilder.editor.cardbacks.encounter') }}
+                                            </div>
                                         </div>
                                     </div>
                                 </n-scrollbar>
@@ -180,7 +193,8 @@
                         <n-tab-pane name="images" :tab="t('deckBuilder.editor.tabs.images')" class="full-height-pane">
                             <!-- 图片搜索框 -->
                             <div class="search-container">
-                                <n-input v-model:value="imageSearchKeyword" :placeholder="t('deckBuilder.editor.search.images')" clearable>
+                                <n-input v-model:value="imageSearchKeyword"
+                                    :placeholder="t('deckBuilder.editor.search.images')" clearable>
                                     <template #prefix>
                                         <n-icon :component="SearchOutline" />
                                     </template>
@@ -197,7 +211,8 @@
                                                 <div class="content-path">{{ image.path }}</div>
                                             </div>
                                         </div>
-                                        <n-empty v-if="filteredImages.length === 0" :description="t('deckBuilder.editor.empty.noImages')">
+                                        <n-empty v-if="filteredImages.length === 0"
+                                            :description="t('deckBuilder.editor.empty.noImages')">
                                             <template #icon>
                                                 <n-icon :component="ImageOutline" />
                                             </template>
@@ -210,6 +225,36 @@
                 </div>
             </n-drawer-content>
         </n-drawer>
+
+        <!-- PDF导出对话框 -->
+        <n-modal v-model:show="showPdfDialog" preset="dialog" :title="t('deckBuilder.dialogs.exportPdf.title', '导出PDF')"
+            positive-text="确认导出" negative-text="取消" :positive-button-props="{ loading: exportingPdf }"
+            @positive-click="handlePdfExport">
+            <div class="pdf-export-form">
+                <n-form-item :label="t('deckBuilder.dialogs.exportPdf.fileName', 'PDF文件名')">
+                    <n-input v-model:value="pdfFileName"
+                        :placeholder="t('deckBuilder.dialogs.exportPdf.fileNamePlaceholder', '请输入PDF文件名（不需要扩展名）')"
+                        clearable @keydown.enter.prevent="handlePdfExport" />
+                </n-form-item>
+                <n-form-item>
+                    <div class="pdf-export-description">
+                        <n-alert type="info" :show-icon="false">
+                            <div class="export-info">
+                                <h4>{{ t('deckBuilder.dialogs.exportPdf.features.title', 'PDF导出特性') }}</h4>
+                                <ul>
+                                    <li>{{ t('deckBuilder.dialogs.exportPdf.features.vectorText', '矢量文字，支持文本搜索和复制') }}
+                                    </li>
+                                    <li>{{ t('deckBuilder.dialogs.exportPdf.features.highQuality', '高质量无损图像') }}</li>
+                                    <li>{{ t('deckBuilder.dialogs.exportPdf.features.printOptimized', '打印优化排版') }}</li>
+                                    <li>{{ t('deckBuilder.dialogs.exportPdf.features.autoRotation', '自动处理横向卡牌旋转') }}
+                                    </li>
+                                </ul>
+                            </div>
+                        </n-alert>
+                    </div>
+                </n-form-item>
+            </div>
+        </n-modal>
     </div>
 </template>
 
@@ -224,10 +269,12 @@ import {
     SearchOutline,
     LayersOutline,
     SwapHorizontalOutline,
-    DownloadOutline
+    DownloadOutline,
+    DocumentTextOutline  // 新增导入
 } from '@vicons/ionicons5';
 import { WorkspaceService, CardService } from '@/api';
 import TTSExportGuide from './TTSExportGuide.vue';
+import TtsExportService from '@/api/tts-export-service';  // 新增导入
 
 // 导入卡背图片
 import playerBack from '@/assets/cardbacks/player-back.jpg';
@@ -301,7 +348,10 @@ const imageSearchKeyword = ref('');
 
 // TTS导出相关状态
 const showTTSExport = ref(false);
-
+// PDF导出相关状态 - 新增
+const showPdfDialog = ref(false);
+const pdfFileName = ref('');
+const exportingPdf = ref(false);
 // 双面卡牌预览缓存
 const frontSlotCardImages = ref(new Map<number, string>());
 const backSlotCardImages = ref(new Map<number, string>());
@@ -532,7 +582,7 @@ const assignContentToSlot = async (type: 'card' | 'cardback' | 'image', path: st
     emit('update:deck', updatedDeck);
     showCardSelector.value = false;
     selectedSlotIndex.value = null;
-    
+
     const typeName = t(`deckBuilder.messages.types.${type}`);
     const sideName = currentSide.value === 'front' ? t('deckBuilder.editor.sides.front') : t('deckBuilder.editor.sides.back');
     message.success(t('deckBuilder.messages.cardAdded', { type: typeName, side: sideName }));
@@ -621,7 +671,57 @@ const handleDrop = (targetIndex: number) => {
 const handleSave = () => {
     emit('save');
 };
+// PDF导出相关方法 - 新增
+const showPdfExportDialog = () => {
+    if (!props.deck) {
+        message.error(t('deckBuilder.messages.noDeckSelected', '未选择牌库'));
+        return;
+    }
 
+    // 设置默认文件名（去掉原始文件的扩展名）
+    const defaultName = props.deck.name.replace(/\.(json|deck)$/i, '');
+    pdfFileName.value = defaultName;
+    showPdfDialog.value = true;
+};
+const handlePdfExport = async () => {
+    if (!props.deck) {
+        message.error(t('deckBuilder.messages.noDeckSelected', '未选择牌库'));
+        return false;
+    }
+    const fileName = pdfFileName.value.trim();
+    if (!fileName) {
+        message.error(t('deckBuilder.messages.emptyFileName', '请输入文件名'));
+        return false;
+    }
+    try {
+        exportingPdf.value = true;
+
+        // 确保文件名有.pdf扩展名
+        const finalFileName = fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`;
+
+        // 调用PDF导出API
+        const result = await TtsExportService.exportDeckPdf(`${props.deck.name}.deck`, finalFileName);
+
+        message.success(t('deckBuilder.messages.pdfExportSuccess',
+            `PDF导出成功`,
+            { fileName: result.pdf_filename }
+        ));
+
+        showPdfDialog.value = false;
+        pdfFileName.value = '';
+
+        return true;
+    } catch (error: any) {
+        console.error('PDF导出失败:', error);
+        message.error(t('deckBuilder.messages.pdfExportFailed',
+            `PDF导出失败: ${error.message || '未知错误'}`,
+            { error: error.message || '未知错误' }
+        ));
+        return false;
+    } finally {
+        exportingPdf.value = false;
+    }
+};
 // TTS导出相关方法
 const showTTSExportGuide = () => {
     showTTSExport.value = true;
@@ -692,10 +792,17 @@ watch(() => props.deck, (newDeck, oldDeck) => {
     font-size: 1.1rem;
 }
 
+/* 调整按钮组布局 */
 .editor-actions {
     display: flex;
     gap: 0;
     align-items: center;
+}
+.editor-actions > :not(:last-child) {
+    margin-right: 0.75rem;
+}
+.editor-actions > :last-child {
+    margin-right: 0;
 }
 
 /* TTS导出按钮样式 */
@@ -1128,41 +1235,78 @@ watch(() => props.deck, (newDeck, oldDeck) => {
     text-align: center;
 }
 
-/* 响应式调整 */
-@media (max-width: 1400px) {
-    .grid-slot {
-        width: 120px;
-        height: 170px;
-    }
-
-    .deck-grid {
-        gap: 1rem;
-    }
+/* PDF导出按钮样式 - 新增 */
+.export-pdf-button {
+    background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%) !important;
+    border: none !important;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+    transition: all 0.3s ease;
+    font-weight: 600;
+    margin-right: 0.75rem;
+}
+.export-pdf-button:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+}
+/* PDF导出对话框样式 - 新增 */
+.pdf-export-form {
+    padding: 1rem 0;
+}
+.pdf-export-description {
+    margin-top: 1rem;
+}
+.export-info h4 {
+    margin: 0 0 0.75rem 0;
+    color: #2c3e50;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+.export-info ul {
+    margin: 0;
+    padding-left: 1.25rem;
+    list-style-type: disc;
+}
+.export-info li {
+    margin: 0.375rem 0;
+    font-size: 0.85rem;
+    color: #495057;
+    line-height: 1.4;
 }
 
+/* 响应式调整 - 修改现有样式 */
+@media (max-width: 1400px) {
+    .editor-actions {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .editor-actions > :not(:last-child) {
+        margin-right: 0;
+    }
+    
+    .export-tts-button,
+    .export-pdf-button {
+        margin-right: 0;
+    }
+}
 @media (max-width: 1200px) {
-    .grid-slot {
-        width: 110px;
-        height: 150px;
+    .panel-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
     }
-
-    .deck-grid {
-        gap: 0.8rem;
+    
+    .editor-actions {
+        width: 100%;
+        justify-content: flex-end;
     }
-
-    .card-name {
-        font-size: 0.7rem;
-    }
-
-    .remove-card-btn {
-        width: 24px !important;
-        height: 24px !important;
-        min-width: 24px !important;
-        min-height: 24px !important;
-    }
-
-    .remove-card-btn .n-icon {
-        font-size: 12px !important;
+    
+    .export-tts-button,
+    .export-pdf-button,
+    .save-button {
+        font-size: 0.85rem;
+        padding: 0.5rem 0.75rem;
     }
 }
 </style>

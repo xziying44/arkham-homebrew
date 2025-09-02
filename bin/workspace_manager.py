@@ -4,14 +4,13 @@ import json
 import mimetypes
 import os
 import sys
-import tempfile  # 添加这个导入
 import time
 import traceback
-from pathlib import Path
 from typing import List, Dict, Any, Optional, Union
 
 from PIL import Image
 
+from bin.deck_exporter import DeckExporter
 from bin.tts_card_converter import TTSCardConverter
 
 # 导入卡牌生成相关模块
@@ -67,6 +66,8 @@ class WorkspaceManager:
             self.image_manager = None
 
         self.config = self.get_config()
+        # 初始化牌库导出器
+        self.deck_exporter = DeckExporter(self)
 
     def _get_relative_path(self, absolute_path: str) -> str:
         """将绝对路径转换为相对于工作目录的相对路径"""
@@ -457,7 +458,7 @@ class WorkspaceManager:
                 picture_path = full_picture_path
         return picture_path
 
-    def generate_card_image(self, json_data: Dict[str, Any]):
+    def generate_card_image(self, json_data: Dict[str, Any], silence=False):
         """
         生成卡图
 
@@ -482,11 +483,16 @@ class WorkspaceManager:
             self.font_manager.set_lang(language)
 
             # 调用process_card_json生成卡牌
-
-            card = self.creator.create_card(
-                json_data,
-                picture_path=self.get_card_base64(json_data)
-            )
+            if silence:
+                card = self.creator.create_card_bottom_map(
+                    json_data,
+                    picture_path=self.get_card_base64(json_data)
+                )
+            else:
+                card = self.creator.create_card(
+                    json_data,
+                    picture_path=self.get_card_base64(json_data)
+                )
 
             # 检测是否有遭遇组
             encounter_group = json_data.get('encounter_group', None)
@@ -502,24 +508,25 @@ class WorkspaceManager:
                     card.set_encounter_icon(Image.open(encounter_group_picture_path))
 
             # 画页脚
-            illustrator = json_data.get('illustrator', '')
-            footer_copyright = self.config.get('footer_copyright', '')
-            encounter_group_number = json_data.get('encounter_group_number', '')
-            card_number = json_data.get('card_number', '')
-            footer_icon_name = self.config.get('footer_icon_dir', '')
-            footer_icon = None
-            if footer_icon_name:
-                footer_icon_path = self._get_absolute_path(footer_icon_name)
-                if os.path.exists(footer_icon_path):
-                    footer_icon = Image.open(footer_icon_path)
+            if not silence:
+                illustrator = json_data.get('illustrator', '')
+                footer_copyright = self.config.get('footer_copyright', '')
+                encounter_group_number = json_data.get('encounter_group_number', '')
+                card_number = json_data.get('card_number', '')
+                footer_icon_name = self.config.get('footer_icon_dir', '')
+                footer_icon = None
+                if footer_icon_name:
+                    footer_icon_path = self._get_absolute_path(footer_icon_name)
+                    if os.path.exists(footer_icon_path):
+                        footer_icon = Image.open(footer_icon_path)
 
-            card.set_footer_information(
-                illustrator,
-                footer_copyright,
-                encounter_group_number,
-                footer_icon,
-                card_number
-            )
+                card.set_footer_information(
+                    illustrator,
+                    footer_copyright,
+                    encounter_group_number,
+                    footer_icon,
+                    card_number
+                )
             return card
 
         except Exception as e:
@@ -789,97 +796,11 @@ class WorkspaceManager:
         Returns:
             bool: 导出是否成功
         """
-        try:
-            from PIL import Image, ImageDraw
+        return self.deck_exporter.export_deck_image(deck_name, export_format, quality)
 
-            # 1. 读取牌库JSON文件
-            deck_builder_path = os.path.join(self.workspace_path, 'DeckBuilder')
-            if not os.path.exists(deck_builder_path):
-                print("DeckBuilder目录不存在")
-                return False
-
-            deck_file_path = os.path.join(deck_builder_path, deck_name)
-            if not os.path.exists(deck_file_path):
-                print(f"牌库文件不存在: {deck_name}")
-                return False
-
-            with open(deck_file_path, 'r', encoding='utf-8') as f:
-                deck_data = json.load(f)
-
-            # 2. 获取底图尺寸
-            width = deck_data.get('width', 1)
-            height = deck_data.get('height', 1)
-
-            # 单元大小
-            card_width = 750
-            card_height = 1050
-
-            # 创建底图（黑色背景）
-            canvas_width = width * card_width
-            canvas_height = height * card_height
-
-            front_image = Image.new('RGB', (canvas_width, canvas_height), (0, 0, 0))
-            back_image = Image.new('RGB', (canvas_width, canvas_height), (0, 0, 0))
-
-            # 3. 处理正面卡片
-            front_cards = deck_data.get('frontCards', [])
-            back_cards = deck_data.get('backCards', [])
-
-            # 收集所有需要处理的位置
-            positions_to_process = set()
-            for card in front_cards:
-                positions_to_process.add(card.get('index', 0))
-            for card in back_cards:
-                positions_to_process.add(card.get('index', 0))
-
-            # 处理每个位置的卡片
-            for position in positions_to_process:
-                # 计算位置坐标（从左到右，从上到下）
-                col = position % width
-                row = position // width
-                x = col * card_width
-                y = row * card_height
-
-                # 处理正面卡片
-                front_card_image = self._get_card_image_for_position(front_cards, position)
-                if front_card_image:
-                    processed_front = self._process_card_image(front_card_image, True, card_width, card_height)
-                    front_image.paste(processed_front, (x, y))
-
-                # 处理背面卡片
-                back_card_image = self._get_card_image_for_position(back_cards, position)
-                if back_card_image:
-                    processed_back = self._process_card_image(back_card_image, False, card_width, card_height)
-                    back_image.paste(processed_back, (x, y))
-
-            # 4. 保存图片
-            deck_base_name = os.path.splitext(deck_name)[0]  # 去掉后缀
-
-            front_filename = f"{deck_base_name}_front.{export_format.lower()}"
-            back_filename = f"{deck_base_name}_back.{export_format.lower()}"
-
-            front_path = os.path.join(deck_builder_path, front_filename)
-            back_path = os.path.join(deck_builder_path, back_filename)
-
-            save_kwargs = {}
-            if export_format == 'JPG':
-                save_kwargs['quality'] = quality
-                save_kwargs['format'] = 'JPEG'
-            else:
-                save_kwargs['format'] = 'PNG'
-
-            front_image.save(front_path, **save_kwargs)
-            back_image.save(back_path, **save_kwargs)
-
-            print(f"牌库图片已导出:")
-            print(f"  正面: {self._get_relative_path(front_path)}")
-            print(f"  背面: {self._get_relative_path(back_path)}")
-
-            return True
-
-        except Exception as e:
-            print(f"导出牌库图片失败: {e}")
-            return False
+    def export_deck_pdf(self, deck_name: str, pdf_filename: Optional[str] = None) -> bool:
+        """导出牌库PDF"""
+        return self.deck_exporter.export_deck_pdf(deck_name, pdf_filename)
 
     def _get_card_image_for_position(self, cards: List[Dict], position: int) -> Optional[Image.Image]:
         """获取指定位置的卡片图片"""

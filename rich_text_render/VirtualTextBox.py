@@ -1,6 +1,7 @@
 # VirtualTextBox.py
-from typing import List, Tuple, Union, Optional, Dict
 from dataclasses import dataclass
+from typing import List, Tuple, Union, Optional
+
 from PIL import Image
 from PIL.ImageFont import FreeTypeFont
 

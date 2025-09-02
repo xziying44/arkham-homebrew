@@ -1,8 +1,9 @@
 import json
-import random
 import re
 from typing import Union, Optional
+
 from PIL import Image, ImageEnhance
+
 from Card import Card, FontManager, ImageManager
 
 
@@ -919,13 +920,22 @@ class CardCreator:
 
         test_text = ""
         if 'size' in card_back and card_back['size'] > 0:
-            test_text += f"【牌库卡牌张数】：{card_back['size']}。\n"
+            test_text += f"【{self.font_manager.get_font_text('牌库卡牌张数')}】" \
+                         f"{self.font_manager.get_font_text('：')}" \
+                         f"{card_back['size']}" \
+                         f"{self.font_manager.get_font_text('。')}\n"
         if 'option' in card_back and card_back['option']:
             option_text = '，'.join(card_back['option']) + '。' if \
                 isinstance(card_back['option'], list) else card_back['option']
-            test_text += '【牌库构筑选项】：' + option_text + '\n'
+            test_text += f"【{self.font_manager.get_font_text('牌库构筑选项')}】" \
+                         f"{self.font_manager.get_font_text('：')}" \
+                         f"{option_text}\n"
         if 'requirement' in card_back and card_back['requirement'] != '':
-            test_text += f"【牌库构筑需求】(不计入卡牌张数)：{card_back['requirement']}。\n"
+            test_text += f"【{self.font_manager.get_font_text('牌库构筑需求')}】" \
+                         f"({self.font_manager.get_font_text('不计入卡牌张数')})" \
+                         f"{self.font_manager.get_font_text('：')}" \
+                         f"{card_back['requirement']}" \
+                         f"{self.font_manager.get_font_text('。')}\n"
         if 'other' in card_back and card_back['other'] != '':
             test_text += card_back['other'] + '\n'
         if 'story' in card_back and card_back['story'] != '':
@@ -1422,15 +1432,19 @@ class CardCreator:
 
     def create_card_bottom_map(self, card_json: dict, picture_path: Union[str, Image.Image, None] = None) -> Card:
         """制作底图"""
-        card_json['name'] = ''
-        card_json['subtitle'] = ''
-        card_json['body'] = ''
-        card_json['flavor'] = ''
-        card_json['health'] = -999
-        card_json['horror'] = -999
-        card_json['attribute'] = []
-        card_json['traits'] = []
-        return self.create_card(card_json, picture_path)
+        self.font_manager.silence = True
+        card_json = card_json.copy()
+        if card_json.get('type', '') == '支援卡':
+            # 支援卡
+            if card_json.get('health', -1) != -1 or card_json.get('horror', -1) != -1:
+                card_json['health'] = -999
+                card_json['horror'] = -999
+        else:
+            card_json['health'] = -999
+            card_json['horror'] = -999
+        card_object = self.create_card(card_json, picture_path)
+        self.font_manager.silence = False
+        return card_object
 
     def create_card(self, card_json: dict, picture_path: Union[str, Image.Image, None] = None) -> Card:
         """
@@ -1501,44 +1515,20 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "调查员",
-        "name": "🏅The Herta Ąą",
+        "type": "调查员背面",
+        "name": "🏅The Herta",
         "id": "",
         "created_at": "",
         "version": "1.0",
         "language": "en",
-        "subtitle": "The Sorceress",
         "class": "探求者",
-        "attribute": [
-            4,
-            6,
-            1,
-            1
-        ],
-        "health": 3,
-        "horror": 12,
-        "traits": [
-            "Scholar",
-            "Genius Society"
-        ],
-        "body": "You begin the game with 4 copies of Herta Puppet in play. When any amount of damage would be placed on you, place those damage on Herta Puppet (Online) instead.\n【Forced】 – When Herta Puppet (Online) is dealt damage: You take 1 direct horror.\n⚡ Exhaust a copy of Herta Puppet at your location: You get +2 skill value during this test.123\n⭐ effect: +X. X is the number of Herta Puppet assets in play.",
-        "flavor": "“If they dared to write that, then I would call myself THE Herta.”",
-        "illustrator": "miHoYo",
-        "card_number": "1",
-        "picture_layout": {
-            "mode": "custom",
-            "offset": {
-                "x": -276.66666666666663,
-                "y": 20
-            },
-            "scale": 0.7,
-            "crop": {
-                "top": 0,
-                "right": 0,
-                "bottom": 0,
-                "left": 0
-            }
-        }
+        "card_back": {
+            "size": 30,
+            "option": "Seeker cards(<探求者>)level 0-5, Neutral cards level 0-5, {Practiceds}kills level 0-3.",
+            "requirement": "Obscure Studies, Whispers from the Deep, 1 random basic weakness",
+            "story": "Amanda Sharpe was on track to become one of Miskatonic University's most accomplished graduates. However, ever since she saw a strange painting of an enormous creature's emergence from the depths of the ocean, her classwork has suffered. Her dreams are overwhelmed by images of a vast submerged city and whispers in a language she does not understand. She remains dedicated to her studies, but her goal is no longer to graduate at the top of her class; rather, she seeks to discover the meaning behind the occult secrets concealed between the lines of reality."
+        },
+        "subtitle": "The Sorceress"
     }
 
     # 创建字体和图片管理器
@@ -1566,9 +1556,9 @@ if __name__ == '__main__':
     # card.image.show()
 
     card_end = creator.create_card_bottom_map(json_data, picture_path=json_data.get('picture_path', None))
+    # card_end.image.show()
 
     from create_pdf import PDFVectorDrawer
-
 
     drawer = PDFVectorDrawer('output_with_borders.pdf', fm)
     drawer.add_page(card_end.image, card.get_text_layer_metadata())

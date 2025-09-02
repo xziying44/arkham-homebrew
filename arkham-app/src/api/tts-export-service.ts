@@ -1,9 +1,11 @@
-// 更新 tts-export-service.ts 文件
+// tts-export-service.ts
 import { httpClient, ApiError } from './http-client';
 import { API_ENDPOINTS } from './endpoints';
 import type {
     OpenDirectoryRequest,
     ExportDeckImageRequest,
+    ExportDeckPdfRequest,
+    ExportDeckPdfData,
     ExportTtsItemRequest
 } from './types';
 
@@ -72,6 +74,40 @@ export class TtsExportService {
     }
 
     /**
+     * 导出牌库PDF
+     * @param deckName 牌库文件名（相对于DeckBuilder文件夹）
+     * @param pdfFilename 可选的自定义PDF文件名
+     * @returns 导出成功后的文件信息
+     * @throws {ApiError} 当导出失败时抛出错误
+     */
+    public static async exportDeckPdf(
+        deckName: string,
+        pdfFilename?: string
+    ): Promise<ExportDeckPdfData> {
+        try {
+            const requestData: ExportDeckPdfRequest = {
+                deck_name: deckName,
+                pdf_filename: pdfFilename
+            };
+            
+            const response = await httpClient.post<ExportDeckPdfData>(
+                API_ENDPOINTS.EXPORT_DECK_PDF.url,
+                requestData,
+                {
+                    timeout: API_ENDPOINTS.EXPORT_DECK_PDF.timeout
+                }
+            );
+
+            return response;
+        } catch (error) {
+            if (error instanceof ApiError) {
+                throw error;
+            }
+            throw new ApiError(8008, '导出牌库PDF失败（系统错误）', error);
+        }
+    }
+
+    /**
      * 导出TTS物品
      * @param deckName 牌库名称（DeckBuilder文件夹中的文件名）
      * @param faceUrl 正面图片URL（完整的HTTP/HTTPS地址）
@@ -110,6 +146,7 @@ export class TtsExportService {
 export const {
     openDirectory,
     exportDeckImage,
+    exportDeckPdf,  // 新增导出PDF方法
     exportTtsItem
 } = TtsExportService;
 

@@ -114,9 +114,9 @@
       "weakness": "WEAKNESS",
       "basic_weakness": "BASIC WEAKNESS",
       "deck_size": "Deck Size",
-      "deck_options": "Deck Options",
-      "deck_requirements": "Deck Requirements",
-      "not_count": "Does not count toward deck size"
+      "deck_options": "Deckbuilding Options",
+      "deck_requirements": "Deckbuilding Requirements",
+      "not_count": "do not count toward deck size"
     }
   }
 ]

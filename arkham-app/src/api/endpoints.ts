@@ -156,6 +156,11 @@ export const API_ENDPOINTS = {
     method: HttpMethod.POST,
     timeout: 60000 // 60秒超时，牌库图片导出可能需要较长时间
   } as ApiConfig,
+  EXPORT_DECK_PDF: {
+    url: '/api/export-deck-pdf',
+    method: HttpMethod.POST,
+    timeout: 60000 // 60秒超时，PDF导出可能需要较长时间
+  } as ApiConfig,
   EXPORT_TTS_ITEM: {
     url: '/api/export-tts',
     method: HttpMethod.POST,

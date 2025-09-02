@@ -1,11 +1,12 @@
 # RichTextRenderer.py
 import re
-from dataclasses import dataclass
-from typing import List, Tuple, Optional
-from enum import Enum
-from PIL import Image, ImageDraw, ImageFont
 # 假设 Card.py 在上一级目录
 import sys
+from dataclasses import dataclass
+from enum import Enum
+from typing import List, Optional
+
+from PIL import Image, ImageDraw
 
 from ResourceManager import FontManager, ImageManager
 
@@ -290,7 +291,6 @@ class RichTextRenderer:
             合并后的文本
         """
         import re
-        from collections import defaultdict
 
         # 正则表达式匹配flavor标签
         flavor_pattern = r'<flavor([^>]*)>(.*?)</flavor>'
@@ -507,6 +507,7 @@ class RichTextRenderer:
                 success = virtual_text_box.new_paragraph()
             elif item.tag == "font":
                 font_name = item.attributes.get('name', base_options.font_name)
+                font_name = self.font_manager.get_lang_font(font_name).name
                 font_stack.push(font_cache.get_font(font_name, size_to_test), font_name)
             elif item.tag == "b":
                 font_stack.push(font_cache.get_font(self.default_fonts.bold, size_to_test), self.default_fonts.bold)
@@ -693,6 +694,7 @@ class RichTextRenderer:
 
             elif item.tag == "font":
                 font_name = item.attributes.get('name', options.font_name)
+                font_name = self.font_manager.get_lang_font(font_name).name
                 try:
                     font_stack.push(font_cache.get_font(font_name, options.font_size), font_name)
                 except Exception as e:

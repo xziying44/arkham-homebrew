@@ -1,9 +1,9 @@
-import requests
 import base64
-import uuid
 import os
-import json
+import uuid
 from typing import List, Dict, Optional, Tuple
+
+import requests
 
 
 class GitHubImageHost:

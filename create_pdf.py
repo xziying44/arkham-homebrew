@@ -1,13 +1,28 @@
 import json
 import os
+from enum import Enum, auto
+
 from PIL import Image
-from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from enum import Enum, auto
+from reportlab.pdfgen import canvas
+
 # 假设 ResourceManager.py 和 FontManager 类存在且工作正常
 from ResourceManager import FontManager
+
+font_vertical_offset = {
+    'star': 4,
+    'Arkhamic': 8,
+    'arkham-icons----w': 8,
+    'ArnoPro-Smbd': 5,
+    'ArnoPro-Bold': 5,
+    'ArnoPro-Regular': 5,
+    'ArnoPro-Italic': 5,
+    'NimbusRomNo9L-Med': 5,
+    'NimbusRomNo9L-MedIta': 5,
+
+}
 
 
 class RotationDirection(Enum):
@@ -173,7 +188,11 @@ class PDFVectorDrawer:
                 border_color_hex = item.get('border_color', '#000000')
 
                 # 计算Y坐标（PDF坐标系与图片坐标系不同）
-                pdf_y = page['height'] - y - font_size * 0.9
+                vertical_offset = font_vertical_offset.get(font, 0)
+                if 0 < vertical_offset < 1:
+                    vertical_offset = int(font_size * vertical_offset)
+                vertical_offset += font_vertical_offset.get(f'{font}----{text}', 0)
+                pdf_y = page['height'] - y - font_size * 0.9 + vertical_offset
 
                 if border_width > 0:
                     c.saveState()

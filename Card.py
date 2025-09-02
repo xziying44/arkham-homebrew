@@ -318,6 +318,8 @@ class Card:
         :param border_color: 边框颜色
         :param underline: 是否添加下划线
         """
+        if self.font_manager.silence:
+            return
         lang_font = self.font_manager.get_lang_font(font_name)
         self.last_render_list.extend(self.rich_renderer.draw_line(
             text=text,
@@ -348,6 +350,8 @@ class Card:
         :param border_width: 边框粗细
         :param border_color: 边框颜色
         """
+        if self.font_manager.silence:
+            return
         lang_font = self.font_manager.get_lang_font(font_name)
         self.last_render_list.extend(self.rich_renderer.draw_line(
             text=text,
@@ -488,6 +492,8 @@ class Card:
         :param padding: 内边距
         :param draw_virtual_box: 是否绘制调试框线
         """
+        if self.font_manager.silence:
+            return
         # 兼容旧格式
         if (self.card_type in ['密谋卡', '场景卡'] and self.is_back) or self.card_type == '故事卡':
             text = re.sub(r'<relish>(.*?)</relish>', r'<flavor align="left" quote="true" flex="false">\1</flavor>',
@@ -617,6 +623,10 @@ class Card:
         :return:
         """
         if health == -999 and horror == -999:
+            if self.card_type == '支援卡':
+                # 画底图
+                img = self.image_manager.get_image('UI-生命恐惧')
+                self.paste_image(img, (293, 925), 'contain')
             return
         if self.card_type == '调查员卡':
             if 0 < health < 100:

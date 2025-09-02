@@ -1,23 +1,22 @@
 import json
+import os
+import queue
 import sys
+import threading
+import tkinter as tk
 import traceback
+from tkinter import filedialog
 from typing import Optional
 
 import webview
 from PIL import Image
 from flask import Flask, jsonify, request, send_from_directory, Response
-import tkinter as tk
-from tkinter import filedialog
-import threading
-import queue
-import os
-
 from openai import OpenAI
 
 from bin.file_manager import QuickStart
-from bin.workspace_manager import WorkspaceManager
 # 在文件顶部添加导入
 from bin.gitHub_image import GitHubImageHost
+from bin.workspace_manager import WorkspaceManager
 
 app = Flask(__name__)
 if not hasattr(app, 'window'):
@@ -1418,6 +1417,54 @@ def export_tts():
         return jsonify(create_response(
             code=11005,
             msg=f"导出TTS物品失败: {str(e)}"
+        )), 500
+
+
+@app.route('/api/export-deck-pdf', methods=['POST'])
+def export_deck_pdf():
+    """导出牌库PDF"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    try:
+        data = request.get_json()
+        if not data or 'deck_name' not in data:
+            return jsonify(create_response(
+                code=8006,
+                msg="请提供牌库名称"
+            )), 400
+
+        deck_name = data['deck_name']
+        pdf_filename = data.get('pdf_filename', None)  # 可选的PDF文件名
+
+        # 导出牌库PDF
+        success = current_workspace.export_deck_pdf(deck_name, pdf_filename)
+
+        if success:
+            # 构建返回的文件路径信息
+            deck_base_name = os.path.splitext(deck_name)[0]
+            final_pdf_filename = pdf_filename or f"{deck_base_name}.pdf"
+
+            return jsonify(create_response(
+                msg="牌库PDF导出成功",
+                data={
+                    "pdf_filename": final_pdf_filename,
+                    "deck_name": deck_name
+                }
+            ))
+        else:
+            return jsonify(create_response(
+                code=8007,
+                msg="牌库PDF导出失败"
+            )), 500
+
+    except Exception as e:
+        # 打印详细错误信息用于调试
+        traceback.print_exc()
+        return jsonify(create_response(
+            code=8008,
+            msg=f"导出牌库PDF失败: {str(e)}"
         )), 500
 
 

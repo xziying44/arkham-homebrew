@@ -1,6 +1,6 @@
 import re
 from enum import Enum
-from typing import List, Dict, Any
+from typing import List, Dict
 
 
 class TextType(Enum):

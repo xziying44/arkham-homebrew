@@ -339,6 +339,19 @@ export interface ExportTtsItemRequest {
   face_url: string;
   back_url: string;
 }
+
+// 导出牌库PDF请求类型
+export interface ExportDeckPdfRequest {
+  deck_name: string;
+  pdf_filename?: string; // 可选的自定义PDF文件名
+}
+
+// 导出牌库PDF响应数据类型
+export interface ExportDeckPdfData {
+  pdf_filename: string;
+  deck_name: string;
+}
+
 // TTS导出相关错误码扩展
 export enum TtsExportErrorCode {
   // 目录操作相关错误码 (9001-9099)
@@ -356,6 +369,9 @@ export enum TtsExportErrorCode {
   QUALITY_INVALID = 8003,
   DECK_EXPORT_FAILED = 8004,
   DECK_EXPORT_SYSTEM_ERROR = 8005,
+  PDF_DECK_NAME_MISSING = 8006,     // 新增：PDF导出缺少牌库名称
+  PDF_EXPORT_FAILED = 8007,         // 新增：PDF导出失败
+  PDF_EXPORT_SYSTEM_ERROR = 8008,   // 新增：PDF导出系统错误
   // TTS物品导出相关错误码 (11001-11099)
   TTS_MISSING_PARAMS = 11001,
   TTS_FACE_URL_INVALID = 11002,
@@ -363,7 +379,9 @@ export enum TtsExportErrorCode {
   TTS_EXPORT_FAILED = 11004,
   TTS_EXPORT_SYSTEM_ERROR = 11005,
 }
+
 // API响应类型
+export type ExportDeckPdfResponse = BaseResponse<ExportDeckPdfData>;
 export type OpenDirectoryResponse = BaseResponse<null>;
 export type ExportDeckImageResponse = BaseResponse<null>;
 export type ExportTtsItemResponse = BaseResponse<null>;

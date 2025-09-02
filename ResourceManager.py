@@ -140,6 +140,8 @@ class FontManager:
         # 设置默认语言
         self.set_lang(lang)
 
+        self.silence = False  # 静默模式
+
     def _load_fonts(self):
         """加载字体目录下所有支持的字体文件"""
         supported_ext = ['.ttf', '.otf', '.ttc']
@@ -282,11 +284,56 @@ class FontManager:
 
         :param text_key: 文本键名
         :return: 对应语言的文本
+        skill: str = "技能"
+        location: str = "地点"
+        event: str = "事件"
+        asset: str = "支援"
+        treachery: str = "诡计"
+        enemy: str = "敌人"
+        weakness: str = "弱点"
+        basic_weakness: str = "基础弱点"
+        deck_size: str = "牌库卡牌张数"
+        deck_options: str = "牌库构筑选项"
+        deck_requirements: str = "牌库构筑需求"
+        not_count: str = "不计入卡牌张数"
         """
+        if self.silence:
+            return ''
         config = self.get_current_config()
         if not config:
             return text_key  # 如果没有配置，返回原始文本
-
+        # 特殊字符处理
+        if text_key == '：' or text_key == '。':
+            if self.lang != 'zh':
+                if text_key == '：':
+                    return ': '
+                elif text_key == '。':
+                    return '.'
+            return text_key
+        if text_key == '技能':
+            text_key = 'skill'
+        elif text_key == '地点':
+            text_key = 'location'
+        elif text_key == '事件':
+            text_key = 'event'
+        elif text_key == '支援':
+            text_key = 'asset'
+        elif text_key == '诡计':
+            text_key = 'treachery'
+        elif text_key == '敌人':
+            text_key = 'enemy'
+        elif text_key == '弱点':
+            text_key = 'weakness'
+        elif text_key == '基础弱点':
+            text_key = 'basic_weakness'
+        elif text_key == '牌库卡牌张数':
+            text_key = 'deck_size'
+        elif text_key == '牌库构筑选项':
+            text_key = 'deck_options'
+        elif text_key == '牌库构筑需求':
+            text_key = 'deck_requirements'
+        elif text_key == '不计入卡牌张数':
+            text_key = 'not_count'
         return getattr(config.texts, text_key, text_key)
 
     def get_available_languages(self):
