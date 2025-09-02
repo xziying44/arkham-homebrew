@@ -204,23 +204,15 @@ class RichTextRenderer:
         self.image: Image.Image = image
         self.draw = ImageDraw.Draw(self.image)
         self.rich_text_parser = RichTextParser()
+        self.default_fonts: DefaultFonts = DefaultFonts(
+            regular=self.font_manager.get_lang_font('正文字体').name,
+            bold=self.font_manager.get_lang_font('加粗字体').name,
+            italic=self.font_manager.get_lang_font('风味文本字体').name,
+            trait=self.font_manager.get_lang_font('特性字体').name
+        )
         if lang == 'zh':
-            self.font_manager.set_lang('zh')
-            self.default_fonts: DefaultFonts = DefaultFonts(
-                regular='simfang',
-                bold='思源黑体',
-                italic='simfang-Italic',
-                trait='方正舒体'
-            )
             self.line_spacing_multiplier = 1.2
         else:
-            self.font_manager.set_lang('en')
-            self.default_fonts: DefaultFonts = DefaultFonts(
-                regular='ArnoPro-Regular',
-                bold='NimbusRomNo9L-Med',
-                italic='ArnoPro-Italic',
-                trait='NimbusRomNo9L-MedIta'
-            )
             self.line_spacing_multiplier = 1.1
 
     def _preprocess_text(self, text: str) -> str:

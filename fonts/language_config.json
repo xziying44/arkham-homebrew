@@ -1,0 +1,122 @@
+[
+  {
+    "name": "简体中文",
+    "code": "zh",
+    "fonts": {
+      "title": {
+        "name": "汉仪小隶书简",
+        "size_percent": 1.0,
+        "vertical_offset": 0
+      },
+      "subtitle": {
+        "name": "汉仪小隶书简",
+        "size_percent": 1.0,
+        "vertical_offset": 0
+      },
+      "card_type": {
+        "name": "汉仪小隶书简",
+        "size_percent": 1.0,
+        "vertical_offset": 0
+      },
+      "trait": {
+        "name": "方正舒体",
+        "size_percent": 1.0,
+        "vertical_offset": 0
+      },
+      "bold": {
+        "name": "思源黑体",
+        "size_percent": 1.0,
+        "vertical_offset": 0
+      },
+      "body": {
+        "name": "simfang",
+        "size_percent": 1.0,
+        "vertical_offset": 0
+      },
+      "flavor": {
+        "name": "simfang-Italic",
+        "size_percent": 1.0,
+        "vertical_offset": 0
+      },
+      "collection_info": {
+        "name": "ArnoPro-Bold",
+        "size_percent": 1.0,
+        "vertical_offset": 0
+      }
+    },
+    "texts": {
+      "skill": "技能",
+      "location": "地点",
+      "event": "事件",
+      "asset": "支援",
+      "treachery": "诡计",
+      "enemy": "敌人",
+      "weakness": "弱点",
+      "basic_weakness": "基础弱点",
+      "deck_size": "牌库卡牌张数",
+      "deck_options": "牌库构筑选项",
+      "deck_requirements": "牌库构筑需求",
+      "not_count": "不计入卡牌张数"
+    }
+  },
+  {
+    "name": "English",
+    "code": "en",
+    "fonts": {
+      "title": {
+        "name": "Arkhamic",
+        "size_percent": 0.95,
+        "vertical_offset": 9
+      },
+      "subtitle": {
+        "name": "ArnoPro-Smbd",
+        "size_percent": 0.95,
+        "vertical_offset": 4
+      },
+      "card_type": {
+        "name": "ArnoPro-Smbd",
+        "size_percent": 0.9,
+        "vertical_offset": 3
+      },
+      "trait": {
+        "name": "NimbusRomNo9L-MedIta",
+        "size_percent": 0.88,
+        "vertical_offset": 9
+      },
+      "bold": {
+        "name": "NimbusRomNo9L-Med",
+        "size_percent": 1.0,
+        "vertical_offset": 0
+      },
+      "body": {
+        "name": "ArnoPro-Regular",
+        "size_percent": 1.0,
+        "vertical_offset": 0
+      },
+      "flavor": {
+        "name": "ArnoPro-Italic",
+        "size_percent": 0.9,
+        "vertical_offset": 0
+      },
+      "collection_info": {
+        "name": "ArnoPro-Bold",
+        "size_percent": 1.0,
+        "vertical_offset": 0
+      }
+    },
+    "texts": {
+      "skill": "SKILL",
+      "location": "LOCATION",
+      "event": "EVENT",
+      "asset": "ASSET",
+      "treachery": "TREACHERY",
+      "enemy": "ENEMY",
+      "weakness": "WEAKNESS",
+      "basic_weakness": "BASIC WEAKNESS",
+      "deck_size": "Deck Size",
+      "deck_options": "Deck Options",
+      "deck_requirements": "Deck Requirements",
+      "not_count": "Does not count toward deck size"
+    }
+  }
+]
