@@ -113,7 +113,7 @@ class ExportHelper:
         self.gamma: float = float(config.get("gamma", 1.0))
 
         # 预计算最终的像素尺寸
-        self.pixel_width, self.pixel_height = self.calculate_pixel_dimensions(self.dpi, self.bleed)
+        self.pixel_width, self.pixel_height = self.calculate_pixel_dimensions(self.dpi, self.bleed, self.size)
 
         # 创建出血客户端
         self.lama_cleaner = LamaCleaner(
@@ -140,14 +140,19 @@ class ExportHelper:
             valid_options = ", ".join([f"'{e.value}'" for e in enum_class])
             raise ValueError(f"无效的参数 '{param_name}': '{value}'。有效选项为: {valid_options}")
 
-    def calculate_pixel_dimensions(self, dpi: int = 300, bleed: ExportBleed = ExportBleed.TWO_MM) -> Tuple[int, int]:
+    def calculate_pixel_dimensions(
+            self,
+            dpi: int = 300,
+            bleed: ExportBleed = ExportBleed.TWO_MM,
+            size=ExportSize.SIZE_61_88
+    ) -> Tuple[int, int]:
         """
         根据规格、出血和DPI计算最终导出的像素尺寸。
 
         :return: 一个包含 (宽度, 高度) 的元组，单位为像素。
         """
         # 1. 获取基础物理尺寸 (mm)
-        base_width_mm, base_height_mm = self.SPECIFICATIONS[self.size]
+        base_width_mm, base_height_mm = self.SPECIFICATIONS[size]
 
         # 2. 加上出血尺寸 (出血是加在四周的，所以总宽高各增加 2 * bleed)
         bleed_mm = bleed.value
@@ -255,29 +260,58 @@ class ExportHelper:
                 ui_name += '-卡背'
             else:
                 ui_name += '-底图'
-        print('出血底图 -> ' + ui_name)
         ui = self.workspace_manager.creator.image_manager.get_image(ui_name)
         if ui:
             card_map.paste(ui, (0, 0, ui.size[0], ui.size[1]), ui)
+
+        # 出血投入图标
+        card_map = self._bleeding_submit_icon(card_json, card_map)
+        return card_map
+
+    def _bleeding_submit_icon(self, card_json: dict, card_map: Image.Image) -> Image:
+        """出血投入图标"""
+        submit_index = 0
+        card_class = card_json.get('class', '')
+        if 'submit_icon' in card_json and isinstance(card_json['submit_icon'], list):
+            for icon in card_json['submit_icon']:
+                img = self.workspace_manager.image_manager.get_image(f'投入-{card_class}-{icon}')
+                # 将img裁剪为15*80
+                img = img.crop((0, 0, 15, img.size[1]))
+                card_map.paste(img, (0, 167 + submit_index * 80 + 19), img)
+                submit_index += 1
         return card_map
 
     def _bleeding(self, card_json: dict, card_map: Image.Image) -> Image:
-        width, height = self.calculate_pixel_dimensions(bleed=self.bleed)
+        # 判断为拉伸
+        if self.bleed_mode == BleedMode.STRETCH:
+            width, height = self.calculate_pixel_dimensions(bleed=self.bleed)
+        else:
+            width, height = self.calculate_pixel_dimensions(bleed=self.bleed, size=self.size)
 
         if not (card_json.get('type') == '调查员卡' and card_json.get('is_back', False) is False):
             # 标准出血
             card_map = self._standard_bleeding(card_json, card_map)
-            # 判断为拉伸
-            if self.bleed_mode == BleedMode.STRETCH:
-                standard_width, standard_height = self.calculate_pixel_dimensions()
-                # 将card_map拉伸到标准尺寸
-                card_map = card_map.resize((standard_width, standard_height))
 
         # 二次出血
         if self._is_horizontal(card_map):
             card_map = self._call_lama_cleaner(card_map, height, width)
         else:
             card_map = self._call_lama_cleaner(card_map, width, height)
+
+        # 优化左上角
+        if self.bleed_model == BleedModel.LAMA and self.bleed == 3:
+            print("优化左上角")
+            # 创建一个优化mask，创建一个图片大小的白色背景图
+            mask_optimized = Image.new("RGB", card_map.size, (0, 0, 0))
+            # 创建画板
+            draw = ImageDraw.Draw(mask_optimized)
+            # 在左上角0,0的位置画一个40的黑色矩形
+            draw.rectangle([0, 0, 40, 40], fill=(255, 255, 255))
+            card_map = self.lama_cleaner.inpaint(
+                image=card_map,
+                mask=mask_optimized
+            )
+
         return card_map
 
     def _load_font(self, font_name: str, font_size: int) -> ImageFont.FreeTypeFont:
@@ -306,45 +340,50 @@ class ExportHelper:
             self._font_cache[cache_key] = default_font
             return default_font
 
-    def _draw_text_layer(self, card_map: Image.Image, text_layer: list[dict[str, any]]):
+    def _draw_text_layer(self, card_map: Image.Image, text_layer: list[dict[str, any]]) -> Image.Image:
         """
         绘制文字层
-
         :param card_map: 卡片图像
         :param text_layer: 文字层元数据列表
         """
         if not text_layer:
             return
-
+        # 计算DPI缩放比例
+        dpi_scale_factor = self.dpi / 300.0
+        # 计算出血偏移量
+        if self.bleed_mode == BleedMode.STRETCH:
+            width, height = self.calculate_pixel_dimensions(bleed=self.bleed, size=ExportSize.SIZE_61_88)
+            target_width, target_height = self.calculate_pixel_dimensions(self.dpi, self.bleed, ExportSize.SIZE_61_88)
+        else:
+            width, height = self.calculate_pixel_dimensions(bleed=self.bleed, size=self.size)
+            target_width, target_height = self.pixel_width, self.pixel_height
+        bleed_offset = (int((width - 739) / 2) * dpi_scale_factor, (int((height - 1049) / 2)) * dpi_scale_factor)
+        # 先将card_map缩放到目标分辨率
+        print(f"缩放至 {target_width}x{target_height}")
+        card_map = card_map.resize((target_width, target_height), Image.Resampling.LANCZOS)
         # 创建绘图对象
         draw = ImageDraw.Draw(card_map)
 
-        # 计算出血偏移量
-        width, height = self.calculate_pixel_dimensions(bleed=self.bleed)
-        bleed_offset = (int((width - 739) / 2), int((height - 1049) / 2))
         if self._is_horizontal(card_map):
             bleed_offset_x = bleed_offset[1]
             bleed_offset_y = bleed_offset[0]
         else:
             bleed_offset_x = bleed_offset[0]
             bleed_offset_y = bleed_offset[1]
-        print(bleed_offset_x, bleed_offset_y)
-
+        print(f"出血偏移量: ({bleed_offset_x}, {bleed_offset_y}), DPI缩放因子: {dpi_scale_factor}")
         for text_info in text_layer:
             try:
-                # 提取文字信息
+                # 提取文字信息并应用DPI缩放
                 text = text_info.get('text', '')
-                x = text_info.get('x', 0) + bleed_offset_x
-                y = text_info.get('y', 0) + bleed_offset_y
+                x = text_info.get('x', 0) * dpi_scale_factor + bleed_offset_x
+                y = text_info.get('y', 0) * dpi_scale_factor + bleed_offset_y
                 font_name = text_info.get('font', 'default')
-                font_size = text_info.get('font_size', 12)
+                font_size = int(text_info.get('font_size', 12) * dpi_scale_factor)
                 color = text_info.get('color', '#000000')
-                border_width = text_info.get('border_width', 0)
+                border_width = int(text_info.get('border_width', 0) * dpi_scale_factor)
                 border_color = text_info.get('border_color', '#FFFFFF')
-
                 # 加载字体（使用缓存）
                 font = self._load_font(font_name, font_size)
-
                 # 绘制文字边框（如果有）
                 if border_width > 0:
                     # 绘制边框：在主文字周围绘制多次偏移的文字
@@ -357,7 +396,6 @@ class ExportHelper:
                                     font=font,
                                     fill=border_color
                                 )
-
                 # 绘制主文字
                 draw.text(
                     (x, y),
@@ -365,10 +403,15 @@ class ExportHelper:
                     font=font,
                     fill=color
                 )
-
             except Exception as e:
                 print(f"警告：绘制文字时发生错误 - 文字: '{text_info.get('text', 'N/A')}', 错误: {e}")
                 continue
+        if self.bleed_mode == BleedMode.STRETCH:
+            if self._is_horizontal(card_map):
+                card_map = card_map.resize((self.pixel_height, self.pixel_width), Image.Resampling.LANCZOS)
+            else:
+                card_map = card_map.resize((self.pixel_width, self.pixel_height), Image.Resampling.LANCZOS)
+        return card_map
 
     def _clear_font_cache(self):
         """清除字体缓存"""
@@ -386,8 +429,7 @@ class ExportHelper:
         card_map_image = self._bleeding(card_json, card_map.image)
         # 绘制文字层
         text_layer = card_layer.get_text_layer_metadata()
-        self._draw_text_layer(card_map_image, text_layer)
-        card_layer.image.show()
+        card_map_image = self._draw_text_layer(card_map_image, text_layer)
         card_map_image.show()
 
 
@@ -395,11 +437,11 @@ if __name__ == "__main__":
     # 定义一个系统默认配置
     system_defaults = {
         "format": "PNG",
-        "size": ExportSize.POKER_SIZE.value,  # "63.5mm × 88.9mm (2.5″ × 3.5″)"
-        "dpi": 300,
+        "size": ExportSize.SIZE_61_88.value,  # "63.5mm × 88.9mm (2.5″ × 3.5″)"
+        "dpi": 600,
         "bleed": 3,
         "bleed_mode": "裁剪",
-        "bleed_model": "镜像出血",  # LaMa模型出血 镜像出血
+        "bleed_model": "LaMa模型出血",  # LaMa模型出血 镜像出血
         "quality": 90,  # 系统默认JPG质量
         "saturation": 1.0,
         "brightness": 1.0,
@@ -408,3 +450,6 @@ if __name__ == "__main__":
     export_helper = ExportHelper(system_defaults, WorkspaceManager(r'D:\汉化文件夹\Test English Project'))
     print(export_helper)
     export_helper.export_card(r'3.card')
+    # export_helper = ExportHelper(system_defaults, WorkspaceManager(r'D:\汉化文件夹\测试工作空间'))
+    # print(export_helper)
+    # export_helper.export_card(r'支援卡.card')
