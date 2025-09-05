@@ -1290,6 +1290,8 @@ class WorkspaceManager:
             # 保存图片
             if export_format == 'JPG':
                 quality = export_params.get('quality', 95)
+                # 转为RGB
+                card_image = card_image.convert('RGB')
                 card_image.save(export_filepath, format='JPEG', quality=quality)
             else:
                 card_image.save(export_filepath, format='PNG')

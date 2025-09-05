@@ -25,12 +25,127 @@ export default {
       create: 'Create',
       close: 'Close'
     },
+    // 在 contextMenu 部分添加：
     contextMenu: {
       newFolder: 'New Folder',
       newCard: 'New Card',
-      batchExport: 'Batch Export',
+      quickExport: 'Quick Export',        // 新增
+      advancedExport: 'Advanced Export',  // 新增
       rename: 'Rename',
       delete: 'Delete'
+    },
+
+    // 新增 quickExport 部分：
+    quickExport: {
+      title: 'Quick Batch Export',
+      directory: 'Directory',
+      foundCards: 'Found Cards',
+      cpuCores: 'CPU Cores',
+      activeThreads: 'Active Threads',
+      processing: 'Processing...',
+      completed: 'Export Completed',
+      currentTasks: 'Current Tasks:',
+      logs: 'Export Logs:',
+      cancel: 'Cancel',
+      stop: 'Stop',
+      start: 'Start Export',
+      close: 'Close',
+      scanning: 'Scanning card files...',
+      noCardsFound: 'No exportable card files found',
+      scanFailed: 'Failed to scan directory',
+      foundCardsLog: 'Found card files',
+      threadsLog: 'Using threads',
+      startLog: 'Starting quick batch export...',
+      usingThreads: 'Using {count} concurrent threads',
+      exportSuccess: '✓ {name}: Export successful',
+      exportFailed: '✗ {name}: Export failed - {error}',
+      completedLog: 'Export completed: {success}/{total}',
+      failedCount: 'Failed count: {count}',
+      userStopped: 'User stopped export',
+      quickExportCompleted: 'Quick export completed: {success}/{total} cards',
+      partialSuccess: 'Partial success: {success} succeeded, {failed} failed',
+      stopping: 'Stopping export...'
+    },
+
+    // 新增 advancedExport 部分：
+    advancedExport: {
+      title: 'Advanced Export Settings',
+      exportInfo: 'Export Information',
+      directory: 'Directory',
+      card: 'Card',
+      foundCards: 'Found Cards',
+      sheets: 'sheets',
+      exportParams: 'Export Parameters',
+      format: {
+        label: 'Export Format',
+        png: 'PNG',
+        jpg: 'JPG'
+      },
+      quality: {
+        label: 'Image Quality',
+        recommended: '95% (Recommended)',
+        highest: '100% (Highest Quality)'
+      },
+      size: {
+        label: 'Export Size',
+        standard: '63.5mm × 88.9mm (2.5″ × 3.5″)'
+      },
+      dpi: {
+        label: 'DPI Setting'
+      },
+      bleed: {
+        label: 'Bleed Specification',
+        none: '0mm (No Bleed)',
+        standard: '2mm (Standard Bleed)',
+        enhanced: '3mm (Enhanced Bleed)'
+      },
+      bleedMode: {
+        label: 'Bleed Mode',
+        crop: 'Crop (Keep Ratio)',
+        stretch: 'Stretch (Fill Size)'
+      },
+      bleedModel: {
+        label: 'Bleed Model',
+        mirror: 'Mirror Bleed (Fast)',
+        lama: 'LaMa Model Bleed (High Quality)'
+      },
+      lamaGuide: {
+        text: 'Lama Cleaner Installation Guide:',
+        link: 'Click to view'
+      },
+      saturation: {
+        label: 'Saturation'
+      },
+      brightness: {
+        label: 'Brightness'
+      },
+      gamma: {
+        label: 'Gamma'
+      },
+      progress: {
+        exporting: 'Exporting: {current} / {total}',
+        completed: 'Export completed!'
+      },
+      logs: 'Export Logs:',
+      cancel: 'Cancel',
+      stop: 'Stop',
+      start: 'Start Export',
+      close: 'Close',
+      scanning: 'Scanning card files...',
+      noCardsFound: 'No exportable card files found',
+      prepareFailed: 'Failed to prepare advanced export',
+      startLog: 'Starting advanced export...',
+      paramsLog: 'Export parameters: Format={format}, DPI={dpi}, Bleed={bleed}mm',
+      exportSuccess: '✓ {name}: Export successful',
+      exportFailed: '✗ {name}: Export failed - {error}',
+      completedLog: 'Advanced export completed: {success}/{total}',
+      failedCount: 'Failed count: {count}',
+      userStopped: 'User stopped advanced export',
+      advancedExportCompleted: 'Advanced export completed: {success}/{total} cards',
+      partialSuccess: 'Partial success: {success} succeeded, {failed} failed',
+      stopping: 'Stopping advanced export...',
+      validationFailed: 'Validation failed: {errors}',
+      exportError: 'Export failed'
     },
     createFolder: {
       title: 'New Folder',

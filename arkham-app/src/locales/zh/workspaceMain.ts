@@ -28,9 +28,121 @@ export default {
     contextMenu: {
       newFolder: '新建文件夹',
       newCard: '新建卡牌',
-      batchExport: '批量导出',
+      quickExport: '快速导出',      // 新增
+      advancedExport: '高级导出',   // 新增
       rename: '重命名',
       delete: '删除'
+    },
+    // 新增 quickExport 部分：
+    quickExport: {
+      title: '快速批量导出',
+      directory: '目录',
+      foundCards: '发现卡牌',
+      cpuCores: 'CPU核心数',
+      activeThreads: '使用线程',
+      processing: '正在处理中...',
+      completed: '导出完成',
+      currentTasks: '当前任务:',
+      logs: '导出日志:',
+      cancel: '取消',
+      stop: '停止',
+      start: '开始导出',
+      close: '关闭',
+      scanning: '正在扫描卡牌文件...',
+      noCardsFound: '未找到可导出的卡牌文件',
+      scanFailed: '扫描目录失败',
+      foundCardsLog: '发现卡牌文件',
+      threadsLog: '使用线程数',
+      startLog: '开始快速批量导出...',
+      usingThreads: '使用 {count} 个线程并发处理',
+      exportSuccess: '✓ {name}: 导出成功',
+      exportFailed: '✗ {name}: 导出失败 - {error}',
+      completedLog: '导出完成: {success}/{total}',
+      failedCount: '失败数量: {count}',
+      userStopped: '用户停止了导出',
+      quickExportCompleted: '快速导出完成: {success}/{total} 张卡牌',
+      partialSuccess: '部分导出成功: {success} 成功, {failed} 失败',
+      stopping: '正在停止导出...'
+    },
+    // 新增 advancedExport 部分：
+    advancedExport: {
+      title: '高级导出设置',
+      exportInfo: '导出信息',
+      directory: '目录',
+      card: '卡牌',
+      foundCards: '发现卡牌',
+      sheets: '张',
+      exportParams: '导出参数设置',
+      format: {
+        label: '导出格式',
+        png: 'PNG',
+        jpg: 'JPG'
+      },
+      quality: {
+        label: '图片质量',
+        recommended: '95%（推荐）',
+        highest: '100%（最高质量）'
+      },
+      size: {
+        label: '导出尺寸',
+        standard: '63.5mm × 88.9mm (2.5″ × 3.5″)'
+      },
+      dpi: {
+        label: 'DPI设置'
+      },
+      bleed: {
+        label: '出血规格',
+        none: '0mm（无出血）',
+        standard: '2mm（标准出血）',
+        enhanced: '3mm（加强出血）'
+      },
+      bleedMode: {
+        label: '出血模式',
+        crop: '裁剪（保持比例）',
+        stretch: '拉伸（填满尺寸）'
+      },
+      bleedModel: {
+        label: '出血模型',
+        mirror: '镜像出血（速度快）',
+        lama: 'LaMa模型出血（质量高）'
+      },
+      lamaGuide: {
+        text: 'Lama Cleaner 安装指南:',
+        link: '点击查看'
+      },
+      saturation: {
+        label: '饱和度'
+      },
+      brightness: {
+        label: '亮度'
+      },
+      gamma: {
+        label: '伽马值'
+      },
+      progress: {
+        exporting: '正在导出: {current} / {total}',
+        completed: '导出完成！'
+      },
+      logs: '导出日志:',
+      cancel: '取消',
+      stop: '停止',
+      start: '开始导出',
+      close: '关闭',
+      scanning: '正在扫描卡牌文件...',
+      noCardsFound: '未找到可导出的卡牌文件',
+      prepareFailed: '准备高级导出失败',
+      startLog: '开始高级导出...',
+      paramsLog: '导出参数: 格式={format}, DPI={dpi}, 出血={bleed}mm',
+      exportSuccess: '✓ {name}: 导出成功',
+      exportFailed: '✗ {name}: 导出失败 - {error}',
+      completedLog: '高级导出完成: {success}/{total}',
+      failedCount: '失败数量: {count}',
+      userStopped: '用户停止了高级导出',
+      advancedExportCompleted: '高级导出完成: {success}/{total} 张卡牌',
+      partialSuccess: '部分导出成功: {success} 成功, {failed} 失败',
+      stopping: '正在停止高级导出...',
+      validationFailed: '验证失败: {errors}',
+      exportError: '导出失败'
     },
     createFolder: {
       title: '新建文件夹',
