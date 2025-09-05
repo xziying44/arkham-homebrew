@@ -1468,6 +1468,46 @@ def export_deck_pdf():
         )), 500
 
 
+@app.route('/api/export-card', methods=['POST'])
+def export_card():
+    """导出卡牌"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    try:
+        data = request.get_json()
+        if not data or 'card_path' not in data or 'export_filename' not in data or 'export_params' not in data or 'params_hash' not in data:
+            return jsonify(create_response(
+                code=12001,
+                msg="请提供卡牌路径、导出文件名、导出参数和参数哈希"
+            )), 400
+
+        card_path = data['card_path']
+        export_filename = data['export_filename']
+        export_params = data['export_params']
+        params_hash = data['params_hash']
+
+        # 导出卡牌
+        success = current_workspace.export_card_with_params(
+            card_path, export_filename, export_params, params_hash
+        )
+
+        if success:
+            return jsonify(create_response(msg="卡牌导出成功"))
+        else:
+            return jsonify(create_response(
+                code=12002,
+                msg="卡牌导出失败"
+            )), 500
+
+    except Exception as e:
+        return jsonify(create_response(
+            code=12003,
+            msg=f"导出卡牌失败: {str(e)}"
+        )), 500
+
+
 if __name__ == '__main__':
     print("=" * 60)
     print("文件管理服务启动")

@@ -369,16 +369,43 @@ export enum TtsExportErrorCode {
   QUALITY_INVALID = 8003,
   DECK_EXPORT_FAILED = 8004,
   DECK_EXPORT_SYSTEM_ERROR = 8005,
-  PDF_DECK_NAME_MISSING = 8006,     // 新增：PDF导出缺少牌库名称
-  PDF_EXPORT_FAILED = 8007,         // 新增：PDF导出失败
-  PDF_EXPORT_SYSTEM_ERROR = 8008,   // 新增：PDF导出系统错误
+  PDF_DECK_NAME_MISSING = 8006,
+  PDF_EXPORT_FAILED = 8007,
+  PDF_EXPORT_SYSTEM_ERROR = 8008,
   // TTS物品导出相关错误码 (11001-11099)
   TTS_MISSING_PARAMS = 11001,
   TTS_FACE_URL_INVALID = 11002,
   TTS_BACK_URL_INVALID = 11003,
   TTS_EXPORT_FAILED = 11004,
   TTS_EXPORT_SYSTEM_ERROR = 11005,
+  // 卡牌导出相关错误码 (12001-12099)
+  CARD_EXPORT_MISSING_PARAMS = 12001,
+  CARD_EXPORT_FAILED = 12002,
+  CARD_EXPORT_SYSTEM_ERROR = 12003,
+  CARD_EXPORT_UNSUPPORTED_FORMAT = 12004,
+  CARD_EXPORT_PATH_OUTSIDE_WORKSPACE = 12005,
+  CARD_EXPORT_QUALITY_INVALID = 12006,
 }
+// 在文件末尾添加卡牌导出相关类型定义
+export interface ExportCardParams {
+  format?: 'PNG' | 'JPG';
+  quality?: number;
+  size?: string;
+  dpi?: number;
+  bleed?: number;
+  bleed_mode?: '裁剪' | '拉伸';
+  bleed_model?: '镜像出血' | 'LaMa模型出血';
+  saturation?: number;
+  brightness?: number;
+  gamma?: number;
+}
+export interface ExportCardRequest {
+  card_path: string;
+  export_filename: string;
+  export_params: ExportCardParams;
+  params_hash: string;
+}
+export type ExportCardResponse = BaseResponse<null>;
 
 // API响应类型
 export type ExportDeckPdfResponse = BaseResponse<ExportDeckPdfData>;

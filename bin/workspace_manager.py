@@ -69,6 +69,9 @@ class WorkspaceManager:
         # 初始化牌库导出器
         self.deck_exporter = DeckExporter(self)
 
+        self._export_helper = None
+        self._export_params_hash = None
+
     def _get_relative_path(self, absolute_path: str) -> str:
         """将绝对路径转换为相对于工作目录的相对路径"""
         try:
@@ -1231,4 +1234,70 @@ class WorkspaceManager:
 
         except Exception as e:
             print(f"导出TTS物品失败: {e}")
+            return False
+
+    def export_card_with_params(self, card_path: str, export_filename: str, export_params: Dict[str, Any],
+                                params_hash: str) -> bool:
+        """
+        使用指定的导出参数导出卡牌
+
+        Args:
+            card_path: 卡牌文件相对路径
+            export_filename: 导出文件名（不包含扩展名）
+            export_params: 导出参数
+            params_hash: 参数哈希值，用于缓存判断
+
+        Returns:
+            bool: 导出是否成功
+        """
+        try:
+            # 确保路径在工作目录内
+            if not self._is_path_in_workspace(card_path):
+                print(f"卡牌路径不在工作目录内: {card_path}")
+                return False
+
+            # 检查导出目录是否存在，不存在则创建
+            export_dir = os.path.join(self.workspace_path, 'export')
+            os.makedirs(export_dir, exist_ok=True)
+
+            # 获取导出格式
+            export_format = export_params.get('format', 'PNG').upper()
+            if export_format not in ['PNG', 'JPG']:
+                print(f"不支持的导出格式: {export_format}")
+                return False
+
+            # 构建完整的导出文件名
+            export_filepath = os.path.join(export_dir, f"{export_filename}.{export_format.lower()}")
+
+            # 检查是否需要重新生成（通过参数哈希判断）
+            export_helper = getattr(self, '_export_helper', None)
+            current_hash = getattr(self, '_export_params_hash', None)
+
+            if export_helper is None or current_hash != params_hash:
+                from ExportHelper import ExportHelper
+                # 创建新的ExportHelper实例
+                export_helper = ExportHelper(export_params, self)
+                self._export_helper = export_helper
+                self._export_params_hash = params_hash
+                print("创建新的ExportHelper实例")
+
+            # 导出卡牌
+            card_image = export_helper.export_card(card_path)
+            if card_image is None:
+                print("导出卡牌失败")
+                return False
+
+            # 保存图片
+            if export_format == 'JPG':
+                quality = export_params.get('quality', 95)
+                card_image.save(export_filepath, format='JPEG', quality=quality)
+            else:
+                card_image.save(export_filepath, format='PNG')
+
+            print(f"卡牌已导出到: {export_filepath}")
+            return True
+
+        except Exception as e:
+            print(f"导出卡牌失败: {e}")
+            traceback.print_exc()
             return False

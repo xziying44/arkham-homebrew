@@ -187,6 +187,12 @@ export const API_ENDPOINTS = {
     method: HttpMethod.GET,
     timeout: 5000
   } as ApiConfig,
+  // 卡牌导出接口
+  EXPORT_CARD: {
+    url: '/api/export-card',
+    method: HttpMethod.POST,
+    timeout: 120000 // 120秒超时，卡牌导出可能需要较长时间
+  } as ApiConfig,
 } as const;
 
 

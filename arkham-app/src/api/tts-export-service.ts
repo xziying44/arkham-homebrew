@@ -23,7 +23,7 @@ export class TtsExportService {
             const requestData: OpenDirectoryRequest = {
                 directory_path: directoryPath
             };
-            
+
             await httpClient.post(
                 API_ENDPOINTS.OPEN_DIRECTORY.url,
                 requestData,
@@ -47,8 +47,8 @@ export class TtsExportService {
      * @throws {ApiError} 当导出失败时抛出错误
      */
     public static async exportDeckImage(
-        deckName: string, 
-        format: 'JPG' | 'PNG' = 'PNG', 
+        deckName: string,
+        format: 'JPG' | 'PNG' = 'PNG',
         quality: number = 95
     ): Promise<void> {
         try {
@@ -57,7 +57,7 @@ export class TtsExportService {
                 format,
                 quality
             };
-            
+
             await httpClient.post(
                 API_ENDPOINTS.EXPORT_DECK_IMAGE.url,
                 requestData,
@@ -89,7 +89,7 @@ export class TtsExportService {
                 deck_name: deckName,
                 pdf_filename: pdfFilename
             };
-            
+
             const response = await httpClient.post<ExportDeckPdfData>(
                 API_ENDPOINTS.EXPORT_DECK_PDF.url,
                 requestData,
@@ -125,7 +125,7 @@ export class TtsExportService {
                 face_url: faceUrl,
                 back_url: backUrl
             };
-            
+
             await httpClient.post(
                 API_ENDPOINTS.EXPORT_TTS_ITEM.url,
                 requestData,
@@ -140,6 +140,42 @@ export class TtsExportService {
             throw new ApiError(11005, '导出TTS物品失败（系统错误）', error);
         }
     }
+    /**
+     * 导出卡牌
+     * @param cardPath 卡牌文件相对路径（例如：a.card 或 d/a.card）
+     * @param exportFilename 导出文件名（不包含扩展名）
+     * @param exportParams 导出参数对象
+     * @param paramsHash 导出参数的哈希值，用于缓存判断
+     * @throws {ApiError} 当导出失败时抛出错误
+     */
+    public static async exportCard(
+        cardPath: string,
+        exportFilename: string,
+        exportParams: ExportCardParams,
+        paramsHash: string
+    ): Promise<void> {
+        try {
+            const requestData: ExportCardRequest = {
+                card_path: cardPath,
+                export_filename: exportFilename,
+                export_params: exportParams,
+                params_hash: paramsHash
+            };
+
+            await httpClient.post(
+                API_ENDPOINTS.EXPORT_CARD.url,
+                requestData,
+                {
+                    timeout: API_ENDPOINTS.EXPORT_CARD.timeout
+                }
+            );
+        } catch (error) {
+            if (error instanceof ApiError) {
+                throw error;
+            }
+            throw new ApiError(12003, '导出卡牌失败（系统错误）', error);
+        }
+    }
 }
 
 // 导出便捷方法
@@ -147,7 +183,8 @@ export const {
     openDirectory,
     exportDeckImage,
     exportDeckPdf,  // 新增导出PDF方法
-    exportTtsItem
+    exportTtsItem,
+    exportCard,
 } = TtsExportService;
 
 export default TtsExportService;

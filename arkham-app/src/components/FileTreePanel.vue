@@ -1,6 +1,3 @@
-我来帮你优化FileTreePanel.vue，添加获取CPU核心数和多线程批量处理功能。
-
-```vue
 <template>
   <div class="file-tree-pane" :style="{ width: width + 'px' }">
     <div class="pane-header">
@@ -144,18 +141,16 @@
       </n-card>
     </n-modal>
 
-    <!-- 批量导出进度对话框 -->
+    <!-- 快速批量导出进度对话框 -->
     <n-modal v-model:show="showBatchExportDialog">
-      <n-card style="width: 600px" :title="$t('workspaceMain.fileTree.batchExport.title')" :bordered="false" size="huge"
+      <n-card style="width: 600px" title="快速批量导出" :bordered="false" size="huge"
         role="dialog" aria-modal="true">
         <n-space vertical size="large">
           <n-space vertical size="small">
-            <n-text depth="3">{{ $t('workspaceMain.fileTree.batchExport.directory') }}: {{ batchExportTarget?.path
-            }}</n-text>
-            <n-text depth="3">{{ $t('workspaceMain.fileTree.batchExport.foundCards') }}: {{ batchExportCards.length
-            }}</n-text>
-            <n-text depth="3">{{ $t('workspaceMain.fileTree.batchExport.cpuCores') }}: {{ cpuCores }}</n-text>
-            <n-text depth="3">{{ $t('workspaceMain.fileTree.batchExport.threadsUsing') }}: {{ activeThreads }}</n-text>
+            <n-text depth="3">目录: {{ batchExportTarget?.path }}</n-text>
+            <n-text depth="3">发现卡牌: {{ batchExportCards.length }}</n-text>
+            <n-text depth="3">CPU核心数: {{ cpuCores }}</n-text>
+            <n-text depth="3">使用线程: {{ activeThreads }}</n-text>
           </n-space>
 
           <n-progress v-if="batchExporting" type="line" :percentage="batchExportProgress" :show-indicator="true"
@@ -163,21 +158,19 @@
 
           <div class="batch-export-status">
             <n-text v-if="batchExporting" style="font-weight: 600;">
-              {{ $t('workspaceMain.fileTree.batchExport.processing') }}
+              正在处理中...
             </n-text>
             <n-text v-if="batchExporting" depth="3" style="font-size: 12px; margin-top: 4px;">
-              {{ $t('workspaceMain.fileTree.batchExport.progressDetail') }}: {{ batchExportedCount }} / {{
-                batchExportCards.length }}
-              ({{ batchExportProgress }}%)
+              进度详情: {{ batchExportedCount }} / {{ batchExportCards.length }} ({{ batchExportProgress }}%)
             </n-text>
             <n-text v-else-if="batchExportCompleted">
-              {{ $t('workspaceMain.fileTree.batchExport.completed') }}
+              导出完成
             </n-text>
 
             <!-- 并发处理状态显示 -->
             <div v-if="batchExporting && activeExportTasks.length > 0" class="concurrent-status">
               <n-text depth="3" style="font-size: 12px; margin-top: 8px;">
-                {{ $t('workspaceMain.fileTree.batchExport.currentTasks') }}:
+                当前任务:
               </n-text>
               <div class="active-tasks">
                 <n-tag 
@@ -195,7 +188,7 @@
 
           <!-- 导出日志 -->
           <div v-if="batchExportLogs.length > 0" class="export-logs">
-            <n-text depth="3" style="font-size: 12px;">{{ $t('workspaceMain.fileTree.batchExport.logs') }}:</n-text>
+            <n-text depth="3" style="font-size: 12px;">导出日志:</n-text>
             <n-scrollbar style="max-height: 200px; margin-top: 8px;">
               <div class="log-content">
                 <div v-for="(log, index) in batchExportLogs" :key="index" class="log-item" :class="log.type">
@@ -211,17 +204,126 @@
         <template #footer>
           <n-space justify="end">
             <n-button v-if="!batchExporting && !batchExportCompleted" @click="showBatchExportDialog = false">
-              {{ $t('workspaceMain.fileTree.batchExport.cancel') }}
+              取消
             </n-button>
             <n-button v-if="batchExporting" @click="stopBatchExport" type="error">
-              {{ $t('workspaceMain.fileTree.batchExport.stop') }}
+              停止
             </n-button>
             <n-button v-if="!batchExporting && !batchExportCompleted" type="primary" @click="startBatchExport"
               :disabled="batchExportCards.length === 0">
-              {{ $t('workspaceMain.fileTree.batchExport.start') }}
+              开始导出
             </n-button>
             <n-button v-if="batchExportCompleted" type="primary" @click="closeBatchExportDialog">
-              {{ $t('workspaceMain.fileTree.batchExport.close') }}
+              关闭
+            </n-button>
+          </n-space>
+        </template>
+      </n-card>
+    </n-modal>
+
+    <!-- 高级导出对话框 -->
+    <n-modal v-model:show="showAdvancedExportDialog">
+      <n-card style="width: 500px" title="高级导出设置" :bordered="false" size="huge"
+        role="dialog" aria-modal="true">
+        <n-space vertical size="large">
+          <!-- 基本信息 -->
+          <n-space vertical size="small">
+            <n-text depth="3" style="font-weight: 600;">导出信息</n-text>
+            <n-text depth="3" style="font-size: 12px;">
+              {{ advancedExportTarget?.type === 'directory' ? '目录' : '卡牌' }}: {{ advancedExportTarget?.path }}
+            </n-text>
+            <n-text v-if="advancedExportTarget?.type === 'directory'" depth="3" style="font-size: 12px;">
+              发现卡牌: {{ advancedExportCards.length }} 张
+            </n-text>
+          </n-space>
+
+          <!-- 导出参数设置 -->
+          <n-form :model="advancedExportParams" label-placement="left" label-width="80px">
+            <n-form-item label="导出格式">
+              <n-select v-model:value="advancedExportParams.format" :options="formatOptions" />
+            </n-form-item>
+
+            <n-form-item label="图片质量" v-if="advancedExportParams.format === 'JPG'">
+              <n-select v-model:value="advancedExportParams.quality" :options="qualityOptions" />
+            </n-form-item>
+
+            <n-form-item label="导出尺寸">
+              <n-select v-model:value="advancedExportParams.size" :options="sizeOptions" />
+            </n-form-item>
+
+            <n-form-item label="DPI设置">
+              <n-select v-model:value="advancedExportParams.dpi" :options="dpiOptions" />
+            </n-form-item>
+
+            <n-form-item label="出血规格">
+              <n-select v-model:value="advancedExportParams.bleed" :options="bleedOptions" />
+            </n-form-item>
+
+            <n-form-item label="出血模式">
+              <n-select v-model:value="advancedExportParams.bleed_mode" :options="bleedModeOptions" />
+            </n-form-item>
+
+            <n-form-item label="出血模型">
+              <n-select v-model:value="advancedExportParams.bleed_model" :options="bleedModelOptions" />
+            </n-form-item>
+
+            <n-form-item label="饱和度">
+              <n-select v-model:value="advancedExportParams.saturation" :options="saturationOptions" />
+            </n-form-item>
+
+            <n-form-item label="亮度">
+              <n-select v-model:value="advancedExportParams.brightness" :options="brightnessOptions" />
+            </n-form-item>
+
+            <n-form-item label="伽马值">
+              <n-select v-model:value="advancedExportParams.gamma" :options="gammaOptions" />
+            </n-form-item>
+          </n-form>
+
+          <!-- 导出进度 -->
+          <div v-if="advancedExporting || advancedExportCompleted" class="advanced-export-progress">
+            <n-progress v-if="advancedExporting" type="line" :percentage="advancedExportProgress" :show-indicator="true"
+              status="active" :stroke-width="6" />
+            
+            <n-text v-if="advancedExporting" style="font-size: 12px; margin-top: 8px;">
+              正在导出: {{ advancedExportedCount }} / {{ advancedExportCards.length }}
+            </n-text>
+            
+            <n-text v-if="advancedExportCompleted" type="success" style="font-weight: 600;">
+              导出完成！
+            </n-text>
+          </div>
+
+          <!-- 导出日志 -->
+          <div v-if="advancedExportLogs.length > 0" class="export-logs">
+            <n-text depth="3" style="font-size: 12px;">导出日志:</n-text>
+            <n-scrollbar style="max-height: 150px; margin-top: 8px;">
+              <div class="log-content">
+                <div v-for="(log, index) in advancedExportLogs" :key="index" class="log-item" :class="log.type">
+                  <n-text :type="log.type === 'error' ? 'error' : log.type === 'warning' ? 'warning' : 'success'"
+                    style="font-size: 11px;">
+                    {{ log.message }}
+                  </n-text>
+                </div>
+              </div>
+            </n-scrollbar>
+          </div>
+        </n-space>
+
+        <template #footer>
+          <n-space justify="end">
+            <n-button v-if="!advancedExporting && !advancedExportCompleted" @click="showAdvancedExportDialog = false">
+              取消
+            </n-button>
+            <n-button v-if="advancedExporting" @click="stopAdvancedExport" type="error">
+              停止
+            </n-button>
+            <n-button v-if="!advancedExporting && !advancedExportCompleted" type="primary" @click="startAdvancedExport"
+              :disabled="advancedExportCards.length === 0">
+              开始导出
+            </n-button>
+            <n-button v-if="advancedExportCompleted" type="primary" @click="closeAdvancedExportDialog">
+              关闭
             </n-button>
           </n-space>
         </template>
@@ -254,8 +356,8 @@ import {
 } from '@vicons/ionicons5';
 
 // 导入API服务
-import { WorkspaceService, ApiError, CardService } from '@/api';
-import type { CardData } from '@/api/types';
+import { WorkspaceService, ApiError, CardService, TtsExportService } from '@/api';
+import type { CardData, ExportCardParams } from '@/api/types';
 
 interface Props {
   width: number;
@@ -283,7 +385,7 @@ const creating = ref(false);
 const renaming = ref(false);
 const deleting = ref(false);
 
-// 批量导出相关状态
+// 批量导出相关状态（快速导出）
 const showBatchExportDialog = ref(false);
 const batchExporting = ref(false);
 const batchExportCompleted = ref(false);
@@ -294,10 +396,109 @@ const batchExportProgress = ref(0);
 const batchExportLogs = ref<{ type: 'success' | 'error' | 'warning', message: string }[]>([]);
 const batchExportAborted = ref(false);
 
-// 多线程并发相关状态
+// 多线程并发相关状态（快速导出）
 const activeExportTasks = ref<{cardPath: string, cardName: string}[]>([]);
 const exportQueue = ref<string[]>([]);
 const completedTasks = ref(0);
+
+// 高级导出相关状态
+const showAdvancedExportDialog = ref(false);
+const advancedExporting = ref(false);
+const advancedExportCompleted = ref(false);
+const advancedExportTarget = ref<TreeOption | null>(null);
+const advancedExportCards = ref<string[]>([]);
+const advancedExportedCount = ref(0);
+const advancedExportProgress = ref(0);
+const advancedExportLogs = ref<{ type: 'success' | 'error' | 'warning', message: string }[]>([]);
+const advancedExportAborted = ref(false);
+
+// 高级导出参数
+const advancedExportParams = ref<ExportCardParams>({
+  format: 'PNG',
+  quality: 95,
+  size: '63.5mm × 88.9mm (2.5″ × 3.5″)',
+  dpi: 300,
+  bleed: 2,
+  bleed_mode: '裁剪',
+  bleed_model: '镜像出血',
+  saturation: 1.0,
+  brightness: 1.0,
+  gamma: 1.0
+});
+
+// 高级导出参数选项
+const formatOptions = [
+  { label: 'PNG', value: 'PNG' },
+  { label: 'JPG', value: 'JPG' }
+];
+
+const qualityOptions = [
+  { label: '95%（推荐）', value: 95 },
+  { label: '90%', value: 90 },
+  { label: '85%', value: 85 },
+  { label: '80%', value: 80 },
+  { label: '75%', value: 75 },
+  { label: '70%', value: 70 },
+  { label: '100%（最高质量）', value: 100 }
+];
+
+const sizeOptions = [
+  { label: '61mm × 88mm', value: '61mm × 88mm' },
+  { label: '61.5mm × 88mm', value: '61.5mm × 88mm' },
+  { label: '62mm × 88mm', value: '62mm × 88mm' },
+  { label: '63.5mm × 88.9mm (2.5″ × 3.5″)', value: '63.5mm × 88.9mm (2.5″ × 3.5″)' }
+];
+
+const dpiOptions = [
+  { label: '150 DPI', value: 150 },
+  { label: '300 DPI', value: 300 },
+  { label: '350 DPI', value: 350 },
+  { label: '400 DPI', value: 400 },
+  { label: '450 DPI', value: 450 },
+  { label: '500 DPI', value: 500 },
+  { label: '600 DPI', value: 600 },
+  { label: '1200 DPI', value: 1200 }
+];
+
+const bleedOptions = [
+  { label: '0mm（无出血）', value: 0 },
+  { label: '2mm（标准出血）', value: 2 },
+  { label: '3mm（加强出血）', value: 3 }
+];
+
+const bleedModeOptions = [
+  { label: '裁剪（保持比例）', value: '裁剪' },
+  { label: '拉伸（填满尺寸）', value: '拉伸' }
+];
+
+const bleedModelOptions = [
+  { label: '镜像出血（速度快）', value: '镜像出血' },
+  { label: 'LaMa模型出血（质量高）', value: 'LaMa模型出血' }
+];
+
+const saturationOptions = [
+  { label: '0.8（降低饱和度）', value: 0.8 },
+  { label: '0.9', value: 0.9 },
+  { label: '1.0（默认）', value: 1.0 },
+  { label: '1.1', value: 1.1 },
+  { label: '1.2（增强饱和度）', value: 1.2 }
+];
+
+const brightnessOptions = [
+  { label: '0.8（降低亮度）', value: 0.8 },
+  { label: '0.9', value: 0.9 },
+  { label: '1.0（默认）', value: 1.0 },
+  { label: '1.1', value: 1.1 },
+  { label: '1.2（增强亮度）', value: 1.2 }
+];
+
+const gammaOptions = [
+  { label: '0.8', value: 0.8 },
+  { label: '0.9', value: 0.9 },
+  { label: '1.0（默认）', value: 1.0 },
+  { label: '1.1', value: 1.1 },
+  { label: '1.2', value: 1.2 }
+];
 
 // 文件树数据
 const fileTreeData = ref<TreeOption[]>([]);
@@ -417,6 +618,7 @@ const contextMenuOptions = computed(() => {
 
   const isWorkspace = contextMenuTarget.value.type === 'workspace';
   const isDirectory = contextMenuTarget.value.type === 'directory';
+  const isCard = contextMenuTarget.value.type === 'card';
   const isFile = !isWorkspace && !isDirectory;
 
   const options = [];
@@ -436,11 +638,27 @@ const contextMenuOptions = computed(() => {
       }
     );
 
-    // 为目录添加批量导出选项
+    // 为目录添加快速导出选项（原批量导出）
     options.push({
-      label: t('workspaceMain.fileTree.contextMenu.batchExport'),
+      label: '快速导出',
       key: 'batch-export',
       icon: () => h(NIcon, { component: ImageOutline })
+    });
+
+    // 为目录添加高级导出选项
+    options.push({
+      label: '高级导出',
+      key: 'advanced-export',
+      icon: () => h(NIcon, { component: SettingsOutline })
+    });
+  }
+
+  // 为单个card文件添加高级导出选项
+  if (isCard) {
+    options.push({
+      label: '高级导出',
+      key: 'advanced-export',
+      icon: () => h(NIcon, { component: SettingsOutline })
     });
   }
 
@@ -713,6 +931,9 @@ const handleContextMenuSelect = (key: string) => {
     case 'batch-export':
       startBatchExportProcess();
       break;
+    case 'advanced-export':
+      startAdvancedExportProcess();
+      break;
     case 'rename':
       const currentName = contextMenuTarget.value?.label as string || '';
       const parsed = parseFileName(currentName);
@@ -938,7 +1159,7 @@ const findAllCardFiles = async (directoryPath: string): Promise<string[]> => {
   }
 };
 
-// 开始批量导出流程
+// 开始快速批量导出流程
 const startBatchExportProcess = async () => {
   if (!contextMenuTarget.value) return;
 
@@ -953,13 +1174,13 @@ const startBatchExportProcess = async () => {
     exportQueue.value = [];
     completedTasks.value = 0;
 
-    message.info(t('workspaceMain.fileTree.batchExport.scanning'));
+    message.info('正在扫描卡牌文件...');
 
     // 获取目录下所有卡牌文件
     batchExportCards.value = await findAllCardFiles(contextMenuTarget.value.path as string);
 
     if (batchExportCards.value.length === 0) {
-      message.warning(t('workspaceMain.fileTree.batchExport.noCardsFound'));
+      message.warning('未找到可导出的卡牌文件');
       return;
     }
 
@@ -971,15 +1192,15 @@ const startBatchExportProcess = async () => {
 
     showBatchExportDialog.value = true;
 
-    addBatchExportLog('info', `${t('workspaceMain.fileTree.batchExport.foundCardsLog')}: ${batchExportCards.value.length}`);
-    addBatchExportLog('info', `${t('workspaceMain.fileTree.batchExport.usingThreads')}: ${activeThreads.value}`);
+    addBatchExportLog('info', `发现卡牌文件: ${batchExportCards.value.length} 张`);
+    addBatchExportLog('info', `使用线程数: ${activeThreads.value}`);
   } catch (error) {
     console.error('扫描目录失败:', error);
-    message.error(`${t('workspaceMain.fileTree.batchExport.scanFailed')}: ${error.message}`);
+    message.error(`扫描目录失败: ${error.message}`);
   }
 };
 
-// 单个卡牌导出任务
+// 快速导出单个卡牌任务
 const exportCardTask = async (cardPath: string): Promise<{success: boolean, cardName: string, error?: string}> => {
   const cardName = cardPath.split('/').pop()?.replace('.card', '') || `card_${Date.now()}`;
 
@@ -1015,7 +1236,7 @@ const exportCardTask = async (cardPath: string): Promise<{success: boolean, card
   }
 };
 
-// 多线程批量导出
+// 多线程快速批量导出
 const startBatchExport = async () => {
   if (batchExportCards.value.length === 0) return;
 
@@ -1030,7 +1251,7 @@ const startBatchExport = async () => {
   // 初始化导出队列
   exportQueue.value = [...batchExportCards.value];
 
-  addBatchExportLog('info', t('workspaceMain.fileTree.batchExport.startLog'));
+  addBatchExportLog('info', '开始快速批量导出...');
   addBatchExportLog('info', `使用 ${activeThreads.value} 个线程并发处理`);
 
   let successCount = 0;
@@ -1046,10 +1267,10 @@ const startBatchExport = async () => {
     
       if (result.success) {
         successCount++;
-        addBatchExportLog('success', `✓ ${result.cardName}: ${t('workspaceMain.fileTree.batchExport.exportSuccess')}`);
+        addBatchExportLog('success', `✓ ${result.cardName}: 导出成功`);
       } else {
         errorCount++;
-        addBatchExportLog('error', `✗ ${result.cardName}: ${t('workspaceMain.fileTree.batchExport.exportFailed')} - ${result.error}`);
+        addBatchExportLog('error', `✗ ${result.cardName}: 导出失败 - ${result.error}`);
       }
 
       // 更新进度
@@ -1059,8 +1280,6 @@ const startBatchExport = async () => {
 
       // 强制更新DOM
       await nextTick();
-    
-      console.log(`进度更新: ${completedTasks.value}/${batchExportCards.value.length} (${batchExportProgress.value}%)`);
     }
   };
 
@@ -1083,43 +1302,42 @@ const startBatchExport = async () => {
     await nextTick();
 
     if (!batchExportAborted.value) {
-      addBatchExportLog('success', `${t('workspaceMain.fileTree.batchExport.completedLog')}: ${successCount}/${batchExportCards.value.length}`);
+      addBatchExportLog('success', `导出完成: ${successCount}/${batchExportCards.value.length}`);
 
       if (errorCount > 0) {
-        addBatchExportLog('warning', `${t('workspaceMain.fileTree.batchExport.failedExports')}: ${errorCount}`);
+        addBatchExportLog('warning', `失败数量: ${errorCount}`);
       }
 
       // 批量导出完成后刷新文件树
-      console.log('批量导出完成，正在刷新文件树...');
       emit('refresh-file-tree');
 
       // 延迟显示成功消息，确保文件树刷新完成
       setTimeout(() => {
         if (successCount > 0) {
-          message.success(t('workspaceMain.fileTree.batchExport.allCompleted', { successCount, totalCount: batchExportCards.value.length }));
+          message.success(`快速导出完成: ${successCount}/${batchExportCards.value.length} 张卡牌`);
         }
         if (errorCount > 0) {
-          message.warning(t('workspaceMain.fileTree.batchExport.partialSuccess', { successCount, errorCount }));
+          message.warning(`部分导出成功: ${successCount} 成功, ${errorCount} 失败`);
         }
       }, 500);
     }
   } catch (error) {
-    console.error('批量导出过程中出现错误:', error);
+    console.error('快速批量导出过程中出现错误:', error);
     addBatchExportLog('error', `批量导出过程中出现错误: ${error.message}`);
     batchExporting.value = false;
     activeExportTasks.value = [];
   }
 };
 
-// 停止批量导出
+// 停止快速批量导出
 const stopBatchExport = () => {
   batchExportAborted.value = true;
   exportQueue.value = []; // 清空队列
-  addBatchExportLog('warning', t('workspaceMain.fileTree.batchExport.userStopped'));
-  message.info(t('workspaceMain.fileTree.batchExport.stopping'));
+  addBatchExportLog('warning', '用户停止了导出');
+  message.info('正在停止导出...');
 };
 
-// 关闭批量导出对话框
+// 关闭快速批量导出对话框
 const closeBatchExportDialog = () => {
   showBatchExportDialog.value = false;
   batchExportTarget.value = null;
@@ -1134,9 +1352,178 @@ const closeBatchExportDialog = () => {
   completedTasks.value = 0;
 };
 
-// 添加导出日志
+// 添加快速导出日志
 const addBatchExportLog = (type: 'success' | 'error' | 'warning' | 'info', message: string) => {
   batchExportLogs.value.push({
+    type: type === 'info' ? 'success' : type,
+    message: `[${new Date().toLocaleTimeString()}] ${message}`
+  });
+};
+
+// 开始高级导出流程
+const startAdvancedExportProcess = async () => {
+  if (!contextMenuTarget.value) return;
+
+  try {
+    advancedExportTarget.value = contextMenuTarget.value;
+    advancedExportLogs.value = [];
+    advancedExportedCount.value = 0;
+    advancedExportProgress.value = 0;
+    advancedExportCompleted.value = false;
+    advancedExportAborted.value = false;
+
+    // 如果是单个card文件
+    if (contextMenuTarget.value.type === 'card') {
+      advancedExportCards.value = [contextMenuTarget.value.path as string];
+    } else {
+      // 如果是目录，扫描所有卡牌文件
+      message.info('正在扫描卡牌文件...');
+      advancedExportCards.value = await findAllCardFiles(contextMenuTarget.value.path as string);
+      
+      if (advancedExportCards.value.length === 0) {
+        message.warning('未找到可导出的卡牌文件');
+        return;
+      }
+    }
+
+    showAdvancedExportDialog.value = true;
+    addAdvancedExportLog('info', `发现卡牌文件: ${advancedExportCards.value.length} 张`);
+  } catch (error) {
+    console.error('准备高级导出失败:', error);
+    message.error(`准备高级导出失败: ${error.message}`);
+  }
+};
+
+// 生成导出参数哈希值
+const generateParamsHash = (params: ExportCardParams): string => {
+  const paramString = JSON.stringify(params, Object.keys(params).sort());
+  // 先用 encodeURIComponent 转换为 ASCII 安全的字符串
+  const encodedString = encodeURIComponent(paramString);
+  return btoa(encodedString).replace(/[+/=]/g, '');
+};
+
+
+// 高级导出单个卡牌
+const advancedExportCard = async (cardPath: string): Promise<{success: boolean, cardName: string, error?: string}> => {
+  const cardName = cardPath.split('/').pop()?.replace('.card', '') || `card_${Date.now()}`;
+  const paramsHash = generateParamsHash(advancedExportParams.value);
+
+  try {
+    // 构建导出文件名（不包含扩展名）
+    const exportFilename = `${cardName}_advanced`;
+    
+    // 调用导出卡牌API
+    await TtsExportService.exportCard(
+      cardPath,
+      exportFilename,
+      advancedExportParams.value,
+      paramsHash
+    );
+
+    return { success: true, cardName };
+  } catch (error) {
+    return { success: false, cardName, error: error.message || '导出失败' };
+  }
+};
+
+// 开始高级导出（单线程）
+const startAdvancedExport = async () => {
+  if (advancedExportCards.value.length === 0) return;
+
+  advancedExporting.value = true;
+  advancedExportedCount.value = 0;
+  advancedExportProgress.value = 0;
+  advancedExportCompleted.value = false;
+  advancedExportAborted.value = false;
+
+  addAdvancedExportLog('info', '开始高级导出...');
+  addAdvancedExportLog('info', `导出参数: 格式=${advancedExportParams.value.format}, DPI=${advancedExportParams.value.dpi}, 出血=${advancedExportParams.value.bleed}mm`);
+
+  let successCount = 0;
+  let errorCount = 0;
+
+  // 单线程顺序处理
+  for (let i = 0; i < advancedExportCards.value.length && !advancedExportAborted.value; i++) {
+    const cardPath = advancedExportCards.value[i];
+    const result = await advancedExportCard(cardPath);
+
+    if (result.success) {
+      successCount++;
+      addAdvancedExportLog('success', `✓ ${result.cardName}: 导出成功`);
+    } else {
+      errorCount++;
+      addAdvancedExportLog('error', `✗ ${result.cardName}: 导出失败 - ${result.error}`);
+    }
+
+    // 更新进度
+    advancedExportedCount.value = i + 1;
+    advancedExportProgress.value = Math.round(((i + 1) / advancedExportCards.value.length) * 100);
+
+    // 强制更新DOM
+    await nextTick();
+  }
+
+  advancedExporting.value = false;
+  advancedExportCompleted.value = true;
+
+  if (!advancedExportAborted.value) {
+    addAdvancedExportLog('success', `高级导出完成: ${successCount}/${advancedExportCards.value.length}`);
+
+    if (errorCount > 0) {
+      addAdvancedExportLog('warning', `失败数量: ${errorCount}`);
+    }
+
+    // 高级导出完成后刷新文件树
+    emit('refresh-file-tree');
+
+    // 延迟显示成功消息
+    setTimeout(() => {
+      if (successCount > 0) {
+        message.success(`高级导出完成: ${successCount}/${advancedExportCards.value.length} 张卡牌`);
+      }
+      if (errorCount > 0) {
+        message.warning(`部分导出成功: ${successCount} 成功, ${errorCount} 失败`);
+      }
+    }, 500);
+  }
+};
+
+// 停止高级导出
+const stopAdvancedExport = () => {
+  advancedExportAborted.value = true;
+  addAdvancedExportLog('warning', '用户停止了高级导出');
+  message.info('正在停止高级导出...');
+};
+
+// 关闭高级导出对话框
+const closeAdvancedExportDialog = () => {
+  showAdvancedExportDialog.value = false;
+  advancedExportTarget.value = null;
+  advancedExportCards.value = [];
+  advancedExportLogs.value = [];
+  advancedExportedCount.value = 0;
+  advancedExportProgress.value = 0;
+  advancedExportCompleted.value = false;
+  advancedExportAborted.value = false;
+  
+  // 重置高级导出参数为默认值
+  advancedExportParams.value = {
+    format: 'PNG',
+    quality: 95,
+    size: '63.5mm × 88.9mm (2.5″ × 3.5″)',
+    dpi: 300,
+    bleed: 2,
+    bleed_mode: '裁剪',
+    bleed_model: '镜像出血',
+    saturation: 1.0,
+    brightness: 1.0,
+    gamma: 1.0
+  };
+};
+
+// 添加高级导出日志
+const addAdvancedExportLog = (type: 'success' | 'error' | 'warning' | 'info', message: string) => {
+  advancedExportLogs.value.push({
     type: type === 'info' ? 'success' : type,
     message: `[${new Date().toLocaleTimeString()}] ${message}`
   });
@@ -1198,6 +1585,14 @@ defineExpose({
 .active-tasks::-webkit-scrollbar-thumb {
   background: #667eea;
   border-radius: 2px;
+}
+
+/* 高级导出进度样式 */
+.advanced-export-progress {
+  padding: 12px;
+  background: rgba(118, 75, 162, 0.05);
+  border-radius: 8px;
+  border-left: 4px solid #764ba2;
 }
 
 .export-statistics {
@@ -1405,5 +1800,28 @@ defineExpose({
     opacity: 1;
     transform: scale(1);
   }
+}
+
+/* 高级导出对话框样式优化 */
+:deep(.n-form-item) {
+  margin-bottom: 16px;
+}
+
+:deep(.n-form-item-label) {
+  font-weight: 500;
+  color: #374151;
+}
+
+:deep(.n-select) {
+  min-width: 200px;
+}
+
+/* 高级导出进度条样式 */
+.advanced-export-progress :deep(.n-progress-graph-line-fill) {
+  background: linear-gradient(90deg, #764ba2 0%, #667eea 100%);
+}
+
+.advanced-export-progress :deep(.n-progress-text) {
+  color: #764ba2;
 }
 </style>
