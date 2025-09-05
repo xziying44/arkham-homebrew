@@ -201,7 +201,7 @@ class LamaCleaner:
         mask_image.paste(mask_black_region, (x_offset, y_offset))
 
         # 4. 调用inpaint方法进行出血处理
-        print("正在使用 lama-cleaner API进行扩展...")
+        # print("正在使用 lama-cleaner API进行扩展...")
         result = self.inpaint(base_image, mask_image, **kwargs)
         return result
 
@@ -252,7 +252,7 @@ class LamaCleaner:
             raise ValueError(f"不支持的图像维度: {image_array.ndim}。只支持彩色和灰度图。")
 
         # 使用 numpy.pad 进行镜像填充 ('reflect' 模式)
-        print("正在使用镜像延伸方式进行扩展...")
+        # print("正在使用镜像延伸方式进行扩展...")
         padded_array = np.pad(image_array, pad_width=pad_spec, mode='reflect')
 
         # 将处理后的 numpy 数组转换回 PIL Image

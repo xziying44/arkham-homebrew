@@ -1,8 +1,11 @@
 import enum
 import json
+import math
+import time
 from typing import Dict, Any, Tuple, TypeVar, Type
 
-from PIL import Image, ImageFont, ImageDraw
+import numpy as np
+from PIL import Image, ImageFont, ImageDraw, ImageEnhance
 
 from bin.workspace_manager import WorkspaceManager
 from export_helper.LamaCleaner import LamaCleaner
@@ -247,6 +250,10 @@ class ExportHelper:
         if card_json.get('class', '') == '弱点':
             # 弱点卡
             ui_name += '弱点' + card_type
+        elif card_type == '调查员卡背':
+            ui_name += '调查员卡'
+            ui_name += '-' + card_json.get('class', '')
+            ui_name += '-卡背'
         else:
             # 其他卡牌
             ui_name += card_type
@@ -256,10 +263,7 @@ class ExportHelper:
                 card_json.get('subtitle', '') != '':
             ui_name += '-副标题'
         if card_type == '调查员卡':
-            if card_json.get('is_back', False):
-                ui_name += '-卡背'
-            else:
-                ui_name += '-底图'
+            ui_name += '-底图'
         ui = self.workspace_manager.creator.image_manager.get_image(ui_name)
         if ui:
             card_map.paste(ui, (0, 0, ui.size[0], ui.size[1]), ui)
@@ -288,10 +292,9 @@ class ExportHelper:
         else:
             width, height = self.calculate_pixel_dimensions(bleed=self.bleed, size=self.size)
 
-        if not (card_json.get('type') == '调查员卡' and card_json.get('is_back', False) is False):
-            # 标准出血
-            card_map = self._standard_bleeding(card_json, card_map)
-
+        # if not (card_json.get('type') == '调查员卡' and card_json.get('is_back', False) is False):
+        #     # 标准出血
+        card_map = self._standard_bleeding(card_json, card_map)
         # 二次出血
         if self._is_horizontal(card_map):
             card_map = self._call_lama_cleaner(card_map, height, width)
@@ -299,14 +302,13 @@ class ExportHelper:
             card_map = self._call_lama_cleaner(card_map, width, height)
 
         # 优化左上角
-        if self.bleed_model == BleedModel.LAMA and self.bleed == 3:
-            print("优化左上角")
+        if self.bleed_model == BleedModel.LAMA and self.bleed == ExportBleed.THREE_MM:
             # 创建一个优化mask，创建一个图片大小的白色背景图
             mask_optimized = Image.new("RGB", card_map.size, (0, 0, 0))
             # 创建画板
             draw = ImageDraw.Draw(mask_optimized)
-            # 在左上角0,0的位置画一个40的黑色矩形
-            draw.rectangle([0, 0, 40, 40], fill=(255, 255, 255))
+            # 在左上角0,0的位置画一个30的黑色矩形
+            draw.rectangle([0, 0, 30, 30], fill=(255, 255, 255))
             card_map = self.lama_cleaner.inpaint(
                 image=card_map,
                 mask=mask_optimized
@@ -359,8 +361,10 @@ class ExportHelper:
             target_width, target_height = self.pixel_width, self.pixel_height
         bleed_offset = (int((width - 739) / 2) * dpi_scale_factor, (int((height - 1049) / 2)) * dpi_scale_factor)
         # 先将card_map缩放到目标分辨率
-        print(f"缩放至 {target_width}x{target_height}")
-        card_map = card_map.resize((target_width, target_height), Image.Resampling.LANCZOS)
+        if self._is_horizontal(card_map):
+            card_map = card_map.resize((target_height, target_width), Image.Resampling.LANCZOS)
+        else:
+            card_map = card_map.resize((target_width, target_height), Image.Resampling.LANCZOS)
         # 创建绘图对象
         draw = ImageDraw.Draw(card_map)
 
@@ -370,7 +374,7 @@ class ExportHelper:
         else:
             bleed_offset_x = bleed_offset[0]
             bleed_offset_y = bleed_offset[1]
-        print(f"出血偏移量: ({bleed_offset_x}, {bleed_offset_y}), DPI缩放因子: {dpi_scale_factor}")
+        # print(f"出血偏移量: ({bleed_offset_x}, {bleed_offset_y}), DPI缩放因子: {dpi_scale_factor}")
         for text_info in text_layer:
             try:
                 # 提取文字信息并应用DPI缩放
@@ -417,6 +421,42 @@ class ExportHelper:
         """清除字体缓存"""
         self._font_cache.clear()
 
+    @staticmethod
+    def _apply_image_adjustments(image: Image.Image, saturation: float = 1.0,
+                                 brightness: float = 1.0, gamma: float = 1.0) -> Image.Image:
+        """
+        应用饱和度、亮度和伽马调整到图像
+
+        :param image: 输入的PIL图像
+        :param saturation: 饱和度调整因子 (1.0表示不变)
+        :param brightness: 亮度调整因子 (1.0表示不变)
+        :param gamma: 伽马调整因子 (1.0表示不变)
+        :return: 调整后的图像
+        """
+        # 应用饱和度调整
+        if not math.isclose(saturation, 1.0):
+            enhancer = ImageEnhance.Color(image)
+            image = enhancer.enhance(saturation)
+
+        # 应用亮度调整
+        if not math.isclose(brightness, 1.0):
+            enhancer = ImageEnhance.Brightness(image)
+            image = enhancer.enhance(brightness)
+
+        # 应用伽马调整
+        if not math.isclose(gamma, 1.0):
+            # 将图像转换为numpy数组进行处理
+            img_array = np.array(image, dtype=np.float32) / 255.0
+            # 应用伽马校正
+            img_array = np.power(img_array, gamma)
+            # 将值限制在0-1范围内
+            img_array = np.clip(img_array, 0, 1)
+            # 转换回0-255范围并创建图像
+            img_array = (img_array * 255).astype(np.uint8)
+            image = Image.fromarray(img_array)
+
+        return image
+
     def export_card(self, card_path: str):
         """导出"""
         card_json = self.workspace_manager.get_file_content(card_path)
@@ -430,17 +470,23 @@ class ExportHelper:
         # 绘制文字层
         text_layer = card_layer.get_text_layer_metadata()
         card_map_image = self._draw_text_layer(card_map_image, text_layer)
-        card_map_image.show()
+        card_map_image = self._apply_image_adjustments(
+            card_map_image,
+            saturation=self.saturation,
+            brightness=self.brightness,
+            gamma=self.gamma
+        )
+        return card_map_image
 
 
 if __name__ == "__main__":
     # 定义一个系统默认配置
     system_defaults = {
         "format": "PNG",
-        "size": ExportSize.SIZE_61_88.value,  # "63.5mm × 88.9mm (2.5″ × 3.5″)"
+        "size": ExportSize.POKER_SIZE.value,  # "63.5mm × 88.9mm (2.5″ × 3.5″)"
         "dpi": 600,
-        "bleed": 3,
-        "bleed_mode": "裁剪",
+        "bleed": 2,
+        "bleed_mode": "拉伸",
         "bleed_model": "LaMa模型出血",  # LaMa模型出血 镜像出血
         "quality": 90,  # 系统默认JPG质量
         "saturation": 1.0,
@@ -449,7 +495,11 @@ if __name__ == "__main__":
     }
     export_helper = ExportHelper(system_defaults, WorkspaceManager(r'D:\汉化文件夹\Test English Project'))
     print(export_helper)
-    export_helper.export_card(r'3.card')
+    # 计算出血时间
+    t = time.time()
+    export_helper.export_card(r'1.card').show()
+    # 输出耗时 单位秒 保留2位小数
+    print(f'耗时: {round(time.time() - t, 2)}s')
     # export_helper = ExportHelper(system_defaults, WorkspaceManager(r'D:\汉化文件夹\测试工作空间'))
     # print(export_helper)
     # export_helper.export_card(r'支援卡.card')
