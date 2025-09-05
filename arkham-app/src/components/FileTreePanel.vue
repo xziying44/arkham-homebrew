@@ -143,8 +143,7 @@
 
     <!-- 快速批量导出进度对话框 -->
     <n-modal v-model:show="showBatchExportDialog">
-      <n-card style="width: 600px" title="快速批量导出" :bordered="false" size="huge"
-        role="dialog" aria-modal="true">
+      <n-card style="width: 600px" title="快速批量导出" :bordered="false" size="huge" role="dialog" aria-modal="true">
         <n-space vertical size="large">
           <n-space vertical size="small">
             <n-text depth="3">目录: {{ batchExportTarget?.path }}</n-text>
@@ -173,13 +172,8 @@
                 当前任务:
               </n-text>
               <div class="active-tasks">
-                <n-tag 
-                  v-for="task in activeExportTasks" 
-                  :key="task.cardPath" 
-                  size="small" 
-                  type="info"
-                  style="margin: 2px;"
-                >
+                <n-tag v-for="task in activeExportTasks" :key="task.cardPath" size="small" type="info"
+                  style="margin: 2px;">
                   {{ task.cardName }}
                 </n-tag>
               </div>
@@ -223,12 +217,11 @@
 
     <!-- 高级导出对话框 -->
     <n-modal v-model:show="showAdvancedExportDialog">
-      <n-card style="width: 500px" title="高级导出设置" :bordered="false" size="huge"
-        role="dialog" aria-modal="true">
-        <n-space vertical size="large">
+      <n-card style="width: 800px" title="高级导出设置" :bordered="false" size="huge" role="dialog" aria-modal="true">
+        <n-space vertical size="medium">
           <!-- 基本信息 -->
           <n-space vertical size="small">
-            <n-text depth="3" style="font-weight: 600;">导出信息</n-text>
+            <n-text depth="3" style="font-weight: 600; font-size: 14px;">导出信息</n-text>
             <n-text depth="3" style="font-size: 12px;">
               {{ advancedExportTarget?.type === 'directory' ? '目录' : '卡牌' }}: {{ advancedExportTarget?.path }}
             </n-text>
@@ -238,57 +231,112 @@
           </n-space>
 
           <!-- 导出参数设置 -->
-          <n-form :model="advancedExportParams" label-placement="left" label-width="80px">
-            <n-form-item label="导出格式">
-              <n-select v-model:value="advancedExportParams.format" :options="formatOptions" />
-            </n-form-item>
+          <n-form :model="advancedExportParams" label-placement="left" label-width="auto" size="small">
+            <n-grid :cols="3" :x-gap="16" :y-gap="12">
+              <!-- 第一列 -->
+              <n-grid-item>
+                <n-form-item label="导出格式">
+                  <n-select v-model:value="advancedExportParams.format" :options="formatOptions" size="small" />
+                </n-form-item>
+              </n-grid-item>
 
-            <n-form-item label="图片质量" v-if="advancedExportParams.format === 'JPG'">
-              <n-select v-model:value="advancedExportParams.quality" :options="qualityOptions" />
-            </n-form-item>
+              <n-grid-item>
+                <n-form-item label="导出尺寸">
+                  <n-select v-model:value="advancedExportParams.size" :options="sizeOptions" size="small" />
+                </n-form-item>
+              </n-grid-item>
 
-            <n-form-item label="导出尺寸">
-              <n-select v-model:value="advancedExportParams.size" :options="sizeOptions" />
-            </n-form-item>
+              <n-grid-item>
+                <n-form-item label="DPI设置">
+                  <n-select v-model:value="advancedExportParams.dpi" :options="dpiOptions" size="small" />
+                </n-form-item>
+              </n-grid-item>
 
-            <n-form-item label="DPI设置">
-              <n-select v-model:value="advancedExportParams.dpi" :options="dpiOptions" />
-            </n-form-item>
+              <!-- 第二列 -->
+              <n-grid-item>
+                <n-form-item label="图片质量" v-if="advancedExportParams.format === 'JPG'">
+                  <n-select v-model:value="advancedExportParams.quality" :options="qualityOptions" size="small" />
+                </n-form-item>
+              </n-grid-item>
 
-            <n-form-item label="出血规格">
-              <n-select v-model:value="advancedExportParams.bleed" :options="bleedOptions" />
-            </n-form-item>
+              <n-grid-item>
+                <n-form-item label="出血规格">
+                  <n-select v-model:value="advancedExportParams.bleed" :options="bleedOptions" size="small" />
+                </n-form-item>
+              </n-grid-item>
 
-            <n-form-item label="出血模式">
-              <n-select v-model:value="advancedExportParams.bleed_mode" :options="bleedModeOptions" />
-            </n-form-item>
+              <n-grid-item>
+                <n-form-item label="出血模式">
+                  <n-select v-model:value="advancedExportParams.bleed_mode" :options="bleedModeOptions" size="small" />
+                </n-form-item>
+              </n-grid-item>
 
-            <n-form-item label="出血模型">
-              <n-select v-model:value="advancedExportParams.bleed_model" :options="bleedModelOptions" />
-            </n-form-item>
+              <!-- 第三列 - 出血模型（跨列显示） -->
+              <n-grid-item :span="3">
+                <n-form-item label="出血模型">
+                  <n-select v-model:value="advancedExportParams.bleed_model" :options="bleedModelOptions"
+                    size="small" />
+                </n-form-item>
+                <!-- Lama模型提示 -->
+                <n-alert v-if="advancedExportParams.bleed_model === 'LaMa模型出血'" type="info" size="small"
+                  style="margin-top: 8px;">
+                  <template #icon>
+                    <n-icon :component="SettingsOutline" />
+                  </template>
+                  <n-text style="font-size: 12px;">
+                    Lama Cleaner 安装指南:
+                    <n-button text tag="a"
+                      href="https://github.com/xziying44/arkham-homebrew/blob/v2/export_helper/INSTALL_zh-CN.md"
+                      target="_blank" style="font-size: 12px; padding: 0; margin-left: 4px;">
+                      点击查看
+                    </n-button>
+                  </n-text>
+                </n-alert>
+              </n-grid-item>
 
-            <n-form-item label="饱和度">
-              <n-select v-model:value="advancedExportParams.saturation" :options="saturationOptions" />
-            </n-form-item>
+              <!-- 滑动条控件 -->
+              <n-grid-item>
+                <n-form-item label="饱和度">
+                  <n-space vertical size="small" style="width: 100%;">
+                    <n-slider v-model:value="advancedExportParams.saturation" :min="0" :max="2" :step="0.1" />
+                    <n-input-number v-model:value="advancedExportParams.saturation" :min="0" :max="2" :step="0.01"
+                      :precision="2" size="small" style="width: 100%;" />
+                  </n-space>
+                </n-form-item>
+              </n-grid-item>
 
-            <n-form-item label="亮度">
-              <n-select v-model:value="advancedExportParams.brightness" :options="brightnessOptions" />
-            </n-form-item>
+              <n-grid-item>
+                <n-form-item label="亮度">
+                  <n-space vertical size="small" style="width: 100%;">
+                    <n-slider v-model:value="advancedExportParams.brightness" :min="0" :max="2" :step="0.1" />
+                    <n-input-number v-model:value="advancedExportParams.brightness" :min="0" :max="2" :step="0.01"
+                      :precision="2" size="small" style="width: 100%;" />
+                  </n-space>
+                </n-form-item>
+              </n-grid-item>
 
-            <n-form-item label="伽马值">
-              <n-select v-model:value="advancedExportParams.gamma" :options="gammaOptions" />
-            </n-form-item>
+              <n-grid-item>
+                <n-form-item label="伽马值">
+                  <n-space vertical size="small" style="width: 100%;">
+                    <n-slider v-model:value="advancedExportParams.gamma" :min="0" :max="2" :step="0.1" />
+                    <n-input-number v-model:value="advancedExportParams.gamma" :min="0" :max="2" :step="0.01"
+                      :precision="2" size="small" style="width: 100%;" />
+                  </n-space>
+                </n-form-item>
+              </n-grid-item>
+
+            </n-grid>
           </n-form>
 
           <!-- 导出进度 -->
           <div v-if="advancedExporting || advancedExportCompleted" class="advanced-export-progress">
             <n-progress v-if="advancedExporting" type="line" :percentage="advancedExportProgress" :show-indicator="true"
               status="active" :stroke-width="6" />
-            
+
             <n-text v-if="advancedExporting" style="font-size: 12px; margin-top: 8px;">
               正在导出: {{ advancedExportedCount }} / {{ advancedExportCards.length }}
             </n-text>
-            
+
             <n-text v-if="advancedExportCompleted" type="success" style="font-weight: 600;">
               导出完成！
             </n-text>
@@ -297,7 +345,7 @@
           <!-- 导出日志 -->
           <div v-if="advancedExportLogs.length > 0" class="export-logs">
             <n-text depth="3" style="font-size: 12px;">导出日志:</n-text>
-            <n-scrollbar style="max-height: 150px; margin-top: 8px;">
+            <n-scrollbar style="max-height: 120px; margin-top: 8px;">
               <div class="log-content">
                 <div v-for="(log, index) in advancedExportLogs" :key="index" class="log-item" :class="log.type">
                   <n-text :type="log.type === 'error' ? 'error' : log.type === 'warning' ? 'warning' : 'success'"
@@ -397,7 +445,7 @@ const batchExportLogs = ref<{ type: 'success' | 'error' | 'warning', message: st
 const batchExportAborted = ref(false);
 
 // 多线程并发相关状态（快速导出）
-const activeExportTasks = ref<{cardPath: string, cardName: string}[]>([]);
+const activeExportTasks = ref<{ cardPath: string, cardName: string }[]>([]);
 const exportQueue = ref<string[]>([]);
 const completedTasks = ref(0);
 
@@ -474,30 +522,6 @@ const bleedModeOptions = [
 const bleedModelOptions = [
   { label: '镜像出血（速度快）', value: '镜像出血' },
   { label: 'LaMa模型出血（质量高）', value: 'LaMa模型出血' }
-];
-
-const saturationOptions = [
-  { label: '0.8（降低饱和度）', value: 0.8 },
-  { label: '0.9', value: 0.9 },
-  { label: '1.0（默认）', value: 1.0 },
-  { label: '1.1', value: 1.1 },
-  { label: '1.2（增强饱和度）', value: 1.2 }
-];
-
-const brightnessOptions = [
-  { label: '0.8（降低亮度）', value: 0.8 },
-  { label: '0.9', value: 0.9 },
-  { label: '1.0（默认）', value: 1.0 },
-  { label: '1.1', value: 1.1 },
-  { label: '1.2（增强亮度）', value: 1.2 }
-];
-
-const gammaOptions = [
-  { label: '0.8', value: 0.8 },
-  { label: '0.9', value: 0.9 },
-  { label: '1.0（默认）', value: 1.0 },
-  { label: '1.1', value: 1.1 },
-  { label: '1.2', value: 1.2 }
 ];
 
 // 文件树数据
@@ -1186,7 +1210,7 @@ const startBatchExportProcess = async () => {
 
     // 根据卡牌数量调整并发数量
     activeThreads.value = Math.min(
-      Math.max(1, Math.min(cpuCores.value, 4)), 
+      Math.max(1, Math.min(cpuCores.value, 4)),
       batchExportCards.value.length
     );
 
@@ -1201,13 +1225,13 @@ const startBatchExportProcess = async () => {
 };
 
 // 快速导出单个卡牌任务
-const exportCardTask = async (cardPath: string): Promise<{success: boolean, cardName: string, error?: string}> => {
+const exportCardTask = async (cardPath: string): Promise<{ success: boolean, cardName: string, error?: string }> => {
   const cardName = cardPath.split('/').pop()?.replace('.card', '') || `card_${Date.now()}`;
 
   try {
     // 添加到活动任务列表
-    activeExportTasks.value.push({cardPath, cardName});
-  
+    activeExportTasks.value.push({ cardPath, cardName });
+
     // 读取卡牌文件内容
     const content = await WorkspaceService.getFileContent(cardPath);
     const cardData = JSON.parse(content || '{}') as CardData;
@@ -1264,7 +1288,7 @@ const startBatchExport = async () => {
       if (!cardPath) break;
 
       const result = await exportCardTask(cardPath);
-    
+
       if (result.success) {
         successCount++;
         addBatchExportLog('success', `✓ ${result.cardName}: 导出成功`);
@@ -1379,7 +1403,7 @@ const startAdvancedExportProcess = async () => {
       // 如果是目录，扫描所有卡牌文件
       message.info('正在扫描卡牌文件...');
       advancedExportCards.value = await findAllCardFiles(contextMenuTarget.value.path as string);
-      
+
       if (advancedExportCards.value.length === 0) {
         message.warning('未找到可导出的卡牌文件');
         return;
@@ -1404,14 +1428,14 @@ const generateParamsHash = (params: ExportCardParams): string => {
 
 
 // 高级导出单个卡牌
-const advancedExportCard = async (cardPath: string): Promise<{success: boolean, cardName: string, error?: string}> => {
+const advancedExportCard = async (cardPath: string): Promise<{ success: boolean, cardName: string, error?: string }> => {
   const cardName = cardPath.split('/').pop()?.replace('.card', '') || `card_${Date.now()}`;
   const paramsHash = generateParamsHash(advancedExportParams.value);
 
   try {
     // 构建导出文件名（不包含扩展名）
     const exportFilename = `${cardName}_advanced`;
-    
+
     // 调用导出卡牌API
     await TtsExportService.exportCard(
       cardPath,
@@ -1505,7 +1529,7 @@ const closeAdvancedExportDialog = () => {
   advancedExportProgress.value = 0;
   advancedExportCompleted.value = false;
   advancedExportAborted.value = false;
-  
+
   // 重置高级导出参数为默认值
   advancedExportParams.value = {
     format: 'PNG',
@@ -1796,6 +1820,7 @@ defineExpose({
     opacity: 0;
     transform: scale(0.8);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -1804,16 +1829,63 @@ defineExpose({
 
 /* 高级导出对话框样式优化 */
 :deep(.n-form-item) {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 :deep(.n-form-item-label) {
   font-weight: 500;
   color: #374151;
+  font-size: 12px;
 }
 
 :deep(.n-select) {
-  min-width: 200px;
+  min-width: 120px;
+}
+
+/* 高级导出网格布局优化 */
+:deep(.n-grid-item .n-form-item) {
+  margin-bottom: 8px;
+}
+
+:deep(.n-grid-item .n-form-item-label) {
+  min-height: 20px;
+  line-height: 20px;
+}
+
+:deep(.n-grid-item .n-select),
+:deep(.n-grid-item .n-slider) {
+  font-size: 12px;
+}
+
+/* 滑动条样式优化 */
+:deep(.n-slider) {
+  margin: 4px 0;
+}
+
+:deep(.n-slider-rail) {
+  background: #e2e8f0;
+}
+
+:deep(.n-slider-fill) {
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+}
+
+:deep(.n-slider-handle) {
+  border: 2px solid #667eea;
+  background: white;
+}
+
+:deep(.n-slider-handle:hover) {
+  border-color: #5a67d8;
+}
+
+/* Lama模型提示样式 */
+:deep(.n-alert) {
+  font-size: 12px;
+}
+
+:deep(.n-alert .n-alert__icon) {
+  font-size: 14px;
 }
 
 /* 高级导出进度条样式 */
@@ -1823,5 +1895,49 @@ defineExpose({
 
 .advanced-export-progress :deep(.n-progress-text) {
   color: #764ba2;
+}
+
+/* 紧凑布局优化 */
+:deep(.n-form) {
+  margin: 0;
+}
+
+:deep(.n-grid) {
+  margin: 0;
+}
+
+:deep(.n-space) {
+  gap: 8px !important;
+}
+
+/* 高级导出对话框特定样式 */
+:deep(.n-card__content) {
+  padding: 16px !important;
+}
+
+:deep(.n-card__footer) {
+  padding: 12px 16px !important;
+  margin: 0 !important;
+}
+
+/* 滑动条数值显示优化 */
+.n-form-item .n-text {
+  font-size: 11px;
+  font-family: monospace;
+  color: #667eea;
+  font-weight: 500;
+}
+
+/* 响应式调整 */
+@media (max-width: 1200px) {
+  :deep(.n-grid) {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 800px) {
+  :deep(.n-grid) {
+    grid-template-columns: 1fr !important;
+  }
 }
 </style>
