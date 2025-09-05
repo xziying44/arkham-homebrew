@@ -2,7 +2,7 @@ import enum
 import json
 from typing import Dict, Any, Tuple, TypeVar, Type
 
-from PIL import Image
+from PIL import Image, ImageFont, ImageDraw
 
 from bin.workspace_manager import WorkspaceManager
 from export_helper.LamaCleaner import LamaCleaner
@@ -119,6 +119,8 @@ class ExportHelper:
         self.lama_cleaner = LamaCleaner(
             base_url=self.workspace_manager.config.get('lama_baseurl', 'http://localhost:8080'),
         )
+        # 字体缓存：缓存已加载的字体对象，避免重复加载
+        self._font_cache: Dict[Tuple[str, int], ImageFont.FreeTypeFont] = {}
 
     def _parse_enum(self, value: Any, enum_class: Type[T], param_name: str) -> T:
         """一个通用的帮助函数，用于将输入值转换为指定的枚举类型。"""
@@ -262,13 +264,14 @@ class ExportHelper:
     def _bleeding(self, card_json: dict, card_map: Image.Image) -> Image:
         width, height = self.calculate_pixel_dimensions(bleed=self.bleed)
 
-        # 标准出血
-        card_map = self._standard_bleeding(card_json, card_map)
-        # 判断为拉伸
-        if self.bleed_mode == BleedMode.STRETCH:
-            standard_width, standard_height = self.calculate_pixel_dimensions()
-            # 将card_map拉伸到标准尺寸
-            card_map = card_map.resize((standard_width, standard_height))
+        if not (card_json.get('type') == '调查员卡' and card_json.get('is_back', False) is False):
+            # 标准出血
+            card_map = self._standard_bleeding(card_json, card_map)
+            # 判断为拉伸
+            if self.bleed_mode == BleedMode.STRETCH:
+                standard_width, standard_height = self.calculate_pixel_dimensions()
+                # 将card_map拉伸到标准尺寸
+                card_map = card_map.resize((standard_width, standard_height))
 
         # 二次出血
         if self._is_horizontal(card_map):
@@ -277,9 +280,99 @@ class ExportHelper:
             card_map = self._call_lama_cleaner(card_map, width, height)
         return card_map
 
-    def _draw_text_layer(self, card_map: Image.Image, text_layer: list[dict[str, any]]):
-        """绘制文字层"""
+    def _load_font(self, font_name: str, font_size: int) -> ImageFont.FreeTypeFont:
+        """
+        加载字体，使用缓存机制避免重复加载相同的字体+大小组合
 
+        :param font_name: 字体名称
+        :param font_size: 字体大小
+        :return: PIL字体对象
+        """
+        cache_key = (font_name, font_size)
+
+        # 检查缓存中是否已存在
+        if cache_key in self._font_cache:
+            return self._font_cache[cache_key]
+
+        # 加载字体并缓存
+        try:
+            font = self.workspace_manager.creator.font_manager.get_font(font_name, font_size)
+            self._font_cache[cache_key] = font
+            return font
+        except Exception as e:
+            print(f"警告：无法加载字体 {font_name} 大小 {font_size}，使用默认字体: {e}")
+            # 使用默认字体作为备选
+            default_font = ImageFont.load_default()
+            self._font_cache[cache_key] = default_font
+            return default_font
+
+    def _draw_text_layer(self, card_map: Image.Image, text_layer: list[dict[str, any]]):
+        """
+        绘制文字层
+
+        :param card_map: 卡片图像
+        :param text_layer: 文字层元数据列表
+        """
+        if not text_layer:
+            return
+
+        # 创建绘图对象
+        draw = ImageDraw.Draw(card_map)
+
+        # 计算出血偏移量
+        width, height = self.calculate_pixel_dimensions(bleed=self.bleed)
+        bleed_offset = (int((width - 739) / 2), int((height - 1049) / 2))
+        if self._is_horizontal(card_map):
+            bleed_offset_x = bleed_offset[1]
+            bleed_offset_y = bleed_offset[0]
+        else:
+            bleed_offset_x = bleed_offset[0]
+            bleed_offset_y = bleed_offset[1]
+        print(bleed_offset_x, bleed_offset_y)
+
+        for text_info in text_layer:
+            try:
+                # 提取文字信息
+                text = text_info.get('text', '')
+                x = text_info.get('x', 0) + bleed_offset_x
+                y = text_info.get('y', 0) + bleed_offset_y
+                font_name = text_info.get('font', 'default')
+                font_size = text_info.get('font_size', 12)
+                color = text_info.get('color', '#000000')
+                border_width = text_info.get('border_width', 0)
+                border_color = text_info.get('border_color', '#FFFFFF')
+
+                # 加载字体（使用缓存）
+                font = self._load_font(font_name, font_size)
+
+                # 绘制文字边框（如果有）
+                if border_width > 0:
+                    # 绘制边框：在主文字周围绘制多次偏移的文字
+                    for dx in range(-border_width, border_width + 1):
+                        for dy in range(-border_width, border_width + 1):
+                            if dx != 0 or dy != 0:  # 不绘制中心位置
+                                draw.text(
+                                    (x + dx, y + dy),
+                                    text,
+                                    font=font,
+                                    fill=border_color
+                                )
+
+                # 绘制主文字
+                draw.text(
+                    (x, y),
+                    text,
+                    font=font,
+                    fill=color
+                )
+
+            except Exception as e:
+                print(f"警告：绘制文字时发生错误 - 文字: '{text_info.get('text', 'N/A')}', 错误: {e}")
+                continue
+
+    def _clear_font_cache(self):
+        """清除字体缓存"""
+        self._font_cache.clear()
 
     def export_card(self, card_path: str):
         """导出"""
@@ -288,10 +381,14 @@ class ExportHelper:
             raise ValueError("无效的卡路径")
         card_json = json.loads(card_json)
         card_json = self.workspace_manager.creator._preprocessing_json(card_json)
+        card_layer = self.workspace_manager.generate_card_image(card_json, False)
         card_map = self.workspace_manager.generate_card_image(card_json, True)
         card_map_image = self._bleeding(card_json, card_map.image)
         # 绘制文字层
-        text_layer = card_map.get_text_layer_metadata()
+        text_layer = card_layer.get_text_layer_metadata()
+        self._draw_text_layer(card_map_image, text_layer)
+        card_layer.image.show()
+        card_map_image.show()
 
 
 if __name__ == "__main__":
@@ -299,10 +396,10 @@ if __name__ == "__main__":
     system_defaults = {
         "format": "PNG",
         "size": ExportSize.POKER_SIZE.value,  # "63.5mm × 88.9mm (2.5″ × 3.5″)"
-        "dpi": 500,
+        "dpi": 300,
         "bleed": 3,
-        "bleed_mode": "拉伸",
-        "bleed_model": "LaMa模型出血",  # LaMa模型出血 镜像出血
+        "bleed_mode": "裁剪",
+        "bleed_model": "镜像出血",  # LaMa模型出血 镜像出血
         "quality": 90,  # 系统默认JPG质量
         "saturation": 1.0,
         "brightness": 1.0,
