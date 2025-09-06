@@ -43,6 +43,8 @@ class LanguageTexts:
     deck_options: str = "牌库构筑选项"
     deck_requirements: str = "牌库构筑需求"
     not_count: str = "不计入卡牌张数"
+    agenda: str = "密谋"
+    act: str = "场景"
 
 
 @dataclass
@@ -334,6 +336,10 @@ class FontManager:
             text_key = 'deck_requirements'
         elif text_key == '不计入卡牌张数':
             text_key = 'not_count'
+        elif text_key == '密谋':
+            text_key = 'agenda'
+        elif text_key == '场景':
+            text_key = 'act'
         return getattr(config.texts, text_key, text_key)
 
     def get_available_languages(self):

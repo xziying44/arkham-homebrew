@@ -542,20 +542,37 @@ class Card:
 
         :param level: 等级
         """
-        position_level = (25, 77)
-        position_none = (15, 55)
-        if self.card_type == '事件卡':
-            position_level = (25, 73)
-            position_none = (12, 12)
-        if self.card_type == '支援卡':
+        if level == -2 and self.card_type in ['事件卡', '支援卡', '技能卡']:
+            # 定制标
+            if self.card_type == '事件卡':
+                position = (16, 13)
+                type_name = '事件支援'
+            elif self.card_type == '支援卡':
+                position = (16, 13)
+                type_name = '事件支援'
+            else:
+                position = (12, 55)
+                type_name = '技能'
+            img = self.image_manager.get_image(f'定制标-{type_name}-{self.card_class}')
+            if not img:
+                img = self.image_manager.get_image(f'{self.card_type}-无等级')
+            self.paste_image(img, position, 'contain')
+        else:
+            # 其他
             position_level = (25, 77)
-            position_none = (12, 12)
-        img = self.image_manager.get_image(f'{self.card_type}-无等级')
-        if level is not None and 0 < level < 6:
-            img = self.image_manager.get_image(f'{self.card_type}-等级{level}')
-            self.paste_image(img, position_level, 'contain')
-        elif level != 0:
-            self.paste_image(img, position_none, 'contain')
+            position_none = (15, 55)
+            if self.card_type == '事件卡':
+                position_level = (25, 73)
+                position_none = (12, 12)
+            elif self.card_type == '支援卡':
+                position_level = (25, 77)
+                position_none = (12, 12)
+            img = self.image_manager.get_image(f'{self.card_type}-无等级')
+            if level is not None and 0 < level < 6:
+                img = self.image_manager.get_image(f'{self.card_type}-等级{level}')
+                self.paste_image(img, position_level, 'contain')
+            elif level != 0:
+                self.paste_image(img, position_none, 'contain')
 
     def set_card_cost(self, cost=-1):
         """
@@ -928,8 +945,8 @@ class Card:
             '诡计卡': {'center': (372, 536), 'default_size': (60, 60)},
             '故事卡': {'center': (600, 98), 'default_size': (60, 60)},
             '冒险参考卡': {'center': (372, 152), 'default_size': (60, 60)},
-            '密谋卡_正面': {'center': (742, 78), 'default_size': (60, 60)},
-            '场景卡_正面': {'center': (282, 76), 'default_size': (60, 60)},
+            '密谋卡_正面': {'center': (742, 85), 'default_size': (60, 60)},
+            '场景卡_正面': {'center': (282, 83), 'default_size': (60, 60)},
             '密谋卡_背面': {'center': (98, 140), 'default_size': (68, 68)},
             '场景卡_背面': {'center': (98, 140), 'default_size': (68, 68)},
             '密谋卡-大画': {'center': (106, 448), 'default_size': (72, 72)},
@@ -1108,7 +1125,7 @@ class Card:
             self.draw_left_text(
                 position=(pos_left[0], pos_left[1]),
                 text=left_text,
-                font_name='ArnoPro-Bold',
+                font_name='收藏信息字体',
                 font_size=20,
                 font_color=font_color
             )
@@ -1116,7 +1133,7 @@ class Card:
             self.draw_centered_text(
                 position=(pos_center[0], pos_center[1] + 8),
                 text=center_text,
-                font_name='ArnoPro-Bold',
+                font_name='收藏信息字体',
                 font_size=20,
                 font_color=font_color
             )
@@ -1124,7 +1141,7 @@ class Card:
             self.draw_centered_text(
                 position=(pos_right_encounter_group_number[0], pos_right_encounter_group_number[1] + 9),
                 text=encounter_text,
-                font_name='ArnoPro-Bold',
+                font_name='A收藏信息字体',
                 font_size=20,
                 font_color=font_color
             )
@@ -1138,7 +1155,7 @@ class Card:
             self.draw_left_text(
                 position=(pos_right[0], pos_right[1]),
                 text=right_text,
-                font_name='ArnoPro-Bold',
+                font_name='收藏信息字体',
                 font_size=20,
                 font_color=font_color
             )

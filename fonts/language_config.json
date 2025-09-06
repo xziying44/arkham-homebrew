@@ -56,7 +56,9 @@
       "deck_size": "牌库卡牌张数",
       "deck_options": "牌库构筑选项",
       "deck_requirements": "牌库构筑需求",
-      "not_count": "不计入卡牌张数"
+      "not_count": "不计入卡牌张数",
+      "agenda": "密谋",
+      "act": "场景"
     }
   },
   {
@@ -75,7 +77,7 @@
       },
       "card_type": {
         "name": "ArnoPro-Smbd",
-        "size_percent": 0.9,
+        "size_percent": 0.95,
         "vertical_offset": 3
       },
       "trait": {
@@ -116,7 +118,9 @@
       "deck_size": "Deck Size",
       "deck_options": "Deckbuilding Options",
       "deck_requirements": "Deckbuilding Requirements",
-      "not_count": "do not count toward deck size"
+      "not_count": "do not count toward deck size",
+      "agenda": "Agenda ",
+      "act": "Act "
     }
   }
 ]

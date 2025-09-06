@@ -243,11 +243,11 @@ class RichTextRenderer:
             (r'<谈判>', r'<b>躲避</b>'),  # As per original code, Parley maps to Evade
             # 2. Icon Rules (Emoji | CN Tag | SE Tag | Other Alias) -> Font Icon
             # Faction Icons
-            (r'🛡️|<守护者>|<gua>', font_tpl.format(char='e')),
+            (r'🛡️|<守护者>|<守卫者>|<gua>', font_tpl.format(char='e')),
             (r'🔍|<探求者>|<see>', font_tpl.format(char='f')),
             (r'🚶|<流浪者>|<rog>', font_tpl.format(char='g')),
             (r'🧘|<潜修者>|<mys>', font_tpl.format(char='h')),
-            (r'🏕️|<生存者>|<sur>', font_tpl.format(char='i')),
+            (r'🏕️|<生存者>|<求生者>|<sur>', font_tpl.format(char='i')),
             (r'🕵️|<调查员>|<per>', font_tpl.format(char='v')),
             # Action Icons
             (r'⭕|<反应>|<rea>', font_tpl.format(char='l')),

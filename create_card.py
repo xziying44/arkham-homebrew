@@ -1048,7 +1048,7 @@ class CardCreator:
             self._paste_background_image(card, picture_path, data, dp)
 
         card.paste_image(self.image_manager.get_image(f'{data["type"]}-{data["class"]}'), (0, 0), 'contain')
-        card.draw_centered_text((73, 134), self.font_manager.get_font_text("技能"), "卡牌类型字体", 22, (0, 0, 0))
+        card.draw_centered_text((73, 132), self.font_manager.get_font_text("技能"), "卡牌类型字体", 22, (0, 0, 0))
 
     def _setup_event_card_base(self, card, data, picture_path):
         """设置事件卡基础"""
@@ -1237,13 +1237,15 @@ class CardCreator:
 
         # 写序列号
         if data['type'] == '场景卡':
-            card.draw_centered_text((287, 25), f"场景{data.get('serial_number', '')}", "卡牌类型字体", 28, (0, 0, 0))
+            card.draw_centered_text((280, 30), f"{self.font_manager.get_font_text('场景')}"
+                                               f"{data.get('serial_number', '')}", "卡牌类型字体", 28, (0, 0, 0))
         else:
-            card.draw_centered_text((758, 25), f"密谋{data.get('serial_number', '')}", "卡牌类型字体", 28, (0, 0, 0))
+            card.draw_centered_text((740, 38), f"{self.font_manager.get_font_text('密谋')}"
+                                               f"{data.get('serial_number', '')}", "卡牌类型字体", 28, (0, 0, 0))
 
         # 写标题
-        title_x = 285 if data['type'] == '场景卡' else 765
-        card.draw_centered_text((title_x, 150), data['name'], "标题字体", 48, (0, 0, 0))
+        title_x = 280 if data['type'] == '场景卡' else 740
+        card.draw_centered_text((title_x, 140), data['name'], "标题字体", 48, (0, 0, 0))
 
         vertices = [(10, 185), (560, 185), (560, 574), (470, 574), (470, 678), (10, 678)]
         offset_x = -20
@@ -1261,7 +1263,7 @@ class CardCreator:
 
         # 写阈值
         if 'threshold' in data:
-            threshold_pos = (523, 618) if data['type'] == '场景卡' else (498, 624)
+            threshold_pos = (523, 626) if data['type'] == '场景卡' else (498, 624)
             card.set_number_value(threshold_pos, data['threshold'], 54)
 
         return card
@@ -1288,7 +1290,8 @@ class CardCreator:
             card.copy_circle_to_image(dp, (90, 144, 42), (97, 138, 42))
 
         # 写序列号
-        small_words = '场景' if data['type'] == '场景卡' else '密谋'
+        small_words = self.font_manager.get_font_text('场景') if data['type'] == '场景卡' \
+            else self.font_manager.get_font_text('密谋')
         small_words += data.get('serial_number', '')
         card.draw_centered_text((96, 68), small_words, "卡牌类型字体", 28, (0, 0, 0))
 
@@ -1515,20 +1518,48 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "调查员背面",
-        "name": "🏅The Herta",
+        "type": "技能卡",
+        "name": "<独特>小助手",
         "id": "",
         "created_at": "",
         "version": "1.0",
-        "language": "en",
-        "class": "探求者",
-        "card_back": {
-            "size": 30,
-            "option": "Seeker cards(<探求者>)level 0-5, Neutral cards level 0-5, {Practiceds}kills level 0-3.",
-            "requirement": "Obscure Studies, Whispers from the Deep, 1 random basic weakness",
-            "story": "Amanda Sharpe was on track to become one of Miskatonic University's most accomplished graduates. However, ever since she saw a strange painting of an enormous creature's emergence from the depths of the ocean, her classwork has suffered. Her dreams are overwhelmed by images of a vast submerged city and whispers in a language she does not understand. She remains dedicated to her studies, but her goal is no longer to graduate at the top of her class; rather, she seeks to discover the meaning behind the occult secrets concealed between the lines of reality."
+        "language": "zh",
+        "level": -2,
+        "cost": -1,
+        "body": "【显现】 - 将本卡牌放置入场。\n<反应>本卡牌入场后：抽取2张卡牌。\n<启动>：【攻击】。这次攻击巴拉巴拉巴拉。\n",
+        "subtitle": "阿卡姆姬",
+        "class": "生存者",
+        "health": -2,
+        "horror": -2,
+        "slots": "盟友",
+        "flavor": "朴实无华！",
+        "traits": [
+            "盟友"
+        ],
+        "subclass": [
+            "守护者",
+            "探求者"
+        ],
+        "picture_layout": {
+            "mode": "custom",
+            "offset": {
+                "x": 11.666666666666742,
+                "y": 15.000000000000028
+            },
+            "scale": 0.95,
+            "crop": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+            }
         },
-        "subtitle": "The Sorceress"
+        "submit_icon": [
+            "战力",
+            "战力",
+            "智力",
+            "智力"
+        ]
     }
 
     # 创建字体和图片管理器
@@ -1551,15 +1582,15 @@ if __name__ == '__main__':
     # card = creator.create_card(json_data, picture_path=None)
     # card.image.show()
 
-    fm.set_lang('en')
+    fm.set_lang('zh')
     card = creator.create_card(json_data, picture_path=json_data.get('picture_path', None))
-    # card.image.show()
+    card.image.show()
 
-    card_end = creator.create_card_bottom_map(json_data, picture_path=json_data.get('picture_path', None))
+    # card_end = creator.create_card_bottom_map(json_data, picture_path=json_data.get('picture_path', None))
     # card_end.image.show()
 
-    from create_pdf import PDFVectorDrawer
+    # from create_pdf import PDFVectorDrawer
 
-    drawer = PDFVectorDrawer('output_with_borders.pdf', fm)
-    drawer.add_page(card_end.image, card.get_text_layer_metadata())
-    drawer.save()
+    # drawer = PDFVectorDrawer('output_with_borders.pdf', fm)
+    # drawer.add_page(card_end.image, card.get_text_layer_metadata())
+    # drawer.save()
