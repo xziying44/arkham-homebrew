@@ -454,14 +454,18 @@ class RichTextRenderer:
         parsed_items = self.rich_text_parser.parse(text)
 
         # 使用构造函数中传入的行距倍率来计算行高
-        if size_to_test < 25 and self.line_spacing_multiplier > 1.15:
-            line_height = int(size_to_test * 1.15)
-        elif size_to_test < 20 and self.line_spacing_multiplier > 1.1:
-            line_height = int(size_to_test * 1.1)
-        elif size_to_test < 18 and self.line_spacing_multiplier > 1.05:
+        if size_to_test < 27 and self.line_spacing_multiplier > 1.05:
             line_height = int(size_to_test * 1.05)
+        elif size_to_test < 29 and self.line_spacing_multiplier > 1.1:
+            line_height = int(size_to_test * 1.1)
+        elif size_to_test < 32 and self.line_spacing_multiplier > 1.15:
+            line_height = int(size_to_test * 1.15)
         else:
+            print("使用默认行高")
             line_height = int(size_to_test * self.line_spacing_multiplier)
+        print(f"行高: {line_height}")
+        print(f"行距倍率: {self.line_spacing_multiplier}")
+        print(f"字体大小: {size_to_test}")
 
         virtual_text_box = VirtualTextBox(
             polygon_vertices=polygon_vertices,
