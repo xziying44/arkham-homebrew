@@ -259,11 +259,14 @@ class ExportHelper:
             ui_name += card_type
             if card_type in ['事件卡', '技能卡', '支援卡', '调查员卡']:
                 ui_name += '-' + card_json.get('class', '')
+        if card_type == '地点卡':
+            ui_name += '-' + card_json.get('location_type', '已揭示')
         if card_type in ['支援卡', '地点卡'] and \
                 card_json.get('subtitle', '') != '':
             ui_name += '-副标题'
         if card_type == '调查员卡':
             ui_name += '-底图'
+        print(ui_name)
         ui = self.workspace_manager.creator.image_manager.get_image(ui_name)
         if ui:
             card_map.paste(ui, (0, 0, ui.size[0], ui.size[1]), ui)
@@ -497,7 +500,7 @@ if __name__ == "__main__":
     print(export_helper)
     # 计算出血时间
     t = time.time()
-    export_helper.export_card(r'1.card').show()
+    export_helper.export_card(r'5.card').show()
     # 输出耗时 单位秒 保留2位小数
     print(f'耗时: {round(time.time() - t, 2)}s')
     # export_helper = ExportHelper(system_defaults, WorkspaceManager(r'D:\汉化文件夹\测试工作空间'))

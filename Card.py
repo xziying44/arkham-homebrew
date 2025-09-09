@@ -544,17 +544,21 @@ class Card:
         """
         if level == -2 and self.card_type in ['事件卡', '支援卡', '技能卡']:
             # 定制标
+            position_none = (15, 55)
             if self.card_type == '事件卡':
                 position = (16, 13)
                 type_name = '事件支援'
+                position_none = (12, 12)
             elif self.card_type == '支援卡':
                 position = (16, 13)
                 type_name = '事件支援'
+                position_none = (12, 12)
             else:
                 position = (12, 55)
                 type_name = '技能'
             img = self.image_manager.get_image(f'定制标-{type_name}-{self.card_class}')
             if not img:
+                position = position_none
                 img = self.image_manager.get_image(f'{self.card_type}-无等级')
             self.paste_image(img, position, 'contain')
         else:

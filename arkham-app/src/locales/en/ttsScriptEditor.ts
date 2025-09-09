@@ -46,7 +46,7 @@ export default {
     copyBtn: '📋 Copy',
     refreshBtn: '🔄 Refresh',
   },
-  
+
   // Common Buttons
   common: {
     deleteBtn: '🗑️ Delete',
@@ -56,9 +56,29 @@ export default {
   options: {
     extraToken: {
       none: '🚫 None',
-      reaction: '⭕ Reaction',
+      activate: '➡️ Activate',
+      engage: '⚔️ Engage',
+      evade: '💨 Evade',
+      explore: '🔍 Explore',
+      fight: '👊 Fight',
       freeTrigger: '⚡ Free Trigger',
+      investigate: '🔎 Investigate',
+      move: '👣 Move',
+      parley: '🤝 Parley',
+      playItem: '🎯 Play Item',
+      reaction: '⭕ Reaction',
+      resource: '💰 Resource',
+      scan: '📡 Scan',
+      spell: '✨ Spell',
+      tome: '📚 Tome',
+      guardian: '🛡️ Guardian',
+      mystic: '🔮 Mystic',
+      neutral: '⚖️ Neutral',
+      rogue: '🗡️ Rogue',
+      seeker: '📖 Seeker',
+      survivor: '🔧 Survivor',
     },
+
     tokenTypes: {
       resource: '📋 Resource',
       damage: '🔥 Damage',

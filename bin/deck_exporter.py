@@ -85,13 +85,13 @@ class DeckExporter:
                 # 处理正面卡片
                 front_card_image = self._get_card_image_for_position(front_cards, position)
                 if front_card_image:
-                    processed_front = self._process_card_image(front_card_image, True, card_width, card_height)
+                    processed_front = self._process_card_image_for_export(front_card_image, card_width, card_height)
                     front_image.paste(processed_front, (x, y))
 
                 # 处理背面卡片
                 back_card_image = self._get_card_image_for_position(back_cards, position)
                 if back_card_image:
-                    processed_back = self._process_card_image(back_card_image, False, card_width, card_height)
+                    processed_back = self._process_card_image_for_export(back_card_image, card_width, card_height)
                     back_image.paste(processed_back, (x, y))
 
             # 4. 保存图片
@@ -183,7 +183,8 @@ class DeckExporter:
                 if front_card_image:
                     # 检测图片是否横向
                     is_landscape = front_card_image.size[0] > front_card_image.size[1]
-                    rotation = RotationDirection.LEFT if is_landscape else RotationDirection.NORMAL
+                    # 正面顺时针旋转
+                    rotation = RotationDirection.RIGHT if is_landscape else RotationDirection.NORMAL
 
                     # 获取卡片的文本层元数据（如果是生成的卡图）
                     card_bottom_map, text_metadata = self._get_card_text_metadata(front_cards, position)
@@ -197,7 +198,8 @@ class DeckExporter:
                 if back_card_image:
                     # 检测图片是否横向
                     is_landscape = back_card_image.size[0] > back_card_image.size[1]
-                    rotation = RotationDirection.RIGHT if is_landscape else RotationDirection.NORMAL
+                    # 背面逆时针旋转
+                    rotation = RotationDirection.LEFT if is_landscape else RotationDirection.NORMAL
 
                     # 获取卡片的文本层元数据（如果是生成的卡图）
                     card_bottom_map, text_metadata = self._get_card_text_metadata(back_cards, position)
@@ -271,9 +273,29 @@ class DeckExporter:
             print(f"加载卡片图片失败: {e}")
             return None
 
+    def _process_card_image_for_export(self, image: Image.Image, target_width: int, target_height: int) -> Image.Image:
+        """处理卡片图片用于导出（检测方向、旋转、拉伸）- 所有横向图片都顺时针旋转90度"""
+        try:
+            # 检测图片是横向还是纵向
+            img_width, img_height = image.size
+            is_landscape = img_width > img_height
+
+            if is_landscape:
+                # 横向图片统一顺时针旋转90度
+                image = image.rotate(-90, expand=True)
+
+            # 拉伸到目标尺寸
+            image = image.resize((target_width, target_height), Image.Resampling.LANCZOS)
+
+            return image
+
+        except Exception as e:
+            print(f"处理卡片图片失败: {e}")
+            return image
+
     def _process_card_image(self, image: Image.Image, is_front: bool, target_width: int,
                             target_height: int) -> Image.Image:
-        """处理卡片图片（检测方向、旋转、拉伸）"""
+        """处理卡片图片（检测方向、旋转、拉伸）- 保留原有方法用于其他地方"""
         try:
             # 检测图片是横向还是纵向
             img_width, img_height = image.size

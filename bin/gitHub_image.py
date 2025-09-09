@@ -241,10 +241,12 @@ class GitHubImageHost:
                 return download_url, None
             else:
                 self.last_error = f"上传失败: HTTP {response.status_code} - {response.text}"
+                print(f"上传失败: HTTP {response.status_code} - {response.text}")
                 return None, self.last_error
 
         except Exception as e:
             self.last_error = f"上传图片错误: {str(e)}"
+            print(f"上传图片错误: {str(e)}")
             return None, self.last_error
 
     def get_status(self) -> Dict:

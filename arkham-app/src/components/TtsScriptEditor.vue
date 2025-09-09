@@ -5,12 +5,13 @@
             <n-form-item :label="$t('ttsScriptEditor.scriptId.label')">
                 <n-space align="center">
                     <n-input v-model:value="scriptConfig.id" :placeholder="$t('ttsScriptEditor.scriptId.placeholder')"
-                        style="flex: 1" @update:value="onScriptConfigChange" />
+                        :allow-input="allowOnlyAlphaNumeric" style="flex: 1" @update:value="onScriptConfigChange" />
                     <n-button @click="generateRandomId" size="small" type="primary">
                         {{ $t('ttsScriptEditor.scriptId.button') }}
                     </n-button>
                 </n-space>
             </n-form-item>
+
 
             <!-- 调查员专用配置 -->
             <template v-if="props.cardType === '调查员'">
@@ -27,14 +28,14 @@
                         <div class="attribute-input">
                             <n-text depth="3" style="font-size: 12px;">{{
                                 $t('ttsScriptEditor.investigator.willpower') }}</n-text>
-                            <n-input-number v-model:value="investigatorConfig.willpowerIcons" :min="0" :max="9" :step="1"
-                                size="small" @update:value="onScriptConfigChange" />
+                            <n-input-number v-model:value="investigatorConfig.willpowerIcons" :min="0" :max="9"
+                                :step="1" size="small" @update:value="onScriptConfigChange" />
                         </div>
                         <div class="attribute-input">
                             <n-text depth="3" style="font-size: 12px;">{{ $t('ttsScriptEditor.investigator.intellect')
                             }}</n-text>
-                            <n-input-number v-model:value="investigatorConfig.intellectIcons" :min="0" :max="9" :step="1"
-                                size="small" @update:value="onScriptConfigChange" />
+                            <n-input-number v-model:value="investigatorConfig.intellectIcons" :min="0" :max="9"
+                                :step="1" size="small" @update:value="onScriptConfigChange" />
                         </div>
                         <div class="attribute-input">
                             <n-text depth="3" style="font-size: 12px;">{{ $t('ttsScriptEditor.investigator.combat')
@@ -93,7 +94,8 @@
                                                 </div>
                                             </template>
                                         </n-select>
-                                        <n-button @click="removePhaseButton(index)" size="small" type="error" quaternary>
+                                        <n-button @click="removePhaseButton(index)" size="small" type="error"
+                                            quaternary>
                                             {{ $t('ttsScriptEditor.common.deleteBtn') }}
                                         </n-button>
                                     </n-space>
@@ -120,15 +122,14 @@
                                 <div class="uses-input-group">
                                     <n-text depth="3" style="font-size: 12px;">{{ $t('ttsScriptEditor.asset.count')
                                     }}</n-text>
-                                    <n-input-number v-model:value="use.count" :min="0" :max="20" :step="1"
-                                        size="small" @update:value="onScriptConfigChange" />
+                                    <n-input-number v-model:value="use.count" :min="0" :max="20" :step="1" size="small"
+                                        @update:value="onScriptConfigChange" />
                                 </div>
                                 <div class="uses-input-group">
                                     <n-text depth="3" style="font-size: 12px;">{{ $t('ttsScriptEditor.asset.token')
                                     }}</n-text>
                                     <n-select v-model:value="use.token" :options="computedTokenOptions"
-                                        :placeholder="$t('ttsScriptEditor.asset.tokenPlaceholder')"
-                                        style="width: 120px"
+                                        :placeholder="$t('ttsScriptEditor.asset.tokenPlaceholder')" style="width: 120px"
                                         @update:value="(value) => onTokenChange(index, value)" />
                                 </div>
                                 <div class="uses-input-group">
@@ -282,11 +283,33 @@ const typeMapping: Record<string, string> = {
     '事件卡': 'Event'
 };
 
-// --- 修改: 使用 computed 属性生成本地化选项 ---
+// ID验证函数 - 只允许字母数字
+const allowOnlyAlphaNumeric = (value: string) => /^[A-Za-z0-9]*$/.test(value);
+
+// --- 修改: 扩展extraToken选项 ---
 const computedExtraTokenOptions = computed(() => [
     { label: t('ttsScriptEditor.options.extraToken.none'), value: 'None' },
+    { label: t('ttsScriptEditor.options.extraToken.activate'), value: 'Activate' },
+    { label: t('ttsScriptEditor.options.extraToken.engage'), value: 'Engage' },
+    { label: t('ttsScriptEditor.options.extraToken.evade'), value: 'Evade' },
+    { label: t('ttsScriptEditor.options.extraToken.explore'), value: 'Explore' },
+    { label: t('ttsScriptEditor.options.extraToken.fight'), value: 'Fight' },
+    { label: t('ttsScriptEditor.options.extraToken.freeTrigger'), value: 'FreeTrigger' },
+    { label: t('ttsScriptEditor.options.extraToken.investigate'), value: 'Investigate' },
+    { label: t('ttsScriptEditor.options.extraToken.move'), value: 'Move' },
+    { label: t('ttsScriptEditor.options.extraToken.parley'), value: 'Parley' },
+    { label: t('ttsScriptEditor.options.extraToken.playItem'), value: 'PlayItem' },
     { label: t('ttsScriptEditor.options.extraToken.reaction'), value: 'Reaction' },
-    { label: t('ttsScriptEditor.options.extraToken.freeTrigger'), value: 'FreeTrigger' }
+    { label: t('ttsScriptEditor.options.extraToken.resource'), value: 'Resource' },
+    { label: t('ttsScriptEditor.options.extraToken.scan'), value: 'Scan' },
+    { label: t('ttsScriptEditor.options.extraToken.spell'), value: 'Spell' },
+    { label: t('ttsScriptEditor.options.extraToken.tome'), value: 'Tome' },
+    { label: t('ttsScriptEditor.options.extraToken.guardian'), value: 'Guardian' },
+    { label: t('ttsScriptEditor.options.extraToken.mystic'), value: 'Mystic' },
+    { label: t('ttsScriptEditor.options.extraToken.neutral'), value: 'Neutral' },
+    { label: t('ttsScriptEditor.options.extraToken.rogue'), value: 'Rogue' },
+    { label: t('ttsScriptEditor.options.extraToken.seeker'), value: 'Seeker' },
+    { label: t('ttsScriptEditor.options.extraToken.survivor'), value: 'Survivor' }
 ]);
 
 const computedTokenOptions = computed(() => [

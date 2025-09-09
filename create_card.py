@@ -910,10 +910,15 @@ class CardCreator:
         # 贴底图
         if not self.transparent_background:
             self._paste_background_image(card, picture_path, data, dp)
-
-        card.paste_image(self.image_manager.get_image(f'调查员卡-{data["class"]}-卡背'), (0, 0), 'contain')
-        card.draw_centered_text((750, 36), data['name'], "标题字体", 48, (0, 0, 0))
-        card.draw_centered_text((750, 86), data['subtitle'], "副标题字体", 32, (0, 0, 0))
+        ui_name = f'调查员卡-{data["class"]}'
+        title_color = (0, 0, 0)
+        if data.get('subtype', '常规') == '平行':
+            ui_name += '-平行'
+            title_color = (255, 255, 255)
+        ui_name += '-卡背'
+        card.paste_image(self.image_manager.get_image(ui_name), (0, 0), 'contain')
+        card.draw_centered_text((750, 36), data['name'], "标题字体", 48, title_color)
+        card.draw_centered_text((750, 86), data['subtitle'], "副标题字体", 32, title_color)
 
         if card_json['body'] is not None and card_json['body'] != '':
             card_back['other'] = card_json['body']
@@ -981,14 +986,20 @@ class CardCreator:
         if not self.transparent_background:
             self._paste_background_image(card, picture_path, data, dp)
 
-        card.paste_image(self.image_manager.get_image(f'{data["type"]}-{data["class"]}-UI'), (0, 0), 'contain')
-        card.draw_centered_text((320, 36), data['name'], "标题字体", 48, (0, 0, 0))
-        card.draw_centered_text((320, 88), data['subtitle'], "副标题字体", 32, (0, 0, 0))
+        title_color = (0, 0, 0)
+
+        if data.get('subtype', '常规') == '平行':
+            card.paste_image(self.image_manager.get_image(f'{data["type"]}-{data["class"]}-平行'), (0, 0), 'contain')
+            title_color = (255, 255, 255)
+        else:
+            card.paste_image(self.image_manager.get_image(f'{data["type"]}-{data["class"]}-UI'), (0, 0), 'contain')
+        card.draw_centered_text((320, 36), data['name'], "标题字体", 48, title_color)
+        card.draw_centered_text((320, 88), data['subtitle'], "副标题字体", 32, title_color)
 
         # 写四维
         if 'attribute' in data and isinstance(data['attribute'], list):
             for i, attr in enumerate(data['attribute']):
-                card.draw_centered_text((600 + 120 * i, 57), str(attr), "Bolton", 48, (0, 0, 0))
+                card.draw_centered_text((600 + 120 * i, 57), str(attr), "Bolton", 48, title_color)
 
         traits = self._integrate_traits_text(data.get('traits', []))
         card.draw_centered_text((810, 160), traits, "特性字体", 29, (0, 0, 0))
@@ -1518,48 +1529,35 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "技能卡",
-        "name": "<独特>小助手",
+        "type": "调查员背面",
+        "subtype": "平行",
+        "name": "🏅The Herta",
         "id": "",
         "created_at": "",
         "version": "1.0",
-        "language": "zh",
-        "level": -2,
-        "cost": -1,
-        "body": "【显现】 - 将本卡牌放置入场。\n<反应>本卡牌入场后：抽取2张卡牌。\n<启动>：【攻击】。这次攻击巴拉巴拉巴拉。\n",
-        "subtitle": "阿卡姆姬",
-        "class": "生存者",
-        "health": -2,
-        "horror": -2,
-        "slots": "盟友",
-        "flavor": "朴实无华！",
-        "traits": [
-            "盟友"
-        ],
-        "subclass": [
-            "守护者",
-            "探求者"
-        ],
+        "language": "en",
+        "class": "探求者",
+        "card_back": {
+            "size": 30,
+            "option": "Seeker cards(<探求者>)level 0-5, Neutral cards level 0-5, {Practiceds}kills level 0-3.",
+            "requirement": "Obscure Studies, Whispers from the Deep, 1 random basic weakness",
+            "story": "Amanda Sharpe was on track to become one of Miskatonic University's most accomplished graduates. However, ever since she saw a strange painting of an enormous creature's emergence from the depths of the ocean, her classwork has suffered. Her dreams are overwhelmed by images of a vast submerged city and whispers in a language she does not understand. She remains dedicated to her studies, but her goal is no longer to graduate at the top of her class; rather, she seeks to discover the meaning behind the occult secrets concealed between the lines of reality."
+        },
+        "subtitle": "The Sorceress",
         "picture_layout": {
             "mode": "custom",
             "offset": {
-                "x": 11.666666666666742,
-                "y": 15.000000000000028
+                "x": 165,
+                "y": -16.666666666666668
             },
-            "scale": 0.95,
+            "scale": 0.75,
             "crop": {
                 "top": 0,
                 "right": 0,
                 "bottom": 0,
                 "left": 0
             }
-        },
-        "submit_icon": [
-            "战力",
-            "战力",
-            "智力",
-            "智力"
-        ]
+        }
     }
 
     # 创建字体和图片管理器
@@ -1582,7 +1580,7 @@ if __name__ == '__main__':
     # card = creator.create_card(json_data, picture_path=None)
     # card.image.show()
 
-    fm.set_lang('zh')
+    fm.set_lang('en')
     card = creator.create_card(json_data, picture_path=json_data.get('picture_path', None))
     card.image.show()
 

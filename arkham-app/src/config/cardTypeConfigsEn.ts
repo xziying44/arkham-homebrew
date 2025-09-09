@@ -238,6 +238,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'half',
         defaultValue: -1,
         options: [
+          { label: '🧩 Custom Level', value: -2 },
           { label: '🚫 No Level', value: -1 },
           { label: '0️⃣ Level-0', value: 0 },
           ...Array.from({ length: 5 }, (_, i) => ({ label: `${['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][i]} Level-${i + 1}`, value: i + 1 }))
@@ -402,6 +403,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'half',
         defaultValue: -1,
         options: [
+          { label: '🧩 Custom Level', value: -2 },
           { label: '🚫 No Level', value: -1 },
           { label: '0️⃣ Level-0', value: 0 },
           ...Array.from({ length: 5 }, (_, i) => ({ label: `${['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][i]} Level-${i + 1}`, value: i + 1 }))
@@ -499,6 +501,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'full',
         defaultValue: -1,
         options: [
+          { label: '🧩 Custom Level', value: -2 },
           { label: '🚫 No Level', value: -1 },
           { label: '0️⃣ Level-0', value: 0 },
           ...Array.from({ length: 5 }, (_, i) => ({ label: `${['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][i]} Level-${i + 1}`, value: i + 1 }))
@@ -554,6 +557,17 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   '调查员': {
     field_type_en: 'Investigator',
     fields: [
+      {
+        key: 'subtype',
+        name: '⚙️ Subtype',
+        type: 'select',
+        layout: 'full',
+        defaultValue: '默认',
+        options: [
+          { label: '📛 Default', value: '默认' },
+          { label: '🔀 Parallel', value: '平行' }
+        ]
+      },
       {
         key: 'name',
         name: '📝 Card Name',
@@ -670,6 +684,17 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   '调查员背面': {
     field_type_en: 'Investigator Back',
     fields: [
+      {
+        key: 'subtype',
+        name: '⚙️ Subtype',
+        type: 'select',
+        layout: 'full',
+        defaultValue: '默认',
+        options: [
+          { label: '📛 Default', value: '默认' },
+          { label: '🔀 Parallel', value: '平行' }
+        ]
+      },
       {
         key: 'name',
         name: '📝 Card Name',

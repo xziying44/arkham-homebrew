@@ -76,7 +76,7 @@ const bodyTip = `输入格式：
 🔍 <探求者>
 
 特殊标签：
-<lr> 换行
+<br> 换行
 <hr> 横线
 
 支持直接使用emoji或对应的标签格式
@@ -237,6 +237,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'half',
         defaultValue: -1,
         options: [
+          { label: '🧩 定制标', value: -2 },
           { label: '🚫 无等级', value: -1 },
           { label: '0️⃣ 等级-0', value: 0 },
           ...Array.from({ length: 5 }, (_, i) => ({ label: `${['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][i]} 等级-${i + 1}`, value: i + 1 }))
@@ -400,6 +401,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'half',
         defaultValue: -1,
         options: [
+          { label: '🧩 定制标', value: -2 },
           { label: '🚫 无等级', value: -1 },
           { label: '0️⃣ 等级-0', value: 0 },
           ...Array.from({ length: 5 }, (_, i) => ({ label: `${['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][i]} 等级-${i + 1}`, value: i + 1 }))
@@ -496,6 +498,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'full',
         defaultValue: -1,
         options: [
+          { label: '🧩 定制标', value: -2 },
           { label: '🚫 无等级', value: -1 },
           { label: '0️⃣ 等级-0', value: 0 },
           ...Array.from({ length: 5 }, (_, i) => ({ label: `${['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][i]} 等级-${i + 1}`, value: i + 1 }))
@@ -550,6 +553,17 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   },
   '调查员': {
     fields: [
+      {
+        key: 'subtype',
+        name: '⚙️ 副类型',
+        type: 'select',
+        layout: 'full',
+        defaultValue: '默认',
+        options: [
+          { label: '📛 默认', value: '默认' },
+          { label: '🔀 平行', value: '平行' }
+        ]
+      },
       {
         key: 'name',
         name: '📝 卡名',
@@ -665,6 +679,17 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   },
   '调查员背面': {
     fields: [
+      {
+        key: 'subtype',
+        name: '⚙️ 副类型',
+        type: 'select',
+        layout: 'full',
+        defaultValue: '默认',
+        options: [
+          { label: '📛 默认', value: '默认' },
+          { label: '🔀 平行', value: '平行' }
+        ]
+      },
       {
         key: 'name',
         name: '📝 卡名',

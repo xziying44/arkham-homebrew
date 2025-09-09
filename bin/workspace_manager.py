@@ -1288,13 +1288,14 @@ class WorkspaceManager:
                 return False
 
             # 保存图片
+            dpi_info = (export_helper.dpi, export_helper.dpi)
             if export_format == 'JPG':
                 quality = export_params.get('quality', 95)
                 # 转为RGB
                 card_image = card_image.convert('RGB')
-                card_image.save(export_filepath, format='JPEG', quality=quality)
+                card_image.save(export_filepath, format='JPEG', quality=quality, dpi=dpi_info)
             else:
-                card_image.save(export_filepath, format='PNG')
+                card_image.save(export_filepath, format='PNG', dpi=dpi_info)
 
             print(f"卡牌已导出到: {export_filepath}")
             return True

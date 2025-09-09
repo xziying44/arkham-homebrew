@@ -46,7 +46,7 @@ export default {
     copyBtn: '📋 复制',
     refreshBtn: '🔄 刷新',
   },
-  
+
   // 通用按钮
   common: {
     deleteBtn: '🗑️ 删除',
@@ -56,8 +56,27 @@ export default {
   options: {
     extraToken: {
       none: '🚫 无标记',
-      reaction: '⭕ 反应',
+      activate: '➡️ 启动',
+      engage: '⚔️ 交战',
+      evade: '💨 躲避',
+      explore: '🔍 探索',
+      fight: '👊 攻击',
       freeTrigger: '⚡ 免费',
+      investigate: '🔎 调查',
+      move: '👣 移动',
+      parley: '🤝 谈判',
+      playItem: '🎯 打出道具',
+      reaction: '⭕ 反应',
+      resource: '💰 资源',
+      scan: '📡 扫描',
+      spell: '✨ 法术',
+      tome: '📚 书籍',
+      guardian: '🛡️ 守护者',
+      mystic: '🔮 潜修者',
+      neutral: '⚖️ 中立',
+      rogue: '🗡️ 流浪者',
+      seeker: '📖 探求者',
+      survivor: '🔧 生存者',
     },
     tokenTypes: {
       resource: '📋 资源',
