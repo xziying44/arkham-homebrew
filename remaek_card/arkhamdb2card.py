@@ -78,6 +78,7 @@ class ArkhamDBConverter:
         r'\[rogue\]': '🚶',
         r'\[mystic\]': '🧘',
         r'\[survivor\]': '🏕️',
+        r'\[per_investigator\]': '🕵️',
     }
 
     # span图标映射
@@ -108,11 +109,11 @@ class ArkhamDBConverter:
 
     COPYRIGHT_DICT = {
         '01': {'name': '基础', 'year': 2016, 'font_text': '<font name="packicon_coreset">\ue91a</font>'},
-        '02': {'name': '敦威治遗产', 'year': 2016, 'font_text': '<font name="dunwich">\uE947</font>'},
-        '03': {'name': '卡尔克萨之路', 'year': 2017},
-        '04': {'name': '失落的时代', 'year': 2017},
-        '05': {'name': '万象无终', 'year': 2018},
-        '06': {'name': '食梦者', 'year': 2019},
+        '02': {'name': '敦威治遗产', 'year': 2016, 'font_text': '<font name="packicon_dunwich">\uE947</font>'},
+        '03': {'name': '卡尔克萨之路', 'year': 2017, 'font_text': '<font name="packicon_carcosa">\uE94C</font>'},
+        '04': {'name': '失落的时代', 'year': 2017, 'font_text': '<font name="packicon_forgotten">\uE900</font>'},
+        '05': {'name': '万象无终', 'year': 2018, 'font_text': '<font name="packicon_circle">\uE900</font>'},
+        '06': {'name': '食梦者', 'year': 2019, 'font_text': '<font name="packicon_dreameaters">\uE900</font>'},
         '07': {'name': '印斯茅斯的阴谋', 'year': 2020},
         '08': {'name': '暗与地球之界', 'year': 2021},
         '09': {'name': '绯红密钥', 'year': 2022},

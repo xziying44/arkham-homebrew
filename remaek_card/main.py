@@ -20,7 +20,7 @@ class CardMetadataScanner:
 
         Args:
             work_directory: 工作目录路径
-            code: 项目代码，用于匹配db_cards中的pack_code字段
+            code: 项目代码，用于匹配db_cards中的card code前N位
         """
         self.work_directory = Path(work_directory)
         self.code = code
@@ -75,7 +75,7 @@ class CardMetadataScanner:
 
     def _find_card_by_position(self, position: int) -> Optional[Dict[str, Any]]:
         """
-        根据pack_code和position查找卡牌
+        根据code前N位和position查找卡牌
 
         Args:
             position: 位置编号
@@ -83,10 +83,18 @@ class CardMetadataScanner:
         Returns:
             找到的卡牌数据，未找到则返回None
         """
+        # 计算要比较的前N位长度
+        code_length = len(self.code)
+
         for card in self.db_cards:
-            if (card.get('pack_code') == self.code and
+            card_code = card.get('code', '')
+
+            # 检查卡牌code的前N位是否匹配
+            if (len(card_code) >= code_length and
+                    card_code[:code_length] == self.code and
                     card.get('position') == position):
                 return card
+
         return None
 
     def _process_image_to_base64(self, image_path: Path, type_code: str, is_back: bool = False) -> str:
@@ -206,7 +214,7 @@ class CardMetadataScanner:
                         }
                         metadata_list.append(metadata)
                         print(
-                            f"找到匹配: {filename} -> {card_data.get('name')} (位置: {position}{'背面' if is_back else '正面'})")
+                            f"找到匹配: {filename} -> {card_data.get('name')} (位置: {position}{'背面' if is_back else '正面'}) [code: {card_data.get('code')}]")
                     else:
                         print(f"警告: 未找到位置 {position} 对应的卡牌数据 - 文件: {filename}")
                 else:
@@ -317,7 +325,6 @@ class CardMetadataScanner:
                     skipped_count += 1
                     continue
 
-
                 # 生成输出文件名 (例如: 图片/1a.png -> 卡牌/1a.card)
                 card_filename = filename + '.card'
 
@@ -351,7 +358,7 @@ class CardMetadataScanner:
             扫描到的元数据列表
         """
         print(f"开始扫描工作目录: {self.work_directory}")
-        print(f"项目代码: {self.code}")
+        print(f"项目代码: {self.code} (匹配卡牌code的前{len(self.code)}位)")
 
         metadata_list = self.scan_metadata()
 
@@ -367,11 +374,16 @@ class CardMetadataScanner:
 if __name__ == "__main__":
     # 创建扫描器实例
     try:
-        # core
-        # dwl
+        # 基础 01
+        # 敦威治遗产 02
+        # 卡尔克萨之路 03
+        # 失落的时代 04
+        # 失落的时代 04
+        # 万象无终 05
+        # 06_食梦者 05
         scanner = CardMetadataScanner(
-            work_directory=r"D:\诡镇奇谈\重置玩家卡\敦威治遗产",  # 替换为实际的工作目录路径
-            code="dwl"  # 替换为实际的项目代码
+            work_directory=r"D:\诡镇奇谈\重置玩家卡\06_食梦者",  # 替换为实际的工作目录路径
+            code="06"  # 使用code前缀，匹配前2位
         )
 
         # 执行扫描并保存元数据
