@@ -1051,8 +1051,9 @@ class Card:
                                illustrator: str,
                                footer_copyright: str,
                                encounter_group_number: str,
-                               footer_icon: Image.Image,
-                               card_number: str):
+                               card_number: str,
+                               footer_icon: Image.Image = None,
+                               footer_icon_font: str = None):
         """
         写页脚信息
         :param illustrator: 插画信息
@@ -1060,6 +1061,7 @@ class Card:
         :param encounter_group_number: 遭遇组序号
         :param footer_icon: 图标
         :param card_number: 卡牌序号
+        :param footer_icon_font:
         :return:
         """
         print(self.card_type)
@@ -1072,7 +1074,6 @@ class Card:
         encounter_text = ''
         right_text = ''
         footer_icon_copy = footer_icon
-
         if illustrator and illustrator != '':
             left_text = 'Illus. ' + illustrator
         if footer_copyright and footer_copyright != '':
@@ -1122,7 +1123,8 @@ class Card:
             pos_right = (offset_x + card_width - 80, offset_y + card_height - 28)
             pos_right_encounter_group_number = (offset_x + card_width - 180, offset_y + card_height - 28)
             font_color = (0, 0, 0)
-            footer_icon_copy = self.invert_rgba_image(footer_icon_copy)
+            if footer_icon_copy:
+                footer_icon_copy = self.invert_rgba_image(footer_icon_copy)
             pass
         # 开始绘制
         if left_text:
@@ -1154,6 +1156,14 @@ class Card:
                 footer_icon_copy,
                 (pos_icon[0], pos_icon[1] + 3, 24, 24),
                 'stretch'
+            )
+        elif footer_icon_font:
+            self.draw_centered_text(
+                position=(pos_icon[0], pos_icon[1] + 10),
+                text=footer_icon_font,
+                font_name='收藏信息字体',
+                font_size=30,
+                font_color=font_color
             )
         if right_text:
             self.draw_left_text(

@@ -513,23 +513,35 @@ class WorkspaceManager:
             # 画页脚
             if not silence:
                 illustrator = json_data.get('illustrator', '')
-                footer_copyright = self.config.get('footer_copyright', '')
+                footer_copyright = json_data.get('footer_copyright', '')
+                if footer_copyright == '':
+                    footer_copyright = self.config.get('footer_copyright', '')
                 encounter_group_number = json_data.get('encounter_group_number', '')
                 card_number = json_data.get('card_number', '')
                 footer_icon_name = self.config.get('footer_icon_dir', '')
-                footer_icon = None
-                if footer_icon_name:
-                    footer_icon_path = self._get_absolute_path(footer_icon_name)
-                    if os.path.exists(footer_icon_path):
-                        footer_icon = Image.open(footer_icon_path)
+                footer_icon_font = json_data.get('footer_icon_font', '')
+                if footer_icon_font == '':
+                    footer_icon = None
+                    if footer_icon_name:
+                        footer_icon_path = self._get_absolute_path(footer_icon_name)
+                        if os.path.exists(footer_icon_path):
+                            footer_icon = Image.open(footer_icon_path)
 
-                card.set_footer_information(
-                    illustrator,
-                    footer_copyright,
-                    encounter_group_number,
-                    footer_icon,
-                    card_number
-                )
+                    card.set_footer_information(
+                        illustrator,
+                        footer_copyright,
+                        encounter_group_number,
+                        card_number,
+                        footer_icon=footer_icon
+                    )
+                else:
+                    card.set_footer_information(
+                        illustrator,
+                        footer_copyright,
+                        encounter_group_number,
+                        card_number,
+                        footer_icon_font=footer_icon_font
+                    )
             return card
 
         except Exception as e:

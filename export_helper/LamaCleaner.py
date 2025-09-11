@@ -158,24 +158,53 @@ class LamaCleaner:
             print(f"网络请求错误: {req_err}")
             raise
 
+    @staticmethod
+    def _center_crop(image: Image.Image, target_width: int, target_height: int) -> Image.Image:
+        """
+        居中裁剪图像到目标尺寸。
+
+        :param image: PIL.Image 对象，表示原始图像。
+        :param target_width: 目标图像的宽度。
+        :param target_height: 目标图像的高度。
+        :return: PIL.Image 对象，表示裁剪后的图像。
+        """
+        orig_width, orig_height = image.size
+
+        # 如果目标尺寸大于等于原图尺寸，直接返回原图
+        if target_width >= orig_width and target_height >= orig_height:
+            return image.copy()
+
+        # 计算居中裁剪的坐标
+        left = max(0, (orig_width - target_width) // 2)
+        top = max(0, (orig_height - target_height) // 2)
+        right = min(orig_width, left + target_width)
+        bottom = min(orig_height, top + target_height)
+
+        # 执行裁剪
+        cropped_image = image.crop((left, top, right, bottom))
+        print(f"执行居中裁剪：从 {orig_width}x{orig_height} 裁剪到 {cropped_image.size[0]}x{cropped_image.size[1]}")
+
+        return cropped_image
+
     def outpaint_extend(self, original_image: Image.Image, target_width: int, target_height: int,
                         **kwargs) -> Image.Image:
         """
         扩展方法：使用 lama-cleaner API 自动创建源图和mask图进行出血处理。
+        当目标尺寸小于原图尺寸时，使用居中裁剪。
 
         :param original_image: PIL.Image 对象，表示原始图像。
         :param target_width: 目标图像的宽度。
         :param target_height: 目标图像的高度。
         :param kwargs: 其他可选的 API 参数，传递给 inpaint 方法。
         :return: PIL.Image 对象，表示扩展后的图像。
-        :raises: ValueError: 如果目标尺寸小于原图尺寸。
         """
         # 获取原图尺寸
         orig_width, orig_height = original_image.size
 
-        # 验证目标尺寸
+        # 如果目标尺寸小于原图尺寸，进行居中裁剪
         if target_width < orig_width or target_height < orig_height:
-            raise ValueError(f"目标尺寸 ({target_width}x{target_height}) 不能小于原图尺寸 ({orig_width}x{orig_height})")
+            print(f"目标尺寸 ({target_width}x{target_height}) 小于原图尺寸 ({orig_width}x{orig_height})，执行居中裁剪")
+            return self._center_crop(original_image, target_width, target_height)
 
         # 如果尺寸相同，直接返回原图
         if target_width == orig_width and target_height == orig_height:
@@ -201,29 +230,29 @@ class LamaCleaner:
         mask_image.paste(mask_black_region, (x_offset, y_offset))
 
         # 4. 调用inpaint方法进行出血处理
-        # print("正在使用 lama-cleaner API进行扩展...")
+        print(f"使用 lama-cleaner API 进行扩展：从 {orig_width}x{orig_height} 扩展到 {target_width}x{target_height}")
         result = self.inpaint(base_image, mask_image, **kwargs)
         return result
 
-    # --- 新增方法开始 ---
     @staticmethod
     def outpaint_mirror_extend(original_image: Image.Image, target_width: int, target_height: int) -> Image.Image:
         """
         使用镜像延伸的方式扩展图像，不调用 lama-cleaner API。
         此方法通过反射图像边缘的像素来填充扩展区域。
+        当目标尺寸小于原图尺寸时，使用居中裁剪。
 
         :param original_image: PIL.Image 对象，表示原始图像。
         :param target_width: 目标图像的宽度。
         :param target_height: 目标图像的高度。
         :return: PIL.Image 对象，表示扩展后的图像。
-        :raises: ValueError: 如果目标尺寸小于原图尺寸。
         """
         # 获取原图尺寸
         orig_width, orig_height = original_image.size
 
-        # 验证目标尺寸
+        # 如果目标尺寸小于原图尺寸，进行居中裁剪
         if target_width < orig_width or target_height < orig_height:
-            raise ValueError(f"目标尺寸 ({target_width}x{target_height}) 不能小于原图尺寸 ({orig_width}x{orig_height})")
+            print(f"目标尺寸 ({target_width}x{target_height}) 小于原图尺寸 ({orig_width}x{orig_height})，执行居中裁剪")
+            return LamaCleaner._center_crop(original_image, target_width, target_height)
 
         # 如果尺寸相同，直接返回原图
         if target_width == orig_width and target_height == orig_height:
@@ -252,14 +281,13 @@ class LamaCleaner:
             raise ValueError(f"不支持的图像维度: {image_array.ndim}。只支持彩色和灰度图。")
 
         # 使用 numpy.pad 进行镜像填充 ('reflect' 模式)
-        # print("正在使用镜像延伸方式进行扩展...")
+        # print(f"使用镜像延伸方式进行扩展：从 {orig_width}x{orig_height} 扩展到 {target_width}x{target_height}")
         padded_array = np.pad(image_array, pad_width=pad_spec, mode='reflect')
 
         # 将处理后的 numpy 数组转换回 PIL Image
         result_image = Image.fromarray(padded_array)
 
         return result_image
-    # --- 新增方法结束 ---
 
 
 if __name__ == "__main__":
@@ -284,38 +312,90 @@ if __name__ == "__main__":
             original_image = Image.open('000174-raw.jpg')
         except FileNotFoundError:
             print("错误: 未找到 '000174-raw.jpg'。请确保当前目录下有此文件。")
-            print("将创建一个 200x300 的示例图片用于测试。")
-            original_image = Image.new('RGB', (200, 300), color='blue')
-            original_image.paste(Image.new('RGB', (100, 150), color='red'), (50, 75))
+            print("将创建一个 800x600 的示例图片用于测试。")
+            original_image = Image.new('RGB', (800, 600), color='blue')
+            original_image.paste(Image.new('RGB', (400, 300), color='red'), (200, 150))
             original_image.save("000174-raw.jpg")
 
-        target_w, target_h = 821, 1121
+        # --- 测试不同场景 ---
 
-        # --- 4. 测试 lama-cleaner 的扩展方法 (如果服务在线) ---
+        # 场景1：扩展（目标尺寸大于原图）
+        target_w1, target_h1 = 1000, 800
+        print(f"\n=== 场景1：扩展测试 (目标尺寸: {target_w1}x{target_h1}) ===")
+
         if is_online:
-            print(f"\n--- 测试 lama-cleaner 扩展方法 (目标尺寸: {target_w}x{target_h}) ---")
-            lama_result = cleaner.outpaint_extend(
+            print(f"\n--- 测试 lama-cleaner 扩展方法 ---")
+            lama_result1 = cleaner.outpaint_extend(
                 original_image=original_image,
-                target_width=target_w,
-                target_height=target_h
+                target_width=target_w1,
+                target_height=target_h1
             )
-            if lama_result:
-                lama_result.save("outpaint_lama_result.png")
-                print("Lama 扩展成功！结果已保存为 'outpaint_lama_result.png'")
-        else:
-            print("\n--- 跳过 lama-cleaner 扩展测试 (服务离线) ---")
+            if lama_result1:
+                lama_result1.save("test_lama_extend.png")
+                print("Lama 扩展成功！结果已保存为 'test_lama_extend.png'")
 
-        # --- 5. 测试新的镜像延伸方法 ---
-        print(f"\n--- 测试镜像延伸方法 (目标尺寸: {target_w}x{target_h}) ---")
-        mirror_result = cleaner.outpaint_mirror_extend(
+        print(f"\n--- 测试镜像延伸方法 ---")
+        mirror_result1 = cleaner.outpaint_mirror_extend(
             original_image=original_image,
-            target_width=target_w,
-            target_height=target_h
+            target_width=target_w1,
+            target_height=target_h1
         )
-        if mirror_result:
-            mirror_result.save("outpaint_mirror_result.png")
-            print("镜像延伸成功！结果已保存为 'outpaint_mirror_result.png'")
+        if mirror_result1:
+            mirror_result1.save("test_mirror_extend.png")
+            print("镜像延伸成功！结果已保存为 'test_mirror_extend.png'")
 
+        # 场景2：裁剪（目标尺寸小于原图）
+        target_w2, target_h2 = 400, 300
+        print(f"\n=== 场景2：裁剪测试 (目标尺寸: {target_w2}x{target_h2}) ===")
+
+        if is_online:
+            print(f"\n--- 测试 lama-cleaner 裁剪方法 ---")
+            lama_result2 = cleaner.outpaint_extend(
+                original_image=original_image,
+                target_width=target_w2,
+                target_height=target_h2
+            )
+            if lama_result2:
+                lama_result2.save("test_lama_crop.png")
+                print("Lama 裁剪成功！结果已保存为 'test_lama_crop.png'")
+
+        print(f"\n--- 测试镜像裁剪方法 ---")
+        mirror_result2 = cleaner.outpaint_mirror_extend(
+            original_image=original_image,
+            target_width=target_w2,
+            target_height=target_h2
+        )
+        if mirror_result2:
+            mirror_result2.save("test_mirror_crop.png")
+            print("镜像裁剪成功！结果已保存为 'test_mirror_crop.png'")
+
+        # 场景3：混合（一个维度扩展，一个维度裁剪）
+        target_w3, target_h3 = 600, 400  # 宽度缩小，高度缩小
+        print(f"\n=== 场景3：混合测试 (目标尺寸: {target_w3}x{target_h3}) ===")
+
+        if is_online:
+            print(f"\n--- 测试 lama-cleaner 混合方法 ---")
+            lama_result3 = cleaner.outpaint_extend(
+                original_image=original_image,
+                target_width=target_w3,
+                target_height=target_h3
+            )
+            if lama_result3:
+                lama_result3.save("test_lama_mixed.png")
+                print("Lama 混合处理成功！结果已保存为 'test_lama_mixed.png'")
+
+        print(f"\n--- 测试镜像混合方法 ---")
+        mirror_result3 = cleaner.outpaint_mirror_extend(
+            original_image=original_image,
+            target_width=target_w3,
+            target_height=target_h3
+        )
+        if mirror_result3:
+            mirror_result3.save("test_mirror_mixed.png")
+            print("镜像混合处理成功！结果已保存为 'test_mirror_mixed.png'")
+
+        print(f"\n=== 所有测试完成 ===")
+        print(f"原图尺寸: {original_image.size}")
 
     except requests.exceptions.ConnectionError:
         print(f"连接失败: 无法连接到 {LAMA_CLEANER_URL}。请确保 lama-cleaner 服务正在运行。")

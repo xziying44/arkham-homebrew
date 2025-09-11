@@ -1477,53 +1477,60 @@ class CardCreator:
         if picture_path is None:
             picture_path = card_json.get('picture_path', None)
 
-        if 'msg' in card_json and card_json['msg'] != '':
-            raise ValueError(card_json['msg'])
-        if 'type' not in card_json:
-            raise ValueError('卡牌类型不能为空')
+        _self_image_mode = self.image_mode
+        if 'image_mode' in card_json and isinstance(card_json['image_mode'], int):
+            self.image_mode = card_json['image_mode']
+        try:
 
-        card_type = card_json['type']
+            if 'msg' in card_json and card_json['msg'] != '':
+                raise ValueError(card_json['msg'])
+            if 'type' not in card_json:
+                raise ValueError('卡牌类型不能为空')
 
-        # 根据卡牌类型调用对应的创建方法
-        if card_type == '调查员卡':
-            return self.create_investigators_card(card_json, picture_path)
-        elif card_type == '调查员卡背':
-            return self.create_investigators_card_back(card_json, picture_path)
-        elif card_json.get('class', '') == '弱点':
-            return self.create_weakness_back(card_json, picture_path)
-        elif card_type == '升级卡':
-            return self.create_upgrade_card(card_json, picture_path)
-        elif card_type == '故事卡':
-            return self.create_story_card(card_json, picture_path)
-        elif card_type == '行动卡':
-            return self.create_action_card(card_json, picture_path)
-        elif card_type == '冒险参考卡':
-            return self.create_scenario_card(card_json, picture_path)
-        elif card_type == '敌人卡':
-            return self.create_enemy_card(card_json, picture_path)
-        elif card_type == '诡计卡':
-            return self.create_treachery_card(card_json, picture_path)
-        elif card_type == '地点卡':
-            return self.create_location_card(card_json, picture_path)
-        elif card_type in ['场景卡-大画', '密谋卡-大画']:
-            return self.create_large_picture(card_json, picture_path)
-        elif card_type in ['场景卡', '密谋卡']:
-            if card_json.get('is_back', False):
+            card_type = card_json['type']
+
+            # 根据卡牌类型调用对应的创建方法
+            if card_type == '调查员卡':
+                return self.create_investigators_card(card_json, picture_path)
+            elif card_type == '调查员卡背':
+                return self.create_investigators_card_back(card_json, picture_path)
+            elif card_json.get('class', '') == '弱点':
+                return self.create_weakness_back(card_json, picture_path)
+            elif card_type == '升级卡':
+                return self.create_upgrade_card(card_json, picture_path)
+            elif card_type == '故事卡':
+                return self.create_story_card(card_json, picture_path)
+            elif card_type == '行动卡':
+                return self.create_action_card(card_json, picture_path)
+            elif card_type == '冒险参考卡':
+                return self.create_scenario_card(card_json, picture_path)
+            elif card_type == '敌人卡':
+                return self.create_enemy_card(card_json, picture_path)
+            elif card_type == '诡计卡':
+                return self.create_treachery_card(card_json, picture_path)
+            elif card_type == '地点卡':
+                return self.create_location_card(card_json, picture_path)
+            elif card_type in ['场景卡-大画', '密谋卡-大画']:
+                return self.create_large_picture(card_json, picture_path)
+            elif card_type in ['场景卡', '密谋卡']:
+                if card_json.get('is_back', False):
+                    return self.create_act_back_card(card_json, picture_path)
+                return self.create_act_card(card_json, picture_path)
+            elif card_type in ['场景卡背', '密谋卡背']:
+                card_json['is_back'] = True
+                if card_type == '场景卡背':
+                    card_json['type'] = '场景卡'
+                else:
+                    card_json['type'] = '密谋卡'
                 return self.create_act_back_card(card_json, picture_path)
-            return self.create_act_card(card_json, picture_path)
-        elif card_type in ['场景卡背', '密谋卡背']:
-            card_json['is_back'] = True
-            if card_type == '场景卡背':
-                card_json['type'] = '场景卡'
             else:
-                card_json['type'] = '密谋卡'
-            return self.create_act_back_card(card_json, picture_path)
-        else:
-            if 'class' not in card_json:
-                card_json['class'] = '中立'
-                if 'level' not in card_json:
-                    card_json['level'] = -1
-            return self.create_player_cards(card_json, picture_path)
+                if 'class' not in card_json:
+                    card_json['class'] = '中立'
+                    if 'level' not in card_json:
+                        card_json['level'] = -1
+                return self.create_player_cards(card_json, picture_path)
+        finally:
+            self.image_mode = _self_image_mode
 
 
 # 使用示例

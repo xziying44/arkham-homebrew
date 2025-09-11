@@ -1,8 +1,10 @@
 import json
 import os
 import re
+import base64
 from pathlib import Path
 from typing import List, Dict, Any, Optional
+from PIL import Image
 from arkhamdb2card import ArkhamDBConverter
 
 
@@ -86,6 +88,71 @@ class CardMetadataScanner:
                     card.get('position') == position):
                 return card
         return None
+
+    def _process_image_to_base64(self, image_path: Path, type_code: str, is_back: bool = False) -> str:
+        """
+        处理图片并转换为base64字符串
+
+        Args:
+            image_path: 图片文件路径
+            type_code: 卡牌类型代码
+            is_back: 是否为背面
+
+        Returns:
+            处理后的图片base64字符串
+        """
+        try:
+            # 打开图片
+            with Image.open(image_path) as img:
+                # 获取原图尺寸
+                original_width, original_height = img.size
+
+                # 目标尺寸
+                target_width, target_height = 739, 1049
+
+                # 计算裁剪的左上角坐标（居中裁剪）
+                left = int((original_width - target_width) / 2)
+                top = int((original_height - target_height) / 2)
+
+                # 确保坐标不为负数
+                left = max(0, left)
+                top = max(0, top)
+
+                # 计算右下角坐标
+                right = min(original_width, left + target_width)
+                bottom = min(original_height, top + target_height)
+
+                # 裁剪图片
+                cropped_img = img.crop((left, top, right, bottom))
+
+                # 如果裁剪后的尺寸不足目标尺寸，则进行缩放
+                if cropped_img.size != (target_width, target_height):
+                    cropped_img = cropped_img.resize((target_width, target_height), Image.Resampling.LANCZOS)
+
+                # 如果是调查员卡牌，根据正面/背面进行不同的旋转
+                if type_code == "investigator":
+                    if is_back:
+                        # 背面：逆时针90度旋转
+                        cropped_img = cropped_img.rotate(90, expand=True)
+                    else:
+                        # 正面：顺时针90度旋转
+                        cropped_img = cropped_img.rotate(-90, expand=True)
+
+                # 转换为RGB模式（确保没有透明通道）
+                if cropped_img.mode != 'RGB':
+                    cropped_img = cropped_img.convert('RGB')
+
+                # 转换为base64
+                from io import BytesIO
+                buffer = BytesIO()
+                cropped_img.save(buffer, format='JPEG', quality=95)
+                img_bytes = buffer.getvalue()
+                base64_string = base64.b64encode(img_bytes).decode('utf-8')
+
+                return base64_string
+
+        except Exception as e:
+            raise Exception(f"处理图片失败 {image_path}: {e}")
 
     def scan_metadata(self) -> List[Dict[str, Any]]:
         """
@@ -196,9 +263,12 @@ class CardMetadataScanner:
             try:
                 # 获取文件路径信息
                 file_path = metadata.get('file_path', '')
-                filename = metadata.get('filename', '')
+                filename = metadata.get('card_code', '')
                 is_back = metadata.get('is_back', False)
                 card_data = metadata.get('card_data', {})
+                type_code = metadata.get('type_code', '')
+                if is_back:
+                    filename += 'b'
 
                 if not card_data:
                     print(f"警告: 元数据中缺少卡牌数据 - 文件: {filename}")
@@ -220,16 +290,36 @@ class CardMetadataScanner:
                     skipped_count += 1
                     continue
 
+                # 处理图片并转换为base64
+                image_full_path = self.work_directory / file_path
+                if not image_full_path.exists():
+                    print(f"警告: 图片文件不存在 - {image_full_path}")
+                    skipped_count += 1
+                    continue
+
+                try:
+                    # 处理图片并转换为base64，传递is_back参数
+                    picture_base64 = self._process_image_to_base64(image_full_path, type_code, is_back)
+
+                    # 添加新字段到card对象
+                    card_object['picture_base64'] = 'data:image/png;base64,' + picture_base64
+                    card_object['image_mode'] = 1
+
+                    rotation_info = ""
+                    if type_code == "investigator":
+                        rotation_info = f" - {'逆时针90°' if is_back else '顺时针90°'}旋转"
+
+                    print(
+                        f"图片处理完成: {filename} ({'调查员' if type_code == 'investigator' else '普通卡牌'}){rotation_info}")
+
+                except Exception as e:
+                    print(f"图片处理失败: {filename} - 错误: {e}")
+                    skipped_count += 1
+                    continue
+
+
                 # 生成输出文件名 (例如: 图片/1a.png -> 卡牌/1a.card)
-                # 从file_path中提取文件名部分
-                path_parts = file_path.split('/')
-                if len(path_parts) >= 2:
-                    image_filename = path_parts[-1]  # 获取文件名部分
-                    # 移除扩展名并添加.card扩展名
-                    card_filename = Path(image_filename).stem + '.card'
-                else:
-                    # 如果路径格式不符合预期，使用原始filename
-                    card_filename = filename + '.card'
+                card_filename = filename + '.card'
 
                 # 保存card对象到文件
                 output_path = cards_dir / card_filename
@@ -277,9 +367,11 @@ class CardMetadataScanner:
 if __name__ == "__main__":
     # 创建扫描器实例
     try:
+        # core
+        # dwl
         scanner = CardMetadataScanner(
-            work_directory=r"D:\诡镇奇谈\重置玩家卡\基础游戏",  # 替换为实际的工作目录路径
-            code="core"  # 替换为实际的项目代码
+            work_directory=r"D:\诡镇奇谈\重置玩家卡\敦威治遗产",  # 替换为实际的工作目录路径
+            code="dwl"  # 替换为实际的项目代码
         )
 
         # 执行扫描并保存元数据

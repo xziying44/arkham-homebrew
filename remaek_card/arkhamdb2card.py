@@ -106,6 +106,32 @@ class ArkhamDBConverter:
         "icon-survivor": "🏕️",
     }
 
+    COPYRIGHT_DICT = {
+        '01': {'name': '基础', 'year': 2016, 'font_text': '<font name="packicon_coreset">\ue91a</font>'},
+        '02': {'name': '敦威治遗产', 'year': 2016, 'font_text': '<font name="dunwich">\uE947</font>'},
+        '03': {'name': '卡尔克萨之路', 'year': 2017},
+        '04': {'name': '失落的时代', 'year': 2017},
+        '05': {'name': '万象无终', 'year': 2018},
+        '06': {'name': '食梦者', 'year': 2019},
+        '07': {'name': '印斯茅斯的阴谋', 'year': 2020},
+        '08': {'name': '暗与地球之界', 'year': 2021},
+        '09': {'name': '绯红密钥', 'year': 2022},
+        '10': {'name': '铁杉谷盛宴', 'year': 2024},
+        '50': {'name': '重返基础', 'year': 2017},
+        '51': {'name': '重返敦威治遗产', 'year': 2018},
+        '52': {'name': '重返卡尔克萨之路', 'year': 2019},
+        '53': {'name': '重返失落的时代', 'year': 2020},
+        '54': {'name': '重返万象无终', 'year': 2021},
+    }
+
+    COPYRIGHT_DICT_THREE = {
+        '601': {'name': '调查员包-守卫者', 'year': 2019},
+        '602': {'name': '调查员包-探求者', 'year': 2019},
+        '603': {'name': '调查员包-流浪者', 'year': 2019},
+        '604': {'name': '调查员包-潜修者', 'year': 2020},
+        '605': {'name': '调查员包-生存者', 'year': 2019},
+    }
+
     def __init__(self, arkhamdb_json: Dict[str, Any]):
         """
         构造函数
@@ -154,6 +180,7 @@ class ArkhamDBConverter:
         formatted_text = re.sub(r'<span([^>]*)></span>', replace_span_icon, text)
         # 1. 替换HTML粗体标签为【】
         formatted_text = re.sub(r'<b><i>(.*?)</i></b>', r'{\1}', formatted_text)
+        formatted_text = re.sub(r'\[\[(.*?)]]', r'{\1}', formatted_text)
         formatted_text = re.sub(r'<b>(.*?)</b>', r'【\1】', formatted_text)
         formatted_text = re.sub(r'<p>(.*?)</p>', r'\1\n', formatted_text)
 
@@ -246,6 +273,28 @@ class ArkhamDBConverter:
     # 公共转换方法
     # -----------------------------------------------------
 
+    def registered_base_mark_information(self, card_data: Optional[Dict[str, Any]]):
+        """注册底标信息"""
+        type_code = self.data.get("type_code")
+        if type_code in ['investigator', 'enemy']:
+            return
+        card_data['illustrator'] = self.data.get("illustrator", '')
+        card_data['card_number'] = str(self.data.get("position", ''))
+
+        # 获取版权年份
+        pack_code = self.data['code'][:2]
+        pack_code_three = self.data['code'][:2]
+        middle_text = ''
+        footer_icon_font = ''
+        if self.data['code'][:2] in self.COPYRIGHT_DICT:
+            middle_text = f"© {self.COPYRIGHT_DICT[pack_code]['year']} FFG"
+            footer_icon_font = self.COPYRIGHT_DICT[pack_code]['font_text']
+        elif pack_code_three in self.COPYRIGHT_DICT_THREE:
+            middle_text = f"© {self.COPYRIGHT_DICT_THREE[pack_code_three]['year']} FFG"
+            footer_icon_font = self.COPYRIGHT_DICT_THREE[pack_code_three]['font_text']
+        card_data['footer_copyright'] = middle_text
+        card_data['footer_icon_font'] = footer_icon_font
+
     def convert_front(self) -> Optional[Dict[str, Any]]:
         """
         转换卡牌正面数据。
@@ -275,6 +324,8 @@ class ArkhamDBConverter:
             print(f"警告：尚未实现对 '{type_code}' 类型的正面转换")
             return None
         card_data['type'] = card_type_name
+        # 获取底标数据
+        self.registered_base_mark_information(card_data)
         return card_data
 
     def convert_back(self) -> Optional[Dict[str, Any]]:
