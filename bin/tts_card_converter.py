@@ -206,7 +206,7 @@ class TTSCardConverter:
     def convert_deck_to_tts(self, deck_config: Dict[str, Any], face_url: str,
                             back_url: str) -> Dict[str, Any]:
         """
-        将牌库配置转换为TTS格式
+        将牌库配置转换为TTS格式，将调查员卡和其他卡分成两个牌堆
 
         Args:
             deck_config: 牌库配置JSON
@@ -289,16 +289,16 @@ class TTSCardConverter:
                     except Exception as e:
                         print(f"无法读取背面卡牌 {back_card['path']}: {e}")
 
-        contained_objects = []
-        deck_ids = []
-        custom_decks = {}
+        # 分别处理调查员卡和其他卡牌
+        investigator_cards = []  # 调查员卡牌列表
+        other_cards = []  # 其他卡牌列表
 
-        # 使用一个统一的CustomDeck ID，从2700开始
+        # 使用统一的CustomDeck ID，从2700开始
         base_custom_deck_id = 2700
         current_custom_deck_id = str(base_custom_deck_id)
         card_position_in_deck = 0
 
-        # 处理正面卡牌 - 现在处理所有类型
+        # 处理正面卡牌，按类型分组
         for i, front_card in enumerate(front_cards):
             print(f"处理第 {i + 1} 张卡牌: {front_card}")
 
@@ -306,21 +306,29 @@ class TTSCardConverter:
             front_index = front_card.get("index", 0)
 
             try:
-                # 计算卡牌在deck中的位置（根据配置的width和height）
+                # 计算卡牌在deck中的位置
                 if card_position_in_deck >= max_cards_per_deck:
                     base_custom_deck_id += 1
                     current_custom_deck_id = str(base_custom_deck_id)
                     card_position_in_deck = 0
 
-                # 生成CardID：CustomDeckID + 卡牌位置（从00开始）
+                # 生成CardID
                 card_position_str = str(front_index).zfill(2)
                 card_id = int(current_custom_deck_id + card_position_str)
                 print(f"生成CardID: {card_id} (position: {card_position_in_deck:02d})")
 
-                # 根据是否共享背面设置UniqueBack
-                # isSharedBack = true -> UniqueBack = false (共享背面)
-                # isSharedBack = false -> UniqueBack = true (独立背面)
+                # 设置UniqueBack
                 unique_back = not is_shared_back
+
+                # 判断是否为调查员卡
+                is_investigator_card = False
+                if front_card_type == "card":
+                    try:
+                        card_data = self.read_card_file(front_card["path"])
+                        card_type = card_data.get("type", "")
+                        is_investigator_card = card_type in ["调查员", "Investigator"]
+                    except Exception as e:
+                        print(f"无法读取卡牌数据判断类型: {e}")
 
                 # 根据类型处理不同的卡牌
                 if front_card_type == "card":
@@ -328,7 +336,7 @@ class TTSCardConverter:
                     card_data = self.read_card_file(front_card["path"])
                     print(f"成功读取card: {front_card['path']} - {card_data.get('name', 'No Name')}")
 
-                    # 获取对应的背面卡牌（可能是共享背面）
+                    # 获取对应的背面卡牌
                     back_card_data = back_card_map.get(front_card["index"])
                     if back_card_data:
                         if is_shared_back:
@@ -336,15 +344,7 @@ class TTSCardConverter:
                         else:
                             print(f"找到对应背面卡牌: {back_card_data.get('name', 'No Name')}")
 
-                    # 如果这个CustomDeck还没有被创建，创建它
-                    if current_custom_deck_id not in custom_decks:
-                        custom_decks[current_custom_deck_id] = self.create_custom_deck_entry(
-                            face_url, back_url, deck_width, deck_height, unique_back
-                        )
-                        print(
-                            f"创建CustomDeck: {current_custom_deck_id} ({deck_width}x{deck_height}) UniqueBack={unique_back}")
-
-                    # 创建卡牌对象（包含脚本）
+                    # 创建卡牌对象
                     card_object = self.create_card_object_from_data(
                         card_data, card_id, current_custom_deck_id,
                         face_url, back_url, deck_width, deck_height,
@@ -354,19 +354,8 @@ class TTSCardConverter:
                 elif front_card_type == "image":
                     # image类型：创建基础卡牌对象，不添加脚本
                     print(f"处理image: {front_card['path']}")
-
-                    # image类型通常使用共享背面
                     unique_back = False
 
-                    # 如果这个CustomDeck还没有被创建，创建它
-                    if current_custom_deck_id not in custom_decks:
-                        custom_decks[current_custom_deck_id] = self.create_custom_deck_entry(
-                            face_url, back_url, deck_width, deck_height, unique_back
-                        )
-                        print(
-                            f"创建CustomDeck: {current_custom_deck_id} ({deck_width}x{deck_height}) UniqueBack={unique_back}")
-
-                    # 创建卡牌对象（不包含脚本）
                     card_object = self.create_card_object_from_image(
                         front_card["path"], card_id, current_custom_deck_id,
                         face_url, back_url, deck_width, deck_height, unique_back
@@ -375,136 +364,198 @@ class TTSCardConverter:
                 else:
                     # 其他类型：也创建基础卡牌对象
                     print(f"处理其他类型 {front_card_type}: {front_card['path']}")
-
                     unique_back = False
 
-                    if current_custom_deck_id not in custom_decks:
-                        custom_decks[current_custom_deck_id] = self.create_custom_deck_entry(
-                            face_url, back_url, deck_width, deck_height, unique_back
-                        )
-                        print(
-                            f"创建CustomDeck: {current_custom_deck_id} ({deck_width}x{deck_height}) UniqueBack={unique_back}")
-
-                    # 创建基础卡牌对象
                     card_object = self.create_card_object_from_image(
                         front_card["path"], card_id, current_custom_deck_id,
                         face_url, back_url, deck_width, deck_height, unique_back
                     )
 
-                contained_objects.append(card_object)
-                deck_ids.append(card_id)
+                # 根据是否为调查员卡分组
+                if is_investigator_card:
+                    investigator_cards.append({
+                        'card_object': card_object,
+                        'card_id': card_id,
+                        'custom_deck_id': current_custom_deck_id
+                    })
+                    print(f"添加到调查员卡组: {card_object.get('Nickname', 'Unknown')}")
+                else:
+                    other_cards.append({
+                        'card_object': card_object,
+                        'card_id': card_id,
+                        'custom_deck_id': current_custom_deck_id
+                    })
+                    print(f"添加到其他卡组: {card_object.get('Nickname', 'Unknown')}")
+
                 card_position_in_deck += 1
-                print(f"成功创建卡牌对象，当前总数: {len(contained_objects)}")
 
             except Exception as e:
                 print(f"处理卡牌时出错 {front_card.get('path', 'unknown')}: {e}")
                 continue
 
-        print(f"最终生成了 {len(contained_objects)} 张卡牌")
+        print(f"调查员卡数量: {len(investigator_cards)}")
+        print(f"其他卡牌数量: {len(other_cards)}")
 
-        # *** 新增：单张卡牌特殊处理 ***
-        if len(contained_objects) == 1:
-            print("检测到只有1张卡牌，导出单张卡牌格式")
-
-            # 获取唯一的卡牌对象
-            single_card = contained_objects[0]
-
-            # 调整单张卡牌的Transform位置（参考示例）
-            single_card["Transform"] = {
-                "posX": 32.41374 + random.uniform(-0.1, 0.1),
-                "posY": 1.49510384,
-                "posZ": 26.9848671 + random.uniform(-0.1, 0.1),
-                "rotX": random.uniform(-1.8e-07, 1.8e-07),
-                "rotY": 270.0,
-                "rotZ": random.uniform(-6e-07, 6e-07),
-                "scaleX": 1.0,  # 单张卡牌使用标准缩放
-                "scaleY": 1.0,
-                "scaleZ": 1.0
-            }
-
-            # 直接将单张卡牌添加到ObjectStates
-            tts_object["ObjectStates"] = [single_card]
-            print("单张卡牌格式导出完成")
-
-            return tts_object
-
-        # *** 原有的牌堆处理逻辑 ***
-        # 如果有多张卡牌，创建牌堆
-        if contained_objects:
-            # 检查第一张卡牌是否为调查员卡，决定牌堆的缩放
-            first_card_tags = contained_objects[0].get("Tags", [])
-            is_investigator_deck = "Investigator" in first_card_tags
-
-            # 根据第一张卡牌类型设置缩放
-            if is_investigator_deck:
-                # 调查员牌堆缩放
-                scale_x = 1.15
-                scale_y = 1.0
-                scale_z = 1.15
-                print("检测到调查员牌堆，使用调查员缩放 (1.15, 1.0, 1.15)")
+        # 处理调查员卡 (左边)
+        if investigator_cards:
+            if len(investigator_cards) == 1:
+                # 单张调查员卡
+                single_card = investigator_cards[0]['card_object']
+                single_card["Transform"] = {
+                    "posX": -13.253087 + random.uniform(-0.1, 0.1),
+                    "posY": 0.973604739,
+                    "posZ": 5.63178 + random.uniform(-0.1, 0.1),
+                    "rotX": random.uniform(-4.13e-08, 4.13e-08),
+                    "rotY": 89.9999847,
+                    "rotZ": random.uniform(-1.92e-07, 1.92e-07),
+                    "scaleX": 1.15,
+                    "scaleY": 1.0,
+                    "scaleZ": 1.15
+                }
+                tts_object["ObjectStates"].append(single_card)
+                print("创建单张调查员卡（左边）")
             else:
-                # 普通卡牌牌堆缩放
-                scale_x = 1.0
-                scale_y = 1.0
-                scale_z = 1.0
-                print("检测到普通卡牌牌堆，使用标准缩放 (1.0, 1.0, 1.0)")
+                # 多张调查员卡，创建牌堆
+                investigator_deck_ids = [card['card_id'] for card in investigator_cards]
+                investigator_contained_objects = [card['card_object'] for card in investigator_cards]
 
-            # 确定牌堆标签（基于第一张卡的类型）
-            deck_tags = ["PlayerCard"]  # 默认标签
-            if contained_objects:
-                first_card_tags = contained_objects[0].get("Tags", [])
-                if "Investigator" in first_card_tags:
-                    deck_tags = ["Investigator", "PlayerCard"]
-                elif "Asset" in first_card_tags:
-                    deck_tags = ["Asset", "PlayerCard"]
+                # 收集所有CustomDeck
+                investigator_custom_decks = {}
+                for card in investigator_cards:
+                    deck_id = card['custom_deck_id']
+                    if deck_id not in investigator_custom_decks:
+                        investigator_custom_decks[deck_id] = self.create_custom_deck_entry(
+                            face_url, back_url, deck_width, deck_height, not is_shared_back
+                        )
 
-            deck_object = {
-                "GUID": self.generate_guid(),
-                "Name": "Deck",
-                "Transform": {
-                    "posX": 37.0078049,
-                    "posY": 1.52168572,
-                    "posZ": 37.49592,
-                    "rotX": -3.26525765e-07,
-                    "rotY": 270.0014,
-                    "rotZ": -3.29874922e-07,
-                    "scaleX": scale_x,  # 使用动态缩放
-                    "scaleY": scale_y,  # 使用动态缩放
-                    "scaleZ": scale_z  # 使用动态缩放
-                },
-                "Nickname": deck_config.get("name", ""),
-                "Description": "",
-                "GMNotes": "",
-                "AltLookAngle": {"x": 0.0, "y": 0.0, "z": 0.0},
-                "ColorDiffuse": {"r": 0.713235259, "g": 0.713235259, "b": 0.713235259},
-                "Tags": deck_tags,
-                "LayoutGroupSortIndex": 0,
-                "Value": 0,
-                "Locked": False,
-                "Grid": True,
-                "Snap": True,
-                "IgnoreFoW": False,
-                "MeasureMovement": False,
-                "DragSelectable": True,
-                "Autoraise": True,
-                "Sticky": True,
-                "Tooltip": True,
-                "GridProjection": False,
-                "HideWhenFaceDown": True,
-                "Hands": False,
-                "SidewaysCard": False,
-                "DeckIDs": deck_ids,
-                "CustomDeck": custom_decks,
-                "LuaScript": "",
-                "LuaScriptState": "",
-                "XmlUI": "",
-                "ContainedObjects": contained_objects
-            }
+                investigator_deck_object = {
+                    "GUID": self.generate_guid(),
+                    "Name": "Deck",
+                    "Transform": {
+                        "posX": -13.253087 + random.uniform(-0.1, 0.1),
+                        "posY": 0.973604739,
+                        "posZ": 5.63178 + random.uniform(-0.1, 0.1),
+                        "rotX": random.uniform(-7.78e-07, 7.78e-07),
+                        "rotY": 89.9999847,
+                        "rotZ": random.uniform(-3.26e-07, 3.26e-07),
+                        "scaleX": 1.15,
+                        "scaleY": 1.0,
+                        "scaleZ": 1.15
+                    },
+                    "Nickname": "调查员卡堆",
+                    "Description": "",
+                    "GMNotes": "",
+                    "AltLookAngle": {"x": 0.0, "y": 0.0, "z": 0.0},
+                    "ColorDiffuse": {"r": 0.713235259, "g": 0.713235259, "b": 0.713235259},
+                    "Tags": ["Investigator", "PlayerCard"],
+                    "LayoutGroupSortIndex": 0,
+                    "Value": 0,
+                    "Locked": False,
+                    "Grid": True,
+                    "Snap": True,
+                    "IgnoreFoW": False,
+                    "MeasureMovement": False,
+                    "DragSelectable": True,
+                    "Autoraise": True,
+                    "Sticky": True,
+                    "Tooltip": True,
+                    "GridProjection": False,
+                    "HideWhenFaceDown": False,  # 调查员卡牌堆不隐藏
+                    "Hands": False,
+                    "SidewaysCard": True,  # 调查员牌堆横置
+                    "DeckIDs": investigator_deck_ids,
+                    "CustomDeck": investigator_custom_decks,
+                    "LuaScript": "",
+                    "LuaScriptState": "",
+                    "XmlUI": "",
+                    "ContainedObjects": investigator_contained_objects
+                }
+                tts_object["ObjectStates"].append(investigator_deck_object)
+                print("创建调查员牌堆（左边）")
 
-            tts_object["ObjectStates"].append(deck_object)
-            print("成功创建牌堆对象")
-        else:
-            print("没有找到任何有效的卡牌，无法创建牌堆")
+        # 处理其他卡牌 (右边)
+        if other_cards:
+            if len(other_cards) == 1:
+                # 单张其他卡牌
+                single_card = other_cards[0]['card_object']
+                single_card["Transform"] = {
+                    "posX": 3.71505737 + random.uniform(-0.1, 0.1),
+                    "posY": 0.973604739,  # 使用与调查员卡相同的高度
+                    "posZ": -0.104532719 + random.uniform(-0.1, 0.1),
+                    "rotX": random.uniform(-7.78e-07, 7.78e-07),
+                    "rotY": 179.999817,
+                    "rotZ": random.uniform(-3.26e-07, 3.26e-07),
+                    "scaleX": 1.0,  # 普通卡牌使用标准缩放
+                    "scaleY": 1.0,
+                    "scaleZ": 1.0
+                }
+                tts_object["ObjectStates"].append(single_card)
+                print("创建单张其他卡牌（右边）")
+            else:
+                # 多张其他卡牌，创建牌堆
+                other_deck_ids = [card['card_id'] for card in other_cards]
+                other_contained_objects = [card['card_object'] for card in other_cards]
+
+                # 收集所有CustomDeck
+                other_custom_decks = {}
+                for card in other_cards:
+                    deck_id = card['custom_deck_id']
+                    if deck_id not in other_custom_decks:
+                        other_custom_decks[deck_id] = self.create_custom_deck_entry(
+                            face_url, back_url, deck_width, deck_height, not is_shared_back
+                        )
+
+                # 确定牌堆标签（基于第一张卡的类型）
+                deck_tags = ["PlayerCard"]  # 默认标签
+                if other_contained_objects:
+                    first_card_tags = other_contained_objects[0].get("Tags", [])
+                    if "Asset" in first_card_tags:
+                        deck_tags = ["Asset", "PlayerCard"]
+
+                other_deck_object = {
+                    "GUID": self.generate_guid(),
+                    "Name": "Deck",
+                    "Transform": {
+                        "posX": 3.71505737 + random.uniform(-0.1, 0.1),
+                        "posY": 0.026581943,
+                        "posZ": -0.104532719 + random.uniform(-0.1, 0.1),
+                        "rotX": random.uniform(-7.78e-07, 7.78e-07),
+                        "rotY": 179.999817,
+                        "rotZ": random.uniform(-3.26e-07, 3.26e-07),
+                        "scaleX": 1.0,  # 普通卡牌牌堆使用标准缩放
+                        "scaleY": 1.0,
+                        "scaleZ": 1.0
+                    },
+                    "Nickname": deck_config.get("name", "其他卡牌"),
+                    "Description": "",
+                    "GMNotes": "",
+                    "AltLookAngle": {"x": 0.0, "y": 0.0, "z": 0.0},
+                    "ColorDiffuse": {"r": 0.713235259, "g": 0.713235259, "b": 0.713235259},
+                    "Tags": deck_tags,
+                    "LayoutGroupSortIndex": 0,
+                    "Value": 0,
+                    "Locked": False,
+                    "Grid": True,
+                    "Snap": True,
+                    "IgnoreFoW": False,
+                    "MeasureMovement": False,
+                    "DragSelectable": True,
+                    "Autoraise": True,
+                    "Sticky": True,
+                    "Tooltip": True,
+                    "GridProjection": False,
+                    "HideWhenFaceDown": True,
+                    "Hands": False,
+                    "SidewaysCard": False,
+                    "DeckIDs": other_deck_ids,
+                    "CustomDeck": other_custom_decks,
+                    "LuaScript": "",
+                    "LuaScriptState": "",
+                    "XmlUI": "",
+                    "ContainedObjects": other_contained_objects
+                }
+                tts_object["ObjectStates"].append(other_deck_object)
+                print("创建其他卡牌牌堆（右边）")
 
         return tts_object
 

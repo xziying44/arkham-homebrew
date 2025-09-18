@@ -84,11 +84,11 @@
           <div class="version-info">
             <div class="version-item">
               <span class="version-label">{{ $t('about.sections.version.current') }}</span>
-              <span class="version-value">v2.8</span>
+              <span class="version-value">v2.8.2</span>
             </div>
             <div class="version-item">
               <span class="version-label">{{ $t('about.sections.version.buildTime') }}</span>
-              <span class="version-value">{{ new Date().toLocaleDateString() }}</span>
+              <span class="version-value">2025/9/18</span>
             </div>
             <div class="version-item">
               <span class="version-label">{{ $t('about.sections.version.tech') }}</span>
@@ -143,7 +143,7 @@ const copyToClipboard = async (text: string) => {
     textArea.select();
     document.execCommand('copy');
     document.body.removeChild(textArea);
-    
+
     showCopySuccess.value = true;
     setTimeout(() => {
       showCopySuccess.value = false;
@@ -196,7 +196,8 @@ const copyToClipboard = async (text: string) => {
   display: flex;
   flex-direction: column;
   gap: 2rem;
-  padding-bottom: 3rem; /* 增加底部内边距 */
+  padding-bottom: 3rem;
+  /* 增加底部内边距 */
 }
 
 .section {
@@ -254,7 +255,7 @@ const copyToClipboard = async (text: string) => {
   font-size: 1.2rem;
 }
 
-.author-info > p {
+.author-info>p {
   color: #7f8c8d;
   margin: 0 0 1rem 0;
   font-size: 0.9rem;
@@ -336,7 +337,7 @@ const copyToClipboard = async (text: string) => {
   font-size: 1.1rem;
 }
 
-.github-info > p {
+.github-info>p {
   color: #7f8c8d;
   margin: 0 0 1rem 0;
   font-size: 0.9rem;
@@ -455,7 +456,8 @@ const copyToClipboard = async (text: string) => {
   padding: 2rem;
   text-align: center;
   border: 2px dashed rgba(147, 51, 234, 0.2);
-  margin-bottom: 2rem; /* 确保底部有足够空间 */
+  margin-bottom: 2rem;
+  /* 确保底部有足够空间 */
 }
 
 .spacer-content {
@@ -478,9 +480,12 @@ const copyToClipboard = async (text: string) => {
 }
 
 @keyframes heartbeat {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.1);
   }
@@ -505,6 +510,7 @@ const copyToClipboard = async (text: string) => {
     transform: translateX(100%);
     opacity: 0;
   }
+
   to {
     transform: translateX(0);
     opacity: 1;
@@ -515,21 +521,21 @@ const copyToClipboard = async (text: string) => {
   .about-container {
     padding: 1rem;
   }
-  
+
   .author-card {
     flex-direction: column;
     text-align: center;
   }
-  
+
   .github-link {
     flex-direction: column;
     gap: 0.5rem;
   }
-  
+
   .features-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .version-item {
     flex-direction: column;
     align-items: flex-start;

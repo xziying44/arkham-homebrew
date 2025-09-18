@@ -32,7 +32,7 @@ app.window = None
 if __name__ == '__main__':
     # 创建一个 pywebview 窗口
     window = webview.create_window(
-        "阿卡姆印牌姬-V2.8 by.小小银同学",
+        "阿卡姆印牌姬-V2.8.2 by.小小银同学",
         app,
         width=1500,
         height=800,

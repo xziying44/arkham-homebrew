@@ -33,19 +33,19 @@
                         </div>
                         <div class="attribute-input">
                             <n-text depth="3" style="font-size: 12px;">{{ $t('ttsScriptEditor.investigator.intellect')
-                            }}</n-text>
+                                }}</n-text>
                             <n-input-number v-model:value="investigatorConfig.intellectIcons" :min="0" :max="9"
                                 :step="1" size="small" @update:value="onScriptConfigChange" />
                         </div>
                         <div class="attribute-input">
                             <n-text depth="3" style="font-size: 12px;">{{ $t('ttsScriptEditor.investigator.combat')
-                            }}</n-text>
+                                }}</n-text>
                             <n-input-number v-model:value="investigatorConfig.combatIcons" :min="0" :max="9" :step="1"
                                 size="small" @update:value="onScriptConfigChange" />
                         </div>
                         <div class="attribute-input">
                             <n-text depth="3" style="font-size: 12px;">{{ $t('ttsScriptEditor.investigator.agility')
-                            }}</n-text>
+                                }}</n-text>
                             <n-input-number v-model:value="investigatorConfig.agilityIcons" :min="0" :max="9" :step="1"
                                 size="small" @update:value="onScriptConfigChange" />
                         </div>
@@ -58,7 +58,7 @@
                         <n-switch v-model:value="enablePhaseButtons" @update:value="onPhaseButtonToggle">
                             <template #checked>{{ $t('ttsScriptEditor.investigator.phaseButtons.enable') }}</template>
                             <template #unchecked>{{ $t('ttsScriptEditor.investigator.phaseButtons.disable')
-                            }}</template>
+                                }}</template>
                         </n-switch>
 
                         <!-- 每阶段脚本配置 -->
@@ -121,20 +121,20 @@
                             <n-space align="center">
                                 <div class="uses-input-group">
                                     <n-text depth="3" style="font-size: 12px;">{{ $t('ttsScriptEditor.asset.count')
-                                    }}</n-text>
+                                        }}</n-text>
                                     <n-input-number v-model:value="use.count" :min="0" :max="20" :step="1" size="small"
                                         @update:value="onScriptConfigChange" />
                                 </div>
                                 <div class="uses-input-group">
                                     <n-text depth="3" style="font-size: 12px;">{{ $t('ttsScriptEditor.asset.token')
-                                    }}</n-text>
+                                        }}</n-text>
                                     <n-select v-model:value="use.token" :options="computedTokenOptions"
                                         :placeholder="$t('ttsScriptEditor.asset.tokenPlaceholder')" style="width: 120px"
                                         @update:value="(value) => onTokenChange(index, value)" />
                                 </div>
                                 <div class="uses-input-group">
                                     <n-text depth="3" style="font-size: 12px;">{{ $t('ttsScriptEditor.asset.type')
-                                    }}</n-text>
+                                        }}</n-text>
                                     <n-select v-model:value="use.type" :options="getUsesTypeOptions(use.token)"
                                         :placeholder="$t('ttsScriptEditor.asset.typePlaceholder')" style="width: 120px"
                                         @update:value="onScriptConfigChange" />
@@ -355,7 +355,6 @@ const shouldShowTtsScript = computed(() => {
 
 // 生成GMNotes
 const generatedGMNotes = computed(() => {
-    // ... (此部分逻辑不变) ...
     const cardType = props.cardType;
     if (!shouldShowTtsScript.value) return '';
 
@@ -365,7 +364,9 @@ const generatedGMNotes = computed(() => {
         class: classMapping[props.cardData.class || '中立'] || 'Neutral',
         level: props.cardData.level || 0,
         traits: (props.cardData.traits || []).join('.') + (props.cardData.traits?.length ? '.' : ''),
-        cost: props.cardData.cost || 0
+        cost: props.cardData.cost || 0,
+        // 添加victory字段检测
+        ...(props.cardData.victory != null && { victory: props.cardData.victory })
     };
 
     let gmNotesData: any;
@@ -406,6 +407,7 @@ const generatedGMNotes = computed(() => {
         return '// JSON generation failed';
     }
 });
+
 
 // 生成完整的Lua脚本
 const generatedLuaScript = computed(() => {
