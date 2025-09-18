@@ -54,10 +54,73 @@
                 </n-tabs>
             </div>
 
+            <!-- 背面共享选项 -->
+            <div v-if="currentSide === 'back'" class="back-sharing-controls">
+                <div class="sharing-option">
+                    <n-switch v-model:value="isSharedBackEnabled" @update:value="toggleSharedBack">
+                        <template #checked>
+                            <n-icon :component="ShareSocialOutline" />
+                        </template>
+                        <template #unchecked>
+                            <n-icon :component="GridOutline" />
+                        </template>
+                    </n-switch>
+                    <div class="sharing-label">
+                        <span class="sharing-title">{{ isSharedBackEnabled ? '共享背面' : '独立背面' }}</span>
+                        <span class="sharing-desc">{{ isSharedBackEnabled ? '所有位置使用相同背面' : '每个位置独立设置背面' }}</span>
+                    </div>
+                </div>
+            </div>
+
             <div class="deck-grid-container">
                 <n-scrollbar x-scrollable trigger="hover" style="height: 100%;">
                     <div class="deck-grid-wrapper">
-                        <div class="deck-grid" :style="{
+                        <!-- 共享背面模式：只显示一个编辑格子 -->
+                        <div v-if="currentSide === 'back' && isSharedBackEnabled" class="shared-back-editor">
+                            <div class="shared-back-slot" 
+                                :class="{ 'has-card': deck.sharedBackCard }"
+                                @click="selectSharedBackSlot">
+                                <div v-if="deck.sharedBackCard" class="card-in-slot back-card"
+                                    draggable="false">
+                                    <!-- 卡牌预览图 -->
+                                    <div class="card-preview">
+                                        <img v-if="sharedBackPreviewImage"
+                                            :src="sharedBackPreviewImage"
+                                            :alt="getCardName(deck.sharedBackCard.path)"
+                                            class="card-preview-image"
+                                            @error="handleSharedBackImageError" />
+                                        <div v-else class="card-placeholder">
+                                            <n-icon :component="ImageOutline" size="24" />
+                                        </div>
+                                    </div>
+                                    <div class="card-name">{{ getCardName(deck.sharedBackCard.path) }}</div>
+                                    <!-- 删除按钮 -->
+                                    <div class="remove-card-btn-wrapper">
+                                        <n-button class="remove-card-btn"
+                                            @click.stop="removeSharedBackCard" text type="error"
+                                            size="tiny" circle>
+                                            <n-icon :component="CloseOutline" size="14" />
+                                        </n-button>
+                                    </div>
+                                </div>
+                                <div v-else class="empty-slot">
+                                    <div class="slot-index">共享</div>
+                                    <div class="add-hint">点击设置共享背面</div>
+                                    <div class="side-indicator">所有卡牌共用</div>
+                                </div>
+                            </div>
+                            <div class="shared-back-info">
+                                <n-alert type="info" :show-icon="false">
+                                    <div class="info-content">
+                                        <n-icon :component="InformationCircleOutline" />
+                                        <span>共享背面模式：所有{{ deck.width * deck.height }}个位置将使用相同的背面内容</span>
+                                    </div>
+                                </n-alert>
+                            </div>
+                        </div>
+
+                        <!-- 常规网格模式 -->
+                        <div v-else class="deck-grid" :style="{
                             gridTemplateColumns: `repeat(${deck.width}, 1fr)`,
                             gridTemplateRows: `repeat(${deck.height}, 1fr)`,
                             minWidth: `${Math.max(deck.width * 150, 600)}px`
@@ -84,8 +147,7 @@
                                             <n-icon :component="ImageOutline" size="24" />
                                         </div>
                                     </div>
-                                    <div class="card-name">{{ getCardName(getCardAtIndex(index - 1, currentSide)!) }}
-                                    </div>
+                                    <div class="card-name">{{ getCardName(getCardAtIndex(index - 1, currentSide)!) }}</div>
                                     <!-- 改进的删除按钮 -->
                                     <div class="remove-card-btn-wrapper">
                                         <n-button class="remove-card-btn"
@@ -109,8 +171,6 @@
             </div>
         </div>
 
-
-
         <!-- TTS导出引导页面 -->
         <TTSExportGuide v-if="deck && showTTSExport" :deck="deck" @back="showTTSExport = false"
             @update:deck="handleTTSInfoUpdate" />
@@ -118,12 +178,10 @@
         <!-- 内容选择抽屉 -->
         <n-drawer v-model:show="showCardSelector" :width="420" placement="right" :trap-focus="false"
             :block-scroll="false" :mask-closable="true">
-            <n-drawer-content :title="t('deckBuilder.editor.content.selectContent')" closable>
+            <n-drawer-content :title="getDrawerTitle()" closable>
                 <template #header>
                     <div class="drawer-header">
-                        <h3>{{ t('deckBuilder.editor.content.selectContentFor', {
-                            side: currentSide === 'front' ?
-                                t('deckBuilder.editor.sides.front') : t('deckBuilder.editor.sides.back') }) }}</h3>
+                        <h3>{{ getDrawerTitle() }}</h3>
                     </div>
                 </template>
 
@@ -270,11 +328,14 @@ import {
     LayersOutline,
     SwapHorizontalOutline,
     DownloadOutline,
-    DocumentTextOutline  // 新增导入
+    DocumentTextOutline,
+    ShareSocialOutline,
+    GridOutline,
+    InformationCircleOutline
 } from '@vicons/ionicons5';
 import { WorkspaceService, CardService } from '@/api';
 import TTSExportGuide from './TTSExportGuide.vue';
-import TtsExportService from '@/api/tts-export-service';  // 新增导入
+import TtsExportService from '@/api/tts-export-service';
 
 // 导入卡背图片
 import playerBack from '@/assets/cardbacks/player-back.jpg';
@@ -301,6 +362,8 @@ interface DeckFile {
     height: number;
     frontCards: DeckCard[];
     backCards: DeckCard[];
+    isSharedBack?: boolean;  // 是否使用共享背面
+    sharedBackCard?: DeckCard;  // 共享背面卡牌
     ttsInfo?: TTSInfo;
 }
 
@@ -342,23 +405,38 @@ const { t } = useI18n();
 const currentSide = ref<'front' | 'back'>('front');
 const showCardSelector = ref(false);
 const selectedSlotIndex = ref<number | null>(null);
+const isEditingSharedBack = ref(false);  // 是否正在编辑共享背面
 const contentType = ref<'cards' | 'cardbacks' | 'images'>('cards');
 const searchKeyword = ref('');
 const imageSearchKeyword = ref('');
 
 // TTS导出相关状态
 const showTTSExport = ref(false);
-// PDF导出相关状态 - 新增
+// PDF导出相关状态
 const showPdfDialog = ref(false);
 const pdfFileName = ref('');
 const exportingPdf = ref(false);
+
 // 双面卡牌预览缓存
 const frontSlotCardImages = ref(new Map<number, string>());
 const backSlotCardImages = ref(new Map<number, string>());
+const sharedBackPreviewImage = ref<string | null>(null);
 
 // 拖拽相关
 const dragOverIndex = ref<number | null>(null);
 const dragSourceIndex = ref<number | null>(null);
+
+// 共享背面开关
+const isSharedBackEnabled = computed({
+    get: () => props.deck?.isSharedBack ?? false,
+    set: (value: boolean) => {
+        if (props.deck) {
+            const updatedDeck = { ...props.deck };
+            updatedDeck.isSharedBack = value;
+            emit('update:deck', updatedDeck);
+        }
+    }
+});
 
 // 固定卡背图片
 const cardbackImages = {
@@ -392,6 +470,16 @@ const filteredImages = computed(() => {
     );
 });
 
+// 获取抽屉标题
+const getDrawerTitle = () => {
+    if (isEditingSharedBack.value) {
+        return '选择共享背面内容';
+    }
+    const sideName = currentSide.value === 'front' ? 
+        t('deckBuilder.editor.sides.front') : t('deckBuilder.editor.sides.back');
+    return t('deckBuilder.editor.content.selectContentFor', { side: sideName });
+};
+
 // 获取正面卡牌数量
 const getFrontCardCount = () => {
     return props.deck?.frontCards.length || 0;
@@ -399,13 +487,20 @@ const getFrontCardCount = () => {
 
 // 获取背面卡牌数量
 const getBackCardCount = () => {
-    return props.deck?.backCards.length || 0;
+    if (!props.deck) return 0;
+    
+    if (props.deck.isSharedBack) {
+        return props.deck.sharedBackCard ? props.deck.width * props.deck.height : 0;
+    } else {
+        return props.deck.backCards.length;
+    }
 };
 
 // 切换编辑面
 const switchSide = (side: 'front' | 'back') => {
     currentSide.value = side;
     showCardSelector.value = false;
+    isEditingSharedBack.value = false;
 };
 
 // 切换内容类型
@@ -414,6 +509,30 @@ const switchContentType = (type: 'cards' | 'cardbacks' | 'images') => {
     if (type === 'images' && props.availableImages.length === 0) {
         emit('load-images');
     }
+};
+
+// 切换共享背面模式
+const toggleSharedBack = async (enabled: boolean) => {
+    if (!props.deck) return;
+
+    const updatedDeck = { ...props.deck };
+    updatedDeck.isSharedBack = enabled;
+
+    // 如果从独立背面切换到共享背面，且当前没有共享背面内容，尝试使用第一个独立背面作为共享背面
+    if (enabled && !updatedDeck.sharedBackCard && updatedDeck.backCards.length > 0) {
+        const firstBackCard = updatedDeck.backCards[0];
+        updatedDeck.sharedBackCard = {
+            index: 0,
+            type: firstBackCard.type,
+            path: firstBackCard.path
+        };
+        // 生成共享背面预览图
+        await generateSharedBackPreview(updatedDeck.sharedBackCard);
+    }
+
+    emit('update:deck', updatedDeck);
+    
+    message.success(enabled ? '已切换到共享背面模式' : '已切换到独立背面模式');
 };
 
 // 压缩图片
@@ -433,6 +552,35 @@ const compressImage = (base64: string, maxWidth = 150, quality = 0.7): Promise<s
         };
         img.src = base64;
     });
+};
+
+// 生成共享背面预览图
+const generateSharedBackPreview = async (item: DeckCard) => {
+    try {
+        let imageBase64: string | null = null;
+
+        if (item.type === 'card') {
+            const content = await WorkspaceService.getFileContent(item.path);
+            const cardData = JSON.parse(content);
+            const result_card = await CardService.generateCard(cardData)
+            imageBase64 = result_card?.image;
+        } else if (item.type === 'cardback') {
+            const cardbackPath = cardbackImages[item.path as 'player' | 'encounter'];
+            if (cardbackPath) {
+                imageBase64 = await loadImageAsBase64(cardbackPath);
+            }
+        } else if (item.type === 'image') {
+            imageBase64 = await loadWorkspaceImageAsBase64(item.path);
+        }
+
+        if (imageBase64) {
+            const compressedImage = await compressImage(imageBase64, 120, 0.7);
+            sharedBackPreviewImage.value = compressedImage;
+        }
+    } catch (error) {
+        console.error(`生成共享背面预览失败: ${item.path}`, error);
+        sharedBackPreviewImage.value = null;
+    }
 };
 
 // 为单个网格位置生成内容预览图
@@ -514,6 +662,11 @@ const handleImageError = (index: number, side: 'front' | 'back') => {
     }
 };
 
+// 处理共享背面图片加载错误
+const handleSharedBackImageError = () => {
+    sharedBackPreviewImage.value = null;
+};
+
 // 处理卡背图片加载错误
 const handleCardbackError = (event: Event) => {
     const img = event.target as HTMLImageElement;
@@ -533,7 +686,12 @@ const getCardName = (path: string): string => {
     if (!props.deck) return '';
 
     const cards = [...props.deck.frontCards, ...props.deck.backCards];
-    const item = cards.find(c => c.path === path);
+    let item = cards.find(c => c.path === path);
+    
+    // 如果没找到，检查共享背面
+    if (!item && props.deck.sharedBackCard && props.deck.sharedBackCard.path === path) {
+        item = props.deck.sharedBackCard;
+    }
 
     if (!item) return path;
 
@@ -552,43 +710,67 @@ const getCardName = (path: string): string => {
 // 选择网格位置
 const selectGridSlot = (index: number) => {
     selectedSlotIndex.value = index;
+    isEditingSharedBack.value = false;
     showCardSelector.value = true;
 };
 
-// 分配内容到位置 - 修改版本
+// 选择共享背面位置
+const selectSharedBackSlot = () => {
+    selectedSlotIndex.value = null;
+    isEditingSharedBack.value = true;
+    showCardSelector.value = true;
+};
+
+// 分配内容到位置
 const assignContentToSlot = async (type: 'card' | 'cardback' | 'image', path: string) => {
-    if (!props.deck || selectedSlotIndex.value === null) return;
+    if (!props.deck) return;
+
     const updatedDeck = { ...props.deck };
-    const index = selectedSlotIndex.value;
-    const cards = currentSide.value === 'front' ? [...updatedDeck.frontCards] : [...updatedDeck.backCards];
-    // 移除该位置现有的内容
-    const filteredCards = cards.filter(c => c.index !== index);
-    // 添加新内容
     const newItem: DeckCard = {
-        index,
+        index: selectedSlotIndex.value ?? 0,
         type,
         path
     };
-    filteredCards.push(newItem);
-    // 更新对应面的内容
-    if (currentSide.value === 'front') {
-        updatedDeck.frontCards = filteredCards;
+
+    if (isEditingSharedBack.value) {
+        // 编辑共享背面
+        updatedDeck.sharedBackCard = newItem;
+        await generateSharedBackPreview(newItem);
+        message.success('共享背面设置成功');
     } else {
-        updatedDeck.backCards = filteredCards;
+        // 编辑常规网格
+        const index = selectedSlotIndex.value!;
+        const cards = currentSide.value === 'front' ? [...updatedDeck.frontCards] : [...updatedDeck.backCards];
+        
+        // 移除该位置现有的内容
+        const filteredCards = cards.filter(c => c.index !== index);
+        
+        // 添加新内容
+        newItem.index = index;
+        filteredCards.push(newItem);
+        
+        // 更新对应面的内容
+        if (currentSide.value === 'front') {
+            updatedDeck.frontCards = filteredCards;
+        } else {
+            updatedDeck.backCards = filteredCards;
+        }
+        
+        // 生成预览图
+        await generateSlotContentPreview(index, newItem, currentSide.value);
+
+        const typeName = t(`deckBuilder.messages.types.${type}`);
+        const sideName = currentSide.value === 'front' ? t('deckBuilder.editor.sides.front') : t('deckBuilder.editor.sides.back');
+        message.success(t('deckBuilder.messages.cardAdded', { type: typeName, side: sideName }));
     }
-    // 先生成预览图，再更新deck数据
-    await generateSlotContentPreview(index, newItem, currentSide.value);
 
     emit('update:deck', updatedDeck);
     showCardSelector.value = false;
     selectedSlotIndex.value = null;
-
-    const typeName = t(`deckBuilder.messages.types.${type}`);
-    const sideName = currentSide.value === 'front' ? t('deckBuilder.editor.sides.front') : t('deckBuilder.editor.sides.back');
-    message.success(t('deckBuilder.messages.cardAdded', { type: typeName, side: sideName }));
+    isEditingSharedBack.value = false;
 };
 
-// 从位置移除内容 - 修改版本
+// 从位置移除内容
 const removeCardFromSlot = (index: number, side: 'front' | 'back') => {
     if (!props.deck) return;
     const updatedDeck = { ...props.deck };
@@ -601,6 +783,16 @@ const removeCardFromSlot = (index: number, side: 'front' | 'back') => {
     }
     emit('update:deck', updatedDeck);
     message.info(t('deckBuilder.messages.contentRemoved'));
+};
+
+// 移除共享背面内容
+const removeSharedBackCard = () => {
+    if (!props.deck) return;
+    const updatedDeck = { ...props.deck };
+    updatedDeck.sharedBackCard = undefined;
+    sharedBackPreviewImage.value = null;
+    emit('update:deck', updatedDeck);
+    message.info('共享背面内容已移除');
 };
 
 // 拖拽开始
@@ -624,7 +816,7 @@ const handleDragLeave = () => {
     dragOverIndex.value = null;
 };
 
-// 拖拽放置 - 修改版本
+// 拖拽放置
 const handleDrop = (targetIndex: number) => {
     if (!props.deck || dragSourceIndex.value === null) return;
     const sourceIndex = dragSourceIndex.value;
@@ -671,7 +863,8 @@ const handleDrop = (targetIndex: number) => {
 const handleSave = () => {
     emit('save');
 };
-// PDF导出相关方法 - 新增
+
+// PDF导出相关方法
 const showPdfExportDialog = () => {
     if (!props.deck) {
         message.error(t('deckBuilder.messages.noDeckSelected', '未选择牌库'));
@@ -683,6 +876,7 @@ const showPdfExportDialog = () => {
     pdfFileName.value = defaultName;
     showPdfDialog.value = true;
 };
+
 const handlePdfExport = async () => {
     if (!props.deck) {
         message.error(t('deckBuilder.messages.noDeckSelected', '未选择牌库'));
@@ -722,6 +916,7 @@ const handlePdfExport = async () => {
         exportingPdf.value = false;
     }
 };
+
 // TTS导出相关方法
 const showTTSExportGuide = () => {
     showTTSExport.value = true;
@@ -739,6 +934,8 @@ watch(() => props.deck, (newDeck, oldDeck) => {
         if (newDeck) {
             frontSlotCardImages.value.clear();
             backSlotCardImages.value.clear();
+            sharedBackPreviewImage.value = null;
+            
             // 为牌库中的正面内容生成预览图
             for (const item of newDeck.frontCards) {
                 generateSlotContentPreview(item.index, item, 'front');
@@ -746,6 +943,10 @@ watch(() => props.deck, (newDeck, oldDeck) => {
             // 为牌库中的背面内容生成预览图
             for (const item of newDeck.backCards) {
                 generateSlotContentPreview(item.index, item, 'back');
+            }
+            // 为共享背面生成预览图
+            if (newDeck.sharedBackCard) {
+                generateSharedBackPreview(newDeck.sharedBackCard);
             }
         }
     }
@@ -833,6 +1034,86 @@ watch(() => props.deck, (newDeck, oldDeck) => {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+}
+
+/* 背面共享选项样式 */
+.back-sharing-controls {
+    flex-shrink: 0;
+    padding: 1rem 1.5rem;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.sharing-option {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.sharing-label {
+    display: flex;
+    flex-direction: column;
+}
+
+.sharing-title {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 0.95rem;
+}
+
+.sharing-desc {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+/* 共享背面编辑器样式 */
+.shared-back-editor {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 3rem;
+    gap: 2rem;
+}
+
+.shared-back-slot {
+    width: 200px;
+    height: 280px;
+    border: 3px dashed #667eea;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #f8f9fa;
+    box-sizing: border-box;
+}
+
+.shared-back-slot:hover {
+    border-color: #5a67d8;
+    background: #f0f4ff;
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.25);
+}
+
+.shared-back-slot.has-card {
+    border: 3px solid #667eea;
+    background: white;
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.2);
+}
+
+.shared-back-info {
+    max-width: 500px;
+    width: 100%;
+}
+
+.info-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.9rem;
 }
 
 /* 显著的保存按钮样式 */
@@ -1042,7 +1323,8 @@ watch(() => props.deck, (newDeck, oldDeck) => {
 }
 
 .card-in-slot:hover .remove-card-btn,
-.grid-slot:hover .remove-card-btn {
+.grid-slot:hover .remove-card-btn,
+.shared-back-slot:hover .remove-card-btn {
     opacity: 1;
 }
 
@@ -1235,7 +1517,7 @@ watch(() => props.deck, (newDeck, oldDeck) => {
     text-align: center;
 }
 
-/* PDF导出按钮样式 - 新增 */
+/* PDF导出按钮样式 */
 .export-pdf-button {
     background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%) !important;
     border: none !important;
@@ -1249,7 +1531,7 @@ watch(() => props.deck, (newDeck, oldDeck) => {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
 }
-/* PDF导出对话框样式 - 新增 */
+/* PDF导出对话框样式 */
 .pdf-export-form {
     padding: 1rem 0;
 }
@@ -1274,7 +1556,7 @@ watch(() => props.deck, (newDeck, oldDeck) => {
     line-height: 1.4;
 }
 
-/* 响应式调整 - 修改现有样式 */
+/* 响应式调整 */
 @media (max-width: 1400px) {
     .editor-actions {
         flex-wrap: wrap;

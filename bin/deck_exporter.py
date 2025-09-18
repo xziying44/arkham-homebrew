@@ -56,25 +56,23 @@ class DeckExporter:
             card_width = 750
             card_height = 1050
 
-            # 创建底图（黑色背景）
+            # 创建正面底图（黑色背景）
             canvas_width = width * card_width
             canvas_height = height * card_height
-
             front_image = Image.new('RGB', (canvas_width, canvas_height), (0, 0, 0))
-            back_image = Image.new('RGB', (canvas_width, canvas_height), (0, 0, 0))
 
-            # 3. 处理正面卡片
+            # 3. 处理正面卡片和背面卡片
             front_cards = deck_data.get('frontCards', [])
             back_cards = deck_data.get('backCards', [])
+            is_shared_back = deck_data.get('isSharedBack', False)
+            shared_back_card = deck_data.get('sharedBackCard', {})
 
             # 收集所有需要处理的位置
             positions_to_process = set()
             for card in front_cards:
                 positions_to_process.add(card.get('index', 0))
-            for card in back_cards:
-                positions_to_process.add(card.get('index', 0))
 
-            # 处理每个位置的卡片
+            # 处理正面卡片
             for position in positions_to_process:
                 # 计算位置坐标（从左到右，从上到下）
                 col = position % width
@@ -88,13 +86,31 @@ class DeckExporter:
                     processed_front = self._process_card_image_for_export(front_card_image, card_width, card_height)
                     front_image.paste(processed_front, (x, y))
 
-                # 处理背面卡片
-                back_card_image = self._get_card_image_for_position(back_cards, position)
-                if back_card_image:
-                    processed_back = self._process_card_image_for_export(back_card_image, card_width, card_height)
-                    back_image.paste(processed_back, (x, y))
+            # 4. 处理背面图片
+            if is_shared_back and shared_back_card:
+                # 共享背面：导出单张卡牌大小的背面
+                shared_back_image = self._load_card_image(shared_back_card)
+                if shared_back_image:
+                    back_image = self._process_card_image_for_export(shared_back_image, card_width, card_height)
+                else:
+                    # 如果无法加载共享背面，创建黑色背景
+                    back_image = Image.new('RGB', (card_width, card_height), (0, 0, 0))
+            else:
+                # 独立背面：创建大拼图
+                back_image = Image.new('RGB', (canvas_width, canvas_height), (0, 0, 0))
 
-            # 4. 保存图片
+                for position in positions_to_process:
+                    col = position % width
+                    row = position // width
+                    x = col * card_width
+                    y = row * card_height
+
+                    back_card_image = self._get_card_image_for_position(back_cards, position)
+                    if back_card_image:
+                        processed_back = self._process_card_image_for_export(back_card_image, card_width, card_height)
+                        back_image.paste(processed_back, (x, y))
+
+            # 5. 保存图片
             deck_base_name = os.path.splitext(deck_name)[0]  # 去掉后缀
 
             front_filename = f"{deck_base_name}_front.{export_format.lower()}"
@@ -115,7 +131,8 @@ class DeckExporter:
 
             print(f"牌库图片已导出:")
             print(f"  正面: {self.workspace_manager._get_relative_path(front_path)}")
-            print(f"  背面: {self.workspace_manager._get_relative_path(back_path)}")
+            print(
+                f"  背面: {self.workspace_manager._get_relative_path(back_path)} {'(共享背面)' if is_shared_back else '(独立背面)'}")
 
             return True
 
@@ -166,12 +183,12 @@ class DeckExporter:
             height = deck_data.get('height', 1)
             front_cards = deck_data.get('frontCards', [])
             back_cards = deck_data.get('backCards', [])
+            is_shared_back = deck_data.get('isSharedBack', False)
+            shared_back_card = deck_data.get('sharedBackCard', {})
 
             # 5. 收集所有需要处理的位置
             positions_to_process = set()
             for card in front_cards:
-                positions_to_process.add(card.get('index', 0))
-            for card in back_cards:
                 positions_to_process.add(card.get('index', 0))
 
             positions_to_process = sorted(positions_to_process)
@@ -194,19 +211,30 @@ class DeckExporter:
                     drawer.add_page(front_card_image, text_metadata, rotation)
 
                 # 处理背面卡片
-                back_card_image = self._get_card_image_for_position(back_cards, position)
-                if back_card_image:
-                    # 检测图片是否横向
-                    is_landscape = back_card_image.size[0] > back_card_image.size[1]
-                    # 背面逆时针旋转
-                    rotation = RotationDirection.LEFT if is_landscape else RotationDirection.NORMAL
+                if is_shared_back and shared_back_card:
+                    # 共享背面：每张正面卡片后面都添加相同的共享背面
+                    shared_back_image = self._load_card_image(shared_back_card)
+                    if shared_back_image:
+                        is_landscape = shared_back_image.size[0] > shared_back_image.size[1]
+                        rotation = RotationDirection.LEFT if is_landscape else RotationDirection.NORMAL
 
-                    # 获取卡片的文本层元数据（如果是生成的卡图）
-                    card_bottom_map, text_metadata = self._get_card_text_metadata(back_cards, position)
-                    if card_bottom_map:
-                        back_card_image = card_bottom_map
+                        card_bottom_map, text_metadata = self._get_shared_back_text_metadata(shared_back_card)
+                        if card_bottom_map:
+                            shared_back_image = card_bottom_map
 
-                    drawer.add_page(back_card_image, text_metadata, rotation)
+                        drawer.add_page(shared_back_image, text_metadata, rotation)
+                else:
+                    # 独立背面：使用位置对应的背面
+                    back_card_image = self._get_card_image_for_position(back_cards, position)
+                    if back_card_image:
+                        is_landscape = back_card_image.size[0] > back_card_image.size[1]
+                        rotation = RotationDirection.LEFT if is_landscape else RotationDirection.NORMAL
+
+                        card_bottom_map, text_metadata = self._get_card_text_metadata(back_cards, position)
+                        if card_bottom_map:
+                            back_card_image = card_bottom_map
+
+                        drawer.add_page(back_card_image, text_metadata, rotation)
 
             # 7. 保存PDF
             drawer.save()
@@ -293,32 +321,6 @@ class DeckExporter:
             print(f"处理卡片图片失败: {e}")
             return image
 
-    def _process_card_image(self, image: Image.Image, is_front: bool, target_width: int,
-                            target_height: int) -> Image.Image:
-        """处理卡片图片（检测方向、旋转、拉伸）- 保留原有方法用于其他地方"""
-        try:
-            # 检测图片是横向还是纵向
-            img_width, img_height = image.size
-            is_landscape = img_width > img_height
-
-            if is_landscape:
-                # 横向图片需要旋转
-                if is_front:
-                    # 正面顺时针旋转90度
-                    image = image.rotate(-90, expand=True)
-                else:
-                    # 背面逆时针旋转90度
-                    image = image.rotate(90, expand=True)
-
-            # 拉伸到目标尺寸
-            image = image.resize((target_width, target_height), Image.Resampling.LANCZOS)
-
-            return image
-
-        except Exception as e:
-            print(f"处理卡片图片失败: {e}")
-            return image
-
     def _get_card_text_metadata(self, cards: List[Dict], position: int) -> tuple[Image, List[Dict[str, Any]]]:
         """获取指定位置卡片的文本层元数据"""
         for card in cards:
@@ -344,4 +346,26 @@ class DeckExporter:
                             print(f"获取文本元数据失败: {e}")
 
         # 如果没有文本元数据，返回空列表
+        return None, []
+
+    def _get_shared_back_text_metadata(self, shared_back_card: Dict) -> tuple[Image, List[Dict[str, Any]]]:
+        """获取共享背面卡片的文本层元数据"""
+        card_type = shared_back_card.get('type')
+        card_path = shared_back_card.get('path')
+
+        if card_type == 'card':
+            card_json_path = self.workspace_manager._get_absolute_path(card_path)
+            if os.path.exists(card_json_path):
+                try:
+                    with open(card_json_path, 'r', encoding='utf-8') as f:
+                        card_json_data = json.load(f)
+
+                    # 生成卡图并获取文本层元数据
+                    card = self.workspace_manager.generate_card_image(card_json_data)
+                    card_bottom = self.workspace_manager.generate_card_image(card_json_data, True)
+                    return card_bottom.image, card.get_text_layer_metadata()
+                except Exception as e:
+                    traceback.print_exc()
+                    print(f"获取共享背面文本元数据失败: {e}")
+
         return None, []

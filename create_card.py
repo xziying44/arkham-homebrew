@@ -1538,28 +1538,26 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "调查员背面",
-        "subtype": "平行",
-        "name": "🏅The Herta",
+        "type": "支援卡",
+        "name": "<独特>伟大之人",
         "id": "",
         "created_at": "",
         "version": "1.0",
-        "language": "en",
-        "class": "探求者",
-        "card_back": {
-            "size": 30,
-            "option": "Seeker cards(<探求者>)level 0-5, Neutral cards level 0-5, {Practiceds}kills level 0-3.",
-            "requirement": "Obscure Studies, Whispers from the Deep, 1 random basic weakness",
-            "story": "Amanda Sharpe was on track to become one of Miskatonic University's most accomplished graduates. However, ever since she saw a strange painting of an enormous creature's emergence from the depths of the ocean, her classwork has suffered. Her dreams are overwhelmed by images of a vast submerged city and whispers in a language she does not understand. She remains dedicated to her studies, but her goal is no longer to graduate at the top of her class; rather, she seeks to discover the meaning behind the occult secrets concealed between the lines of reality."
-        },
-        "subtitle": "The Sorceress",
+        "language": "zh",
+        "level": 0,
+        "cost": -1,
+        "class": "中立",
+        "traits": [
+            "身份"
+        ],
+        "body": "永久。\n你的牌组上限+3。\n你的调查员牌组构筑选项额外获得：“3张带有'胜利区'字样的潜修者（<潜修者>）事件卡等级0”。",
         "picture_layout": {
             "mode": "custom",
             "offset": {
-                "x": 165,
-                "y": -16.666666666666668
+                "x": -3.3333333333333335,
+                "y": -66.66666666666667
             },
-            "scale": 0.75,
+            "scale": 0.65,
             "crop": {
                 "top": 0,
                 "right": 0,

@@ -227,6 +227,14 @@ class TTSCardConverter:
 
         print(f"牌组尺寸: {deck_width}x{deck_height} (每个CustomDeck最多{max_cards_per_deck}张卡)")
 
+        # 读取共享背面配置
+        is_shared_back = deck_config.get('isSharedBack', False)
+        shared_back_card = deck_config.get('sharedBackCard', {})
+
+        print(f"共享背面: {'是' if is_shared_back else '否'}")
+        if is_shared_back and shared_back_card:
+            print(f"共享背面类型: {shared_back_card.get('type', 'unknown')}")
+
         # 创建基础TTS对象
         tts_object = {
             "SaveName": "",
@@ -255,16 +263,31 @@ class TTSCardConverter:
         print(f"找到 {len(front_cards)} 张正面卡牌")
         print(f"找到 {len(back_cards)} 张背面卡牌")
 
-        # 创建背面卡牌映射（只处理card类型的背面）
+        # 创建背面卡牌映射
         back_card_map = {}
-        for back_card in back_cards:
-            if back_card.get("type") == "card":
+        shared_back_data = None
+
+        if is_shared_back and shared_back_card:
+            # 使用共享背面
+            if shared_back_card.get("type") == "card":
                 try:
-                    card_data = self.read_card_file(back_card["path"])
-                    back_card_map[back_card["index"]] = card_data
-                    print(f"读取背面卡牌: {back_card['path']}")
+                    shared_back_data = self.read_card_file(shared_back_card["path"])
+                    print(f"读取共享背面卡牌: {shared_back_card['path']}")
+                    # 为所有正面卡牌位置设置相同的共享背面
+                    for front_card in front_cards:
+                        back_card_map[front_card["index"]] = shared_back_data
                 except Exception as e:
-                    print(f"无法读取背面卡牌 {back_card['path']}: {e}")
+                    print(f"无法读取共享背面卡牌 {shared_back_card['path']}: {e}")
+        else:
+            # 使用位置对应的背面卡牌
+            for back_card in back_cards:
+                if back_card.get("type") == "card":
+                    try:
+                        card_data = self.read_card_file(back_card["path"])
+                        back_card_map[back_card["index"]] = card_data
+                        print(f"读取背面卡牌: {back_card['path']}")
+                    except Exception as e:
+                        print(f"无法读取背面卡牌 {back_card['path']}: {e}")
 
         contained_objects = []
         deck_ids = []
@@ -280,6 +303,7 @@ class TTSCardConverter:
             print(f"处理第 {i + 1} 张卡牌: {front_card}")
 
             front_card_type = front_card.get("type", "")
+            front_index = front_card.get("index", 0)
 
             try:
                 # 计算卡牌在deck中的位置（根据配置的width和height）
@@ -289,9 +313,14 @@ class TTSCardConverter:
                     card_position_in_deck = 0
 
                 # 生成CardID：CustomDeckID + 卡牌位置（从00开始）
-                card_position_str = str(card_position_in_deck).zfill(2)
+                card_position_str = str(front_index).zfill(2)
                 card_id = int(current_custom_deck_id + card_position_str)
                 print(f"生成CardID: {card_id} (position: {card_position_in_deck:02d})")
+
+                # 根据是否共享背面设置UniqueBack
+                # isSharedBack = true -> UniqueBack = false (共享背面)
+                # isSharedBack = false -> UniqueBack = true (独立背面)
+                unique_back = not is_shared_back
 
                 # 根据类型处理不同的卡牌
                 if front_card_type == "card":
@@ -299,21 +328,21 @@ class TTSCardConverter:
                     card_data = self.read_card_file(front_card["path"])
                     print(f"成功读取card: {front_card['path']} - {card_data.get('name', 'No Name')}")
 
-                    # 获取对应的背面卡牌（如果有）
+                    # 获取对应的背面卡牌（可能是共享背面）
                     back_card_data = back_card_map.get(front_card["index"])
                     if back_card_data:
-                        print(f"找到对应背面卡牌: {back_card_data.get('name', 'No Name')}")
-
-                    # 判断是否需要UniqueBack
-                    card_type = card_data.get("type", "")
-                    unique_back = True
+                        if is_shared_back:
+                            print(f"使用共享背面: {back_card_data.get('name', 'No Name')}")
+                        else:
+                            print(f"找到对应背面卡牌: {back_card_data.get('name', 'No Name')}")
 
                     # 如果这个CustomDeck还没有被创建，创建它
                     if current_custom_deck_id not in custom_decks:
                         custom_decks[current_custom_deck_id] = self.create_custom_deck_entry(
                             face_url, back_url, deck_width, deck_height, unique_back
                         )
-                        print(f"创建CustomDeck: {current_custom_deck_id} ({deck_width}x{deck_height})")
+                        print(
+                            f"创建CustomDeck: {current_custom_deck_id} ({deck_width}x{deck_height}) UniqueBack={unique_back}")
 
                     # 创建卡牌对象（包含脚本）
                     card_object = self.create_card_object_from_data(
@@ -326,7 +355,7 @@ class TTSCardConverter:
                     # image类型：创建基础卡牌对象，不添加脚本
                     print(f"处理image: {front_card['path']}")
 
-                    # image类型通常不需要UniqueBack
+                    # image类型通常使用共享背面
                     unique_back = False
 
                     # 如果这个CustomDeck还没有被创建，创建它
@@ -334,7 +363,8 @@ class TTSCardConverter:
                         custom_decks[current_custom_deck_id] = self.create_custom_deck_entry(
                             face_url, back_url, deck_width, deck_height, unique_back
                         )
-                        print(f"创建CustomDeck: {current_custom_deck_id} ({deck_width}x{deck_height})")
+                        print(
+                            f"创建CustomDeck: {current_custom_deck_id} ({deck_width}x{deck_height}) UniqueBack={unique_back}")
 
                     # 创建卡牌对象（不包含脚本）
                     card_object = self.create_card_object_from_image(
@@ -352,7 +382,8 @@ class TTSCardConverter:
                         custom_decks[current_custom_deck_id] = self.create_custom_deck_entry(
                             face_url, back_url, deck_width, deck_height, unique_back
                         )
-                        print(f"创建CustomDeck: {current_custom_deck_id} ({deck_width}x{deck_height})")
+                        print(
+                            f"创建CustomDeck: {current_custom_deck_id} ({deck_width}x{deck_height}) UniqueBack={unique_back}")
 
                     # 创建基础卡牌对象
                     card_object = self.create_card_object_from_image(

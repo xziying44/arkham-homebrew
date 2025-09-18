@@ -4,6 +4,7 @@ import json
 import mimetypes
 import os
 import sys
+import threading
 import time
 import traceback
 from typing import List, Dict, Any, Optional, Union
@@ -71,6 +72,7 @@ class WorkspaceManager:
 
         self._export_helper = None
         self._export_params_hash = None
+        self.card_lock = threading.Lock()
 
     def _get_relative_path(self, absolute_path: str) -> str:
         """将绝对路径转换为相对于工作目录的相对路径"""
@@ -485,17 +487,18 @@ class WorkspaceManager:
             language = json_data.get('language', 'zh')
             self.font_manager.set_lang(language)
 
-            # 调用process_card_json生成卡牌
-            if silence:
-                card = self.creator.create_card_bottom_map(
-                    json_data,
-                    picture_path=self.get_card_base64(json_data)
-                )
-            else:
-                card = self.creator.create_card(
-                    json_data,
-                    picture_path=self.get_card_base64(json_data)
-                )
+            with self.card_lock:
+                # 调用process_card_json生成卡牌
+                if silence:
+                    card = self.creator.create_card_bottom_map(
+                        json_data,
+                        picture_path=self.get_card_base64(json_data)
+                    )
+                else:
+                    card = self.creator.create_card(
+                        json_data,
+                        picture_path=self.get_card_base64(json_data)
+                    )
 
             # 检测是否有遭遇组
             encounter_group = json_data.get('encounter_group', None)

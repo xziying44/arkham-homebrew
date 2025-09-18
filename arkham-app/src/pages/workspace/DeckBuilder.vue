@@ -27,7 +27,13 @@
             <div class="deck-icon">🎴</div>
             <div class="deck-info">
               <div class="deck-name">{{ deck.name }}</div>
-              <div class="deck-meta">{{ deck.width }}×{{ deck.height }} {{ $t('deckBuilder.deckList.grid') }}</div>
+              <div class="deck-meta">
+                {{ deck.width }}×{{ deck.height }} {{ $t('deckBuilder.deckList.grid') }}
+                <span v-if="deck.isSharedBack" class="shared-back-indicator">
+                  <n-icon :component="ShareSocialOutline" size="12" />
+                  共享背面
+                </span>
+              </div>
             </div>
             <n-button text type="error" @click.stop="showDeleteConfirm(deck)" :title="$t('deckBuilder.actions.delete')" size="small">
               <n-icon :component="TrashOutline" />
@@ -126,7 +132,8 @@ import {
   RefreshOutline,
   TrashOutline,
   FolderOpenOutline,
-  WarningOutline
+  WarningOutline,
+  ShareSocialOutline
 } from '@vicons/ionicons5';
 import { WorkspaceService } from '@/api';
 import DeckEditor from '@/components/DeckEditor.vue';
@@ -151,6 +158,8 @@ interface DeckData {
   height: number;
   frontCards: DeckCard[];
   backCards: DeckCard[];
+  isSharedBack?: boolean;  // 是否使用共享背面
+  sharedBackCard?: DeckCard;  // 共享背面卡牌
   ttsInfo?: TTSInfo;
 }
 
@@ -161,6 +170,8 @@ interface DeckFile {
   height: number;
   frontCards: DeckCard[];
   backCards: DeckCard[];
+  isSharedBack?: boolean;  // 是否使用共享背面
+  sharedBackCard?: DeckCard;  // 共享背面卡牌
   ttsInfo?: TTSInfo;
 }
 
@@ -298,6 +309,8 @@ const loadDecks = async () => {
             height: deckData.height,
             frontCards: frontCards,
             backCards: backCards,
+            isSharedBack: deckData.isSharedBack || false,  // 新增字段
+            sharedBackCard: deckData.sharedBackCard,  // 新增字段
             ttsInfo: deckData.ttsInfo
           });
         } catch (error) {
@@ -422,7 +435,9 @@ const createDeck = async () => {
       width: newDeckForm.value.width!,
       height: newDeckForm.value.height!,
       frontCards: [],
-      backCards: []
+      backCards: [],
+      isSharedBack: false,  // 默认不使用共享背面
+      sharedBackCard: undefined  // 默认没有共享背面卡牌
     };
 
     const fileName = `${newDeckForm.value.name}.deck`;
@@ -436,7 +451,9 @@ const createDeck = async () => {
       width: deckData.width,
       height: deckData.height,
       frontCards: deckData.frontCards,
-      backCards: deckData.backCards
+      backCards: deckData.backCards,
+      isSharedBack: deckData.isSharedBack,
+      sharedBackCard: deckData.sharedBackCard
     };
 
     deckList.value.push(newDeck);
@@ -477,6 +494,8 @@ const saveDeck = async () => {
       height: selectedDeck.value.height,
       frontCards: selectedDeck.value.frontCards,
       backCards: selectedDeck.value.backCards,
+      isSharedBack: selectedDeck.value.isSharedBack,  // 保存共享背面设置
+      sharedBackCard: selectedDeck.value.sharedBackCard,  // 保存共享背面卡牌
       ttsInfo: selectedDeck.value.ttsInfo
     };
 
@@ -537,7 +556,6 @@ const handleKeydown = (event: KeyboardEvent) => {
     }
   }
 };
-
 
 // 组件挂载时加载数据
 onMounted(() => {
@@ -658,6 +676,21 @@ onUnmounted(() => {
 .deck-meta {
   font-size: 0.8rem;
   color: #6c757d;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.shared-back-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+  font-weight: 500;
 }
 
 .no-deck-selected {
