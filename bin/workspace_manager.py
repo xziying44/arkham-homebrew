@@ -514,7 +514,7 @@ class WorkspaceManager:
             if not silence:
                 illustrator = json_data.get('illustrator', '')
                 footer_copyright = json_data.get('footer_copyright', '')
-                if footer_copyright == '':
+                if footer_copyright and footer_copyright == '':
                     footer_copyright = self.config.get('footer_copyright', '')
                 encounter_group_number = json_data.get('encounter_group_number', '')
                 card_number = json_data.get('card_number', '')

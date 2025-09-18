@@ -114,15 +114,15 @@ class ArkhamDBConverter:
         '04': {'name': '失落的时代', 'year': 2017, 'font_text': '<font name="packicon_forgotten">\uE900</font>'},
         '05': {'name': '万象无终', 'year': 2018, 'font_text': '<font name="packicon_circle">\uE900</font>'},
         '06': {'name': '食梦者', 'year': 2019, 'font_text': '<font name="packicon_dreameaters">\uE900</font>'},
-        '07': {'name': '印斯茅斯的阴谋', 'year': 2020},
-        '08': {'name': '暗与地球之界', 'year': 2021},
-        '09': {'name': '绯红密钥', 'year': 2022},
-        '10': {'name': '铁杉谷盛宴', 'year': 2024},
-        '50': {'name': '重返基础', 'year': 2017},
-        '51': {'name': '重返敦威治遗产', 'year': 2018},
-        '52': {'name': '重返卡尔克萨之路', 'year': 2019},
-        '53': {'name': '重返失落的时代', 'year': 2020},
-        '54': {'name': '重返万象无终', 'year': 2021},
+        '07': {'name': '印斯茅斯的阴谋', 'year': 2020, 'font_text': '<font name="packicon_innsmouth">A</font>'},
+        '08': {'name': '暗与地球之界', 'year': 2021, 'font_text': '<font name="packicon_edge">\uE900</font>'},
+        '09': {'name': '绯红密钥', 'year': 2022, 'font_text': '<font name="packicon_scarlet">\uE900</font>'},
+        '10': {'name': '铁杉谷盛宴', 'year': 2024, 'font_text': '<font name="packicon_hemlock">\uE9B9</font>'},
+        '50': {'name': '重返基础', 'year': 2017, 'font_text': '<font name="packicon_coreset">\uE90A</font>'},
+        '51': {'name': '重返敦威治遗产', 'year': 2018, 'font_text': '<font name="packicon_dunwich">\uE91B</font>'},
+        '52': {'name': '重返卡尔克萨之路', 'year': 2019, 'font_text': '<font name="packicon_carcosa">\uE903</font>'},
+        '53': {'name': '重返失落的时代', 'year': 2020, 'font_text': '<font name="packicon_forgotten">\uE917</font>'},
+        '54': {'name': '重返万象无终', 'year': 2021, 'font_text': '<font name="packicon_circle">\uE916</font>'},
     }
 
     COPYRIGHT_DICT_THREE = {
@@ -296,6 +296,24 @@ class ArkhamDBConverter:
         card_data['footer_copyright'] = middle_text
         card_data['footer_icon_font'] = footer_icon_font
 
+    def convert_customization(self) -> Optional[Dict[str, Any]]:
+        """转化定制卡"""
+        card_data = {}
+        # 基础信息
+        card_data["type"] = '定制卡'
+        card_data["name"] = self.data.get("name", "")
+        card_data["body"] = self._format_text(self.data.get("customization_text"))
+        # 获取版权年份
+        pack_code = self.data['code'][:2]
+        pack_code_three = self.data['code'][:2]
+        middle_text = ''
+        if self.data['code'][:2] in self.COPYRIGHT_DICT:
+            middle_text = f"© {self.COPYRIGHT_DICT[pack_code]['year']} FFG"
+        elif pack_code_three in self.COPYRIGHT_DICT_THREE:
+            middle_text = f"© {self.COPYRIGHT_DICT_THREE[pack_code_three]['year']} FFG"
+        card_data['footer_copyright'] = middle_text
+        return card_data
+
     def convert_front(self) -> Optional[Dict[str, Any]]:
         """
         转换卡牌正面数据。
@@ -321,6 +339,8 @@ class ArkhamDBConverter:
             card_data = self._convert_treachery_front()
         elif type_code == "enemy":
             card_data = self._convert_enemy_front()
+        elif type_code == "location":  # 新增地点卡处理
+            card_data = self._convert_location_front()
         else:
             print(f"警告：尚未实现对 '{type_code}' 类型的正面转换")
             return None
@@ -554,4 +574,49 @@ class ArkhamDBConverter:
         card_data["flavor"] = self._format_text(self.data.get("flavor"))
         if self.data.get("victory") is not None:
             card_data["victory"] = self.data.get("victory")
+        return card_data
+
+    # 新增地点卡转换方法
+    def _convert_location_front(self) -> Dict[str, Any]:
+        """
+        私有方法，专门用于转换地点卡正面。
+        """
+        card_data = {}
+        # 基础信息
+        card_data["name"] = self.data.get("name", "")
+        if self.data.get("is_unique"):
+            card_data["name"] = f"🏅{card_data['name']}"
+        if self.data.get("subname"):
+            card_data["subtitle"] = self.data.get("subname")
+        # 地点类型（已揭示/未揭示）
+        # ArkhamDB中通过back_text判断是否为双面地点
+        if self.data.get("back_text") or self.data.get("double_sided"):
+            card_data["location_type"] = "未揭示"
+        else:
+            card_data["location_type"] = "已揭示"
+        # 地点图标（需要根据实际数据结构调整）
+        # 注意：ArkhamDB可能没有直接的图标字段，可能需要根据其他信息推断
+        if self.data.get("location_icon"):
+            card_data["location_icon"] = self.data.get("location_icon")
+        # 连接地点图标（需要根据实际数据结构调整）
+        if self.data.get("location_connections"):
+            card_data["location_link"] = self.data.get("location_connections")
+        # 隐藏值和线索值
+        card_data["shroud"] = self._format_compound_number("shroud", "shroud_per_investigator")
+        card_data["clues"] = self._format_compound_number("clues", "clues_per_investigator")
+        # 特性
+        traits_str = self.data.get("traits", "")
+        if traits_str:
+            card_data["traits"] = [trait.strip() for trait in traits_str.replace('.', ' ').split() if trait.strip()]
+        else:
+            card_data["traits"] = []
+        # 效果和风味文本
+        card_data["body"] = self._format_text(self.data.get("text"))
+        card_data["flavor"] = self._format_text(self.data.get("flavor"))
+        # 胜利点
+        if self.data.get("victory") is not None:
+            card_data["victory"] = self.data.get("victory")
+        # 遭遇组
+        if self.data.get("encounter_code"):
+            card_data["encounter_group"] = self.data.get("encounter_name")
         return card_data

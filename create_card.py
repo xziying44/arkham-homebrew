@@ -1,4 +1,6 @@
+import cProfile
 import json
+import pstats
 import re
 from typing import Union, Optional
 
@@ -1586,9 +1588,15 @@ if __name__ == '__main__':
     # fm.set_lang('en')
     # card = creator.create_card(json_data, picture_path=None)
     # card.image.show()
+    profiler = cProfile.Profile()
+    profiler.enable()
 
     fm.set_lang('en')
     card = creator.create_card(json_data, picture_path=json_data.get('picture_path', None))
+
+    profiler.disable()
+    stats = pstats.Stats(profiler).sort_stats('tottime')  # 按函数自身花费时间排序
+    stats.print_stats(10)  # 打印耗时最长的前10个函数
     card.image.show()
 
     # card_end = creator.create_card_bottom_map(json_data, picture_path=json_data.get('picture_path', None))

@@ -292,6 +292,14 @@ class CardMetadataScanner:
                 else:
                     card_object = converter.convert_front()
 
+                # 检测是否有定制卡
+                customization_text = card_data.get('customization_text', '')
+                customization_card = None
+                if customization_text and customization_text != '':
+                    print(f"正在处理定制卡: {filename}")
+                    # 转化定制卡
+                    customization_card = converter.convert_customization()
+
                 # 如果转换结果为None，跳过该卡牌
                 if card_object is None:
                     print(f"跳过: {filename} - 转换结果为None")
@@ -333,6 +341,13 @@ class CardMetadataScanner:
 
                 with open(output_path, 'w', encoding='utf-8') as f:
                     json.dump(card_object, f, ensure_ascii=False, indent=2)
+
+                if customization_card:
+                    # 保存定制卡
+                    customization_filename = filename + '-c.card'
+                    with open(cards_dir / customization_filename, 'w', encoding='utf-8') as f:
+                        json.dump(customization_card, f, ensure_ascii=False, indent=2)
+                    print(f"定制卡保存成功: {filename} -> {customization_filename}")
 
                 converted_count += 1
                 print(f"转换成功: {filename} -> {card_filename} ({'背面' if is_back else '正面'})")
@@ -380,10 +395,23 @@ if __name__ == "__main__":
         # 失落的时代 04
         # 失落的时代 04
         # 万象无终 05
-        # 06_食梦者 05
+        # 06_食梦者 06
+        # 07_印斯茅斯的阴谋 07
+        # 08_暗与地球之界 08
+        # 09_绯红密钥 09
+        # 10_铁杉谷盛宴 10
+        # 50_重返基础 50
+        # 51_重返敦威治遗产 51
+        # 52_重返卡尔克萨之路 52
+        # 53_重返失落的时代 53
+        # 54_重返万象无终 54
+        # scanner = CardMetadataScanner(
+        #     work_directory=r"D:\诡镇奇谈\重置玩家卡\54_重返万象无终",  # 替换为实际的工作目录路径
+        #     code="54"  # 使用code前缀，匹配前2位
+        # )
         scanner = CardMetadataScanner(
-            work_directory=r"D:\诡镇奇谈\重置玩家卡\06_食梦者",  # 替换为实际的工作目录路径
-            code="06"  # 使用code前缀，匹配前2位
+            work_directory=r"D:\诡镇奇谈\重置剧本卡\01_基础游戏",  # 替换为实际的工作目录路径
+            code="01"  # 使用code前缀，匹配前2位
         )
 
         # 执行扫描并保存元数据

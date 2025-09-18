@@ -117,9 +117,6 @@ export class CardService {
         const errors: string[] = [];
 
         // 检查必要字段
-        if (!cardData.name || cardData.name.trim() === '') {
-            errors.push('卡牌名称不能为空');
-        }
 
         if (!cardData.type || cardData.type.trim() === '') {
             errors.push('卡牌类型不能为空');

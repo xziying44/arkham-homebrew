@@ -3,9 +3,7 @@ import os
 import queue
 import sys
 import threading
-import tkinter as tk
 import traceback
-from tkinter import filedialog
 from typing import Optional
 
 import webview
@@ -107,6 +105,8 @@ def api_select_directory():
             result_queue = queue.Queue()
 
             def worker():
+                import tkinter as tk
+                from tkinter import filedialog
                 # 这个 select_directory 函数是原来的 tkinter 实现
                 root = tk.Tk()
                 root.withdraw()
@@ -611,40 +611,56 @@ def generate_card():
 
         json_data = data['json_data']
 
-        # 生成卡图
-        card = current_workspace.generate_card_image(json_data)
-        card_image = card.image
+        card_type = json_data.get('type', '')
+        cardback_filename = None
+        if card_type == '玩家卡背':
+            cardback_filename = 'cardback/player-back.jpg'
+        elif card_type == '遭遇卡背':
+            cardback_filename = 'cardback/encounter-back.jpg'
+        print(cardback_filename)
+        if cardback_filename:
+            # 从程序目录读取
+            cardback_path = os.path.join('.', cardback_filename)
+            # 如果是PyInstaller打包的程序
+            if hasattr(sys, '_MEIPASS'):
+                cardback_path = os.path.join(sys._MEIPASS, cardback_filename)
+            card_image = Image.open(cardback_path)
+            card = None
+        else:
+            # 生成卡图
+            card = current_workspace.generate_card_image(json_data)
+            card_image = card.image
 
-        # 判断是否为勘误模式
-        if os.environ.get('APP_MODE', 'normal') == 'check':
-            try:
-                original_image = current_workspace.get_card_base64(json_data)
-                # 如果picture_path为str则读取PIL图片
-                if isinstance(original_image, str):
-                    original_image = Image.open(original_image)
+            # 判断是否为勘误模式
+            if os.environ.get('APP_MODE', 'normal') == 'check':
+                try:
+                    original_image = current_workspace.get_card_base64(json_data)
+                    # 如果picture_path为str则读取PIL图片
+                    if isinstance(original_image, str):
+                        original_image = Image.open(original_image)
 
-                # 处理图片旋转
-                if card_image.width > card_image.height and original_image.width < original_image.height:
-                    original_image = original_image.rotate(90, expand=True)
+                    # 处理图片旋转
+                    if card_image.width > card_image.height and original_image.width < original_image.height:
+                        original_image = original_image.rotate(90, expand=True)
 
-                # 缩放到图片大小
-                original_image = original_image.resize((card_image.width, card_image.height))
+                    # 缩放到图片大小
+                    original_image = original_image.resize((card_image.width, card_image.height))
 
-                # 判断是否为横向图片
-                if card_image.width > card_image.height:
-                    # 横向图片：上下拼接（原图在上，生成图在下）
-                    card_errata = Image.new('RGB', (card_image.width, card_image.height * 2), (255, 255, 255))
-                    card_errata.paste(original_image, (0, 0))
-                    card_errata.paste(card_image, (0, card_image.height))
-                else:
-                    # 纵向图片：左右拼接（原图在左，生成图在右）
-                    card_errata = Image.new('RGB', (card_image.width * 2, card_image.height), (255, 255, 255))
-                    card_errata.paste(original_image, (0, 0))
-                    card_errata.paste(card_image, (card_image.width, 0))
+                    # 判断是否为横向图片
+                    if card_image.width > card_image.height:
+                        # 横向图片：上下拼接（原图在上，生成图在下）
+                        card_errata = Image.new('RGB', (card_image.width, card_image.height * 2), (255, 255, 255))
+                        card_errata.paste(original_image, (0, 0))
+                        card_errata.paste(card_image, (0, card_image.height))
+                    else:
+                        # 纵向图片：左右拼接（原图在左，生成图在右）
+                        card_errata = Image.new('RGB', (card_image.width * 2, card_image.height), (255, 255, 255))
+                        card_errata.paste(original_image, (0, 0))
+                        card_errata.paste(card_image, (card_image.width, 0))
 
-                card_image = card_errata
-            except Exception as e:
-                pass
+                    card_image = card_errata
+                except Exception as e:
+                    pass
 
         if card_image is None:
             return jsonify(create_response(
@@ -664,7 +680,7 @@ def generate_card():
             msg="生成卡图成功",
             data={
                 "image": f"data:image/png;base64,{img_str}",
-                "box_position": card.get_upgrade_card_box_position()
+                "box_position": card.get_upgrade_card_box_position() if card else []
             }
         ))
 
@@ -1509,27 +1525,6 @@ def export_card():
 
 
 if __name__ == '__main__':
-    print("=" * 60)
-    print("文件管理服务启动")
-    print("服务地址: http://localhost:5000")
-    print("")
-    print("快速开始接口:")
-    print("  选择目录: GET /api/select-directory")
-    print("  最近目录: GET /api/recent-directories")
-    print("  打开工作空间: POST /api/open-workspace")
-    print("")
-    print("工作空间接口:")
-    print("  文件树: GET /api/file-tree")
-    print("  创建目录: POST /api/create-directory")
-    print("  创建文件: POST /api/create-file")
-    print("  重命名: PUT /api/rename-item")
-    print("  删除: DELETE /api/delete-item")
-    print("  文件内容: GET/PUT /api/file-content")
-    print("")
-    print("系统接口:")
-    print("  服务状态: GET /api/status")
-    print("=" * 60)
-
     app.run(
         host='127.0.0.1',
         port=5000,

@@ -1,5 +1,7 @@
 import random
 import re
+import traceback
+from typing import Union
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -223,11 +225,13 @@ class Card:
             if extension > 0:
                 img = self._extend_image_right(img, extension)
             if img.mode == 'RGBA':
-                self.image.paste(img, (region[0], region[1], region[0] + target_w + extension, region[1] + target_h),
-                                 img)
+                self.image.paste(img, (region[0], region[1]), img)
             else:
-                self.image.paste(img, (region[0], region[1], region[0] + target_w + extension, region[1] + target_h))
+                self.image.paste(img, (region[0], region[1]))
+
         except Exception as e:
+            # 打印异常栈
+            traceback.print_exc()
             print(f"贴图失败: {str(e)}")
 
     def paste_image_with_transform(self, img, region, transform_params):
@@ -927,7 +931,7 @@ class Card:
         elif 0 < index < 7:
             self.paste_image(im, link_position[index - 1], 'contain')
 
-    def set_encounter_icon(self, icon_name: str | Image.Image, size=None):
+    def set_encounter_icon(self, icon_name: Union[str, Image.Image], size=None):
         """
         画遭遇组
 
