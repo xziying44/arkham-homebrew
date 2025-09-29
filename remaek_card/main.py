@@ -34,17 +34,60 @@ class CardMetadataScanner:
         self._load_db_cards()
 
     def _load_db_cards(self):
-        """加载db_cards.json文件"""
-        db_cards_path = "db_cards.json"
+        """加载db_cards.json文件并应用翻译数据"""
+        db_cards_path = "db_cards_en.json"
+        translation_path = "translation_data.json"
 
         try:
+            # 1. 加载英文数据库
             with open(db_cards_path, 'r', encoding='utf-8') as f:
                 self.db_cards = json.load(f)
-            print(f"成功加载 {len(self.db_cards)} 张卡牌数据")
+            print(f"成功加载 {len(self.db_cards)} 张英文卡牌数据")
+
+            # 2. 加载并应用翻译数据
+            if os.path.exists(translation_path):
+                with open(translation_path, 'r', encoding='utf-8') as f:
+                    translations = json.load(f)
+
+                # 创建code到翻译数据的映射
+                translation_map = {trans.get('code'): trans for trans in translations if 'code' in trans}
+                print(f"成功加载 {len(translation_map)} 张翻译数据")
+
+                # 应用翻译
+                translated_count = 0
+                total_fields_replaced = 0
+
+                for card in self.db_cards:
+                    card_code = card.get('code', '')
+                    if card_code in translation_map:
+                        translation = translation_map[card_code]
+                        fields_replaced = 0
+
+                        # 遍历翻译数据中的所有字段（除了code）
+                        for field_name, trans_value in translation.items():
+                            if field_name != 'code' and trans_value is not None and trans_value != '':
+                                # 只替换非空的翻译值
+                                card[field_name] = trans_value
+                                fields_replaced += 1
+
+                        if fields_replaced > 0:
+                            translated_count += 1
+                            total_fields_replaced += fields_replaced
+
+                print(f"成功应用翻译: {translated_count}/{len(self.db_cards)} 张卡牌")
+                print(f"总计替换字段: {total_fields_replaced} 个")
+
+                # 显示未找到翻译的卡牌数量
+                untranslated_count = len(self.db_cards) - translated_count
+                if untranslated_count > 0:
+                    print(f"未找到翻译: {untranslated_count} 张卡牌")
+            else:
+                print(f"警告: 翻译文件不存在 {translation_path}，将使用原始英文数据")
+
         except json.JSONDecodeError as e:
-            raise ValueError(f"db_cards.json文件格式错误: {e}")
+            raise ValueError(f"JSON文件格式错误: {e}")
         except Exception as e:
-            raise Exception(f"读取db_cards.json文件失败: {e}")
+            raise Exception(f"加载数据失败: {e}")
 
     def _extract_position_from_filename(self, filename: str) -> tuple[Optional[int], bool]:
         """
@@ -276,7 +319,9 @@ class CardMetadataScanner:
                 card_data = metadata.get('card_data', {})
                 type_code = metadata.get('type_code', '')
                 if is_back:
-                    filename += 'b'
+                    filename += '_b'
+                else:
+                    filename += '_a'
 
                 if not card_data:
                     print(f"警告: 元数据中缺少卡牌数据 - 文件: {filename}")
@@ -405,14 +450,14 @@ if __name__ == "__main__":
         # 52_重返卡尔克萨之路 52
         # 53_重返失落的时代 53
         # 54_重返万象无终 54
-        # scanner = CardMetadataScanner(
-        #     work_directory=r"D:\诡镇奇谈\重置玩家卡\54_重返万象无终",  # 替换为实际的工作目录路径
-        #     code="54"  # 使用code前缀，匹配前2位
-        # )
         scanner = CardMetadataScanner(
-            work_directory=r"D:\诡镇奇谈\重置剧本卡\01_基础游戏",  # 替换为实际的工作目录路径
+            work_directory=r"D:\诡镇奇谈\重置玩家卡\01_基础游戏",  # 替换为实际的工作目录路径
             code="01"  # 使用code前缀，匹配前2位
         )
+        # scanner = CardMetadataScanner(
+        #     work_directory=r"D:\诡镇奇谈\重置剧本卡\01_基础游戏",  # 替换为实际的工作目录路径
+        #     code="01"  # 使用code前缀，匹配前2位
+        # )
 
         # 执行扫描并保存元数据
         metadata = scanner.run_scan_and_save("card_metadata.json")
