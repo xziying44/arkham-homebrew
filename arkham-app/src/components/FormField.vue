@@ -113,10 +113,83 @@
         <n-button @click="$emit('add-string-array-item')" size="small">{{ $t('cardEditor.field.addItem') }}</n-button>
       </n-space>
       <div v-if="value && value.length > 0" class="selected-items">
-        <n-tag v-for="(item, index) in value" :key="index" closable @close="$emit('remove-string-array-item', index)"
-          class="item-tag">
-          {{ item }}
-        </n-tag>
+        <div v-for="(item, index) in value" :key="index" class="string-array-item">
+          <!-- 编辑模式 -->
+          <div v-if="editingIndex === index" class="editing-item">
+            <n-input 
+              v-model:value="editingValue" 
+              size="small" 
+              :placeholder="$t('cardEditor.field.editItem')"
+              @keyup.enter="confirmEdit"
+              @keyup.escape="cancelEdit"
+            />
+            <n-space size="small">
+              <n-button size="small" type="primary" @click="confirmEdit">
+                <template #icon>
+                  <n-icon :component="CheckmarkOutline" />
+                </template>
+              </n-button>
+              <n-button size="small" @click="cancelEdit">
+                <template #icon>
+                  <n-icon :component="CloseOutline" />
+                </template>
+              </n-button>
+            </n-space>
+          </div>
+          <!-- 显示模式 -->
+          <div v-else class="display-item">
+            <n-tag class="item-content">{{ item }}</n-tag>
+            <n-space size="small" class="item-controls">
+              <!-- 向上移动 -->
+              <n-button 
+                size="tiny" 
+                quaternary 
+                @click="$emit('move-string-array-item-up', index)"
+                :disabled="index === 0"
+                :title="$t('cardEditor.field.moveUp')"
+              >
+                <template #icon>
+                  <n-icon :component="ArrowUpOutline" size="12" />
+                </template>
+              </n-button>
+              <!-- 向下移动 -->
+              <n-button 
+                size="tiny" 
+                quaternary 
+                @click="$emit('move-string-array-item-down', index)"
+                :disabled="index === value.length - 1"
+                :title="$t('cardEditor.field.moveDown')"
+              >
+                <template #icon>
+                  <n-icon :component="ArrowDownOutline" size="12" />
+                </template>
+              </n-button>
+              <!-- 编辑 -->
+              <n-button 
+                size="tiny" 
+                quaternary 
+                @click="startEditing(index)"
+                :title="$t('cardEditor.field.edit')"
+              >
+                <template #icon>
+                  <n-icon :component="CreateOutline" size="12" />
+                </template>
+              </n-button>
+              <!-- 删除 -->
+              <n-button 
+                size="tiny" 
+                quaternary 
+                type="error"
+                @click="$emit('remove-string-array-item', index)"
+                :title="$t('cardEditor.field.delete')"
+              >
+                <template #icon>
+                  <n-icon :component="TrashOutline" size="12" />
+                </template>
+              </n-button>
+            </n-space>
+          </div>
+        </div>
       </div>
     </div>
   </n-form-item>
@@ -210,7 +283,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import type { UploadFileInfo } from 'naive-ui';
-import { TrashOutline, ImageOutline, HelpCircleOutline, CopyOutline } from '@vicons/ionicons5';
+import { TrashOutline, ImageOutline, HelpCircleOutline, CopyOutline, ArrowUpOutline, ArrowDownOutline, CreateOutline, CheckmarkOutline, CloseOutline } from '@vicons/ionicons5';
 import { useMessage } from 'naive-ui';
 import { useI18n } from 'vue-i18n'; // 新增
 import type { FormField } from '@/config/cardTypeConfigs';
@@ -230,6 +303,9 @@ const emit = defineEmits<{
   'remove-multi-select-item': [index: number];
   'add-string-array-item': [];
   'remove-string-array-item': [index: number];
+  'move-string-array-item-up': [index: number];
+  'move-string-array-item-down': [index: number];
+  'edit-string-array-item': [index: number, newValue: string];
   'remove-image': [];
 }>();
 
@@ -237,6 +313,9 @@ const { t } = useI18n(); // 新增
 const message = useMessage();
 const imageError = ref('');
 const showHelpModal = ref(false);
+// 字符串数组编辑状态
+const editingIndex = ref<number | null>(null);
+const editingValue = ref('');
 // 遭遇组相关状态
 const encounterGroupOptions = ref<Array<{label: string, value: string}>>([]);
 const loadingEncounterGroups = ref(false);
@@ -270,6 +349,24 @@ const loadEncounterGroups = async () => {
   } finally {
     loadingEncounterGroups.value = false;
   }
+};
+
+// 字符串数组编辑相关函数
+const startEditing = (index: number) => {
+  editingIndex.value = index;
+  editingValue.value = props.value[index];
+};
+
+const confirmEdit = () => {
+  if (editingIndex.value !== null && editingValue.value.trim()) {
+    emit('edit-string-array-item', editingIndex.value, editingValue.value.trim());
+  }
+  cancelEdit();
+};
+
+const cancelEdit = () => {
+  editingIndex.value = null;
+  editingValue.value = '';
 };
 
 // 去掉emoji和空格，获取纯净的字段名
@@ -360,6 +457,72 @@ const handleFileChange = async (data: { file: UploadFileInfo; fileList: UploadFi
 
 .item-tag {
   margin: 0;
+}
+
+/* 字符串数组项目样式 */
+.string-array-item {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.string-array-item:last-child {
+  margin-bottom: 0;
+}
+
+.editing-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #f9f9f9;
+}
+
+.editing-item .n-input {
+  flex: 1;
+}
+
+.display-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.display-item:hover {
+  background: #f5f5f5;
+  border-color: #e0e0e0;
+}
+
+.item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.item-controls {
+  flex-shrink: 0;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+.display-item:hover .item-controls {
+  opacity: 1;
+}
+
+.item-controls .n-button {
+  min-width: 24px;
+  height: 24px;
+}
+
+/* 字符串数组容器特殊样式覆盖 */
+.string-array-container .selected-items {
+  flex-direction: column;
+  align-items: stretch;
 }
 
 /* 字段标签样式 */

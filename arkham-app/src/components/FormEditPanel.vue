@@ -192,6 +192,9 @@
                                         @remove-multi-select-item="removeMultiSelectItem(field, $event)"
                                         @add-string-array-item="addStringArrayItem(field)"
                                         @remove-string-array-item="removeStringArrayItem(field, $event)"
+                                        @move-string-array-item-up="moveStringArrayItemUp(field, $event)"
+                                        @move-string-array-item-down="moveStringArrayItemDown(field, $event)"
+                                        @edit-string-array-item="(index, newValue) => editStringArrayItem(field, index, newValue)"
                                         @remove-image="removeImage(field)" />
                                 </div>
                             </div>
@@ -1177,6 +1180,34 @@ const removeStringArrayItem = (field: FormField, index: number) => {
     const currentArray = getFieldValue(field);
     if (Array.isArray(currentArray)) {
         currentArray.splice(index, 1);
+        setFieldValue(field, currentArray);
+    }
+};
+
+const moveStringArrayItemUp = (field: FormField, index: number) => {
+    if (index <= 0) return;
+    const currentArray = getFieldValue(field);
+    if (Array.isArray(currentArray)) {
+        const item = currentArray[index];
+        currentArray.splice(index, 1);
+        currentArray.splice(index - 1, 0, item);
+        setFieldValue(field, currentArray);
+    }
+};
+
+const moveStringArrayItemDown = (field: FormField, index: number) => {
+    const currentArray = getFieldValue(field);
+    if (!Array.isArray(currentArray) || index >= currentArray.length - 1) return;
+    const item = currentArray[index];
+    currentArray.splice(index, 1);
+    currentArray.splice(index + 1, 0, item);
+    setFieldValue(field, currentArray);
+};
+
+const editStringArrayItem = (field: FormField, index: number, newValue: string) => {
+    const currentArray = getFieldValue(field);
+    if (Array.isArray(currentArray) && index >= 0 && index < currentArray.length) {
+        currentArray[index] = newValue;
         setFieldValue(field, currentArray);
     }
 };

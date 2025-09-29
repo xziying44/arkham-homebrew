@@ -1132,7 +1132,7 @@ class CardCreator:
 
     def _setup_event_card_content(self, card, data, traits, body):
         """设置事件卡内容"""
-        offset = {'潜修者': -8, '守护者': -1, '生存者': -1, '中立': -5}.get(data.get('class', ''), 0)
+        offset = {'潜修者': -3, '守护者': -1, '生存者': -1, '中立': -3}.get(data.get('class', ''), 0)
         card.draw_centered_text((370, 621 + offset), data['name'], "标题字体", 48, (0, 0, 0))
         card.draw_centered_text((368, 675), traits, "特性字体", 32, (0, 0, 0))
         card.draw_text(

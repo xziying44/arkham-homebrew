@@ -17,7 +17,11 @@ export default {
     unsupportedImageFormat: '不支持的图片格式，请选择 JPG、PNG、GIF、WebP 或 SVG 文件',
     fileSizeExceeded: '文件大小超过限制，最大支持 {size}',
     fileReadFailed: '文件读取失败',
-    imageProcessFailed: '图片处理失败，请重试'
+    imageProcessFailed: '图片处理失败，请重试',
+    editItem: '编辑项目',
+    moveUp: '上移',
+    moveDown: '下移',
+    edit: '编辑'
   },
 
   // FormEditPanel 组件

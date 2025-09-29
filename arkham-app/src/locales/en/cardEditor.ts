@@ -17,7 +17,11 @@ export default {
     unsupportedImageFormat: 'Unsupported image format, please select JPG, PNG, GIF, WebP or SVG file',
     fileSizeExceeded: 'File size exceeds limit, maximum supported {size}',
     fileReadFailed: 'File read failed',
-    imageProcessFailed: 'Image processing failed, please try again'
+    imageProcessFailed: 'Image processing failed, please try again',
+    editItem: 'Edit item',
+    moveUp: 'Move up',
+    moveDown: 'Move down',
+    edit: 'Edit'
   },
 
   // FormEditPanel component
