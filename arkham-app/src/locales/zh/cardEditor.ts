@@ -27,6 +27,13 @@ export default {
     importJson: '导入JSON',
     viewJson: '查看JSON',
     selectCardFileToEdit: '请在文件管理器中选择一个卡牌文件(.card)进行编辑',
+    noCardSelected: '尚未选择卡牌',
+    createOrSelectCard: '创建或选择卡牌进行编辑',
+    howToCreateCard: '如何创建卡牌？',
+    clickPlusButton: '点击顶部的 "+" 按钮创建新卡牌',
+    rightClickFileTree: '右键点击文件树节点创建新卡牌',
+    selectExistingCard: '或者选择一个现有的 .card 文件进行编辑',
+    getStarted: '开始制作您的卡牌吧！',
 
     // AI 助手
     aiAssistant: '🤖 AI制卡助手',

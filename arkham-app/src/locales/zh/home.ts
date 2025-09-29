@@ -25,6 +25,11 @@ export default {
     subtitle: '选择一个最近使用的项目继续编辑',
     clearRecords: '清空记录',
     emptyState: '还没有最近项目',
+    emptyStateTitle: '开始你的第一个项目',
+    emptyStateDescription: '看起来你还没有创建过任何项目。点击下面的按钮选择一个包含卡牌文件的文件夹，或者选择一个空文件夹来开始你的第一个阿卡姆卡牌设计项目。',
+    emptyStateGuide: '你可以选择：',
+    emptyStateOption1: '包含现有JSON卡牌文件的文件夹',
+    emptyStateOption2: '一个空文件夹来开始新项目',
     loading: '正在加载最近项目...',
     removeSuccess: '已移除: {name}',
     clearSuccess: '已清空最近项目记录'

@@ -137,17 +137,51 @@
             </n-list-item>
           </n-list>
 
-          <!-- 空状态 -->
-          <n-empty v-else :description="$t('home.recentProjects.emptyState')" size="huge" class="empty-state">
-            <template #icon>
-              <n-icon :component="CubeOutline" />
-            </template>
-            <template #extra>
-              <n-button @click="handleOpenFolder" :disabled="isSelecting || !serviceOnline">
-                {{ $t('home.actions.openProject') }}
-              </n-button>
-            </template>
-          </n-empty>
+          <!-- 空状态 - 增强的引导信息 -->
+          <div v-else class="empty-state-enhanced">
+            <div class="empty-icon">
+              <n-icon :component="CubeOutline" size="64" color="#cbd5e1" />
+            </div>
+            
+            <div class="empty-content">
+              <h3 class="empty-title">{{ $t('home.recentProjects.emptyStateTitle') }}</h3>
+              <p class="empty-description">{{ $t('home.recentProjects.emptyStateDescription') }}</p>
+              
+              <div class="empty-guide">
+                <p class="guide-title">{{ $t('home.recentProjects.emptyStateGuide') }}</p>
+                <ul class="guide-options">
+                  <li>
+                    <n-icon :component="FileTrayFullOutline" color="#667eea" />
+                    <span>{{ $t('home.recentProjects.emptyStateOption1') }}</span>
+                  </li>
+                  <li>
+                    <n-icon :component="FolderOpenOutline" color="#667eea" />
+                    <span>{{ $t('home.recentProjects.emptyStateOption2') }}</span>
+                  </li>
+                </ul>
+              </div>
+              
+              <div class="empty-actions">
+                <n-button 
+                  type="primary" 
+                  size="large"
+                  @click="handleOpenFolder" 
+                  :disabled="isSelecting || !serviceOnline"
+                  :loading="isSelecting"
+                >
+                  <template #icon>
+                    <n-icon :component="FolderOpenOutline" />
+                  </template>
+                  {{ $t('home.actions.openProject') }}
+                </n-button>
+                
+                <div v-if="!serviceOnline" class="service-warning">
+                  <n-icon :component="AlertCircle" color="#f59e0b" />
+                  <span>{{ $t('home.messages.serviceOffline') }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1043,6 +1077,135 @@ onUnmounted(() => {
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+/* =========== 增强的空状态样式 =========== */
+.empty-state-enhanced {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.empty-icon {
+  margin-bottom: 24px;
+  opacity: 0.6;
+}
+
+.empty-content {
+  max-width: 500px;
+  width: 100%;
+}
+
+.empty-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 16px 0;
+}
+
+.empty-description {
+  font-size: 16px;
+  color: #64748b;
+  line-height: 1.6;
+  margin: 0 0 32px 0;
+}
+
+.empty-guide {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 32px;
+  text-align: left;
+}
+
+.guide-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #475569;
+  margin: 0 0 16px 0;
+}
+
+.guide-options {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.guide-options li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.guide-options li:hover {
+  border-color: #667eea;
+  background: #f8fafc;
+  transform: translateX(4px);
+}
+
+.guide-options li span {
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.4;
+}
+
+.empty-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.service-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 8px;
+  font-size: 14px;
+  color: #92400e;
+}
+
+/* 响应式样式调整 */
+@media (max-width: 768px) {
+  .empty-state-enhanced {
+    padding: 30px 15px;
+  }
+
+  .empty-title {
+    font-size: 20px;
+  }
+
+  .empty-description {
+    font-size: 14px;
+  }
+
+  .empty-guide {
+    padding: 20px;
+  }
+
+  .guide-options li {
+    padding: 10px 12px;
+  }
+
+  .guide-options li span {
+    font-size: 13px;
+  }
 }
 
 /* =========== 响应式设计 =========== */

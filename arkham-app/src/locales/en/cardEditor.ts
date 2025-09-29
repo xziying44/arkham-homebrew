@@ -27,6 +27,13 @@ export default {
     importJson: 'Import JSON',
     viewJson: 'View JSON',
     selectCardFileToEdit: 'Please select a card file (.card) in the file manager to edit',
+    noCardSelected: 'No Card Selected',
+    createOrSelectCard: 'Create or Select a Card to Edit',
+    howToCreateCard: 'How to Create a Card?',
+    clickPlusButton: 'Click the "+" button at the top to create a new card',
+    rightClickFileTree: 'Right-click on a file tree node to create a new card',
+    selectExistingCard: 'Or select an existing .card file to edit',
+    getStarted: 'Let\'s start creating your card!',
 
     // AI assistant
     aiAssistant: '🤖 AI Card Assistant',

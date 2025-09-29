@@ -25,6 +25,11 @@ export default {
     subtitle: 'Select a recently used project to continue editing',
     clearRecords: 'Clear Records',
     emptyState: 'No recent projects yet',
+    emptyStateTitle: 'Start Your First Project',
+    emptyStateDescription: 'It looks like you haven\'t created any projects yet. Click the button below to select a folder containing card files, or choose an empty folder to start your first Arkham card design project.',
+    emptyStateGuide: 'You can choose:',
+    emptyStateOption1: 'A folder with existing JSON card files',
+    emptyStateOption2: 'An empty folder to start a new project',
     loading: 'Loading recent projects...',
     removeSuccess: 'Removed: {name}',
     clearSuccess: 'Cleared recent project records'

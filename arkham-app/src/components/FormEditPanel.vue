@@ -28,7 +28,38 @@
         <div class="form-content">
             <!-- 未选择卡牌文件时的提示 -->
             <div v-if="!selectedFile || selectedFile.type !== 'card'" class="empty-state">
-                <n-empty :description="$t('cardEditor.panel.selectCardFileToEdit')" />
+                <div class="welcome-guide">
+                    <h2 class="welcome-title">{{ $t('cardEditor.panel.noCardSelected') }}</h2>
+                    <p class="welcome-subtitle">{{ $t('cardEditor.panel.createOrSelectCard') }}</p>
+                    
+                    <div class="guide-section">
+                        <h3 class="guide-title">{{ $t('cardEditor.panel.howToCreateCard') }}</h3>
+                        <div class="guide-steps">
+                            <div class="guide-step">
+                                <div class="step-icon">➕</div>
+                                <div class="step-content">
+                                    <span class="step-text">{{ $t('cardEditor.panel.clickPlusButton') }}</span>
+                                </div>
+                            </div>
+                            <div class="guide-step">
+                                <div class="step-icon">🖱️</div>
+                                <div class="step-content">
+                                    <span class="step-text">{{ $t('cardEditor.panel.rightClickFileTree') }}</span>
+                                </div>
+                            </div>
+                            <div class="guide-step">
+                                <div class="step-icon">📁</div>
+                                <div class="step-content">
+                                    <span class="step-text">{{ $t('cardEditor.panel.selectExistingCard') }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="welcome-footer">
+                        <p class="encourage-text">{{ $t('cardEditor.panel.getStarted') }}</p>
+                    </div>
+                </div>
             </div>
 
             <!-- 卡牌编辑器内容 -->
@@ -1860,5 +1891,255 @@ onUnmounted(() => {
     background: rgba(255, 255, 255, 0.6);
     border-radius: 12px;
     border-top: 3px solid #667eea;
+}
+
+/* 欢迎指导界面样式 */
+.welcome-guide {
+    text-align: center;
+    padding: 80px 40px 60px 40px; /* 增加顶部padding避免被标题栏挡住 */
+    max-width: 600px;
+    margin: 0 auto;
+    background: linear-gradient(135deg, 
+        rgba(102, 126, 234, 0.05) 0%, 
+        rgba(118, 75, 162, 0.05) 50%,
+        rgba(255, 255, 255, 0.8) 100%);
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    animation: fadeInUp 0.6s ease-out;
+}
+
+
+.welcome-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #2d3748;
+    margin: 0 0 16px 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.welcome-subtitle {
+    font-size: 1.2rem;
+    color: #64748b;
+    margin: 0 0 40px 0;
+    font-weight: 400;
+    line-height: 1.6;
+}
+
+.guide-section {
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 16px;
+    padding: 32px 24px;
+    margin: 32px 0;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.guide-title {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #374151;
+    margin: 0 0 24px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.guide-title::before {
+    content: '💡';
+    font-size: 1.2em;
+}
+
+.guide-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    text-align: left;
+}
+
+.guide-step {
+    display: flex;
+    align-items: center; /* 修改为垂直居中对齐 */
+    gap: 16px;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, 
+        rgba(255, 255, 255, 0.8) 0%, 
+        rgba(248, 250, 252, 0.9) 100%);
+    border-radius: 12px;
+    border: 1px solid rgba(226, 232, 240, 0.6);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.guide-step::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.guide-step:hover {
+    transform: translateX(4px);
+    background: linear-gradient(135deg, 
+        rgba(102, 126, 234, 0.08) 0%, 
+        rgba(255, 255, 255, 0.9) 100%);
+    border-color: rgba(102, 126, 234, 0.3);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.15);
+}
+
+.guide-step:hover::before {
+    opacity: 1;
+}
+
+.step-icon {
+    font-size: 1.5rem;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    transition: all 0.3s ease;
+}
+
+.guide-step:hover .step-icon {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.step-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.step-text {
+    font-size: 1rem;
+    color: #374151;
+    font-weight: 500;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.welcome-footer {
+    margin-top: 40px;
+    padding-top: 32px;
+    border-top: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+.encourage-text {
+    font-size: 1.1rem;
+    color: #667eea;
+    font-weight: 600;
+    margin: 0;
+    position: relative;
+}
+
+.encourage-text::before {
+    content: '✨';
+    margin-right: 8px;
+}
+
+.encourage-text::after {
+    content: '✨';
+    margin-left: 8px;
+}
+
+/* 动画效果 */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .welcome-guide {
+        padding: 40px 24px;
+        margin: 20px;
+    }
+    
+    .welcome-title {
+        font-size: 1.6rem;
+    }
+    
+    .welcome-subtitle {
+        font-size: 1rem;
+    }
+    
+    .guide-section {
+        padding: 24px 16px;
+        margin: 24px 0;
+    }
+    
+    .guide-title {
+        font-size: 1.2rem;
+    }
+    
+    .guide-step {
+        padding: 12px 16px;
+        gap: 12px;
+    }
+    
+    .step-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1.2rem;
+    }
+    
+    .step-text {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .welcome-guide {
+        padding: 30px 16px;
+        margin: 10px;
+    }
+    
+    .welcome-icon {
+        font-size: 3rem;
+        margin-bottom: 16px;
+    }
+    
+    .welcome-title {
+        font-size: 1.4rem;
+    }
+    
+    .guide-steps {
+        gap: 16px;
+    }
+    
+    .guide-step {
+        padding: 10px 12px;
+        gap: 10px;
+    }
+    
+    .step-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 1.1rem;
+    }
 }
 </style>

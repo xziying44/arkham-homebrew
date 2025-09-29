@@ -1284,6 +1284,10 @@ class WorkspaceManager:
             # 构建完整的导出文件名
             export_filepath = os.path.join(export_dir, f"{export_filename}.{export_format.lower()}")
 
+            # 确保导出文件的父目录存在，一层一层创建直到目标目录存在
+            export_parent_dir = os.path.dirname(export_filepath)
+            os.makedirs(export_parent_dir, exist_ok=True)
+
             # 检查是否需要重新生成（通过参数哈希判断）
             export_helper = getattr(self, '_export_helper', None)
             current_hash = getattr(self, '_export_params_hash', None)
