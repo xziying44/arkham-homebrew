@@ -951,7 +951,7 @@ class Card:
             '地点卡': {'center': (370, 518), 'default_size': (60, 60)},
             '敌人卡': {'center': (369, 574), 'default_size': (60, 60)},
             '诡计卡': {'center': (372, 536), 'default_size': (60, 60)},
-            '故事卡': {'center': (600, 98), 'default_size': (60, 60)},
+            '故事卡': {'center': (642, 98), 'default_size': (60, 60)},
             '冒险参考卡': {'center': (372, 152), 'default_size': (60, 60)},
             '密谋卡_正面': {'center': (742, 85), 'default_size': (60, 60)},
             '场景卡_正面': {'center': (282, 83), 'default_size': (60, 60)},

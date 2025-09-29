@@ -1348,7 +1348,7 @@ class CardCreator:
 
         # 贴遭遇组
         if self.transparent_encounter and dp:
-            card.copy_circle_to_image(dp, (643, 92, 42), (600, 99, 42))
+            card.copy_circle_to_image(dp, (643, 92, 42), (643, 99, 42))
 
         card.draw_centered_text((313, 90), data['name'], "标题字体", 48, (0, 0, 0))
         card.draw_centered_text((370, 1008), '剧情', "卡牌类型字体", 30, (0, 0, 0))
