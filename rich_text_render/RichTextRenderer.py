@@ -626,17 +626,26 @@ class RichTextRenderer:
         return render_list
 
     def draw_line(self, text: str, position: Tuple[int, int],
-                  alignment: TextAlignment, options: DrawOptions) -> list[RenderItem]:
+                  alignment: TextAlignment, options: DrawOptions,
+                  vertical: bool = False, vertical_line_spacing: float = 1.2) -> list[RenderItem]:
         """
-        绘制一行支持HTML语法的文本。
+        绘制一行支持HTML语法的文本，支持水平和垂直两种模式。
+
         Args:
             text: 要绘制的文本，支持<b>, <i>, <trait>, <font>等标签。
             position: 位置坐标(x, y)。
+                      水平模式：
                       - Center: (x, y)是整行文本的中心点。
                       - Left: (x, y)是整行文本的左上角顶点。
                       - Right: (x, y)是整行文本的右上角顶点。
+                      垂直模式：
+                      - Center: (x, y)是整列文本的中心点。
+                      - Left: (x, y)是整列文本的底部中心点。
+                      - Right: (x, y)是整列文本的顶部中心点。
             alignment: 对齐方式 (TextAlignment.LEFT, .CENTER, .RIGHT)。
             options: 绘制选项，提供默认字体、大小和颜色。
+            vertical: 是否为垂直文本模式，默认为False（水平模式）。
+            vertical_line_spacing: 垂直模式下的行间距倍率，默认为1.2。
 
         Returns:
             list[RenderItem]: 渲染项列表，包含绘制的文本对象及其位置信息
@@ -660,7 +669,9 @@ class RichTextRenderer:
         # 第一遍遍历：计算总宽度和高度，收集渲染信息
         render_segments = []  # 存储每个文本片段的渲染信息
         total_width = 0
+        total_height = 0
         max_height = 0
+        max_width = 0
 
         for item in parsed_items:
             if item.tag == "text":
@@ -672,29 +683,59 @@ class RichTextRenderer:
                     # 逐字符处理
                     for char in text_content:
                         text_box = self._get_text_box(char, font)
+                        char_height = text_box[1]
+                        char_width = text_box[0]
+
+                        # 在垂直模式下应用行间距
+                        if vertical:
+                            spaced_height = int(char_height * vertical_line_spacing)
+                        else:
+                            spaced_height = char_height
+
                         render_segments.append({
                             'text': char,
                             'font': font,
                             'font_name': font_name,
-                            'width': text_box[0],
-                            'height': text_box[1],
+                            'width': char_width,
+                            'height': char_height,  # 原始高度，用于绘制
+                            'spaced_height': spaced_height,  # 带间距的高度，用于布局
                             'color': options.font_color
                         })
-                        total_width += text_box[0]
-                        max_height = max(max_height, text_box[1])
+
+                        if vertical:
+                            total_height += spaced_height
+                            max_width = max(max_width, char_width)
+                        else:
+                            total_width += char_width
+                            max_height = max(max_height, char_height)
                 else:
                     # 整块文本处理
                     text_box = self._get_text_box(text_content, font)
+                    char_height = text_box[1]
+                    char_width = text_box[0]
+
+                    # 在垂直模式下应用行间距
+                    if vertical:
+                        spaced_height = int(char_height * vertical_line_spacing)
+                    else:
+                        spaced_height = char_height
+
                     render_segments.append({
                         'text': text_content,
                         'font': font,
                         'font_name': font_name,
-                        'width': text_box[0],
-                        'height': text_box[1],
+                        'width': char_width,
+                        'height': char_height,  # 原始高度，用于绘制
+                        'spaced_height': spaced_height,  # 带间距的高度，用于布局
                         'color': options.font_color
                     })
-                    total_width += text_box[0]
-                    max_height = max(max_height, text_box[1])
+
+                    if vertical:
+                        total_height += spaced_height
+                        max_width = max(max_width, char_width)
+                    else:
+                        total_width += char_width
+                        max_height = max(max_height, char_height)
 
             elif item.tag == "font":
                 font_name = item.attributes.get('name', options.font_name)
@@ -729,29 +770,49 @@ class RichTextRenderer:
                 if item.tag in ["/font", "/b", "/i", '/trait']:
                     font_stack.pop()
 
-        # 根据对齐方式计算起始位置
+        # 根据对齐方式和垂直/水平模式计算起始位置
         x, y = position
 
-        if alignment == TextAlignment.CENTER:
-            # 中心对齐：position是文本中心点
-            start_x = x - total_width // 2
-            start_y = y - max_height // 2
-        elif alignment == TextAlignment.LEFT:
-            # 左对齐：position是左上角
-            start_x = x
-            start_y = y
-        elif alignment == TextAlignment.RIGHT:
-            # 右对齐：position是右上角
-            start_x = x - total_width
-            start_y = y
+        if vertical:
+            # 垂直文本模式
+            if alignment == TextAlignment.CENTER:
+                # 中心点对齐：position是文本中心点
+                start_x = x - max_width // 2
+                start_y = y - total_height // 2
+            elif alignment == TextAlignment.LEFT:
+                # 底部对齐：position是底部中心点
+                start_x = x - max_width // 2
+                start_y = y - total_height
+            elif alignment == TextAlignment.RIGHT:
+                # 顶部对齐：position是顶部中心点
+                start_x = x - max_width // 2
+                start_y = y
+            else:
+                # 默认中心对齐
+                start_x = x - max_width // 2
+                start_y = y - total_height // 2
         else:
-            # 默认左对齐
-            start_x = x
-            start_y = y
-        # print("绘制文本:", text, "位置:", start_x, start_y)
+            # 水平文本模式（原有逻辑）
+            if alignment == TextAlignment.CENTER:
+                # 中心对齐：position是文本中心点
+                start_x = x - total_width // 2
+                start_y = y - max_height // 2
+            elif alignment == TextAlignment.LEFT:
+                # 左对齐：position是左上角
+                start_x = x
+                start_y = y
+            elif alignment == TextAlignment.RIGHT:
+                # 右对齐：position是右上角
+                start_x = x - total_width
+                start_y = y
+            else:
+                # 默认左对齐
+                start_x = x
+                start_y = y
 
         # 第二遍：实际绘制文本，同时创建RenderItem列表
         current_x = start_x
+        current_y = start_y
         render_items = []  # 用于存储RenderItem对象
         border_width = 0
         border_color = None
@@ -766,42 +827,67 @@ class RichTextRenderer:
                 font=segment['font'],
                 font_name=segment['font_name'],
                 font_size=segment['font'].size,
-                height=segment['height'],
+                height=segment['height'],  # 使用原始高度
                 width=segment['width'],
                 color=segment['color'],
                 border_width=border_width,
                 border_color=border_color
             )
 
-            # 创建RenderItem并添加到列表
-            render_item = RenderItem(
-                obj=text_obj,
-                x=current_x,
-                y=start_y
-            )
-            render_items.append(render_item)
+            if vertical:
+                # 垂直模式：每个字符居中对齐在列中
+                char_x = start_x + (max_width - segment['width']) // 2
+                char_y = current_y
 
-            # 绘制文本
-            self.draw.text(
-                (current_x, start_y),
-                segment['text'],
-                font=segment['font'],
-                fill=segment['color']
-            )
+                # 创建RenderItem并添加到列表
+                render_item = RenderItem(
+                    obj=text_obj,
+                    x=char_x,
+                    y=char_y
+                )
+                render_items.append(render_item)
 
-            # 如果有边框效果
-            if options.has_border:
-                # 绘制边框效果（描边）
-                for dx in [-options.border_width, 0, options.border_width]:
-                    for dy in [-options.border_width, 0, options.border_width]:
-                        if dx != 0 or dy != 0:  # 不重复绘制中心点
-                            self.draw.text(
-                                (current_x + dx, start_y + dy),
-                                segment['text'],
-                                font=segment['font'],
-                                fill=options.border_color
-                            )
-                # 重新绘制主文本（覆盖边框）
+                # 绘制文本
+                self.draw.text(
+                    (char_x, char_y),
+                    segment['text'],
+                    font=segment['font'],
+                    fill=segment['color']
+                )
+
+                # 如果有边框效果
+                if options.has_border:
+                    # 绘制边框效果（描边）
+                    for dx in [-options.border_width, 0, options.border_width]:
+                        for dy in [-options.border_width, 0, options.border_width]:
+                            if dx != 0 or dy != 0:  # 不重复绘制中心点
+                                self.draw.text(
+                                    (char_x + dx, char_y + dy),
+                                    segment['text'],
+                                    font=segment['font'],
+                                    fill=options.border_color
+                                )
+                    # 重新绘制主文本（覆盖边框）
+                    self.draw.text(
+                        (char_x, char_y),
+                        segment['text'],
+                        font=segment['font'],
+                        fill=segment['color']
+                    )
+
+                # 更新y坐标（垂直移动），使用带间距的高度
+                current_y += segment['spaced_height']
+            else:
+                # 水平模式（原有逻辑）
+                # 创建RenderItem并添加到列表
+                render_item = RenderItem(
+                    obj=text_obj,
+                    x=current_x,
+                    y=start_y
+                )
+                render_items.append(render_item)
+
+                # 绘制文本
                 self.draw.text(
                     (current_x, start_y),
                     segment['text'],
@@ -809,24 +895,61 @@ class RichTextRenderer:
                     fill=segment['color']
                 )
 
-            # 更新x坐标
-            current_x += segment['width']
+                # 如果有边框效果
+                if options.has_border:
+                    # 绘制边框效果（描边）
+                    for dx in [-options.border_width, 0, options.border_width]:
+                        for dy in [-options.border_width, 0, options.border_width]:
+                            if dx != 0 or dy != 0:  # 不重复绘制中心点
+                                self.draw.text(
+                                    (current_x + dx, start_y + dy),
+                                    segment['text'],
+                                    font=segment['font'],
+                                    fill=options.border_color
+                                )
+                    # 重新绘制主文本（覆盖边框）
+                    self.draw.text(
+                        (current_x, start_y),
+                        segment['text'],
+                        font=segment['font'],
+                        fill=segment['color']
+                    )
+
+                # 更新x坐标
+                current_x += segment['width']
 
         # 如果有下划线效果，在所有文本绘制完成后绘制整条下划线
         if options.has_underline:
-            underline_y = start_y + max_height + 2
-            y_offset = 12
-            self.draw.line(
-                (start_x, underline_y + y_offset, start_x + total_width, underline_y + y_offset),
-                fill=options.font_color,
-                width=1
-            )
-            y_offset = 18
-            self.draw.line(
-                (start_x, underline_y + y_offset, start_x + total_width, underline_y + y_offset),
-                fill=options.font_color,
-                width=2
-            )
+            if vertical:
+                # 垂直模式的下划线（实际是侧边线）
+                underline_x = start_x + max_width + 2
+                x_offset = 12
+                self.draw.line(
+                    (underline_x + x_offset, start_y, underline_x + x_offset, start_y + total_height),
+                    fill=options.font_color,
+                    width=1
+                )
+                x_offset = 18
+                self.draw.line(
+                    (underline_x + x_offset, start_y, underline_x + x_offset, start_y + total_height),
+                    fill=options.font_color,
+                    width=2
+                )
+            else:
+                # 水平模式的下划线
+                underline_y = start_y + max_height + 2
+                y_offset = 12
+                self.draw.line(
+                    (start_x, underline_y + y_offset, start_x + total_width, underline_y + y_offset),
+                    fill=options.font_color,
+                    width=1
+                )
+                y_offset = 18
+                self.draw.line(
+                    (start_x, underline_y + y_offset, start_x + total_width, underline_y + y_offset),
+                    fill=options.font_color,
+                    width=2
+                )
 
         return render_items
 

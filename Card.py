@@ -307,7 +307,8 @@ class Card:
             has_border=False,
             border_width=1,
             border_color=(0, 0, 0),
-            underline=False
+            underline=False,
+            vertical=False,
     ):
         """
         在指定位置居中绘制文字，可选外边框
@@ -321,6 +322,7 @@ class Card:
         :param border_width: 边框粗细
         :param border_color: 边框颜色
         :param underline: 是否添加下划线
+        :param vertical:垂直文本
         """
         if self.font_manager.silence:
             return
@@ -338,6 +340,7 @@ class Card:
                 border_width=border_width,
                 has_underline=underline
             ),
+            vertical=vertical
         ))
         pass
 

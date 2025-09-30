@@ -1309,10 +1309,14 @@ class CardCreator:
         card.draw_centered_text((96, 68), small_words, "卡牌类型字体", 28, (0, 0, 0))
 
         # 写标题
-        title = Card(450, 100, self.font_manager, self.image_manager)
-        title.draw_centered_text((225, 50), data['name'], "标题字体", 48, (0, 0, 0))
-        title_img = title.image.rotate(90, expand=True)
-        card.paste_image(title_img, (40, 208), 'cover')
+        if self.font_manager.lang == 'zh':
+            card.draw_centered_text((98, 422), data['name'], "标题字体", 48, (0, 0, 0), vertical=True)
+            pass
+        else:
+            title = Card(450, 100, self.font_manager, self.image_manager)
+            title.draw_centered_text((225, 50), data['name'], "标题字体", 48, (0, 0, 0))
+            title_img = title.image.rotate(90, expand=True)
+            card.paste_image(title_img, (40, 208), 'cover')
 
         # 写正文
         body = self._tidy_body_flavor(data['body'], data['flavor'], flavor_type=1, align='left', quote=True)
@@ -1538,8 +1542,9 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "支援卡",
-        "name": "<独特>伟大之人",
+        "type": "场景卡",
+        "is_back": True,
+        "name": "伟大之人",
         "id": "",
         "created_at": "",
         "version": "1.0",
@@ -1589,7 +1594,7 @@ if __name__ == '__main__':
     profiler = cProfile.Profile()
     profiler.enable()
 
-    fm.set_lang('en')
+    fm.set_lang('zh')
     card = creator.create_card(json_data, picture_path=json_data.get('picture_path', None))
 
     profiler.disable()
