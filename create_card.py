@@ -1308,12 +1308,15 @@ class CardCreator:
         small_words += data.get('serial_number', '')
         card.draw_centered_text((96, 68), small_words, "卡牌类型字体", 28, (0, 0, 0))
 
-        # 写标题
-        title = Card(450, 100, self.font_manager, self.image_manager)
-        title.draw_centered_text((225, 50), data['name'], "标题字体", 48, (0, 0, 0))
-        title_img = title.image.rotate(90, expand=True)
-        card.paste_image(title_img, (40, 208), 'cover')
+        # 写标题 原横排文本，可以加选项
+        # title = Card(450, 100, self.font_manager, self.image_manager)
+        # title.draw_centered_text((225, 50), data['name'], "标题字体", 48, (0, 0, 0))
+        # title_img = title.image.rotate(90, expand=True)
+        # card.paste_image(title_img, (40, 208), 'cover')
 
+        # 写竖排标题 坐标转置
+        card.draw_centered_text((98,406), data['name'], "标题字体", 48, (0, 0, 0),is_vertical=True)
+       
         # 写正文
         body = self._tidy_body_flavor(data['body'], data['flavor'], flavor_type=1, align='left', quote=True)
         offset = -8

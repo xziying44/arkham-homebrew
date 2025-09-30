@@ -183,6 +183,7 @@ class DrawOptions:
     border_color: str = "#000000"
     border_width: int = 1
     has_underline: bool = False
+    is_vertical:bool = False
 
 
 class RichTextRenderer:
@@ -641,6 +642,14 @@ class RichTextRenderer:
         Returns:
             list[RenderItem]: 渲染项列表，包含绘制的文本对象及其位置信息
         """
+        print(f"绘制文本: {text}")
+        print(f"对齐方式: {alignment}")
+        print(f"字体: {options.font_name}")
+        print(f"大小: {options.font_size}")
+        print(f"颜色: {options.font_color}")
+        print(f"是否垂直: {options.is_vertical}")
+        print(f"position: {position}")
+
         # 预处理文本
         text = self._preprocess_text(text)
 
@@ -661,6 +670,9 @@ class RichTextRenderer:
         render_segments = []  # 存储每个文本片段的渲染信息
         total_width = 0
         max_height = 0
+        total_height = 0 # 用于竖排文本
+        max_width = 0 # 用于竖排文本
+        vertical_space = 0 # 字间距 用于竖排文本
 
         for item in parsed_items:
             if item.tag == "text":
@@ -668,9 +680,10 @@ class RichTextRenderer:
                 font_name = font_stack.get_top_font_name()
                 text_content = item.content
 
-                if item.type == TextType.OTHER:
-                    # 逐字符处理
+                if options.is_vertical:
+                    # 如果是竖排文本，则无论什么类型均逐字符处理
                     for char in text_content:
+                        print(char)
                         text_box = self._get_text_box(char, font)
                         render_segments.append({
                             'text': char,
@@ -680,21 +693,44 @@ class RichTextRenderer:
                             'height': text_box[1],
                             'color': options.font_color
                         })
+                        # 竖排文本 预留间距
+                        print(f"字符: {char}, 宽度: {text_box[0]}, 高度: {text_box[1]}")
+                        total_height += text_box[1]
+                        max_width = max(max_width, text_box[0])  
+                    
+                    vertical_space = total_height * 0.2  // len(text_content)
+                    total_height += vertical_space * (len(text_content) - 1)
+                    # 不同长度的字的间距保持相同
+                    print(f"总高度: {total_height} 间距: {vertical_space}")
+                else:
+                    if item.type == TextType.OTHER:
+                        # 逐字符处理
+                        for char in text_content:
+                            print(char)
+                            text_box = self._get_text_box(char, font)
+                            render_segments.append({
+                                'text': char,
+                                'font': font,
+                                'font_name': font_name,
+                                'width': text_box[0],
+                                'height': text_box[1],
+                                'color': options.font_color
+                            })
+                            total_width += text_box[0]
+                            max_height = max(max_height, text_box[1])                         
+                    else:
+                        # 整块文本处理
+                        text_box = self._get_text_box(text_content, font)
+                        render_segments.append({
+                            'text': text_content,
+                            'font': font,
+                            'font_name': font_name,
+                            'width': text_box[0],
+                            'height': text_box[1],
+                            'color': options.font_color
+                        })
                         total_width += text_box[0]
                         max_height = max(max_height, text_box[1])
-                else:
-                    # 整块文本处理
-                    text_box = self._get_text_box(text_content, font)
-                    render_segments.append({
-                        'text': text_content,
-                        'font': font,
-                        'font_name': font_name,
-                        'width': text_box[0],
-                        'height': text_box[1],
-                        'color': options.font_color
-                    })
-                    total_width += text_box[0]
-                    max_height = max(max_height, text_box[1])
 
             elif item.tag == "font":
                 font_name = item.attributes.get('name', options.font_name)
@@ -749,9 +785,23 @@ class RichTextRenderer:
             start_x = x
             start_y = y
         # print("绘制文本:", text, "位置:", start_x, start_y)
+        if options.is_vertical:
+            if alignment == TextAlignment.CENTER:
+                # 中心对齐：position是文本中心点
+                start_x = x - max_width // 2
+                start_y = y - total_height // 2
+            elif alignment == TextAlignment.LEFT:
+                # 左对齐=>相当于顶部对齐：position是中上
+                start_x = x - max_width // 2
+                start_y = y
+            elif alignment == TextAlignment.RIGHT:
+                # 右对齐=>相当于底部对齐：position是中下
+                start_x = x - max_width // 2
+                start_y = y - total_height
 
         # 第二遍：实际绘制文本，同时创建RenderItem列表
         current_x = start_x
+        current_y = start_y
         render_items = []  # 用于存储RenderItem对象
         border_width = 0
         border_color = None
@@ -777,17 +827,18 @@ class RichTextRenderer:
             render_item = RenderItem(
                 obj=text_obj,
                 x=current_x,
-                y=start_y
+                y=current_y
             )
             render_items.append(render_item)
 
             # 绘制文本
             self.draw.text(
-                (current_x, start_y),
+                (current_x, current_y),
                 segment['text'],
                 font=segment['font'],
                 fill=segment['color']
             )
+            #print(f"绘制文本: {segment['text']}, 位置: ({current_x}, {current_y})")
 
             # 如果有边框效果
             if options.has_border:
@@ -796,21 +847,24 @@ class RichTextRenderer:
                     for dy in [-options.border_width, 0, options.border_width]:
                         if dx != 0 or dy != 0:  # 不重复绘制中心点
                             self.draw.text(
-                                (current_x + dx, start_y + dy),
+                                (current_x + dx, current_y + dy),
                                 segment['text'],
                                 font=segment['font'],
                                 fill=options.border_color
                             )
                 # 重新绘制主文本（覆盖边框）
                 self.draw.text(
-                    (current_x, start_y),
+                    (current_x, current_y),
                     segment['text'],
                     font=segment['font'],
                     fill=segment['color']
                 )
 
-            # 更新x坐标
-            current_x += segment['width']
+            # 更新x坐标（横排） 更新y坐标（竖排） 
+            if options.is_vertical:
+                current_y += segment['height'] + vertical_space
+            else:
+                current_x += segment['width']
 
         # 如果有下划线效果，在所有文本绘制完成后绘制整条下划线
         if options.has_underline:
