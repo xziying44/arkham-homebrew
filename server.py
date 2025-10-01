@@ -752,7 +752,9 @@ def get_config():
     """获取配置项"""
     try:
         if current_workspace is None:
-            config = WorkspaceManager.get_global_config()
+            # 创建临时WorkspaceManager实例来获取全局配置
+            temp_workspace = WorkspaceManager(os.getcwd())
+            config = temp_workspace.get_global_config()
         else:
             config = current_workspace.get_config()
         return jsonify(create_response(
@@ -779,7 +781,9 @@ def save_config():
 
         config = data['config']
         if current_workspace is None:
-            success = WorkspaceManager.save_global_config(config)
+            # 创建临时WorkspaceManager实例来保存全局配置
+            temp_workspace = WorkspaceManager(os.getcwd())
+            success = temp_workspace.save_global_config(config)
         else:
             success = current_workspace.save_config(config)
 

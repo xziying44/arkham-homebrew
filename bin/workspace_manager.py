@@ -27,6 +27,24 @@ except ImportError:
 
 class WorkspaceManager:
     """工作空间管理类，负责文件和目录操作"""
+    
+    # 系统配置字段定义 - 这些字段会保存到全局配置文件中
+    SYSTEM_CONFIG_FIELDS = [
+        "github_token",      # GitHub访问令牌
+        "github_repo",       # GitHub仓库名
+        "github_branch",     # GitHub分支名
+        "github_folder",     # GitHub文件夹
+        "language",          # 界面语言
+        # 可以在这里添加更多系统级配置字段
+    ]
+    
+    # 工作空间配置字段定义 - 这些字段会保存到工作空间的config.json中
+    WORKSPACE_CONFIG_FIELDS = [
+        "encounter_groups_dir",     # 遭遇组目录
+        "footer_copyright",         # 页脚版权信息
+        "footer_icon_dir",          # 页脚图标目录
+        # 可以在这里添加更多工作空间级配置字段
+    ]
 
     def __init__(self, workspace_path: str):
         if not os.path.exists(workspace_path):
@@ -601,130 +619,162 @@ class WorkspaceManager:
             return os.path.join(sys._MEIPASS, "global_config.json")
         return os.path.join(os.path.abspath("."), "global_config.json")
 
+    def _get_default_global_config(self) -> Dict[str, Any]:
+        """获取默认全局配置"""
+        config = {}
+        for field in self.SYSTEM_CONFIG_FIELDS:
+            if field == "github_branch":
+                config[field] = "main"
+            elif field == "github_folder":
+                config[field] = "images"
+            elif field == "language":
+                config[field] = "zh"
+            else:
+                config[field] = ""
+        return config
+
+    def _get_default_workspace_config(self) -> Dict[str, Any]:
+        """获取默认工作空间配置"""
+        config = {}
+        for field in self.WORKSPACE_CONFIG_FIELDS:
+            if field == "encounter_groups_dir":
+                config[field] = "encounter_groups"
+            else:
+                config[field] = ""
+        return config
+
+    def _load_config_file(self, file_path: str) -> Dict[str, Any]:
+        """加载配置文件"""
+        try:
+            if os.path.exists(file_path):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            else:
+                return {}
+        except Exception as e:
+            print(f"加载配置文件失败 {file_path}: {e}")
+            return {}
+
+    def _save_config_file(self, file_path: str, config: Dict[str, Any]) -> bool:
+        """保存配置文件"""
+        try:
+            # 确保目录存在
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(config, f, ensure_ascii=False, indent=2)
+            return True
+        except Exception as e:
+            print(f"保存配置文件失败 {file_path}: {e}")
+            return False
+
+    def _filter_config_by_fields(self, config: Dict[str, Any], fields: List[str]) -> Dict[str, Any]:
+        """根据字段列表过滤配置"""
+        return {key: value for key, value in config.items() if key in fields}
+
+    def get_global_config(self) -> Dict[str, Any]:
+        """获取全局配置"""
+        try:
+            global_config_path = self._get_global_config_path()
+            loaded_config = self._load_config_file(global_config_path)
+            
+            # 合并默认配置和加载的配置
+            default_config = self._get_default_global_config()
+            default_config.update(loaded_config)
+            
+            return default_config
+        except Exception as e:
+            print(f"获取全局配置失败: {e}")
+            return self._get_default_global_config()
+
+    def save_global_config(self, global_config: Dict[str, Any]) -> bool:
+        """保存全局配置"""
+        try:
+            # 只保存系统配置字段
+            filtered_config = self._filter_config_by_fields(global_config, self.SYSTEM_CONFIG_FIELDS)
+            
+            global_config_path = self._get_global_config_path()
+            return self._save_config_file(global_config_path, filtered_config)
+        except Exception as e:
+            print(f"保存全局配置失败: {e}")
+            return False
+
+    def get_workspace_config(self) -> Dict[str, Any]:
+        """获取工作空间配置"""
+        try:
+            config_path = os.path.join(self.workspace_path, 'config.json')
+            loaded_config = self._load_config_file(config_path)
+            
+            # 合并默认配置和加载的配置
+            default_config = self._get_default_workspace_config()
+            default_config.update(loaded_config)
+            
+            return default_config
+        except Exception as e:
+            print(f"获取工作空间配置失败: {e}")
+            return self._get_default_workspace_config()
+
+    def save_workspace_config(self, workspace_config: Dict[str, Any]) -> bool:
+        """保存工作空间配置"""
+        try:
+            # 只保存工作空间配置字段
+            filtered_config = self._filter_config_by_fields(workspace_config, self.WORKSPACE_CONFIG_FIELDS)
+            
+            config_path = os.path.join(self.workspace_path, 'config.json')
+            return self._save_config_file(config_path, filtered_config)
+        except Exception as e:
+            print(f"保存工作空间配置失败: {e}")
+            return False
+
     def get_github_config(self) -> Dict[str, Any]:
         """获取GitHub配置"""
         global_config = self.get_global_config()
-        return {
-            "github_token": global_config.get("github_token", ""),
-            "github_repo": global_config.get("github_repo", ""),
-            "github_branch": global_config.get("github_branch", "main"),
-            "github_folder": global_config.get("github_folder", "images")
-        }
+        github_fields = ["github_token", "github_repo", "github_branch", "github_folder"]
+        return self._filter_config_by_fields(global_config, github_fields)
 
     def save_github_config(self, github_config: Dict[str, Any]) -> bool:
         """保存GitHub配置"""
         try:
             # 读取现有全局配置
             existing_global_config = self.get_global_config()
-
+            
             # 更新GitHub相关配置
-            github_keys = ["github_token", "github_repo", "github_branch", "github_folder"]
-            for key in github_keys:
+            github_fields = ["github_token", "github_repo", "github_branch", "github_folder"]
+            for key in github_fields:
                 if key in github_config:
                     existing_global_config[key] = github_config[key]
-
+            
             # 保存全局配置
             return self.save_global_config(existing_global_config)
         except Exception as e:
             print(f"保存GitHub配置失败: {e}")
             return False
 
-    @staticmethod
-    def get_global_config() -> Dict[str, Any]:
-        """获取全局配置（更新默认配置）"""
-        try:
-            global_config_path = WorkspaceManager._get_global_config_path()
-            if os.path.exists(global_config_path):
-                with open(global_config_path, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            else:
-                # 返回默认全局配置（包含GitHub配置）
-                return {
-                    "github_token": "",
-                    "github_repo": "",
-                    "github_branch": "main",
-                    "github_folder": "images",
-                    "language": "zh"
-                }
-        except Exception as e:
-            print(f"读取全局配置文件失败: {e}")
-            return {
-                "github_token": "",
-                "github_repo": "",
-                "github_branch": "main",
-                "github_folder": "images",
-                "language": "zh"
-            }
-
-    @staticmethod
-    def save_global_config(global_config: Dict[str, Any]) -> bool:
-        """保存全局配置"""
-        try:
-            global_config_path = WorkspaceManager._get_global_config_path()
-            with open(global_config_path, 'w', encoding='utf-8') as f:
-                json.dump(global_config, f, ensure_ascii=False, indent=2)
-            return True
-        except Exception as e:
-            print(f"保存全局配置文件失败: {e}")
-            return False
-
     def get_config(self) -> Dict[str, Any]:
         """获取配置项（合并全局配置和工作目录配置）"""
         try:
-            # 读取工作目录配置
-            workspace_config = {}
-            config_path = os.path.join(self.workspace_path, 'config.json')
-            if os.path.exists(config_path):
-                with open(config_path, 'r', encoding='utf-8') as f:
-                    workspace_config = json.load(f)
-
-            # 读取全局配置
+            # 获取全局配置和工作空间配置
             global_config = self.get_global_config()
+            workspace_config = self.get_workspace_config()
 
-            # 合并配置，全局配置的GitHub相关配置优先
-            combined_config = workspace_config.copy()
-            combined_config.update({
-                "github_token": global_config.get("github_token", ""),
-                "github_repo": global_config.get("github_repo", ""),
-                "github_branch": global_config.get("github_branch", "main"),
-                "github_folder": global_config.get("github_folder", "images"),
-                "language": global_config.get("language", "zh")
-            })
+            # 合并配置，工作空间配置优先
+            combined_config = global_config.copy()
+            combined_config.update(workspace_config)
 
             return combined_config
 
         except Exception as e:
             print(f"读取配置文件失败: {e}")
             # 返回默认配置
-            return {
-                "github_token": "",
-                "github_repo": "",
-                "github_branch": "main",
-                "github_folder": "images",
-                "language": "zh"
-            }
+            default_config = self._get_default_global_config()
+            default_config.update(self._get_default_workspace_config())
+            return default_config
 
     def save_config(self, config: Dict[str, Any]) -> bool:
         """保存配置项（分别保存全局配置和工作目录配置）"""
         try:
-            # GitHub相关配置项列表
-            global_config_keys = [
-                "github_token",
-                "github_repo",
-                "github_branch",
-                "github_folder",
-                "language"
-            ]
-
-            # 分离全局配置和工作目录配置
-            global_config = {}
-            workspace_config = {}
-
-            for key, value in config.items():
-                if key in global_config_keys:
-                    global_config[key] = value
-                else:
-                    workspace_config[key] = value
+            # 分离系统配置和工作空间配置
+            global_config = self._filter_config_by_fields(config, self.SYSTEM_CONFIG_FIELDS)
+            workspace_config = self._filter_config_by_fields(config, self.WORKSPACE_CONFIG_FIELDS)
 
             # 保存全局配置
             if global_config:
@@ -735,11 +785,14 @@ class WorkspaceManager:
                 if not self.save_global_config(existing_global_config):
                     return False
 
-            # 保存工作目录配置
+            # 保存工作空间配置
             if workspace_config:
-                config_path = os.path.join(self.workspace_path, 'config.json')
-                with open(config_path, 'w', encoding='utf-8') as f:
-                    json.dump(workspace_config, f, ensure_ascii=False, indent=2)
+                # 读取现有工作空间配置，然后更新
+                existing_workspace_config = self.get_workspace_config()
+                existing_workspace_config.update(workspace_config)
+
+                if not self.save_workspace_config(existing_workspace_config):
+                    return False
 
             # 更新内存中的配置
             self.config = self.get_config()
