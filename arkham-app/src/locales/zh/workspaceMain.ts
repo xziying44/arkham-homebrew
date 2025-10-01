@@ -30,6 +30,8 @@ export default {
       newCard: '新建卡牌',
       quickExport: '快速导出',      // 新增
       advancedExport: '高级导出',   // 新增
+      copy: '复制',
+      paste: '粘贴',
       rename: '重命名',
       delete: '删除'
     },
@@ -239,7 +241,14 @@ export default {
       renameFailedRetry: '重命名失败，请重试',
       deleteSuccess: '删除成功',
       deleteFailed: '删除失败',
-      deleteFailedRetry: '删除失败，请重试'
+      deleteFailedRetry: '删除失败，请重试',
+      copySuccess: '文件复制成功',
+      copyFailed: '复制失败，只能复制卡牌文件',
+      pasteSuccess: '文件粘贴成功',
+      pasteFailed: '粘贴失败',
+      pasteNoContent: '剪贴板中没有可粘贴的内容',
+      pasteInvalidTarget: '只能在目录中粘贴文件',
+      pasteFileExists: '文件已存在，无法粘贴'
     }
   },
   imagePreview: {

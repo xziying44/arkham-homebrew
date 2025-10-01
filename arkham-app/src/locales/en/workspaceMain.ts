@@ -31,6 +31,8 @@ export default {
       newCard: 'New Card',
       quickExport: 'Quick Export',        // 新增
       advancedExport: 'Advanced Export',  // 新增
+      copy: 'Copy',
+      paste: 'Paste',
       rename: 'Rename',
       delete: 'Delete'
     },
@@ -242,7 +244,14 @@ export default {
       renameFailedRetry: 'Failed to rename, please try again',
       deleteSuccess: 'Deleted successfully',
       deleteFailed: 'Failed to delete',
-      deleteFailedRetry: 'Failed to delete, please try again'
+      deleteFailedRetry: 'Failed to delete, please try again',
+      copySuccess: 'File copied successfully',
+      copyFailed: 'Copy failed, only card files can be copied',
+      pasteSuccess: 'File pasted successfully',
+      pasteFailed: 'Paste failed',
+      pasteNoContent: 'No content to paste in clipboard',
+      pasteInvalidTarget: 'Files can only be pasted in directories',
+      pasteFileExists: 'File already exists, cannot paste'
     }
   },
   imagePreview: {

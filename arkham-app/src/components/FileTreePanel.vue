@@ -453,6 +453,9 @@ const creating = ref(false);
 const renaming = ref(false);
 const deleting = ref(false);
 
+// 复制粘贴相关状态
+const copiedFile = ref<{ path: string; name: string; content: string } | null>(null);
+
 // 批量导出相关状态（快速导出）
 const showBatchExportDialog = ref(false);
 const batchExporting = ref(false);
@@ -698,10 +701,25 @@ const contextMenuOptions = computed(() => {
       key: 'advanced-export',
       icon: () => h(NIcon, { component: SettingsOutline })
     });
+
+    // 为目录添加粘贴选项（如果有复制的内容）
+    if (copiedFile.value && (isDirectory || isWorkspace)) {
+      options.push({
+        label: t('workspaceMain.fileTree.contextMenu.paste'),
+        key: 'paste',
+        icon: () => h(NIcon, { component: DocumentOutline })
+      });
+    }
   }
 
-  // 为单个card文件添加高级导出选项
+  // 为单个card文件添加复制和高级导出选项
   if (isCard) {
+    options.push({
+      label: t('workspaceMain.fileTree.contextMenu.copy'),
+      key: 'copy',
+      icon: () => h(NIcon, { component: DocumentOutline })
+    });
+
     options.push({
       label: t('workspaceMain.fileTree.contextMenu.advancedExport'),
       key: 'advanced-export',
@@ -980,6 +998,12 @@ const handleContextMenuSelect = (key: string) => {
       break;
     case 'advanced-export':
       startAdvancedExportProcess();
+      break;
+    case 'copy':
+      handleCopy();
+      break;
+    case 'paste':
+      handlePaste();
       break;
     case 'rename':
       const currentName = contextMenuTarget.value?.label as string || '';
@@ -1578,6 +1602,117 @@ const addAdvancedExportLog = (type: 'success' | 'error' | 'warning' | 'info', me
     type: type === 'info' ? 'success' : type,
     message: `[${new Date().toLocaleTimeString()}] ${message}`
   });
+};
+
+// 处理复制功能
+const handleCopy = async () => {
+  if (!contextMenuTarget.value || contextMenuTarget.value.type !== 'card') {
+    message.error(t('workspaceMain.fileTree.messages.copyFailed'));
+    return;
+  }
+
+  try {
+    const filePath = contextMenuTarget.value.path as string;
+    const fileName = contextMenuTarget.value.label as string;
+    
+    // 读取文件内容
+    const content = await WorkspaceService.getFileContent(filePath);
+    
+    // 保存到剪贴板状态
+    copiedFile.value = {
+      path: filePath,
+      name: fileName,
+      content: content || '{}'
+    };
+    
+    message.success(t('workspaceMain.fileTree.messages.copySuccess'));
+  } catch (error) {
+    console.error('复制文件失败:', error);
+    message.error(t('workspaceMain.fileTree.messages.copyFailed'));
+  }
+};
+
+// 处理粘贴功能
+const handlePaste = async () => {
+  if (!copiedFile.value) {
+    message.error(t('workspaceMain.fileTree.messages.pasteNoContent'));
+    return;
+  }
+
+  if (!contextMenuTarget.value) {
+    message.error(t('workspaceMain.fileTree.messages.pasteInvalidTarget'));
+    return;
+  }
+
+  const isDirectory = contextMenuTarget.value.type === 'directory' || contextMenuTarget.value.type === 'workspace';
+  if (!isDirectory) {
+    message.error(t('workspaceMain.fileTree.messages.pasteInvalidTarget'));
+    return;
+  }
+
+  try {
+    const parentPath = contextMenuTarget.value.path;
+    const originalName = copiedFile.value.name;
+    
+    // 生成新的文件名（避免重复）
+    const newName = generateUniqueFileName(originalName, parentPath);
+    
+    // 创建新文件
+    await WorkspaceService.createFile(newName, copiedFile.value.content, parentPath);
+    
+    // 构建新节点路径
+    const newPath = parentPath ? `${parentPath}/${newName}` : newName;
+    
+    // 直接在文件树中添加新节点
+    const newNode: TreeOption = {
+      label: newName,
+      key: newPath,
+      type: 'card',
+      path: newPath
+    };
+    
+    addNodeToTree(fileTreeData.value, parentPath, newNode);
+    
+    message.success(t('workspaceMain.fileTree.messages.pasteSuccess'));
+  } catch (error) {
+    console.error('粘贴文件失败:', error);
+    message.error(t('workspaceMain.fileTree.messages.pasteFailed'));
+  }
+};
+
+// 生成唯一文件名（避免重复）
+const generateUniqueFileName = (originalName: string, parentPath?: string): string => {
+  // 检查目标目录中是否已存在同名文件
+  const checkIfFileExists = (fileName: string): boolean => {
+    const targetNode = findNodeByPath(fileTreeData.value, parentPath || '');
+    if (!targetNode || !targetNode.children) return false;
+    
+    return targetNode.children.some(child => 
+      child.label === fileName && child.type === 'card'
+    );
+  };
+  
+  // 如果文件不存在，直接返回原名
+  if (!checkIfFileExists(originalName)) {
+    return originalName;
+  }
+  
+  // 解析文件名和扩展名
+  const parsed = parseFileName(originalName);
+  let counter = 1;
+  
+  // 生成新的文件名，直到找到不重复的
+  let newName: string;
+  do {
+    if (parsed.extension) {
+      newName = `${parsed.filename}_copy${counter}.${parsed.extension}`;
+    } else {
+      newName = `${parsed.filename}_copy${counter}`;
+    }
+    counter++;
+  } while (checkIfFileExists(newName));
+  
+  return newName;
 };
 
 // 组件挂载时加载数据
