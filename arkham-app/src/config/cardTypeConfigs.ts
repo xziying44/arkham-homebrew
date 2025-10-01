@@ -1118,10 +1118,6 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       },
       {
         key: 'serial_number',
-        showCondition: {
-          field: 'is_back',
-          value: false
-        },
         name: '🔢 密谋编号',
         type: 'text',
         layout: 'half',
@@ -1239,10 +1235,6 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       },
       {
         key: 'serial_number',
-        showCondition: {
-          field: 'is_back',
-          value: false
-        },
         name: '🔢 场景编号',
         type: 'text',
         layout: 'half',
