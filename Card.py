@@ -1071,7 +1071,6 @@ class Card:
         :param footer_icon_font:
         :return:
         """
-        print(self.card_type)
         if self.card_type in ['密谋卡', '场景卡', '调查员卡'] and self.is_back:
             return
         if self.card_type == '升级卡':
@@ -1154,7 +1153,7 @@ class Card:
             self.draw_centered_text(
                 position=(pos_right_encounter_group_number[0], pos_right_encounter_group_number[1] + 9),
                 text=encounter_text,
-                font_name='A收藏信息字体',
+                font_name='收藏信息字体',
                 font_size=20,
                 font_color=font_color
             )
