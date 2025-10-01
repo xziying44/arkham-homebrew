@@ -47,26 +47,6 @@ export enum ErrorCode {
   CONFIG_SAVE_ERROR = 6003,
   CONFIG_SAVE_DETAILED_ERROR = 6004,
   ENCOUNTER_GROUPS_ERROR = 6005,
-  // OpenAI生成相关错误 (7001-7999)
-  OPENAI_MISSING_CONTENT = 7001,
-  OPENAI_PROMPT_FILE_ERROR = 7002,
-  OPENAI_API_KEY_MISSING = 7003,
-  OPENAI_CLIENT_ERROR = 7004,
-  OPENAI_GENERATE_FAILED = 7005,
-  OPENAI_JSON_TEXT_MISSING = 7006,
-  OPENAI_JSON_FORMAT_ERROR = 7007,
-  OPENAI_AI_ERROR = 7008,
-  OPENAI_MISSING_REQUIRED_FIELDS = 7009,
-  OPENAI_PARSE_FAILED = 7010,
-  OPENAI_NONSTREAM_MISSING_CONTENT = 7011,
-  OPENAI_NONSTREAM_PROMPT_FILE_ERROR = 7012,
-  OPENAI_NONSTREAM_API_KEY_MISSING = 7013,
-  OPENAI_NONSTREAM_CLIENT_ERROR = 7014,
-  OPENAI_API_CALL_FAILED = 7015,
-  OPENAI_PARSE_AI_JSON_FAILED = 7016,
-  OPENAI_NONSTREAM_AI_ERROR = 7017,
-  OPENAI_GENERATED_JSON_MISSING_FIELDS = 7018,
-  OPENAI_GENERATE_AND_PARSE_FAILED = 7019,
 }
 
 // 目录选择响应数据类型
@@ -270,37 +250,7 @@ export type SaveConfigResponse = BaseResponse<null>;
 export type EncounterGroupsResponse = BaseResponse<EncounterGroupsData>;
 
 
-// OpenAI卡牌生成相关类型定义
-// 流式生成卡牌JSON信息请求类型
-export interface GenerateCardInfoStreamRequest {
-  content: string;
-}
-// 流式数据块类型
-export interface StreamDataChunk {
-  content?: string;
-  done?: boolean;
-  error?: string;
-}
-// 解析卡牌JSON请求类型
-export interface ParseCardJsonRequest {
-  json_text: string;
-}
-// 解析卡牌JSON响应数据类型
-export interface ParseCardJsonData {
-  card_json: CardData;
-}
-// 生成并解析卡牌请求类型
-export interface GenerateAndParseCardRequest {
-  content: string;
-}
-// 生成并解析卡牌响应数据类型
-export interface GenerateAndParseCardData {
-  card_json: CardData;
-  raw_response: string;
-}
-// OpenAI相关API响应类型
-export type ParseCardJsonResponse = BaseResponse<ParseCardJsonData>;
-export type GenerateAndParseCardResponse = BaseResponse<GenerateAndParseCardData>;
+// OpenAI卡牌生成相关类型定义已移除
 
 
 // TTS导出相关类型定义

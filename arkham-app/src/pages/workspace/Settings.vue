@@ -10,28 +10,6 @@
       </div>
 
       <div v-else class="settings-sections">
-        <!-- AI设置 -->
-        <div class="settings-section">
-          <h3>{{ $t('settings.sections.ai.title') }}</h3>
-          <div class="setting-item">
-            <label>{{ $t('settings.sections.ai.endpoint') }}</label>
-            <input v-model="config.ai_endpoint" type="text" placeholder="https://api.deepseek.com/v1" />
-          </div>
-          <div class="setting-item">
-            <label>{{ $t('settings.sections.ai.model') }}</label>
-            <input v-model="config.ai_model" type="text" placeholder="deepseek-chat" />
-          </div>
-          <div class="setting-item">
-            <label>{{ $t('settings.sections.ai.apiKey') }}</label>
-            <input v-model="config.ai_api_key" type="password" :placeholder="$t('settings.sections.ai.apiKey')" />
-          </div>
-          <div class="setting-item">
-            <label>{{ $t('settings.sections.ai.enableInEditor') }}</label>
-            <input v-model="config.ai_enabled_in_editor" type="checkbox" />
-            <span class="setting-description">{{ $t('settings.sections.ai.enableInEditorDesc') }}</span>
-          </div>
-        </div>
-
         <!-- GitHub图床设置 -->
         <div class="settings-section">
           <h3>{{ $t('settings.sections.github.title') }}</h3>
@@ -214,10 +192,6 @@ const githubRepositories = ref<GitHubRepository[]>([]);
 
 // 配置数据
 const config = reactive<ConfigData>({
-  ai_endpoint: '',
-  ai_model: '',
-  ai_api_key: '',
-  ai_enabled_in_editor: false,
   encounter_groups_dir: '',
   footer_icon_dir: '',
   footer_copyright: '',
@@ -291,10 +265,6 @@ const loadSettings = async () => {
 
     // 合并配置数据
     Object.assign(config, {
-      ai_endpoint: configData.ai_endpoint || '',
-      ai_model: configData.ai_model || 'deepseek-chat',
-      ai_api_key: configData.ai_api_key || '',
-      ai_enabled_in_editor: configData.ai_enabled_in_editor || false,
       encounter_groups_dir: configData.encounter_groups_dir || '',
       footer_icon_dir: configData.footer_icon_dir || '',
       footer_copyright: configData.footer_copyright || '© 2025 DIY',
@@ -523,13 +493,6 @@ const saveSettings = async () => {
   successMessage.value = '';
 
   try {
-    // 验证必填项
-    if (config.ai_enabled_in_editor) {
-      if (!config.ai_endpoint || !config.ai_api_key) {
-        throw new Error(t('settings.messages.aiConfigRequired'));
-      }
-    }
-
     // 合并所有配置
     const configToSave = {
       ...config,
@@ -572,10 +535,6 @@ const resetSettings = () => {
  */
 const resetToDefaults = () => {
   Object.assign(config, {
-    ai_endpoint: 'https://api.deepseek.com/v1',
-    ai_model: 'deepseek-chat',
-    ai_api_key: '',
-    ai_enabled_in_editor: false,
     encounter_groups_dir: '',
     footer_icon_dir: '',
     footer_copyright: '© 2025 DIY',
