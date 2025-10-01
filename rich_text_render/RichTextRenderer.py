@@ -679,7 +679,7 @@ class RichTextRenderer:
                 font_name = font_stack.get_top_font_name()
                 text_content = item.content
 
-                if item.type == TextType.OTHER:
+                if item.type == TextType.OTHER  or (vertical & (item.type == TextType.ENGLISH)):
                     # 逐字符处理
                     for char in text_content:
                         text_box = self._get_text_box(char, font)
