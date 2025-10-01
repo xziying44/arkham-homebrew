@@ -8,6 +8,7 @@ export default {
     addItem: 'Add',
     viewFieldDescription: 'View field description',
     fieldDescription: 'Field Description',
+    help: 'Help',
     close: 'Close',
     delete: 'Delete',
     clickOrDragToUpload: 'Click or drag image to this area to upload',

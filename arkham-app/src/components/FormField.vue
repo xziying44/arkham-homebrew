@@ -4,11 +4,12 @@
     <template #label>
       <div class="field-label">
         <span>{{ field.name }}</span>
-        <n-button v-if="field.helpText" size="tiny" quaternary circle @click="showHelpModal = true" class="help-button"
+        <n-button v-if="field.helpText" size="tiny" @click="showHelpModal = true" class="help-button"
           :title="$t('cardEditor.field.viewFieldDescription')">
           <template #icon>
             <n-icon :component="HelpCircleOutline" size="14" />
           </template>
+          {{ $t('cardEditor.field.help') }}
         </n-button>
       </div>
     </template>
@@ -21,11 +22,12 @@
     <template #label>
       <div class="field-label">
         <span>{{ field.name }}</span>
-        <n-button v-if="field.helpText" size="tiny" quaternary circle @click="showHelpModal = true" class="help-button"
+        <n-button v-if="field.helpText" size="tiny" @click="showHelpModal = true" class="help-button"
           :title="$t('cardEditor.field.viewFieldDescription')">
           <template #icon>
             <n-icon :component="HelpCircleOutline" size="14" />
           </template>
+          {{ $t('cardEditor.field.help') }}
         </n-button>
       </div>
     </template>
@@ -39,11 +41,12 @@
     <template #label>
       <div class="field-label">
         <span>{{ field.name }}</span>
-        <n-button v-if="field.helpText" size="tiny" quaternary circle @click="showHelpModal = true" class="help-button"
+        <n-button v-if="field.helpText" size="tiny" @click="showHelpModal = true" class="help-button"
           :title="$t('cardEditor.field.viewFieldDescription')">
           <template #icon>
             <n-icon :component="HelpCircleOutline" size="14" />
           </template>
+          {{ $t('cardEditor.field.help') }}
         </n-button>
       </div>
     </template>
@@ -56,11 +59,12 @@
     <template #label>
       <div class="field-label">
         <span>{{ field.name }}</span>
-        <n-button v-if="field.helpText" size="tiny" quaternary circle @click="showHelpModal = true" class="help-button"
+        <n-button v-if="field.helpText" size="tiny" @click="showHelpModal = true" class="help-button"
           :title="$t('cardEditor.field.viewFieldDescription')">
           <template #icon>
             <n-icon :component="HelpCircleOutline" size="14" />
           </template>
+          {{ $t('cardEditor.field.help') }}
         </n-button>
       </div>
     </template>
@@ -73,11 +77,12 @@
     <template #label>
       <div class="field-label">
         <span>{{ field.name }}</span>
-        <n-button v-if="field.helpText" size="tiny" quaternary circle @click="showHelpModal = true" class="help-button"
+        <n-button v-if="field.helpText" size="tiny" @click="showHelpModal = true" class="help-button"
           :title="$t('cardEditor.field.viewFieldDescription')">
           <template #icon>
             <n-icon :component="HelpCircleOutline" size="14" />
           </template>
+          {{ $t('cardEditor.field.help') }}
         </n-button>
       </div>
     </template>
@@ -98,11 +103,12 @@
     <template #label>
       <div class="field-label">
         <span>{{ field.name }}</span>
-        <n-button v-if="field.helpText" size="tiny" quaternary circle @click="showHelpModal = true" class="help-button"
+        <n-button v-if="field.helpText" size="tiny" @click="showHelpModal = true" class="help-button"
           :title="$t('cardEditor.field.viewFieldDescription')">
           <template #icon>
             <n-icon :component="HelpCircleOutline" size="14" />
           </template>
+          {{ $t('cardEditor.field.help') }}
         </n-button>
       </div>
     </template>
@@ -199,11 +205,12 @@
     <template #label>
       <div class="field-label">
         <span>{{ field.name }}</span>
-        <n-button v-if="field.helpText" size="tiny" quaternary circle @click="showHelpModal = true" class="help-button"
+        <n-button v-if="field.helpText" size="tiny" @click="showHelpModal = true" class="help-button"
           :title="$t('cardEditor.field.viewFieldDescription')">
           <template #icon>
             <n-icon :component="HelpCircleOutline" size="14" />
           </template>
+          {{ $t('cardEditor.field.help') }}
         </n-button>
       </div>
     </template>
@@ -217,11 +224,12 @@
     <template #label>
       <div class="field-label">
         <span>{{ field.name }}</span>
-        <n-button v-if="field.helpText" size="tiny" quaternary circle @click="showHelpModal = true" class="help-button"
+        <n-button v-if="field.helpText" size="tiny" @click="showHelpModal = true" class="help-button"
           :title="$t('cardEditor.field.viewFieldDescription')">
           <template #icon>
             <n-icon :component="HelpCircleOutline" size="14" />
           </template>
+          {{ $t('cardEditor.field.help') }}
         </n-button>
       </div>
     </template>
@@ -533,12 +541,27 @@ const handleFileChange = async (data: { file: UploadFileInfo; fileList: UploadFi
 }
 
 .help-button {
-  color: #909399;
-  transition: color 0.2s ease;
+  color: #606266;
+  background: #f4f4f5;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 12px;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 20px;
 }
 
 .help-button:hover {
   color: #409eff;
+  background: #ecf5ff;
+  border-color: #b3d8ff;
+}
+
+.help-button:active {
+  transform: scale(0.95);
 }
 
 /* 帮助文本模态框样式 */

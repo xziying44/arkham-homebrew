@@ -8,6 +8,7 @@ export default {
     addItem: '添加',
     viewFieldDescription: '查看字段说明',
     fieldDescription: '字段说明',
+    help: '帮助',
     close: '关闭',
     delete: '删除',
     clickOrDragToUpload: '点击或者拖拽图片到该区域来上传',

@@ -35,10 +35,10 @@ export interface CardTypeConfig {
 // Help text
 const compoundNumbersTip = `Input format:
 • Number: e.g. 8
-• Variable number: e.g. 2<investigator>
+• Variable number: e.g. 2<调查员>
 • Special values: - / X / ?
 
-Support: numbers, number<investigator>, special symbols (-/X/?).
+Support: numbers, number<调查员>, special symbols (-/X/?).
 `;
 
 const bodyTip = `Input format:
@@ -82,7 +82,7 @@ Special tags:
 Support direct use of emoji or corresponding tag format
 `;
 
-const nameTip = `Support unique marker: 🏅 or <unique>`;
+const nameTip = `Support unique marker: 🏅 or <独特>`;
 
 export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   '支援卡': {
