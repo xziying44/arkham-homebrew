@@ -1098,6 +1098,7 @@ class Card:
         :param footer_icon_font:
         :return:
         """
+        print('footer_copyright',footer_copyright)
         if self.card_type in ['密谋卡', '场景卡', '调查员卡'] and self.is_back:
             return
         if self.card_type == '升级卡':

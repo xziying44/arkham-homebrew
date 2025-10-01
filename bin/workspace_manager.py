@@ -27,22 +27,22 @@ except ImportError:
 
 class WorkspaceManager:
     """工作空间管理类，负责文件和目录操作"""
-    
+
     # 系统配置字段定义 - 这些字段会保存到全局配置文件中
     SYSTEM_CONFIG_FIELDS = [
-        "github_token",      # GitHub访问令牌
-        "github_repo",       # GitHub仓库名
-        "github_branch",     # GitHub分支名
-        "github_folder",     # GitHub文件夹
-        "language",          # 界面语言
+        "github_token",  # GitHub访问令牌
+        "github_repo",  # GitHub仓库名
+        "github_branch",  # GitHub分支名
+        "github_folder",  # GitHub文件夹
+        "language",  # 界面语言
         # 可以在这里添加更多系统级配置字段
     ]
-    
+
     # 工作空间配置字段定义 - 这些字段会保存到工作空间的config.json中
     WORKSPACE_CONFIG_FIELDS = [
-        "encounter_groups_dir",     # 遭遇组目录
-        "footer_copyright",         # 页脚版权信息
-        "footer_icon_dir",          # 页脚图标目录
+        "encounter_groups_dir",  # 遭遇组目录
+        "footer_copyright",  # 页脚版权信息
+        "footer_icon_dir",  # 页脚图标目录
         # 可以在这里添加更多工作空间级配置字段
     ]
 
@@ -535,8 +535,9 @@ class WorkspaceManager:
             if not silence:
                 illustrator = json_data.get('illustrator', '')
                 footer_copyright = json_data.get('footer_copyright', '')
-                if footer_copyright and footer_copyright == '':
+                if (footer_copyright and footer_copyright == '') or not footer_copyright:
                     footer_copyright = self.config.get('footer_copyright', '')
+
                 encounter_group_number = json_data.get('encounter_group_number', '')
                 card_number = json_data.get('card_number', '')
                 footer_icon_name = self.config.get('footer_icon_dir', '')
@@ -676,11 +677,11 @@ class WorkspaceManager:
         try:
             global_config_path = self._get_global_config_path()
             loaded_config = self._load_config_file(global_config_path)
-            
+
             # 合并默认配置和加载的配置
             default_config = self._get_default_global_config()
             default_config.update(loaded_config)
-            
+
             return default_config
         except Exception as e:
             print(f"获取全局配置失败: {e}")
@@ -691,7 +692,7 @@ class WorkspaceManager:
         try:
             # 只保存系统配置字段
             filtered_config = self._filter_config_by_fields(global_config, self.SYSTEM_CONFIG_FIELDS)
-            
+
             global_config_path = self._get_global_config_path()
             return self._save_config_file(global_config_path, filtered_config)
         except Exception as e:
@@ -703,11 +704,11 @@ class WorkspaceManager:
         try:
             config_path = os.path.join(self.workspace_path, 'config.json')
             loaded_config = self._load_config_file(config_path)
-            
+
             # 合并默认配置和加载的配置
             default_config = self._get_default_workspace_config()
             default_config.update(loaded_config)
-            
+
             return default_config
         except Exception as e:
             print(f"获取工作空间配置失败: {e}")
@@ -718,7 +719,7 @@ class WorkspaceManager:
         try:
             # 只保存工作空间配置字段
             filtered_config = self._filter_config_by_fields(workspace_config, self.WORKSPACE_CONFIG_FIELDS)
-            
+
             config_path = os.path.join(self.workspace_path, 'config.json')
             return self._save_config_file(config_path, filtered_config)
         except Exception as e:
@@ -736,13 +737,13 @@ class WorkspaceManager:
         try:
             # 读取现有全局配置
             existing_global_config = self.get_global_config()
-            
+
             # 更新GitHub相关配置
             github_fields = ["github_token", "github_repo", "github_branch", "github_folder"]
             for key in github_fields:
                 if key in github_config:
                     existing_global_config[key] = github_config[key]
-            
+
             # 保存全局配置
             return self.save_global_config(existing_global_config)
         except Exception as e:
