@@ -3,7 +3,7 @@ import re
 import traceback
 from typing import Union
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageChops
 
 from ResourceManager import FontManager, ImageManager
 from rich_text_render.RichTextRenderer import RichTextRenderer, DrawOptions, TextAlignment
@@ -1054,6 +1054,33 @@ class Card:
         # 重新合并通道
         return Image.merge('RGBA', (r, g, b, a))
 
+    def paste_with_multiply_blend(self, overlay_img, position):
+        """
+        使用“正片叠底”混合模式粘贴一个覆盖层图像。
+        这对于实现高质量的半透明黑色蒙版效果非常有用。
+        :param overlay_img: 要粘贴的覆盖层图像 (RGBA)
+        :param position: 粘贴位置的左上角坐标 (x, y)
+        """
+        # 1. 确保覆盖层是 RGBA 模式，以分离其 alpha 通道
+        if overlay_img.mode != 'RGBA':
+            overlay_img = overlay_img.convert('RGBA')
+        # 2. 从主图像上裁剪出将要被覆盖的区域
+        x, y = position
+        w, h = overlay_img.size
+        # base_crop = self.image.crop((x, y, x + w, y + h)) # 如果主图是RGBA会更复杂
+
+        # 为了处理主图可能没有Alpha通道的情况，我们先创建一个副本
+        base_crop_rgb = self.image.convert('RGB').crop((x, y, x + w, y + h))
+        # 3. 将覆盖层的颜色部分（RGB）与裁剪出的背景区域进行“正片叠底”
+        #    注意：multiply 操作只作用于 RGB 通道
+        overlay_rgb = overlay_img.convert('RGB')
+        blended_crop = ImageChops.multiply(base_crop_rgb, overlay_rgb)
+        # 4. 使用覆盖层的 Alpha 通道作为蒙版，将混合后的区域粘贴回主图像
+        #    这里使用 paste 的 mask 参数，它会根据 alpha 值的不同，
+        #    决定在每个像素上显示多少“混合后”的图像，以及保留多少“原始”的图像。
+        #    但由于我们已经处理了背景，所以可以直接粘贴，使用alpha通道作为mask
+        self.image.paste(blended_crop, position, mask=overlay_img.split()[3])
+
     def set_footer_information(self,
                                illustrator: str,
                                footer_copyright: str,
@@ -1091,6 +1118,15 @@ class Card:
         if self.card_type in ['故事卡', '冒险参考卡']:
             left_text = center_text
             center_text = ''
+        # 添加底部信息蒙版
+        if left_text != '' or center_text != '' or encounter_text != '' or right_text != '':
+            if self.card_type == '敌人卡':
+                self.paste_with_multiply_blend(
+                    self.image_manager.get_image('底部信息蒙版_敌人'),
+                    (0, 1000)
+                )
+                pass
+            pass
         # 通用位置点
         card_width, card_height = self.image.size
         pos_left = (40, card_height - 28)
