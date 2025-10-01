@@ -40,6 +40,19 @@ export default {
     addBtn: '➕ Add Token Config',
   },
 
+  // Location Specific Config
+  location: {
+    locationIconLabel: '📍 Location Icon',
+    connectionIconLabel: '🔗 Connection Icons',
+    clueValueLabel: '🔍 Clue Value',
+    originalValueLabel: 'Original Value:',
+    countLabel: 'Count',
+    typeLabel: 'Type',
+    perInvestigator: 'Per Investigator',
+    fixedCount: 'Fixed Count',
+    notSet: 'Not Set',
+  },
+
   // GMNotes Preview Section
   preview: {
     label: '📋 GMNotes Preview',

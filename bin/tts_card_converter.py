@@ -74,6 +74,57 @@ class TTSCardConverter:
             "Type": 0
         }
 
+    def process_location_gm_notes(self, gm_notes: str, front_card_type: str,
+                                 back_card: Optional[Dict[str, Any]] = None) -> str:
+        """
+        处理地点卡的GMNotes字段
+        
+        Args:
+            gm_notes: 正面卡牌的GMNotes
+            front_card_type: 正面卡牌类型
+            back_card: 背面卡牌数据
+            
+        Returns:
+            处理后的GMNotes字符串
+        """
+        try:
+            # 解析正面GMNotes
+            front_gm_data = {}
+            if gm_notes:
+                front_gm_data = json.loads(gm_notes)
+            
+            # 处理正面为地点卡的情况
+            if front_card_type == "地点卡" and front_gm_data.get("type") == "Location":
+                if "location" in front_gm_data:
+                    front_gm_data["locationFront"] = front_gm_data.pop("location")
+                    print(f"正面地点卡：将location字段改为locationFront")
+            
+            # 处理背面为地点卡的情况
+            if back_card:
+                back_card_type = back_card.get("type", "")
+                back_tts_script = back_card.get("tts_script", {})
+                back_gm_notes = back_tts_script.get("GMNotes", "")
+                
+                if back_gm_notes:
+                    back_gm_data = json.loads(back_gm_notes)
+                    
+                    # 如果背面是地点卡
+                    if back_card_type == "地点卡" and back_gm_data.get("type") == "Location":
+                        if "location" in back_gm_data:
+                            # 将背面的location改为locationBack并合并到正面
+                            front_gm_data["locationBack"] = back_gm_data["location"]
+                            print(f"背面地点卡：将location字段改为locationBack并合并到正面")
+            
+            # 返回处理后的JSON字符串
+            return json.dumps(front_gm_data, ensure_ascii=False) if front_gm_data else ""
+            
+        except json.JSONDecodeError as e:
+            print(f"解析GMNotes JSON时出错: {e}")
+            return gm_notes
+        except Exception as e:
+            print(f"处理地点卡GMNotes时出错: {e}")
+            return gm_notes
+
     def create_card_object_from_data(self, card_data: Dict[str, Any], card_id: int,
                                      custom_deck_id: str, face_url: str, back_url: str,
                                      num_width: int, num_height: int,
@@ -98,6 +149,9 @@ class TTSCardConverter:
         if back_card and not lua_script:
             back_script = back_card.get("tts_script", {})
             lua_script = back_script.get("LuaScript", "")
+
+        # 特殊处理地点卡的GMNotes
+        gm_notes = self.process_location_gm_notes(gm_notes, card_type, back_card)
 
         # 判断是否为调查员卡（需要横置）
         is_investigator = card_type in ["调查员", "Investigator"]

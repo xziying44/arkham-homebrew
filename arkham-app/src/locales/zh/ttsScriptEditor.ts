@@ -40,6 +40,19 @@ export default {
     addBtn: '➕ 添加标记配置',
   },
 
+  // 地点卡专用配置
+  location: {
+    locationIconLabel: '📍 地点图标',
+    connectionIconLabel: '🔗 连接地点图标',
+    clueValueLabel: '🔍 线索值',
+    originalValueLabel: '原始值:',
+    countLabel: '数量',
+    typeLabel: '类型',
+    perInvestigator: '每调查员',
+    fixedCount: '固定数量',
+    notSet: '未设置',
+  },
+
   // GMNotes 预览部分
   preview: {
     label: '📋 GMNotes预览',

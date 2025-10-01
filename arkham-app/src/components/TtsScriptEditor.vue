@@ -153,6 +153,41 @@
                 </n-form-item>
             </template>
 
+            <!-- 地点卡专用配置 -->
+            <template v-if="props.cardType === '地点卡'">
+                <!-- 地点信息显示 -->
+                <n-form-item :label="$t('ttsScriptEditor.location.locationIconLabel')">
+                    <n-input :value="props.cardData.location_icon || $t('ttsScriptEditor.location.notSet')" readonly />
+                </n-form-item>
+
+                <n-form-item :label="$t('ttsScriptEditor.location.connectionIconLabel')">
+                    <n-input :value="(props.cardData.location_link || []).join(', ') || $t('ttsScriptEditor.location.notSet')" readonly />
+                </n-form-item>
+
+                <!-- 线索值配置 - 只有已揭示地点才显示 -->
+                <n-form-item v-if="props.cardData.location_type === '已揭示'" :label="$t('ttsScriptEditor.location.clueValueLabel')">
+                    <n-space vertical size="small">
+                        <n-text depth="3" style="font-size: 12px;">
+                            {{ $t('ttsScriptEditor.location.originalValueLabel') }} {{ props.cardData.clues || $t('ttsScriptEditor.location.notSet') }}
+                        </n-text>
+                        <n-space align="end" style="align-items: flex-end;">
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                                <n-text depth="3" style="font-size: 12px;">{{ $t('ttsScriptEditor.location.countLabel') }}</n-text>
+                                <n-input-number v-model:value="clueCount" :min="0" :max="20" :step="1" size="small"
+                                    @update:value="onClueCountChange" />
+                            </div>
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                                <n-text depth="3" style="font-size: 12px;">{{ $t('ttsScriptEditor.location.typeLabel') }}</n-text>
+                                <n-switch v-model:value="isPerInvestigator" @update:value="onClueTypeChange">
+                                    <template #checked>{{ $t('ttsScriptEditor.location.perInvestigator') }}</template>
+                                    <template #unchecked>{{ $t('ttsScriptEditor.location.fixedCount') }}</template>
+                                </n-switch>
+                            </div>
+                        </n-space>
+                    </n-space>
+                </n-form-item>
+            </template>
+
             <!-- 预览GMNotes -->
             <n-form-item :label="$t('ttsScriptEditor.preview.label')">
                 <div class="gmnotes-preview">
@@ -206,6 +241,7 @@ interface TtsScriptData {
         phaseButtonConfig: PhaseButtonConfig;
         investigatorConfig: InvestigatorConfig;
         assetConfig: AssetConfig;
+        locationConfig: LocationConfig;
         scriptConfig: ScriptConfig;
     };
 }
@@ -230,6 +266,14 @@ interface UseConfig {
 
 interface AssetConfig {
     uses: UseConfig[];
+}
+
+interface LocationConfig {
+    location: {
+        icons: string;
+        connections: string[];
+        uses: UseConfig[];
+    };
 }
 
 const props = defineProps<Props>();
@@ -258,6 +302,19 @@ const assetConfig = ref<AssetConfig>({
     uses: []
 });
 
+// 地点卡TTS配置
+const locationConfig = ref<LocationConfig>({
+    location: {
+        icons: 'Diamond',
+        connections: [],
+        uses: []
+    }
+});
+
+// 地点卡线索值相关数据
+const clueCount = ref(1);
+const isPerInvestigator = ref(false);
+
 // 每阶段按钮配置开关
 const enablePhaseButtons = ref(false);
 
@@ -280,7 +337,26 @@ const classMapping: Record<string, string> = {
 const typeMapping: Record<string, string> = {
     '调查员': 'Investigator',
     '支援卡': 'Asset',
-    '事件卡': 'Event'
+    '事件卡': 'Event',
+    '地点卡': 'Location'
+};
+
+// 地点图标中英文映射
+const locationIconMapping: Record<string, string> = {
+    '绿菱': 'GreenDiamond',
+    '暗红漏斗': 'DarkRedCrescent',
+    '橙心': 'OrangeHeart',
+    '浅褐水滴': 'LightBrownDroplet',
+    '深紫星': 'DeepPurpleStar',
+    '深绿斜二': 'DeepGreenSquare',
+    '深蓝T': 'DeepBlueHourglass',
+    '紫月': 'PurpleMoon',
+    '红十': 'RedCross',
+    '红方': 'RedSquare',
+    '蓝三角': 'BlueTriangle',
+    '褐扭': 'BrownSpiral',
+    '青花': 'BlueFlower',
+    '黄圆': 'YellowCircle'
 };
 
 // ID验证函数 - 只允许字母数字
@@ -337,6 +413,24 @@ const computedFixedTokenTypeMap = computed<Record<string, { label: string; value
     doom: [{ label: t('ttsScriptEditor.options.fixedTokenTypes.doom'), value: 'Doom' }],
     clue: [{ label: t('ttsScriptEditor.options.fixedTokenTypes.clue'), value: 'Clue' }]
 }));
+
+// 地点图标选项
+const locationIconOptions = computed(() => [
+    { label: '🔶 绿菱', value: '绿菱' },
+    { label: '🔴 暗红漏斗', value: '暗红漏斗' },
+    { label: '🧡 橙心', value: '橙心' },
+    { label: '🟤 浅褐水滴', value: '浅褐水滴' },
+    { label: '🟣 深紫星', value: '深紫星' },
+    { label: '🟢 深绿斜二', value: '深绿斜二' },
+    { label: '🔷 深蓝T', value: '深蓝T' },
+    { label: '🌙 紫月', value: '紫月' },
+    { label: '➕ 红十', value: '红十' },
+    { label: '🟥 红方', value: '红方' },
+    { label: '🔺 蓝三角', value: '蓝三角' },
+    { label: '🌀 褐扭', value: '褐扭' },
+    { label: '🌸 青花', value: '青花' },
+    { label: '🟡 黄圆', value: '黄圆' }
+]);
 // ----------------------------------------------------
 
 // 根据选择的token类型获取可用的type选项
@@ -349,7 +443,7 @@ const getUsesTypeOptions = (token: string) => {
 
 // 判断是否应该显示TTS脚本组件
 const shouldShowTtsScript = computed(() => {
-    const supportedTypes = ['调查员', '支援卡', '事件卡'];
+    const supportedTypes = ['调查员', '支援卡', '事件卡', '地点卡'];
     return supportedTypes.includes(props.cardType);
 });
 
@@ -397,6 +491,30 @@ const generatedGMNotes = computed(() => {
             };
             break;
 
+        case '地点卡':
+            const locationData: any = {
+                icons: locationIconMapping[props.cardData.location_icon] || props.cardData.location_icon || 'Diamond',
+                connections: (props.cardData.location_link || []).map(conn => locationIconMapping[conn] || conn).join('|'),
+                ...(props.cardData.victory != null && { victory: props.cardData.victory })
+            };
+
+            // 只有当地点类型为"已揭示"时才添加uses字段
+            if (props.cardData.location_type === '已揭示') {
+                locationData.uses = [{
+                    ...(isPerInvestigator.value ? { countPerInvestigator: clueCount.value } : { count: clueCount.value }),
+                    type: 'Clue',
+                    token: 'clue'
+                }];
+            }
+
+            gmNotesData = {
+                id: scriptConfig.value.id || generateUUID(),
+                type: 'Location',
+                traits: (props.cardData.traits || []).join('.') + (props.cardData.traits?.length ? '.' : ''),
+                location: locationData
+            };
+            break;
+
         default:
             return '';
     }
@@ -424,6 +542,7 @@ const ttsScriptData = computed((): TtsScriptData => ({
         phaseButtonConfig: phaseButtonConfig.value,
         investigatorConfig: investigatorConfig.value,
         assetConfig: assetConfig.value,
+        locationConfig: locationConfig.value,
         scriptConfig: scriptConfig.value
     }
 }));
@@ -484,6 +603,56 @@ const removePhaseButton = (index: number) => {
     onPhaseButtonConfigChange();
 };
 
+// 添加线索值配置
+const addClueUse = () => {
+    locationConfig.value.locationBack.uses.push({
+        count: 1,
+        type: 'Clue',
+        token: 'clue',
+        isPerInvestigator: false
+    });
+    onScriptConfigChange();
+};
+
+// 删除线索值配置
+const removeClueUse = (index: number) => {
+    locationConfig.value.locationBack.uses.splice(index, 1);
+    onScriptConfigChange();
+};
+
+// 解析clues字段
+const parseCluesField = (clues: string) => {
+    if (!clues) {
+        clueCount.value = 1;
+        isPerInvestigator.value = false;
+        return;
+    }
+    
+    // 匹配格式如 "1<调查员>" 或 "4"
+    const match = clues.match(/^(\d+)(<调查员>)?$/);
+    if (match) {
+        const count = parseInt(match[1], 10);
+        const hasInvestigatorTag = match[2] === '<调查员>';
+        
+        clueCount.value = count;
+        isPerInvestigator.value = hasInvestigatorTag;
+    } else {
+        // 默认值
+        clueCount.value = 1;
+        isPerInvestigator.value = false;
+    }
+};
+
+// 线索值数量变化处理
+const onClueCountChange = () => {
+    onScriptConfigChange();
+};
+
+// 线索值类型变化处理
+const onClueTypeChange = () => {
+    onScriptConfigChange();
+};
+
 // 脚本配置变化处理
 const onScriptConfigChange = () => {
     nextTick(() => {
@@ -540,6 +709,10 @@ const syncAttributesFromCardData = () => {
     if ((props.cardType === '支援卡' || props.cardType === '事件卡') && props.cardData.uses) {
         assetConfig.value.uses = [...props.cardData.uses];
     }
+    if (props.cardType === '地点卡') {
+        // 解析clues字段
+        parseCluesField(props.cardData.clues);
+    }
 };
 
 // 从保存的配置中加载数据
@@ -556,6 +729,10 @@ const loadFromSavedConfig = (savedConfig: any) => {
     if (savedConfig?.assetConfig) {
         assetConfig.value = { ...savedConfig.assetConfig };
         console.log('✅ 支援卡/事件卡配置已加载');
+    }
+    if (savedConfig?.locationConfig) {
+        locationConfig.value = { ...savedConfig.locationConfig };
+        console.log('✅ 地点卡配置已加载');
     }
     if (savedConfig?.enablePhaseButtons !== undefined) {
         enablePhaseButtons.value = savedConfig.enablePhaseButtons;
@@ -587,6 +764,27 @@ const loadFromLegacyFormat = (ttsScript: any) => {
             }
             if ((props.cardType === '支援卡' || props.cardType === '事件卡') && parsed.uses) {
                 assetConfig.value.uses = parsed.uses;
+            }
+            if (props.cardType === '地点卡') {
+                // 加载地点卡配置
+                if (parsed.locationFront) {
+                    locationConfig.value.locationFront = {
+                        icons: parsed.locationFront.icons || 'Diamond',
+                        connections: parsed.locationFront.connections ? parsed.locationFront.connections.split('|') : []
+                    };
+                }
+                if (parsed.locationBack) {
+                    locationConfig.value.locationBack = {
+                        icons: parsed.locationBack.icons || 'Diamond',
+                        connections: parsed.locationBack.connections ? parsed.locationBack.connections.split('|') : [],
+                        uses: parsed.locationBack.uses ? parsed.locationBack.uses.map((use: any) => ({
+                            count: use.count || use.countPerInvestigator || 1,
+                            type: use.type || 'Clue',
+                            token: use.token || 'clue',
+                            isPerInvestigator: !!use.countPerInvestigator
+                        })) : []
+                    };
+                }
             }
             console.log('✅ 从GMNotes解析配置成功');
         } catch (error) {
