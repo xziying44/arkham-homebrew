@@ -625,7 +625,12 @@ watch(
     (newTtsScript) => {
         console.log('📥 TTS脚本数据变化:', newTtsScript);
         if (!newTtsScript) {
-            console.log('🧹 没有TTS脚本数据，使用默认配置');
+            console.log('🧹 没有TTS脚本数据，初始化默认配置');
+            // 当没有TTS脚本数据时，初始化脚本ID
+            if (!scriptConfig.value.id) {
+                scriptConfig.value.id = generateUUID();
+                console.log('✅ 生成默认脚本ID:', scriptConfig.value.id);
+            }
             return;
         }
         if (newTtsScript.config) {
@@ -644,6 +649,11 @@ watch(
 if (shouldShowTtsScript.value) {
     nextTick(() => {
         syncAttributesFromCardData();
+        // 确保脚本ID有默认值
+        if (!scriptConfig.value.id) {
+            scriptConfig.value.id = generateUUID();
+            console.log('✅ 初始化时生成默认脚本ID:', scriptConfig.value.id);
+        }
         onScriptConfigChange();
     });
 }
