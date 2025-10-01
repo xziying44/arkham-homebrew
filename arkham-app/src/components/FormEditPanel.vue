@@ -1281,12 +1281,20 @@ const loadCardData = async () => {
         // 清除防抖定时器
         clearDebounceTimer();
 
-        const content = await WorkspaceService.getFileContent(props.selectedFile.path);
-        const cardData = JSON.parse(content || '{}');
+        // 先清空卡牌类型，触发表单卸载
+        currentCardType.value = '';
+        
         // 清空当前数据
         Object.keys(currentCardData).forEach(key => {
             delete currentCardData[key];
         });
+        
+        // 等待DOM更新，确保表单完全卸载
+        await nextTick();
+
+        const content = await WorkspaceService.getFileContent(props.selectedFile.path);
+        const cardData = JSON.parse(content || '{}');
+        
         // 加载新数据
         Object.assign(currentCardData, {
             type: '',
@@ -1297,7 +1305,10 @@ const loadCardData = async () => {
             language: 'zh', // 新增：默认语言
             ...cardData
         });
+        
+        // 设置新的卡牌类型
         currentCardType.value = cardData.type || '';
+        
         // 等待TTS配置加载完成后再保存原始数据
         await nextTick();
         setTimeout(() => {
