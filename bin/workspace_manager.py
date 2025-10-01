@@ -640,9 +640,6 @@ class WorkspaceManager:
             else:
                 # 返回默认全局配置（包含GitHub配置）
                 return {
-                    "ai_api_key": "",
-                    "ai_endpoint": "https://api.deepseek.com/v1",
-                    "ai_model": "deepseek-chat",
                     "github_token": "",
                     "github_repo": "",
                     "github_branch": "main",
@@ -652,9 +649,6 @@ class WorkspaceManager:
         except Exception as e:
             print(f"读取全局配置文件失败: {e}")
             return {
-                "ai_api_key": "",
-                "ai_endpoint": "https://api.deepseek.com/v1",
-                "ai_model": "deepseek-chat",
                 "github_token": "",
                 "github_repo": "",
                 "github_branch": "main",
@@ -687,12 +681,9 @@ class WorkspaceManager:
             # 读取全局配置
             global_config = self.get_global_config()
 
-            # 合并配置，全局配置的AI相关配置优先
+            # 合并配置，全局配置的GitHub相关配置优先
             combined_config = workspace_config.copy()
             combined_config.update({
-                "ai_api_key": global_config.get("ai_api_key", ""),
-                "ai_endpoint": global_config.get("ai_endpoint", "https://api.deepseek.com/v1"),
-                "ai_model": global_config.get("ai_model", "deepseek-chat"),
                 "github_token": global_config.get("github_token", ""),
                 "github_repo": global_config.get("github_repo", ""),
                 "github_branch": global_config.get("github_branch", "main"),
@@ -706,9 +697,6 @@ class WorkspaceManager:
             print(f"读取配置文件失败: {e}")
             # 返回默认配置
             return {
-                "ai_api_key": "",
-                "ai_endpoint": "https://api.deepseek.com/v1",
-                "ai_model": "deepseek-chat",
                 "github_token": "",
                 "github_repo": "",
                 "github_branch": "main",
@@ -719,11 +707,8 @@ class WorkspaceManager:
     def save_config(self, config: Dict[str, Any]) -> bool:
         """保存配置项（分别保存全局配置和工作目录配置）"""
         try:
-            # AI相关配置项列表
+            # GitHub相关配置项列表
             global_config_keys = [
-                "ai_api_key",
-                "ai_endpoint",
-                "ai_model",
                 "github_token",
                 "github_repo",
                 "github_branch",
