@@ -1,3 +1,5 @@
+# .github/workflows/build-macos-app.yml
+
 name: Build macOS App
 
 on:
@@ -12,17 +14,20 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        # 使用最新的 v4 版本
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
 
+      # --- 修改的核心部分 ---
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip wheel setuptools
-          pip install py2app pywebview flask
+          python -m pip install --upgrade pip
+          pip install py2app
+          pip install -r requirements.txt
 
       - name: Build .app
         run: |
@@ -30,14 +35,14 @@ jobs:
 
       - name: Create DMG
         run: |
-          hdiutil create -volname ArkhamApp \
-            -srcfolder dist/阿卡姆印牌姬.app \
-            -ov -format UDZO ArkhamApp.dmg
+          hdiutil create -volname "阿卡姆印牌姬" \
+            -srcfolder "dist/阿卡姆印牌姬.app" \
+            -ov -format UDZO "阿卡姆印牌姬.dmg"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-app
           path: |
-            dist/*
-            ArkhamApp.dmg
+            dist/*.app
+            *.dmg
