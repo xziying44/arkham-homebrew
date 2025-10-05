@@ -18,6 +18,8 @@ class TextObject:
     color: Union[str, Tuple[int, int, int], Tuple[int, int, int, int]]
     border_width: int = 0
     border_color: Union[str, Tuple[int, int, int], Tuple[int, int, int, int]] = "#000000"
+    offset_x: int = 0
+    offset_y: int = 0
 
     def __post_init__(self):
         self.color = self._convert_color(self.color)
@@ -445,7 +447,7 @@ class VirtualTextBox:
                       TextObject) and obj.text in self.cannot_be_line_start and self.cursor_x == self.current_line_left:
             if self._handle_line_start_punctuation(obj): return True
         if not self._can_fit_vertically(obj.height): return False
-        render_item = RenderItem(obj, self.cursor_x, self.cursor_y)
+        render_item = RenderItem(obj, self.cursor_x, self.cursor_y + obj.offset_y)
         self.render_list.append(render_item)
         self.cursor_x += obj.width
         return True
