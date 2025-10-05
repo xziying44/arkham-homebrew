@@ -111,8 +111,8 @@ class VirtualTextBox:
         self.use_line_padding: bool = False
 
         self.cannot_be_line_start = {'。', '，', '！', '？', '；', '：', ')', '）', '、',
-                                     '}', '】', '>', '》', '.', '!', '?', ','}
-        self.cannot_be_line_end = {'(', '（', '{', '【', '<', '《'}
+                                     '}', '】', '>', '》', '.', '!', '?', ',', '”'}
+        self.cannot_be_line_end = {'(', '（', '{', '【', '<', '《', '“'}
 
         self._update_line_bounds()
         self.cursor_x = self.current_line_left
