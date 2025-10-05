@@ -482,6 +482,7 @@ class RichTextRenderer:
 
         font_stack = FontStack(base_font, base_options.font_name)
         html_tag_stack = HtmlTagStack('body')
+        simfang_font = font_cache.get_font('simfang', size_to_test)
 
         for item in parsed_items:
             success = True
@@ -491,15 +492,25 @@ class RichTextRenderer:
                 if item.type == TextType.OTHER:
                     # 一个一个push
                     for char in item.content:
-                        text_box = self._get_text_box(char, font)
+                        if font_name == 'simfang-Italic':
+                            # 使用仿宋计算字体
+                            text_width, text_height = self._get_text_box(char, simfang_font)
+                            text_width = int(text_width * 0.95)
+                        else:
+                            text_width, text_height = self._get_text_box(char, font)
                         offset_y = 0
+                        offset_x = 0
                         if font_name == '方正舒体':
                             offset_y = -2
                         elif font_name == 'SourceHanSansSC-Regular':
                             offset_y = -9
+
+                        if char == '﹒':
+                            text_width = int(text_width * 0.5)
+                            offset_x = -int(text_width * 0.5)
                         success = virtual_text_box.push(
-                            TextObject(char, font, font_name, font.size, text_box[1], text_box[0],
-                                       base_options.font_color, offset_y=offset_y)
+                            TextObject(char, font, font_name, font.size, text_height, text_width,
+                                       base_options.font_color, offset_x=offset_x, offset_y=offset_y)
                         )
                 else:
                     text_box = self._get_text_box(item.content, font)
