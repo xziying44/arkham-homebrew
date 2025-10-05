@@ -1,48 +1,58 @@
 import argparse
 import os
 
-import webview
+# 检测是否在 Android 平台
+IS_ANDROID = 'ANDROID_ARGUMENT' in os.environ
 
-# ... (你原来的 argparse 代码，无需改动)
-parser = argparse.ArgumentParser(description="阿卡姆印牌姬-V2.5 启动器")
-parser.add_argument(
-    '-d', '--debug',
-    action='store_true',
-    help='以调试模式运行，显示开发者工具并保留控制台窗口。'
-)
-# 添加 mode 参数
-parser.add_argument(
-    '-m', '--mode',
-    type=str,
-    default='normal',  # 设置默认值
-    choices=['normal', 'check'],  # 可选的模式（根据你的需求调整）
-    help='设置运行模式 (normal/advanced/simple)'
-)
-args = parser.parse_args()
-DEBUG_MODE = args.debug
-IMAGE_MODE = args.mode
-os.environ['APP_MODE'] = args.mode
+# Android 平台不支持某些参数解析
+if not IS_ANDROID:
+    parser = argparse.ArgumentParser(description="阿卡姆印牌姬-V2.8.4 启动器")
+    parser.add_argument(
+        '-d', '--debug',
+        action='store_true',
+        help='以调试模式运行，显示开发者工具并保留控制台窗口。'
+    )
+    parser.add_argument(
+        '-m', '--mode',
+        type=str,
+        default='normal',
+        choices=['normal', 'check'],
+        help='设置运行模式 (normal/check)'
+    )
+    args = parser.parse_args()
+    DEBUG_MODE = args.debug
+    IMAGE_MODE = args.mode
+else:
+    DEBUG_MODE = False
+    IMAGE_MODE = 'normal'
+
+os.environ['APP_MODE'] = IMAGE_MODE
 
 from server import app
 
-# 【关键】为 Flask app 附加一个全局变量，用于判断运行模式
-# 默认为 None，表示非 pywebview 环境
 app.window = None
 
 if __name__ == '__main__':
-    # 创建一个 pywebview 窗口
-    window = webview.create_window(
-        "阿卡姆印牌姬-V2.8.4 by.小小银同学",
-        app,
-        width=1500,
-        height=800,
-        resizable=True,
-        maximized=True
-    )
+    try:
+        import webview
 
-    # 【★★★ 新增代码 ★★★】
-    # 将 window 实例附加到 app 对象上
-    # 这样在 server.py 中就可以通过 app.window 访问它了
-    app.window = window
+        # 创建窗口
+        window = webview.create_window(
+            "阿卡姆印牌姬-V2.8.4",
+            app,
+            width=1500,
+            height=800,
+            resizable=True,
+            maximized=not IS_ANDROID  # Android 不最大化
+        )
 
-    webview.start(debug=DEBUG_MODE)
+        app.window = window
+        webview.start(debug=DEBUG_MODE)
+
+    except Exception as e:
+        print(f"启动错误: {e}")
+        # Android 上直接运行 Flask（备用方案）
+        if IS_ANDROID:
+            app.run(host='0.0.0.0', port=5000, debug=DEBUG_MODE)
+        else:
+            raise
