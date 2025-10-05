@@ -1,5 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+block_cipher = None
+
 a = Analysis(
     ['app.py'],
     pathex=[],
@@ -9,34 +11,36 @@ a = Analysis(
         ('images', 'images'),
         ('static', 'static'),
         ('prompt', 'prompt'),
+        ('cardback', 'cardback'),
     ],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
     excludes=[],
+    win_no_prefer_redirects=False,
+    win_private_assemblies=False,
+    cipher=block_cipher,
     noarchive=False,
 )
 
-pyz = PYZ(a.pure)
+pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 exe = EXE(
     pyz,
     a.scripts,
     [],
     exclude_binaries=True,
-    name='ArkhamHomebrew',
+    name='Arkham Card Maker',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=False,
+    console=False,  # 不显示控制台窗口
     disable_windowed_traceback=False,
-    argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='favicon.icns'  # Mac 使用 .icns 格式图标
 )
 
 coll = COLLECT(
@@ -47,22 +51,23 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='ArkhamHomebrew'
+    name='Arkham Card Maker',
 )
 
-# 新增：创建 Mac .app 束文件
 app = BUNDLE(
     coll,
-    name='ArkhamHomebrew.app',
-    icon='favicon.icns',  # 应用图标
-    bundle_identifier='com.yourcompany.arkhamhomebrew',  # 修改为你的标识符
-    version='1.0.0',  # 应用版本
+    name='Arkham Card Maker.app',
+    icon='favicon.icns',  # macOS 使用 .icns 格式图标
+    bundle_identifier='cn.xziying.arkhamcardmaker',  # 修改为你的应用标识符
     info_plist={
         'NSPrincipalClass': 'NSApplication',
-        'NSAppleScriptEnabled': False,
-        'CFBundleDocumentTypes': [],
-        'NSHighResolutionCapable': True,
-        'LSMinimumSystemVersion': '10.13.0',  # 最低系统要求
-        'NSRequiresAquaSystemAppearance': False,  # 支持暗色模式
+        'NSHighResolutionCapable': 'True',
+        'CFBundleShortVersionString': '2.8.4',
+        'CFBundleVersion': '1',
     },
 )
+
+# 如果安装了 dmgbuild
+import os
+if os.system('which dmgbuild') == 0:
+    os.system('dmgbuild -s dmg_settings.py "Arkham Card Maker" "dist/Arkham-Card-Maker.dmg"')
