@@ -198,7 +198,7 @@ class CardCreator:
             else:
                 body = f'{flavor}\n{body}'
 
-        body = body.replace('·', '<font name="SourceHanSansSC-Regular">\uff65</font>')
+        body = body.replace('·', '﹒')
         return body
 
     def _integrate_traits_text(self, traits: list) -> str:

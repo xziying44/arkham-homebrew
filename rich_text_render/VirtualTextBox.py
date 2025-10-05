@@ -447,7 +447,7 @@ class VirtualTextBox:
                       TextObject) and obj.text in self.cannot_be_line_start and self.cursor_x == self.current_line_left:
             if self._handle_line_start_punctuation(obj): return True
         if not self._can_fit_vertically(obj.height): return False
-        render_item = RenderItem(obj, self.cursor_x, self.cursor_y + obj.offset_y)
+        render_item = RenderItem(obj, self.cursor_x + obj.offset_x, self.cursor_y + obj.offset_y)
         self.render_list.append(render_item)
         self.cursor_x += obj.width
         return True
