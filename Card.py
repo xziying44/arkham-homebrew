@@ -575,6 +575,8 @@ class Card:
             if self.card_type == '事件卡':
                 position_level = (25, 73)
                 position_none = (12, 12)
+                if self.card_class == '多职阶':
+                    position_level = (25, 74)
             elif self.card_type == '支援卡':
                 position_level = (25, 77)
                 position_none = (12, 12)
