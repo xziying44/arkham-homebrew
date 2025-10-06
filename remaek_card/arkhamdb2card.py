@@ -154,6 +154,9 @@ class ArkhamDBConverter:
         # 转换 [[Trait]] 为 {Trait}
         formatted_text = re.sub(r'\[\[(.*?)]]', r'{\1}', formatted_text)
         formatted_text = formatted_text.replace('‧', '·')
+        formatted_text = formatted_text.replace('（', '(')
+        formatted_text = formatted_text.replace('）', ')')
+        formatted_text = formatted_text.replace('?', '？')
 
         self.data = json.loads(formatted_text)
 
@@ -186,7 +189,7 @@ class ArkhamDBConverter:
         formatted_text = re.sub(r'<p>(.*?)</p>', r'\1\n', formatted_text)
 
         # 2. 替换HTML斜体标签为[]（风味文本格式）
-        formatted_text = re.sub(r'<i>.*?(?:FAQ|Erratum).*?</i>', '', formatted_text, flags=re.IGNORECASE)
+        formatted_text = re.sub(r'<i>(?:(?!</i>).)*?(?:FAQ|Erratum)(?:(?!</i>).)*?</i>', '', formatted_text, flags=re.IGNORECASE)
         formatted_text = re.sub(r'<i>(.*?)</i>', r'[\1]', formatted_text)
         formatted_text = formatted_text.replace('\n<cite>', '<cite>')
         formatted_text = re.sub(r'<cite>(.*?)</cite>', r'<br>[-\1]', formatted_text)
@@ -195,6 +198,30 @@ class ArkhamDBConverter:
         formatted_text = re.sub(r'\n- ', r"\n<点> ", formatted_text)
         formatted_text = re.sub(r'\n-', r"\n<点> ", formatted_text)
 
+        return formatted_text
+
+    def _format_flavor_text(self, text: Optional[str]) -> str:
+        """
+        专门用于格式化风味文本的方法，对_format_text的包装，进行额外的特殊处理。
+        :param text: 原始风味文本
+        :return: 格式化后的风味文本
+        """
+        if not text:
+            return ""
+        
+        # 先使用通用的文本格式化
+        formatted_text = self._format_text(text)
+        
+        # 1. 删除所有换行
+        formatted_text = formatted_text.replace('\n', '')
+        
+        # 2. 将<cite>XXXX</cite>内容转化为\n——XXXX
+        def replace_cite_content(match):
+            cite_content = match.group(1)
+            return f'\n——{cite_content}'
+        
+        formatted_text = re.sub(r'<cite>(.*?)</cite>', replace_cite_content, formatted_text)
+        
         return formatted_text
 
     def _extract_common_player_card_properties(self) -> Dict[str, Any]:
@@ -319,8 +346,6 @@ class ArkhamDBConverter:
         转换卡牌正面数据。
         """
         type_code = self.data.get("type_code")
-        if self.data.get('real_name') == self.data.get('name'):
-            return None
         if not type_code:
             return None
         card_type_name = self.TYPE_MAP_FRONT.get(type_code)
@@ -414,7 +439,7 @@ class ArkhamDBConverter:
 
         # 效果、风味文本、胜利点和遭遇组
         card_data["body"] = self._format_text(self.data.get("text"))
-        card_data["flavor"] = self._format_text(self.data.get("flavor"))
+        card_data["flavor"] = self._format_flavor_text(self.data.get("flavor"))
 
         if self.data.get("victory") is not None:
             card_data["victory"] = self.data.get("victory")
@@ -458,7 +483,7 @@ class ArkhamDBConverter:
 
         # 卡牌效果和风味文本
         card_data["body"] = self._format_text(self.data.get("text"))
-        card_data["flavor"] = self._format_text(self.data.get("flavor"))
+        card_data["flavor"] = self._format_flavor_text(self.data.get("flavor"))
 
         return card_data
 
@@ -488,12 +513,14 @@ class ArkhamDBConverter:
         """
         私有方法，专门用于转换事件卡正面。
         """
+        if self.data.get('name') == '捷径':
+            pass
         # 1. 获取所有玩家卡通用属性
         card_data = self._extract_common_player_card_properties()
         # 2. 添加事件卡特有的属性
         # 效果、风味文本、胜利点和遭遇组
         card_data["body"] = self._format_text(self.data.get("text"))
-        card_data["flavor"] = self._format_text(self.data.get("flavor"))
+        card_data["flavor"] = self._format_flavor_text(self.data.get("flavor"))
         if self.data.get("victory") is not None:
             card_data["victory"] = self.data.get("victory")
         if self.data.get("encounter_code"):
@@ -509,7 +536,7 @@ class ArkhamDBConverter:
         # 2. 添加技能卡特有的属性
         # 效果、风味文本、胜利点和遭遇组
         card_data["body"] = self._format_text(self.data.get("text"))
-        card_data["flavor"] = self._format_text(self.data.get("flavor"))
+        card_data["flavor"] = self._format_flavor_text(self.data.get("flavor"))
         if self.data.get("victory") is not None:
             card_data["victory"] = self.data.get("victory")
         if self.data.get("encounter_code"):
@@ -524,7 +551,7 @@ class ArkhamDBConverter:
         card_data = self._extract_common_player_card_properties()
         # 效果、风味文本和胜利点
         card_data["body"] = self._format_text(self.data.get("text"))
-        card_data["flavor"] = self._format_text(self.data.get("flavor"))
+        card_data["flavor"] = self._format_flavor_text(self.data.get("flavor"))
         if self.data.get("victory") is not None:
             card_data["victory"] = self.data.get("victory")
         return card_data
@@ -571,7 +598,7 @@ class ArkhamDBConverter:
             card_data["traits"] = []
         # 效果、风味文本和胜利点
         card_data["body"] = self._format_text(self.data.get("text"))
-        card_data["flavor"] = self._format_text(self.data.get("flavor"))
+        card_data["flavor"] = self._format_flavor_text(self.data.get("flavor"))
         if self.data.get("victory") is not None:
             card_data["victory"] = self.data.get("victory")
         return card_data
@@ -612,7 +639,7 @@ class ArkhamDBConverter:
             card_data["traits"] = []
         # 效果和风味文本
         card_data["body"] = self._format_text(self.data.get("text"))
-        card_data["flavor"] = self._format_text(self.data.get("flavor"))
+        card_data["flavor"] = self._format_flavor_text(self.data.get("flavor"))
         # 胜利点
         if self.data.get("victory") is not None:
             card_data["victory"] = self.data.get("victory")

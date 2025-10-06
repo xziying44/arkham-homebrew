@@ -429,50 +429,263 @@ class CardMetadataScanner:
 
         return metadata_list
 
+    @staticmethod
+    def batch_process_all_folders(base_directory: str, folder_type: str = "重置玩家卡"):
+        """
+        批量处理01-54所有文件夹
+        
+        Args:
+            base_directory: 基础目录路径 (例如: "D:\诡镇奇谈")
+            folder_type: 文件夹类型 ("重置玩家卡" 或 "重置剧本卡")
+        """
+        # 定义文件夹映射关系
+        folder_mapping = {
+            "01": "01_基础游戏",
+            "02": "02_敦威治遗产", 
+            "03": "03_卡尔克萨之路",
+            "04": "04_失落的时代",
+            "05": "05_万象无终",
+            "06": "06_食梦者",
+            "07": "07_印斯茅斯的阴谋",
+            "08": "08_暗与地球之界",
+            "09": "09_绯红密钥",
+            "10": "10_铁杉谷盛宴",
+            "50": "50_重返基础",
+            "51": "51_重返敦威治遗产",
+            "52": "52_重返卡尔克萨之路",
+            "53": "53_重返失落的时代",
+            "54": "54_重返万象无终"
+        }
+        
+        # 按数字顺序排序
+        sorted_codes = sorted(folder_mapping.keys(), key=lambda x: int(x))
+        
+        print("=" * 80)
+        print(f"开始批量处理所有文件夹")
+        print(f"基础目录: {base_directory}")
+        print(f"文件夹类型: {folder_type}")
+        print(f"总共需要处理: {len(sorted_codes)} 个文件夹")
+        print("=" * 80)
+        
+        success_count = 0
+        error_count = 0
+        total_cards_processed = 0
+        
+        # 处理结果统计
+        processing_results = []
+        
+        for i, code in enumerate(sorted_codes, 1):
+            folder_name = folder_mapping[code]
+            work_directory = os.path.join(base_directory, folder_type, folder_name)
+            
+            print(f"\n[{i}/{len(sorted_codes)}] 正在处理: {folder_name} (代码: {code})")
+            print(f"路径: {work_directory}")
+            print("-" * 60)
+            
+            try:
+                # 检查目录是否存在
+                if not os.path.exists(work_directory):
+                    print(f"警告: 目录不存在，跳过 - {work_directory}")
+                    error_count += 1
+                    processing_results.append({
+                        'code': code,
+                        'folder_name': folder_name,
+                        'status': 'skipped',
+                        'reason': '目录不存在',
+                        'cards_count': 0
+                    })
+                    continue
+                
+                # 创建扫描器实例
+                scanner = CardMetadataScanner(
+                    work_directory=work_directory,
+                    code=code
+                )
+                
+                # 执行扫描并保存元数据
+                metadata = scanner.run_scan_and_save("card_metadata.json")
+                
+                cards_count = len(metadata) if metadata else 0
+                
+                if cards_count > 0:
+                    # 输出统计信息
+                    back_count = sum(1 for item in metadata if item['is_back'])
+                    front_count = cards_count - back_count
+                    print(f"统计信息: 正面 {front_count} 张, 背面 {back_count} 张, 总计 {cards_count} 张")
+                    
+                    # 转换卡牌数据并保存到"卡牌"目录
+                    scanner.convert_and_save_cards("card_metadata.json")
+                    
+                    print(f"✅ {folder_name} 处理完成 - 共 {cards_count} 张卡牌")
+                    success_count += 1
+                    total_cards_processed += cards_count
+                    processing_results.append({
+                        'code': code,
+                        'folder_name': folder_name,
+                        'status': 'success',
+                        'cards_count': cards_count,
+                        'front_count': front_count,
+                        'back_count': back_count
+                    })
+                else:
+                    print(f"⚠️ {folder_name} 没有找到匹配的卡牌文件")
+                    processing_results.append({
+                        'code': code,
+                        'folder_name': folder_name,
+                        'status': 'no_cards',
+                        'cards_count': 0
+                    })
+                    
+            except Exception as e:
+                print(f"❌ {folder_name} 处理失败: {e}")
+                error_count += 1
+                processing_results.append({
+                    'code': code,
+                    'folder_name': folder_name,
+                    'status': 'error',
+                    'reason': str(e),
+                    'cards_count': 0
+                })
+                continue
+        
+        # 输出最终统计结果
+        print("\n" + "=" * 80)
+        print("批量处理完成!")
+        print("=" * 80)
+        print(f"成功处理: {success_count} 个文件夹")
+        print(f"处理失败: {error_count} 个文件夹")
+        print(f"总计处理卡牌: {total_cards_processed} 张")
+        
+        # 保存处理结果到文件
+        results_file = os.path.join(base_directory, f"batch_processing_results_{folder_type}.json")
+        try:
+            with open(results_file, 'w', encoding='utf-8') as f:
+                json.dump({
+                    'summary': {
+                        'total_folders': len(sorted_codes),
+                        'success_count': success_count,
+                        'error_count': error_count,
+                        'total_cards_processed': total_cards_processed,
+                        'base_directory': base_directory,
+                        'folder_type': folder_type,
+                        'processing_time': None  # 可以添加时间戳
+                    },
+                    'details': processing_results
+                }, f, ensure_ascii=False, indent=2)
+            print(f"处理结果已保存到: {results_file}")
+        except Exception as e:
+            print(f"保存处理结果失败: {e}")
+        
+        # 显示详细结果
+        print("\n详细处理结果:")
+        for result in processing_results:
+            status_icon = {
+                'success': '✅',
+                'error': '❌', 
+                'skipped': '⏭️',
+                'no_cards': '⚠️'
+            }.get(result['status'], '❓')
+            
+            print(f"{status_icon} {result['folder_name']} ({result['code']}) - {result['status']}")
+            if result['status'] == 'success':
+                print(f"    卡牌数量: {result['cards_count']} (正面: {result['front_count']}, 背面: {result['back_count']})")
+            elif result['status'] in ['error', 'skipped']:
+                print(f"    原因: {result.get('reason', '未知')}")
+        
+        return processing_results
+
 
 # 使用示例
 if __name__ == "__main__":
-    # 创建扫描器实例
+    import sys
+    
     try:
-        # 基础 01
-        # 敦威治遗产 02
-        # 卡尔克萨之路 03
-        # 失落的时代 04
-        # 失落的时代 04
-        # 万象无终 05
-        # 06_食梦者 06
-        # 07_印斯茅斯的阴谋 07
-        # 08_暗与地球之界 08
-        # 09_绯红密钥 09
-        # 10_铁杉谷盛宴 10
-        # 50_重返基础 50
-        # 51_重返敦威治遗产 51
-        # 52_重返卡尔克萨之路 52
-        # 53_重返失落的时代 53
-        # 54_重返万象无终 54
-        scanner = CardMetadataScanner(
-            work_directory=r"D:\诡镇奇谈\重置玩家卡\01_基础游戏",  # 替换为实际的工作目录路径
-            code="01"  # 使用code前缀，匹配前2位
-        )
-        # scanner = CardMetadataScanner(
-        #     work_directory=r"D:\诡镇奇谈\重置剧本卡\01_基础游戏",  # 替换为实际的工作目录路径
-        #     code="01"  # 使用code前缀，匹配前2位
-        # )
+        # 检查命令行参数
+        if len(sys.argv) > 1 and sys.argv[1].lower() == "batch":
+            # 批量处理模式
+            print("=" * 60)
+            print("批量处理模式")
+            print("=" * 60)
+            
+            # 获取基础目录和文件夹类型
+            base_directory = r"D:\诡镇奇谈"  # 默认基础目录
+            folder_type = "重置玩家卡"  # 默认处理玩家卡
+            
+            if len(sys.argv) > 2:
+                folder_type = sys.argv[2]
+            
+            if len(sys.argv) > 3:
+                base_directory = sys.argv[3]
+            
+            print(f"基础目录: {base_directory}")
+            print(f"文件夹类型: {folder_type}")
+            print("开始批量处理...")
+            
+            # 执行批量处理
+            results = CardMetadataScanner.batch_process_all_folders(base_directory, folder_type)
+            
+        else:
+            # 单个文件夹处理模式（原有逻辑）
+            print("=" * 60)
+            print("单个文件夹处理模式")
+            print("=" * 60)
+            
+            # 文件夹映射关系说明
+            print("支持的文件夹代码:")
+            print("01_基础游戏 -> 01")
+            print("02_敦威治遗产 -> 02")
+            print("03_卡尔克萨之路 -> 03")
+            print("04_失落的时代 -> 04")
+            print("05_万象无终 -> 05")
+            print("06_食梦者 -> 06")
+            print("07_印斯茅斯的阴谋 -> 07")
+            print("08_暗与地球之界 -> 08")
+            print("09_绯红密钥 -> 09")
+            print("10_铁杉谷盛宴 -> 10")
+            print("50_重返基础 -> 50")
+            print("51_重返敦威治遗产 -> 51")
+            print("52_重返卡尔克萨之路 -> 52")
+            print("53_重返失落的时代 -> 53")
+            print("54_重返万象无终 -> 54")
+            print()
+            
+            # 创建扫描器实例
+            scanner = CardMetadataScanner(
+                work_directory=r"D:\诡镇奇谈\重置玩家卡\03_卡尔克萨之路",  # 替换为实际的工作目录路径
+                code="03"  # 使用code前缀，匹配前2位
+            )
+            
+            # 如果需要处理剧本卡，取消下面的注释并注释上面的代码
+            # scanner = CardMetadataScanner(
+            #     work_directory=r"D:\诡镇奇谈\重置剧本卡\01_基础游戏",  # 替换为实际的工作目录路径
+            #     code="01"  # 使用code前缀，匹配前2位
+            # )
 
-        # 执行扫描并保存元数据
-        metadata = scanner.run_scan_and_save("card_metadata.json")
+            # 执行扫描并保存元数据
+            metadata = scanner.run_scan_and_save("card_metadata.json")
 
-        # 输出一些统计信息
-        if metadata:
-            back_count = sum(1 for item in metadata if item['is_back'])
-            front_count = len(metadata) - back_count
-            print(f"\n统计信息:")
-            print(f"正面图片: {front_count} 张")
-            print(f"背面图片: {back_count} 张")
-            print(f"总计: {len(metadata)} 张")
+            # 输出一些统计信息
+            if metadata:
+                back_count = sum(1 for item in metadata if item['is_back'])
+                front_count = len(metadata) - back_count
+                print(f"\n统计信息:")
+                print(f"正面图片: {front_count} 张")
+                print(f"背面图片: {back_count} 张")
+                print(f"总计: {len(metadata)} 张")
 
-        # 转换卡牌数据并保存到"卡牌"目录
-        scanner.convert_and_save_cards("card_metadata.json")
+            # 转换卡牌数据并保存到"卡牌"目录
+            scanner.convert_and_save_cards("card_metadata.json")
+            
+            print("\n" + "=" * 60)
+            print("使用说明:")
+            print("单个文件夹处理: python main.py")
+            print("批量处理所有文件夹: python main.py batch [文件夹类型] [基础目录]")
+            print("示例:")
+            print("  python main.py batch 重置玩家卡")
+            print("  python main.py batch 重置剧本卡 \"D:\\诡镇奇谈\"")
+            print("=" * 60)
 
     except Exception as e:
         print(f"错误: {e}")
+        import traceback
+        traceback.print_exc()
