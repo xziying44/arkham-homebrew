@@ -74,6 +74,26 @@ class CardMetadataScanner:
                             translated_count += 1
                             total_fields_replaced += fields_replaced
 
+                    # 处理linked_card字段的翻译
+                    linked_card = card.get('linked_card')
+                    if linked_card and isinstance(linked_card, dict):
+                        linked_card_code = linked_card.get('code', '')
+                        if linked_card_code in translation_map:
+                            linked_translation = translation_map[linked_card_code]
+                            linked_fields_replaced = 0
+
+                            # 遍历翻译数据中的所有字段（除了code）
+                            for field_name, trans_value in linked_translation.items():
+                                if field_name != 'code' and trans_value is not None and trans_value != '':
+                                    # 只替换非空的翻译值
+                                    linked_card[field_name] = trans_value
+                                    linked_fields_replaced += 1
+
+                            if linked_fields_replaced > 0:
+                                translated_count += 1
+                                total_fields_replaced += linked_fields_replaced
+                                print(f"应用linked_card翻译: {linked_card_code} ({linked_card.get('name', 'Unknown')}) - 替换 {linked_fields_replaced} 个字段")
+
                 print(f"成功应用翻译: {translated_count}/{len(self.db_cards)} 张卡牌")
                 print(f"总计替换字段: {total_fields_replaced} 个")
 
