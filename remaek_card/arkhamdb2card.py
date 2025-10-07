@@ -116,6 +116,64 @@ class ArkhamDBConverter:
         "icon-survivor": "🏕️",
     }
 
+    # 遭遇组code到图标名称的映射
+    ENCOUNTER_GROUP_MAP = {
+        "torch": "the_gathering",
+        "arkham": "midnight_masks",
+        "cultists": "cult_of_umordoth",
+        "tentacles": "the_devourer_below",
+        "pentagram": "dark_cult",
+        "bayou": "the_bayou",
+        "rougarou": "curse_of_the_rougarou",
+        "essex_county_express": "the_essex_county_express",
+        "decay": "decay_and_filth",
+        "stranger": "the_stranger",
+        "flood": "the_flood_below",
+        "vortex": "the_vortex_above",
+        "traps": "deadly_traps",
+        "expedition": "expedition",
+        "ruins": "forgotten_ruins",
+        "flux": "temporal_flux",
+        "eztli": "the_doom_of_eztli",
+        "wilds": "the_untamed_wilds",
+        "venom": "yigs_venom",
+        "the_city_of_archives": "city_of_archives",
+        "the_eternal_slumber": "eternal_slumber",
+        "the_nights_usurper": "nights_usurper",
+        "ghouls_of_umôrdhoth": "ghouls_of_umrdhoth",
+        "return_to_a_phantom_of_truth": "return_to_the_phantom_of_truth",
+        "where_the_gods_dwell": "where_gods_dwell",
+        "murder_at_the_excelsior_hotel": "excelsior",
+        "blob_epic_multiplayer": "epic_multiplayer",
+        "machinations_through_time_epic_multiplayer": "epic_multiplayer",
+        "blob_single_group": "single_group",
+        "machinations_through_time_single_group": "single_group",
+        "migo_incursion": "migo",
+        "return_to_heart_of_the_elders": "return_to_the_heart_of_the_elders",
+        "return_to_pillars_of_judgment": "return_to_pillars_of_judgement",
+        "return_to_the_city_of_archives": "return_to_city_of_archives",
+        "the_pit_of_despair": "grotto_of_despair",
+        "creatures_of_the_deep": "creatures_from_below",
+        "flooded_caverns": "flooded_caves",
+        "the_locals": "locals",
+        "the_vanishing_of_elina_harper": "disappearance_of_elina_harper",
+        "the_lair_of_dagon": "lair_of_dagon",
+        "death_of_stars": "death_of_the_stars",
+        "swarm_of_assimilation": "assimilating_swarm",
+        "hexcraft": "witchwork",
+        "unstable_realm": "spectral_realm",
+        "chilling_mists": "cold_fog",
+        "impending_evils": "threatening_evil",
+        "seeping_nightmares": "sleeping_nightmares",
+        "tekelili": "tekeli_li",
+        "shades_of_suffering": "shades_of_sorrow",
+        "relics_of_the_past": "rop",
+        "blob_that_ate_everything_else": "blob_that_ate_everything_else",
+        "migo_incursion_2": "migo_incursion_2",
+        "the_midwinter_gala": "gala",
+        "film_fatale": "film_fatale_encounter",
+    }
+
     COPYRIGHT_DICT = {
         '01': {'name': '基础', 'year': 2016, 'font_text': '<font name="packicon_coreset">\ue91a</font>'},
         '02': {'name': '敦威治遗产', 'year': 2016, 'font_text': '<font name="packicon_dunwich">\uE947</font>'},
@@ -233,6 +291,18 @@ class ArkhamDBConverter:
         formatted_text = re.sub(r'<cite>(.*?)</cite>', replace_cite_content, formatted_text)
 
         return formatted_text
+
+    def _convert_encounter_group_code(self, encounter_code: str) -> str:
+        """
+        转换遭遇组代码为对应的图标名称
+        
+        Args:
+            encounter_code: 原始遭遇组代码
+            
+        Returns:
+            转换后的图标名称，如果不在映射表中则返回原始代码
+        """
+        return self.ENCOUNTER_GROUP_MAP.get(encounter_code, encounter_code)
 
     def _extract_common_player_card_properties(self) -> Dict[str, Any]:
         """
@@ -585,7 +655,7 @@ class ArkhamDBConverter:
             card_data["victory"] = self.data.get("victory")
 
         if self.data.get("encounter_code"):
-            card_data["encounter_group"] = self.data.get("encounter_code")
+            card_data["encounter_group"] = self._convert_encounter_group_code(self.data.get("encounter_code"))
 
         return card_data
 
@@ -662,7 +732,7 @@ class ArkhamDBConverter:
         if self.data.get("victory") is not None:
             card_data["victory"] = self.data.get("victory")
         if self.data.get("encounter_code"):
-            card_data["encounter_group"] = self.data.get("encounter_code")
+            card_data["encounter_group"] = self._convert_encounter_group_code(self.data.get("encounter_code"))
         return card_data
 
     def _convert_skill_front(self) -> Dict[str, Any]:
@@ -678,7 +748,7 @@ class ArkhamDBConverter:
         if self.data.get("victory") is not None:
             card_data["victory"] = self.data.get("victory")
         if self.data.get("encounter_code"):
-            card_data["encounter_group"] = self.data.get("encounter_code")
+            card_data["encounter_group"] = self._convert_encounter_group_code(self.data.get("encounter_code"))
         return card_data
 
     def _convert_treachery_front(self) -> Dict[str, Any]:
@@ -769,7 +839,7 @@ class ArkhamDBConverter:
         card_data["flavor"] = self._format_flavor_text(self.data.get("back_flavor", ''))
         # 遭遇组
         if self.data.get("encounter_code"):
-            card_data["encounter_group"] = self.data.get("encounter_code")
+            card_data["encounter_group"] = self._convert_encounter_group_code(self.data.get("encounter_code"))
         return card_data
 
     def _convert_scenario_front(self) -> Dict[str, Any]:
@@ -824,7 +894,7 @@ class ArkhamDBConverter:
         
         # 遭遇组
         if self.data.get("encounter_code"):
-            card_data["encounter_group"] = self.data.get("encounter_code")
+            card_data["encounter_group"] = self._convert_encounter_group_code(self.data.get("encounter_code"))
         
         return card_data
 
@@ -883,7 +953,7 @@ class ArkhamDBConverter:
         
         # 遭遇组
         if self.data.get("encounter_code"):
-            card_data["encounter_group"] = self.data.get("encounter_code")
+            card_data["encounter_group"] = self._convert_encounter_group_code(self.data.get("encounter_code"))
         
         return card_data
 
@@ -920,7 +990,7 @@ class ArkhamDBConverter:
 
         # 遭遇组
         if self.data.get("encounter_code"):
-            card_data["encounter_group"] = self.data.get("encounter_code")
+            card_data["encounter_group"] = self._convert_encounter_group_code(self.data.get("encounter_code"))
 
         return card_data
 
@@ -952,7 +1022,7 @@ class ArkhamDBConverter:
 
         # 遭遇组
         if self.data.get("encounter_code"):
-            card_data["encounter_group"] = self.data.get("encounter_code")
+            card_data["encounter_group"] = self._convert_encounter_group_code(self.data.get("encounter_code"))
 
         return card_data
 
@@ -989,7 +1059,7 @@ class ArkhamDBConverter:
 
         # 遭遇组
         if self.data.get("encounter_code"):
-            card_data["encounter_group"] = self.data.get("encounter_code")
+            card_data["encounter_group"] = self._convert_encounter_group_code(self.data.get("encounter_code"))
 
         return card_data
 
@@ -1021,7 +1091,7 @@ class ArkhamDBConverter:
 
         # 遭遇组
         if self.data.get("encounter_code"):
-            card_data["encounter_group"] = self.data.get("encounter_code")
+            card_data["encounter_group"] = self._convert_encounter_group_code(self.data.get("encounter_code"))
 
         return card_data
 
@@ -1061,5 +1131,5 @@ class ArkhamDBConverter:
             card_data["victory"] = self.data.get("victory")
         # 遭遇组
         if self.data.get("encounter_code"):
-            card_data["encounter_group"] = self.data.get("encounter_code")
+            card_data["encounter_group"] = self._convert_encounter_group_code(self.data.get("encounter_code"))
         return card_data
