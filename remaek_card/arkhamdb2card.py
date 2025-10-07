@@ -402,39 +402,39 @@ class ArkhamDBConverter:
                     # 将两个code都加入集合，表示它们是关联的
                     linked_cards.add(card.get('code'))
                     linked_cards.add(linked_card_code)
-        
+
         # 2. 计算每个遭遇组的总数量，排除linked_card的重复计算
         encounter_group_totals = {}
-        
+
         for card in all_cards:
             card_code = card.get('code')
             encounter_code = card.get('encounter_code')
-            
+
             # 跳过linked_card中的副卡（只计算主卡）
             if card_code in linked_cards:
                 # 检查是否是主卡（有linked_card字段的卡）
                 if not card.get('linked_card'):
                     continue  # 跳过副卡
-            
+
             if encounter_code and encounter_code.strip():  # 确保encounter_code存在且不为空
                 quantity = card.get('quantity', 1)
                 if encounter_code not in encounter_group_totals:
                     encounter_group_totals[encounter_code] = 0
                 encounter_group_totals[encounter_code] += quantity
-        
+
         # 3. 为每张卡生成遭遇组信息
         encounter_group_index = {}
-        
+
         for card in all_cards:
             card_code = card.get('code')
             encounter_code = card.get('encounter_code')
             encounter_position = card.get('encounter_position')
             quantity = card.get('quantity', 1)
-            
+
             # 只有encounter_code存在且不为空才能计算
             if encounter_code and encounter_code.strip() and card_code:
                 total_count = encounter_group_totals.get(encounter_code, 0)
-                
+
                 if total_count > 0 and encounter_position is not None:
                     # 生成遭遇组信息
                     if quantity > 1:
@@ -444,9 +444,9 @@ class ArkhamDBConverter:
                     else:
                         # quantity为1时显示：x/x
                         group_info = f"{encounter_position}/{total_count}"
-                    
+
                     encounter_group_index[card_code] = group_info
-        
+
         return encounter_group_index
 
     @classmethod
@@ -762,6 +762,10 @@ class ArkhamDBConverter:
         card_data["flavor"] = self._format_flavor_text(self.data.get("flavor"))
         if self.data.get("victory") is not None:
             card_data["victory"] = self.data.get("victory")
+
+        # 遭遇组
+        if self.data.get("encounter_code"):
+            card_data["encounter_group"] = self._convert_encounter_group_code(self.data.get("encounter_code"))
         return card_data
 
     def _format_compound_number(self, value_key: str, per_investigator_key: str, val: bool = True) -> Optional[str]:
@@ -809,6 +813,10 @@ class ArkhamDBConverter:
         card_data["flavor"] = self._format_flavor_text(self.data.get("flavor"))
         if self.data.get("victory") is not None:
             card_data["victory"] = self.data.get("victory")
+
+        # 遭遇组
+        if self.data.get("encounter_code"):
+            card_data["encounter_group"] = self._convert_encounter_group_code(self.data.get("encounter_code"))
         return card_data
 
     def _convert_location_back(self) -> Dict[str, Any]:
@@ -847,12 +855,12 @@ class ArkhamDBConverter:
         私有方法，专门用于转换冒险参考卡正面。
         """
         card_data = {}
-        
+
         # 基础信息
         card_data["name"] = self.data.get("name", "")
         if self.data.get("is_unique"):
             card_data["name"] = f"🏅{card_data['name']}"
-        
+
         # 解析text中的副标题（第一行的粗体内容）
         text = self.data.get("text", "")
         subtitle_match = re.search(r'<b>(.*?)</b>', text)
@@ -860,42 +868,42 @@ class ArkhamDBConverter:
             card_data["subtitle"] = subtitle_match.group(1).strip()
         elif self.data.get("subname"):
             card_data["subtitle"] = self.data.get("subname")
-        
+
         # 设置默认类型为0（默认类型）
         card_data["scenario_type"] = 0
-        
+
         # 解析text中的各种图标效果
         scenario_card_data = {}
-        
+
         # 使用正则表达式提取各种图标效果
         # 匹配格式：💀 -X。X是你所在地点{食尸鬼}的数量。
         skull_match = re.search(r'💀\s*([^💀👤📜👹\n]*?)(?=\n|$|👤|📜|👹)', text)
         if skull_match:
             scenario_card_data["skull"] = self._format_text(skull_match.group(1).strip())
-        
+
         # 匹配👤效果
         cultist_match = re.search(r'👤\s*([^💀👤📜👹\n]*?)(?=\n|$|💀|📜|👹)', text)
         if cultist_match:
             scenario_card_data["cultist"] = self._format_text(cultist_match.group(1).strip())
-        
+
         # 匹配📜效果
         tablet_match = re.search(r'📜\s*([^💀👤📜👹\n]*?)(?=\n|$|💀|👤|👹)', text)
         if tablet_match:
             scenario_card_data["tablet"] = self._format_text(tablet_match.group(1).strip())
-        
+
         # 匹配👹效果
         elder_thing_match = re.search(r'👹\s*([^💀👤📜👹\n]*?)(?=\n|$|💀|👤|📜)', text)
         if elder_thing_match:
             scenario_card_data["elder_thing"] = self._format_text(elder_thing_match.group(1).strip())
-        
+
         # 将scenario_card数据包装到scenario_card字段中
         if scenario_card_data:
             card_data["scenario_card"] = scenario_card_data
-        
+
         # 遭遇组
         if self.data.get("encounter_code"):
             card_data["encounter_group"] = self._convert_encounter_group_code(self.data.get("encounter_code"))
-        
+
         return card_data
 
     def _convert_scenario_back(self) -> Dict[str, Any]:
@@ -903,12 +911,12 @@ class ArkhamDBConverter:
         私有方法，专门用于转换冒险参考卡背面。
         """
         card_data = {}
-        
+
         # 基础信息
         card_data["name"] = self.data.get("name", "")
         if self.data.get("is_unique"):
             card_data["name"] = f"🏅{card_data['name']}"
-        
+
         # 解析back_text中的副标题（第一行的粗体内容）
         back_text = self.data.get("back_text", "")
         subtitle_match = re.search(r'<b>(.*?)</b>', back_text)
@@ -916,45 +924,45 @@ class ArkhamDBConverter:
             card_data["subtitle"] = subtitle_match.group(1).strip()
         elif self.data.get("subname"):
             card_data["subtitle"] = self.data.get("subname")
-        
+
         # 设置为背面
         card_data["is_back"] = True
-        
+
         # 设置默认类型为0（默认类型）
         card_data["scenario_type"] = 0
-        
+
         # 解析back_text中的各种图标效果
         scenario_card_data = {}
-        
+
         # 使用正则表达式提取各种图标效果
         # 匹配格式：💀 -2。如果失败，在该次技能检定后，查找遭遇牌堆和弃牌堆，抽取一个{食尸鬼}敌人。混洗遭遇牌堆。
         skull_match = re.search(r'💀\s*([^💀👤📜👹\n]*?)(?=\n|$|👤|📜|👹)', back_text)
         if skull_match:
             scenario_card_data["skull"] = self._format_text(skull_match.group(1).strip())
-        
+
         # 匹配👤效果
         cultist_match = re.search(r'👤\s*([^💀👤📜👹\n]*?)(?=\n|$|💀|📜|👹)', back_text)
         if cultist_match:
             scenario_card_data["cultist"] = self._format_text(cultist_match.group(1).strip())
-        
+
         # 匹配📜效果
         tablet_match = re.search(r'📜\s*([^💀👤📜👹\n]*?)(?=\n|$|💀|👤|👹)', back_text)
         if tablet_match:
             scenario_card_data["tablet"] = self._format_text(tablet_match.group(1).strip())
-        
+
         # 匹配👹效果
         elder_thing_match = re.search(r'👹\s*([^💀👤📜👹\n]*?)(?=\n|$|💀|👤|📜)', back_text)
         if elder_thing_match:
             scenario_card_data["elder_thing"] = self._format_text(elder_thing_match.group(1).strip())
-        
+
         # 将scenario_card数据包装到scenario_card字段中
         if scenario_card_data:
             card_data["scenario_card"] = scenario_card_data
-        
+
         # 遭遇组
         if self.data.get("encounter_code"):
             card_data["encounter_group"] = self._convert_encounter_group_code(self.data.get("encounter_code"))
-        
+
         return card_data
 
     def _convert_act_front(self) -> Dict[str, Any]:
