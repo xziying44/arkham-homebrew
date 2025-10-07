@@ -395,6 +395,9 @@ class CardMetadataScanner:
                 is_back = metadata.get('is_back', False)
                 card_data = metadata.get('card_data', {})
                 type_code = metadata.get('type_code', '')
+                if is_back and not card_data.get('double_sided') and 'linked_card' in card_data:
+                    type_code = card_data['linked_card'].get('type_code', '')
+                    pass
                 if is_back:
                     filename += '_b'
                 else:
