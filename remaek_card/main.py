@@ -104,7 +104,7 @@ class CardMetadataScanner:
                         if card_code in translation_map:
                             # 如果当前卡牌有翻译，则为其所有复制品应用相同的翻译
                             translation = translation_map[card_code]
-                            
+
                             for duplicated_code in duplicated_by:
                                 # 查找被复制的卡牌
                                 duplicated_card = None
@@ -112,7 +112,7 @@ class CardMetadataScanner:
                                     if target_card.get('code') == duplicated_code:
                                         duplicated_card = target_card
                                         break
-                                
+
                                 if duplicated_card:
                                     duplicated_fields_replaced = 0
                                     # 应用翻译到被复制的卡牌
@@ -120,11 +120,12 @@ class CardMetadataScanner:
                                         if field_name != 'code' and trans_value is not None and trans_value != '':
                                             duplicated_card[field_name] = trans_value
                                             duplicated_fields_replaced += 1
-                                    
+
                                     if duplicated_fields_replaced > 0:
                                         duplicated_translation_count += 1
                                         total_fields_replaced += duplicated_fields_replaced
-                                        print(f"应用duplicated_by翻译: {duplicated_code} ({duplicated_card.get('name', 'Unknown')}) - 替换 {duplicated_fields_replaced} 个字段")
+                                        print(
+                                            f"应用duplicated_by翻译: {duplicated_code} ({duplicated_card.get('name', 'Unknown')}) - 替换 {duplicated_fields_replaced} 个字段")
 
                 print(f"成功应用翻译: {translated_count}/{len(self.db_cards)} 张卡牌")
                 print(f"duplicated_by翻译: {duplicated_translation_count} 张卡牌")
@@ -253,7 +254,7 @@ class CardMetadataScanner:
                     cropped_img = cropped_img.resize((target_width, target_height), Image.Resampling.LANCZOS)
 
                 # 如果是调查员卡牌，根据正面/背面进行不同的旋转
-                if type_code == "investigator":
+                if type_code in ["investigator", 'act', 'agenda']:
                     if is_back:
                         # 背面：逆时针90度旋转
                         cropped_img = cropped_img.rotate(90, expand=True)
@@ -443,7 +444,7 @@ class CardMetadataScanner:
                     card_object['image_mode'] = 1
 
                     rotation_info = ""
-                    if type_code == "investigator":
+                    if type_code in ["investigator", 'act', 'agenda']:
                         rotation_info = f" - {'逆时针90°' if is_back else '顺时针90°'}旋转"
 
                     print(

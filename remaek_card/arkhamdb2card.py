@@ -28,12 +28,17 @@ class ArkhamDBConverter:
         "treachery": "诡计卡",
         "enemy": "敌人卡",
         "location": "地点卡",
-        "story": "故事卡"
+        "story": "故事卡",
+        "act": "场景卡",
+        "agenda": "密谋卡"
         # ... 其他类型
     }
 
     TYPE_MAP_BACK = {
         "investigator": "调查员背面",
+        "location": "地点卡",
+        "act": "场景卡",
+        "agenda": "密谋卡"
         # ... 其他双面卡牌的背面类型
     }
 
@@ -367,6 +372,10 @@ class ArkhamDBConverter:
             card_data = self._convert_enemy_front()
         elif type_code == "location":  # 新增地点卡处理
             card_data = self._convert_location_front()
+        elif type_code == "act":  # 新增场景卡处理
+            card_data = self._convert_act_front()
+        elif type_code == "agenda":  # 新增密谋卡处理
+            card_data = self._convert_agenda_front()
         else:
             print(f"警告：尚未实现对 '{type_code}' 类型的正面转换")
             return None
@@ -385,12 +394,16 @@ class ArkhamDBConverter:
             # 双面对象
             if type_code == "location":
                 card_data = self._convert_location_back()
+            elif type_code == "act":
+                card_data = self._convert_act_back()
+            elif type_code == "agenda":
+                card_data = self._convert_agenda_back()
             else:
                 return None
             card_data['type'] = card_type_name
             # 获取底标数据
             self.registered_base_mark_information(card_data)
-            if type_code == "location":
+            if type_code in ["location", "act", "agenda"]:
                 card_data['card_number'] = ''
                 card_data['encounter_group_number'] = ''
             return card_data
@@ -569,7 +582,7 @@ class ArkhamDBConverter:
             card_data["victory"] = self.data.get("victory")
         return card_data
 
-    def _format_compound_number(self, value_key: str, per_investigator_key: str) -> Optional[str]:
+    def _format_compound_number(self, value_key: str, per_investigator_key: str, val: bool = True) -> Optional[str]:
         """
         格式化一个可能为 "X" 或 "每位调查员" 的数值。
         :param value_key: ArkhamDB JSON 中基础数值的键名 (e.g., 'health')
@@ -577,12 +590,12 @@ class ArkhamDBConverter:
         :return: 格式化后的字符串 (e.g., '3', 'X', '2<调查员>')
         """
         if value_key not in self.data:
-            return None
+            return "-"
         value = self.data.get(value_key)
         if value is None:
-            return "X"  # ArkhamDB 使用 null 来表示 'X'
+            return "-"  # ArkhamDB 使用 null 来表示 '-'
         value_str = str(value)
-        if self.data.get(per_investigator_key, False):
+        if self.data.get(per_investigator_key, False) == val:
             return f"{value_str}<调查员>"
         return value_str
 
@@ -647,6 +660,144 @@ class ArkhamDBConverter:
             card_data["encounter_group"] = self.data.get("encounter_name")
         return card_data
 
+    def _convert_act_front(self) -> Dict[str, Any]:
+        """
+        私有方法，专门用于转换场景卡正面。
+        """
+        card_data = {}
+        # 基础信息
+        card_data["name"] = self.data.get("name", "")
+        if self.data.get("is_unique"):
+            card_data["name"] = f"🏅{card_data['name']}"
+        if self.data.get("subname"):
+            card_data["subtitle"] = self.data.get("subname")
+
+        # 场景卡特有属性
+        # 场景编号
+        card_data["serial_number"] = str(self.data.get("stage")) + 'a'
+
+        # 场景目标（线索值）
+        card_data["threshold"] = self._format_compound_number("clues", "clues_fixed", False)
+
+        # 阶段（stage）
+        if self.data.get("stage") is not None:
+            card_data["stage"] = self.data.get("stage")
+
+        # 效果和风味文本
+        card_data["body"] = self._format_text(self.data.get("text"))
+        card_data["flavor"] = self._format_flavor_text(self.data.get("flavor"))
+
+        # 胜利点
+        if self.data.get("victory") is not None:
+            card_data["victory"] = self.data.get("victory")
+
+        # 遭遇组
+        if self.data.get("encounter_code"):
+            card_data["encounter_group"] = self.data.get("encounter_name")
+
+        return card_data
+
+    def _convert_act_back(self) -> Dict[str, Any]:
+        """
+        私有方法，专门用于转换场景卡背面。
+        参考地点卡背面的处理方式
+        """
+        card_data = {}
+        # 基础信息（使用背面的名称）
+        card_data["is_back"] = True
+        card_data["name"] = self.data.get("back_name", self.data.get("name", ""))
+        if self.data.get("is_unique"):
+            card_data["name"] = f"🏅{card_data['name']}"
+        if self.data.get("subname"):
+            card_data["subtitle"] = self.data.get("subname")
+
+        # 场景卡特有属性
+        # 场景编号
+        card_data["serial_number"] = str(self.data.get("stage")) + 'b'
+
+        # 背面效果和风味文本
+        card_data["body"] = self._format_text(self.data.get("back_text", ""))
+        card_data["flavor"] = self._format_flavor_text(self.data.get("back_flavor", ""))
+
+        # 背面可能有胜利点
+        if self.data.get("victory") is not None:
+            card_data["victory"] = self.data.get("victory")
+
+        # 遭遇组
+        if self.data.get("encounter_code"):
+            card_data["encounter_group"] = self.data.get("encounter_name")
+
+        return card_data
+
+    def _convert_agenda_front(self) -> Dict[str, Any]:
+        """
+        私有方法，专门用于转换密谋卡正面。
+        """
+        card_data = {}
+        # 基础信息
+        card_data["name"] = self.data.get("name", "")
+        if self.data.get("is_unique"):
+            card_data["name"] = f"🏅{card_data['name']}"
+        if self.data.get("subname"):
+            card_data["subtitle"] = self.data.get("subname")
+
+        # 密谋卡特有属性
+        # 密谋编号
+        card_data["serial_number"] = str(self.data.get("stage")) + 'a'
+
+        # 毁灭阈值（doom值）
+        card_data["threshold"] = self._format_compound_number("doom", "doom_per_investigator")
+
+        # 阶段（stage）
+        if self.data.get("stage") is not None:
+            card_data["stage"] = self.data.get("stage")
+
+        # 效果和风味文本
+        card_data["body"] = self._format_text(self.data.get("text"))
+        card_data["flavor"] = self._format_flavor_text(self.data.get("flavor"))
+
+        # 胜利点
+        if self.data.get("victory") is not None:
+            card_data["victory"] = self.data.get("victory")
+
+        # 遭遇组
+        if self.data.get("encounter_code"):
+            card_data["encounter_group"] = self.data.get("encounter_name")
+
+        return card_data
+
+    def _convert_agenda_back(self) -> Dict[str, Any]:
+        """
+        私有方法，专门用于转换密谋卡背面。
+        参考地点卡背面的处理方式
+        """
+        card_data = {}
+        # 基础信息（使用背面的名称）
+        card_data["is_back"] = True
+        card_data["name"] = self.data.get("back_name", self.data.get("name", ""))
+        if self.data.get("is_unique"):
+            card_data["name"] = f"🏅{card_data['name']}"
+        if self.data.get("subname"):
+            card_data["subtitle"] = self.data.get("subname")
+
+        # 密谋卡特有属性
+        # 密谋编号
+        card_data["serial_number"] = str(self.data.get("stage")) + 'b'
+
+        # 背面效果和风味文本
+        card_data["body"] = self._format_text(self.data.get("back_text", ""))
+        card_data["flavor"] = self._format_flavor_text(self.data.get("back_flavor", ""))
+
+        # 背面可能有胜利点
+        if self.data.get("victory") is not None:
+            card_data["victory"] = self.data.get("victory")
+
+        # 遭遇组
+        if self.data.get("encounter_code"):
+            card_data["encounter_group"] = self.data.get("encounter_name")
+
+        return card_data
+
     # 新增地点卡转换方法
     def _convert_location_front(self) -> Dict[str, Any]:
         """
@@ -668,7 +819,7 @@ class ArkhamDBConverter:
             card_data["location_link"] = self.data.get("location_connections")
         # 隐藏值和线索值
         card_data["shroud"] = self._format_compound_number("shroud", "shroud_per_investigator")
-        card_data["clues"] = self._format_compound_number("clues", "clues_per_investigator")
+        card_data["clues"] = self._format_compound_number("clues", "clues_fixed", False)
         # 特性
         traits_str = self.data.get("traits", "")
         if traits_str:

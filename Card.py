@@ -820,6 +820,8 @@ class Card:
 
     def set_number_value(self, position, text, font_size=1, color='#f8f1e4', stroke_color='#060001'):
         """画数值"""
+        if not text:
+            return
         font = self.font_manager.get_font('Bolton', font_size)
         # 取出text中的数字
         number = ''
