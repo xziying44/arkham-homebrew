@@ -189,7 +189,8 @@ class ArkhamDBConverter:
         formatted_text = re.sub(r'<p>(.*?)</p>', r'\1\n', formatted_text)
 
         # 2. 替换HTML斜体标签为[]（风味文本格式）
-        formatted_text = re.sub(r'<i>(?:(?!</i>).)*?(?:FAQ|Erratum)(?:(?!</i>).)*?</i>', '', formatted_text, flags=re.IGNORECASE)
+        formatted_text = re.sub(r'<i>(?:(?!</i>).)*?(?:FAQ|Erratum)(?:(?!</i>).)*?</i>', '', formatted_text,
+                                flags=re.IGNORECASE)
         formatted_text = re.sub(r'<i>(.*?)</i>', r'[\1]', formatted_text)
         formatted_text = formatted_text.replace('\n<cite>', '<cite>')
         formatted_text = re.sub(r'<cite>(.*?)</cite>', r'<br>[-\1]', formatted_text)
@@ -208,20 +209,20 @@ class ArkhamDBConverter:
         """
         if not text:
             return ""
-        
+
         # 先使用通用的文本格式化
         formatted_text = self._format_text(text)
-        
+
         # 1. 删除所有换行
         formatted_text = formatted_text.replace('\n', '')
-        
+
         # 2. 将<cite>XXXX</cite>内容转化为\n——XXXX
         def replace_cite_content(match):
             cite_content = match.group(1)
             return f'\n——{cite_content}'
-        
+
         formatted_text = re.sub(r'<cite>(.*?)</cite>', replace_cite_content, formatted_text)
-        
+
         return formatted_text
 
     def _extract_common_player_card_properties(self) -> Dict[str, Any]:
@@ -378,13 +379,27 @@ class ArkhamDBConverter:
         """
         转换卡牌背面数据。
         """
+        type_code = self.data.get("type_code")
+        card_type_name = self.TYPE_MAP_FRONT.get(type_code)
+        if self.data.get('double_sided'):
+            # 双面对象
+            if type_code == "location":
+                card_data = self._convert_location_back()
+            else:
+                return None
+            card_data['type'] = card_type_name
+            # 获取底标数据
+            self.registered_base_mark_information(card_data)
+            if type_code == "location":
+                card_data['card_number'] = ''
+                card_data['encounter_group_number'] = ''
+            return card_data
         if 'linked_card' in self.data:
             back_data = ArkhamDBConverter(self.data['linked_card'])
             return back_data.convert_front()
         if not self.data.get("double_sided"):
             return None
 
-        type_code = self.data.get("type_code")
         if not type_code:
             return None
 
@@ -513,8 +528,6 @@ class ArkhamDBConverter:
         """
         私有方法，专门用于转换事件卡正面。
         """
-        if self.data.get('name') == '捷径':
-            pass
         # 1. 获取所有玩家卡通用属性
         card_data = self._extract_common_player_card_properties()
         # 2. 添加事件卡特有的属性
@@ -603,6 +616,37 @@ class ArkhamDBConverter:
             card_data["victory"] = self.data.get("victory")
         return card_data
 
+    def _convert_location_back(self) -> Dict[str, Any]:
+        """
+        私有方法，专门用于转化地点卡背面
+        """
+        card_data = {}
+        # 基础信息
+        card_data["name"] = self.data.get("name", "")
+        if self.data.get("is_unique"):
+            card_data["name"] = f"🏅{card_data['name']}"
+        if self.data.get("subname"):
+            card_data["subtitle"] = self.data.get("subname")
+        card_data["location_type"] = "未揭示"
+        if self.data.get("location_icon"):
+            card_data["location_icon"] = self.data.get("location_icon")
+        # 连接地点图标（需要根据实际数据结构调整）
+        if self.data.get("location_connections"):
+            card_data["location_link"] = self.data.get("location_connections")
+        # 特性
+        traits_str = self.data.get("traits", "")
+        if traits_str:
+            card_data["traits"] = [trait.strip() for trait in traits_str.replace('.', ' ').split() if trait.strip()]
+        else:
+            card_data["traits"] = []
+        # 效果和风味文本
+        card_data["body"] = self._format_text(self.data.get("back_text", ''))
+        card_data["flavor"] = self._format_flavor_text(self.data.get("back_flavor", ''))
+        # 遭遇组
+        if self.data.get("encounter_code"):
+            card_data["encounter_group"] = self.data.get("encounter_name")
+        return card_data
+
     # 新增地点卡转换方法
     def _convert_location_front(self) -> Dict[str, Any]:
         """
@@ -616,13 +660,7 @@ class ArkhamDBConverter:
         if self.data.get("subname"):
             card_data["subtitle"] = self.data.get("subname")
         # 地点类型（已揭示/未揭示）
-        # ArkhamDB中通过back_text判断是否为双面地点
-        if self.data.get("back_text") or self.data.get("double_sided"):
-            card_data["location_type"] = "未揭示"
-        else:
-            card_data["location_type"] = "已揭示"
-        # 地点图标（需要根据实际数据结构调整）
-        # 注意：ArkhamDB可能没有直接的图标字段，可能需要根据其他信息推断
+        card_data["location_type"] = "已揭示"
         if self.data.get("location_icon"):
             card_data["location_icon"] = self.data.get("location_icon")
         # 连接地点图标（需要根据实际数据结构调整）

@@ -95,7 +95,39 @@ class CardMetadataScanner:
                                 print(
                                     f"应用linked_card翻译: {linked_card_code} ({linked_card.get('name', 'Unknown')}) - 替换 {linked_fields_replaced} 个字段")
 
+                # 处理duplicated_by字段的翻译
+                duplicated_translation_count = 0
+                for card in self.db_cards:
+                    duplicated_by = card.get('duplicated_by')
+                    if duplicated_by and isinstance(duplicated_by, list):
+                        card_code = card.get('code', '')
+                        if card_code in translation_map:
+                            # 如果当前卡牌有翻译，则为其所有复制品应用相同的翻译
+                            translation = translation_map[card_code]
+                            
+                            for duplicated_code in duplicated_by:
+                                # 查找被复制的卡牌
+                                duplicated_card = None
+                                for target_card in self.db_cards:
+                                    if target_card.get('code') == duplicated_code:
+                                        duplicated_card = target_card
+                                        break
+                                
+                                if duplicated_card:
+                                    duplicated_fields_replaced = 0
+                                    # 应用翻译到被复制的卡牌
+                                    for field_name, trans_value in translation.items():
+                                        if field_name != 'code' and trans_value is not None and trans_value != '':
+                                            duplicated_card[field_name] = trans_value
+                                            duplicated_fields_replaced += 1
+                                    
+                                    if duplicated_fields_replaced > 0:
+                                        duplicated_translation_count += 1
+                                        total_fields_replaced += duplicated_fields_replaced
+                                        print(f"应用duplicated_by翻译: {duplicated_code} ({duplicated_card.get('name', 'Unknown')}) - 替换 {duplicated_fields_replaced} 个字段")
+
                 print(f"成功应用翻译: {translated_count}/{len(self.db_cards)} 张卡牌")
+                print(f"duplicated_by翻译: {duplicated_translation_count} 张卡牌")
                 print(f"总计替换字段: {total_fields_replaced} 个")
 
                 # 显示未找到翻译的卡牌数量
