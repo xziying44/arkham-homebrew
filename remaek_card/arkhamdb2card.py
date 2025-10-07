@@ -322,18 +322,37 @@ class ArkhamDBConverter:
         Returns:
             遭遇组信息索引字典，key为card code，val为遭遇组信息
         """
-        # 1. 计算每个遭遇组的总数量
+        # 1. 首先找出所有有linked_card的卡牌对，避免重复计算
+        linked_cards = set()
+        for card in all_cards:
+            linked_card = card.get('linked_card')
+            if linked_card and isinstance(linked_card, dict):
+                linked_card_code = linked_card.get('code')
+                if linked_card_code:
+                    # 将两个code都加入集合，表示它们是关联的
+                    linked_cards.add(card.get('code'))
+                    linked_cards.add(linked_card_code)
+        
+        # 2. 计算每个遭遇组的总数量，排除linked_card的重复计算
         encounter_group_totals = {}
         
         for card in all_cards:
+            card_code = card.get('code')
             encounter_code = card.get('encounter_code')
+            
+            # 跳过linked_card中的副卡（只计算主卡）
+            if card_code in linked_cards:
+                # 检查是否是主卡（有linked_card字段的卡）
+                if not card.get('linked_card'):
+                    continue  # 跳过副卡
+            
             if encounter_code and encounter_code.strip():  # 确保encounter_code存在且不为空
                 quantity = card.get('quantity', 1)
                 if encounter_code not in encounter_group_totals:
                     encounter_group_totals[encounter_code] = 0
                 encounter_group_totals[encounter_code] += quantity
         
-        # 2. 为每张卡生成遭遇组信息
+        # 3. 为每张卡生成遭遇组信息
         encounter_group_index = {}
         
         for card in all_cards:
@@ -566,7 +585,7 @@ class ArkhamDBConverter:
             card_data["victory"] = self.data.get("victory")
 
         if self.data.get("encounter_code"):
-            card_data["encounter_group"] = self.data.get("encounter_name")
+            card_data["encounter_group"] = self.data.get("encounter_code")
 
         return card_data
 
@@ -643,7 +662,7 @@ class ArkhamDBConverter:
         if self.data.get("victory") is not None:
             card_data["victory"] = self.data.get("victory")
         if self.data.get("encounter_code"):
-            card_data["encounter_group"] = self.data.get("encounter_name")
+            card_data["encounter_group"] = self.data.get("encounter_code")
         return card_data
 
     def _convert_skill_front(self) -> Dict[str, Any]:
@@ -659,7 +678,7 @@ class ArkhamDBConverter:
         if self.data.get("victory") is not None:
             card_data["victory"] = self.data.get("victory")
         if self.data.get("encounter_code"):
-            card_data["encounter_group"] = self.data.get("encounter_name")
+            card_data["encounter_group"] = self.data.get("encounter_code")
         return card_data
 
     def _convert_treachery_front(self) -> Dict[str, Any]:
@@ -750,7 +769,7 @@ class ArkhamDBConverter:
         card_data["flavor"] = self._format_flavor_text(self.data.get("back_flavor", ''))
         # 遭遇组
         if self.data.get("encounter_code"):
-            card_data["encounter_group"] = self.data.get("encounter_name")
+            card_data["encounter_group"] = self.data.get("encounter_code")
         return card_data
 
     def _convert_scenario_front(self) -> Dict[str, Any]:
@@ -805,7 +824,7 @@ class ArkhamDBConverter:
         
         # 遭遇组
         if self.data.get("encounter_code"):
-            card_data["encounter_group"] = self.data.get("encounter_name")
+            card_data["encounter_group"] = self.data.get("encounter_code")
         
         return card_data
 
@@ -864,7 +883,7 @@ class ArkhamDBConverter:
         
         # 遭遇组
         if self.data.get("encounter_code"):
-            card_data["encounter_group"] = self.data.get("encounter_name")
+            card_data["encounter_group"] = self.data.get("encounter_code")
         
         return card_data
 
@@ -901,7 +920,7 @@ class ArkhamDBConverter:
 
         # 遭遇组
         if self.data.get("encounter_code"):
-            card_data["encounter_group"] = self.data.get("encounter_name")
+            card_data["encounter_group"] = self.data.get("encounter_code")
 
         return card_data
 
@@ -933,7 +952,7 @@ class ArkhamDBConverter:
 
         # 遭遇组
         if self.data.get("encounter_code"):
-            card_data["encounter_group"] = self.data.get("encounter_name")
+            card_data["encounter_group"] = self.data.get("encounter_code")
 
         return card_data
 
@@ -970,7 +989,7 @@ class ArkhamDBConverter:
 
         # 遭遇组
         if self.data.get("encounter_code"):
-            card_data["encounter_group"] = self.data.get("encounter_name")
+            card_data["encounter_group"] = self.data.get("encounter_code")
 
         return card_data
 
@@ -1002,7 +1021,7 @@ class ArkhamDBConverter:
 
         # 遭遇组
         if self.data.get("encounter_code"):
-            card_data["encounter_group"] = self.data.get("encounter_name")
+            card_data["encounter_group"] = self.data.get("encounter_code")
 
         return card_data
 
@@ -1042,5 +1061,5 @@ class ArkhamDBConverter:
             card_data["victory"] = self.data.get("victory")
         # 遭遇组
         if self.data.get("encounter_code"):
-            card_data["encounter_group"] = self.data.get("encounter_name")
+            card_data["encounter_group"] = self.data.get("encounter_code")
         return card_data
