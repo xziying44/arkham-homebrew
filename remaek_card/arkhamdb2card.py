@@ -8,6 +8,9 @@ class ArkhamDBConverter:
     将 ArkhamDB 的 JSON 数据转换为符合前端 cardTypeConfigs.ts 规范的 card 数据对象。
     """
 
+    # 类变量：存储遭遇组信息索引
+    _encounter_group_index: Dict[str, str] = {}
+
     # 用于将 arkhamdb 的 faction_code/name 映射为目标格式的职阶名
     FACTION_MAP = {
         "guardian": "守护者",
@@ -305,6 +308,82 @@ class ArkhamDBConverter:
         return card_data
 
     # -----------------------------------------------------
+    # 遭遇组统计方法
+    # -----------------------------------------------------
+
+    @classmethod
+    def calculate_encounter_group_statistics(cls, all_cards: List[Dict[str, Any]]) -> Dict[str, str]:
+        """
+        计算所有卡牌的遭遇组统计信息
+        
+        Args:
+            all_cards: 所有卡牌的列表
+            
+        Returns:
+            遭遇组信息索引字典，key为card code，val为遭遇组信息
+        """
+        # 1. 计算每个遭遇组的总数量
+        encounter_group_totals = {}
+        
+        for card in all_cards:
+            encounter_code = card.get('encounter_code')
+            if encounter_code and encounter_code.strip():  # 确保encounter_code存在且不为空
+                quantity = card.get('quantity', 1)
+                if encounter_code not in encounter_group_totals:
+                    encounter_group_totals[encounter_code] = 0
+                encounter_group_totals[encounter_code] += quantity
+        
+        # 2. 为每张卡生成遭遇组信息
+        encounter_group_index = {}
+        
+        for card in all_cards:
+            card_code = card.get('code')
+            encounter_code = card.get('encounter_code')
+            encounter_position = card.get('encounter_position')
+            quantity = card.get('quantity', 1)
+            
+            # 只有encounter_code存在且不为空才能计算
+            if encounter_code and encounter_code.strip() and card_code:
+                total_count = encounter_group_totals.get(encounter_code, 0)
+                
+                if total_count > 0 and encounter_position is not None:
+                    # 生成遭遇组信息
+                    if quantity > 1:
+                        # quantity大于1时显示范围信息：x-x/x
+                        end_position = encounter_position + quantity - 1
+                        group_info = f"{encounter_position}-{end_position}/{total_count}"
+                    else:
+                        # quantity为1时显示：x/x
+                        group_info = f"{encounter_position}/{total_count}"
+                    
+                    encounter_group_index[card_code] = group_info
+        
+        return encounter_group_index
+
+    @classmethod
+    def set_encounter_group_index(cls, encounter_group_index: Dict[str, str]):
+        """
+        设置遭遇组信息索引
+        
+        Args:
+            encounter_group_index: 遭遇组信息索引字典
+        """
+        cls._encounter_group_index = encounter_group_index
+
+    @classmethod
+    def get_encounter_group_info(cls, card_code: str) -> Optional[str]:
+        """
+        获取指定卡牌的遭遇组信息
+        
+        Args:
+            card_code: 卡牌代码
+            
+        Returns:
+            遭遇组信息字符串，如果不存在则返回None
+        """
+        return cls._encounter_group_index.get(card_code)
+
+    # -----------------------------------------------------
     # 公共转换方法
     # -----------------------------------------------------
 
@@ -329,6 +408,15 @@ class ArkhamDBConverter:
             footer_icon_font = self.COPYRIGHT_DICT_THREE[pack_code_three]['font_text']
         card_data['footer_copyright'] = middle_text
         card_data['footer_icon_font'] = footer_icon_font
+
+        # 添加遭遇组信息
+        card_code = self.data.get('code')
+        if card_code:
+            encounter_group_info = self.get_encounter_group_info(card_code)
+            if encounter_group_info:
+                card_data['encounter_group_number'] = encounter_group_info
+            else:
+                card_data['encounter_group_number'] = ''
 
     def convert_customization(self) -> Optional[Dict[str, Any]]:
         """转化定制卡"""

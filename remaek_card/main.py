@@ -143,6 +143,29 @@ class CardMetadataScanner:
         except Exception as e:
             raise Exception(f"加载数据失败: {e}")
 
+        # 计算遭遇组统计信息并设置到ArkhamDBConverter中
+        print("正在计算遭遇组统计信息...")
+        try:
+            encounter_group_index = ArkhamDBConverter.calculate_encounter_group_statistics(self.db_cards)
+            ArkhamDBConverter.set_encounter_group_index(encounter_group_index)
+            print(f"成功计算遭遇组信息: {len(encounter_group_index)} 张卡牌")
+            
+            # 显示一些统计信息
+            encounter_groups = {}
+            for card_code, group_info in encounter_group_index.items():
+                group_name = group_info.split('/')[-1]  # 获取总数部分
+                if group_name not in encounter_groups:
+                    encounter_groups[group_name] = 0
+                encounter_groups[group_name] += 1
+            
+            print(f"遭遇组统计: {len(encounter_groups)} 个不同的遭遇组")
+            for group_size, count in sorted(encounter_groups.items()):
+                print(f"  总数 {group_size}: {count} 张卡牌")
+                
+        except Exception as e:
+            print(f"警告: 计算遭遇组信息失败: {e}")
+            print("将继续处理，但卡牌可能缺少遭遇组编号信息")
+
     def _extract_position_from_filename(self, filename: str) -> tuple[Optional[int], bool]:
         """
         从文件名中提取位置数字和是否为背面
