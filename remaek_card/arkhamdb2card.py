@@ -30,7 +30,8 @@ class ArkhamDBConverter:
         "location": "地点卡",
         "story": "故事卡",
         "act": "场景卡",
-        "agenda": "密谋卡"
+        "agenda": "密谋卡",
+        "scenario": "冒险参考卡"
         # ... 其他类型
     }
 
@@ -376,6 +377,8 @@ class ArkhamDBConverter:
             card_data = self._convert_act_front()
         elif type_code == "agenda":  # 新增密谋卡处理
             card_data = self._convert_agenda_front()
+        elif type_code == "scenario":  # 新增冒险参考卡处理
+            card_data = self._convert_scenario_front()
         else:
             print(f"警告：尚未实现对 '{type_code}' 类型的正面转换")
             return None
@@ -398,12 +401,14 @@ class ArkhamDBConverter:
                 card_data = self._convert_act_back()
             elif type_code == "agenda":
                 card_data = self._convert_agenda_back()
+            elif type_code == "scenario":
+                card_data = self._convert_scenario_back()
             else:
                 return None
             card_data['type'] = card_type_name
             # 获取底标数据
             self.registered_base_mark_information(card_data)
-            if type_code in ["location", "act", "agenda"]:
+            if type_code in ["location", "act", "agenda", "scenario"]:
                 card_data['card_number'] = ''
                 card_data['encounter_group_number'] = ''
             return card_data
@@ -658,6 +663,121 @@ class ArkhamDBConverter:
         # 遭遇组
         if self.data.get("encounter_code"):
             card_data["encounter_group"] = self.data.get("encounter_name")
+        return card_data
+
+    def _convert_scenario_front(self) -> Dict[str, Any]:
+        """
+        私有方法，专门用于转换冒险参考卡正面。
+        """
+        card_data = {}
+        
+        # 基础信息
+        card_data["name"] = self.data.get("name", "")
+        if self.data.get("is_unique"):
+            card_data["name"] = f"🏅{card_data['name']}"
+        
+        # 解析text中的副标题（第一行的粗体内容）
+        text = self.data.get("text", "")
+        subtitle_match = re.search(r'<b>(.*?)</b>', text)
+        if subtitle_match:
+            card_data["subtitle"] = subtitle_match.group(1).strip()
+        elif self.data.get("subname"):
+            card_data["subtitle"] = self.data.get("subname")
+        
+        # 设置默认类型为0（默认类型）
+        card_data["scenario_type"] = 0
+        
+        # 解析text中的各种图标效果
+        scenario_card_data = {}
+        
+        # 使用正则表达式提取各种图标效果
+        # 匹配格式：💀 -X。X是你所在地点{食尸鬼}的数量。
+        skull_match = re.search(r'💀\s*([^💀👤📜👹\n]*?)(?=\n|$|👤|📜|👹)', text)
+        if skull_match:
+            scenario_card_data["skull"] = self._format_text(skull_match.group(1).strip())
+        
+        # 匹配👤效果
+        cultist_match = re.search(r'👤\s*([^💀👤📜👹\n]*?)(?=\n|$|💀|📜|👹)', text)
+        if cultist_match:
+            scenario_card_data["cultist"] = self._format_text(cultist_match.group(1).strip())
+        
+        # 匹配📜效果
+        tablet_match = re.search(r'📜\s*([^💀👤📜👹\n]*?)(?=\n|$|💀|👤|👹)', text)
+        if tablet_match:
+            scenario_card_data["tablet"] = self._format_text(tablet_match.group(1).strip())
+        
+        # 匹配👹效果
+        elder_thing_match = re.search(r'👹\s*([^💀👤📜👹\n]*?)(?=\n|$|💀|👤|📜)', text)
+        if elder_thing_match:
+            scenario_card_data["elder_thing"] = self._format_text(elder_thing_match.group(1).strip())
+        
+        # 将scenario_card数据包装到scenario_card字段中
+        if scenario_card_data:
+            card_data["scenario_card"] = scenario_card_data
+        
+        # 遭遇组
+        if self.data.get("encounter_code"):
+            card_data["encounter_group"] = self.data.get("encounter_name")
+        
+        return card_data
+
+    def _convert_scenario_back(self) -> Dict[str, Any]:
+        """
+        私有方法，专门用于转换冒险参考卡背面。
+        """
+        card_data = {}
+        
+        # 基础信息
+        card_data["name"] = self.data.get("name", "")
+        if self.data.get("is_unique"):
+            card_data["name"] = f"🏅{card_data['name']}"
+        
+        # 解析back_text中的副标题（第一行的粗体内容）
+        back_text = self.data.get("back_text", "")
+        subtitle_match = re.search(r'<b>(.*?)</b>', back_text)
+        if subtitle_match:
+            card_data["subtitle"] = subtitle_match.group(1).strip()
+        elif self.data.get("subname"):
+            card_data["subtitle"] = self.data.get("subname")
+        
+        # 设置为背面
+        card_data["is_back"] = True
+        
+        # 设置默认类型为0（默认类型）
+        card_data["scenario_type"] = 0
+        
+        # 解析back_text中的各种图标效果
+        scenario_card_data = {}
+        
+        # 使用正则表达式提取各种图标效果
+        # 匹配格式：💀 -2。如果失败，在该次技能检定后，查找遭遇牌堆和弃牌堆，抽取一个{食尸鬼}敌人。混洗遭遇牌堆。
+        skull_match = re.search(r'💀\s*([^💀👤📜👹\n]*?)(?=\n|$|👤|📜|👹)', back_text)
+        if skull_match:
+            scenario_card_data["skull"] = self._format_text(skull_match.group(1).strip())
+        
+        # 匹配👤效果
+        cultist_match = re.search(r'👤\s*([^💀👤📜👹\n]*?)(?=\n|$|💀|📜|👹)', back_text)
+        if cultist_match:
+            scenario_card_data["cultist"] = self._format_text(cultist_match.group(1).strip())
+        
+        # 匹配📜效果
+        tablet_match = re.search(r'📜\s*([^💀👤📜👹\n]*?)(?=\n|$|💀|👤|👹)', back_text)
+        if tablet_match:
+            scenario_card_data["tablet"] = self._format_text(tablet_match.group(1).strip())
+        
+        # 匹配👹效果
+        elder_thing_match = re.search(r'👹\s*([^💀👤📜👹\n]*?)(?=\n|$|💀|👤|📜)', back_text)
+        if elder_thing_match:
+            scenario_card_data["elder_thing"] = self._format_text(elder_thing_match.group(1).strip())
+        
+        # 将scenario_card数据包装到scenario_card字段中
+        if scenario_card_data:
+            card_data["scenario_card"] = scenario_card_data
+        
+        # 遭遇组
+        if self.data.get("encounter_code"):
+            card_data["encounter_group"] = self.data.get("encounter_name")
+        
         return card_data
 
     def _convert_act_front(self) -> Dict[str, Any]:
