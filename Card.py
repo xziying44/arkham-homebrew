@@ -1127,7 +1127,7 @@ class Card:
             center_text = ''
         # 添加底部信息蒙版
         if left_text != '' or center_text != '' or encounter_text != '' or right_text != '':
-            if self.card_type in ['敌人卡', '冒险参考卡']:
+            if self.card_type in ['敌人卡']:
                 self.paste_with_multiply_blend(
                     self.image_manager.get_image('底部信息蒙版_敌人'),
                     (0, 1000)
