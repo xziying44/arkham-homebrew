@@ -324,7 +324,9 @@ class Card:
         :param underline: 是否添加下划线
         :param vertical:垂直文本
         """
-        if self.font_manager.silence:
+        if self.font_manager.silence and not underline:
+            return
+        if not self.font_manager.silence and underline:
             return
         lang_font = self.font_manager.get_lang_font(font_name)
         self.last_render_list.extend(self.rich_renderer.draw_line(
