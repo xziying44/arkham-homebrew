@@ -255,6 +255,7 @@ class ArkhamDBConverter:
             return ""  # 如果找不到对应图标，返回空字符串
 
         formatted_text = re.sub(r'<span([^>]*)></span>', replace_span_icon, text)
+        formatted_text = re.sub(r'<blockquote><i>(.*?)</i></blockquote>', r'<flavor quote="true" padding="20" flavor align="left" flex="false">\1</flavor>', formatted_text)
         # 1. 替换HTML粗体标签为【】
         formatted_text = re.sub(r'<b><i>(.*?)</i></b>', r'{\1}', formatted_text)
         formatted_text = re.sub(r'\[\[(.*?)]]', r'{\1}', formatted_text)

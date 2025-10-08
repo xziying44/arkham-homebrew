@@ -765,16 +765,16 @@ if __name__ == "__main__":
             print()
 
             # 创建扫描器实例
-            scanner = CardMetadataScanner(
-                work_directory=r"D:\诡镇奇谈\重置玩家卡\01_基础游戏",  # 替换为实际的工作目录路径
-                code="01"  # 使用code前缀，匹配前2位
-            )
-
-            # 如果需要处理剧本卡，取消下面的注释并注释上面的代码
             # scanner = CardMetadataScanner(
-            #     work_directory=r"D:\诡镇奇谈\重置剧本卡\01_基础游戏",  # 替换为实际的工作目录路径
+            #     work_directory=r"D:\诡镇奇谈\重置玩家卡\01_基础游戏",  # 替换为实际的工作目录路径
             #     code="01"  # 使用code前缀，匹配前2位
             # )
+
+            # 如果需要处理剧本卡，取消下面的注释并注释上面的代码
+            scanner = CardMetadataScanner(
+                work_directory=r"D:\诡镇奇谈\重置剧本卡\04_失落的时代",  # 替换为实际的工作目录路径
+                code="04"  # 使用code前缀，匹配前2位
+            )
 
             # 执行扫描并保存元数据
             metadata = scanner.run_scan_and_save("card_metadata.json")
