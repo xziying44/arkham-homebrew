@@ -934,7 +934,7 @@ class Card:
         im = self.image_manager.get_image(f'地点标识-{icon}')
         if index == 0:
             self.paste_image(self.image_manager.get_image(f'地点标识-标识底'), (15, 8), 'contain')
-            self.paste_image(im, (20, 13), 'contain')
+            self.paste_image(im, (21, 14), 'contain')
         elif 0 < index < 7:
             self.paste_image(im, link_position[index - 1], 'contain')
 
