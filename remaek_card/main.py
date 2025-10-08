@@ -166,6 +166,15 @@ class CardMetadataScanner:
             print(f"警告: 计算遭遇组信息失败: {e}")
             print("将继续处理，但卡牌可能缺少遭遇组编号信息")
 
+        # 加载地点图标映射数据
+        print("正在加载地点图标映射数据...")
+        try:
+            ArkhamDBConverter.load_location_icons_mapping("location_icons_mapping.json")
+            ArkhamDBConverter.load_gmnotes_index("gmnotes_index.json")
+        except Exception as e:
+            print(f"警告: 加载地点图标映射数据失败: {e}")
+            print("将继续处理，但地点卡可能缺少图标信息")
+
     def _extract_position_from_filename(self, filename: str) -> tuple[Optional[int], bool]:
         """
         从文件名中提取位置数字和是否为背面

@@ -11,6 +11,12 @@ class ArkhamDBConverter:
     # 类变量：存储遭遇组信息索引
     _encounter_group_index: Dict[str, str] = {}
 
+    # 类变量：存储gmnotes索引数据
+    _gmnotes_index: Dict[str, Any] = {}
+
+    # 类变量：存储地点图标映射数据
+    _location_icons_mapping: Dict[str, str] = {}
+
     # 用于将 arkhamdb 的 faction_code/name 映射为目标格式的职阶名
     FACTION_MAP = {
         "guardian": "守护者",
@@ -473,6 +479,127 @@ class ArkhamDBConverter:
         return cls._encounter_group_index.get(card_code)
 
     # -----------------------------------------------------
+    # 地点图标映射方法
+    # -----------------------------------------------------
+
+    @classmethod
+    def load_gmnotes_index(cls, gmnotes_file_path: str = "gmnotes_index.json"):
+        """
+        加载gmnotes_index.json文件
+        
+        Args:
+            gmnotes_file_path: gmnotes_index.json文件路径
+        """
+        try:
+            import os
+            if os.path.exists(gmnotes_file_path):
+                with open(gmnotes_file_path, 'r', encoding='utf-8') as f:
+                    cls._gmnotes_index = json.load(f)
+                print(f"成功加载gmnotes索引数据: {len(cls._gmnotes_index)} 条记录")
+            else:
+                print(f"警告: gmnotes索引文件不存在: {gmnotes_file_path}")
+                cls._gmnotes_index = {}
+        except Exception as e:
+            print(f"加载gmnotes索引文件失败: {e}")
+            cls._gmnotes_index = {}
+
+    @classmethod
+    def load_location_icons_mapping(cls, mapping_file_path: str = "location_icons_mapping.json"):
+        """
+        加载location_icons_mapping.json文件
+        
+        Args:
+            mapping_file_path: location_icons_mapping.json文件路径
+        """
+        try:
+            import os
+            if os.path.exists(mapping_file_path):
+                with open(mapping_file_path, 'r', encoding='utf-8') as f:
+                    cls._location_icons_mapping = json.load(f)
+                print(f"成功加载地点图标映射数据: {len(cls._location_icons_mapping)} 条映射")
+            else:
+                print(f"警告: 地点图标映射文件不存在: {mapping_file_path}")
+                cls._location_icons_mapping = {}
+        except Exception as e:
+            print(f"加载地点图标映射文件失败: {e}")
+            cls._location_icons_mapping = {}
+
+    @classmethod
+    def get_location_icon_mapping(cls, icon_code: str) -> Optional[str]:
+        """
+        获取图标代码对应的图标名称
+        
+        Args:
+            icon_code: 图标代码
+            
+        Returns:
+            图标名称，如果不存在或为空则返回None
+        """
+        icon_name = cls._location_icons_mapping.get(icon_code)
+        if icon_name and icon_name.strip():  # 确保图标名称不为空
+            return icon_name
+        return None
+
+    def _extract_location_icons_from_gmnotes(self, card_code: str, is_back: bool = False) -> Dict[str, Any]:
+        """
+        从gmnotes_index.json中提取地点图标信息
+        
+        Args:
+            card_code: 卡牌代码
+            is_back: 是否为背面
+            
+        Returns:
+            包含location_icon和location_link的字典
+        """
+        result = {}
+
+        # 获取gmnotes数据
+        gmnotes_data = self._gmnotes_index.get(card_code)
+        if not gmnotes_data:
+            return result
+
+        # 检查是否为地点类型
+        if gmnotes_data.get("type") != "Location":
+            return result
+
+        # 根据是否为背面选择对应的数据
+        location_data = None
+        if is_back:
+            location_data = gmnotes_data.get("locationBack")
+        else:
+            location_data = gmnotes_data.get("locationFront")
+
+        if not location_data:
+            return result
+
+        # 处理地点图标
+        icons_str = location_data.get("icons", "")
+        if icons_str:
+            # 分割多个图标代码（用|分隔）
+            icon_codes = [code.strip() for code in icons_str.split("|") if code.strip()]
+            for icon_code in icon_codes:
+                icon_name = self.get_location_icon_mapping(icon_code)
+                if icon_name:
+                    result["location_icon"] = icon_name
+                    break  # 只取第一个有效图标
+
+        # 处理连接图标
+        connections_str = location_data.get("connections", "")
+        if connections_str:
+            # 分割多个连接图标代码（用|分隔）
+            connection_codes = [code.strip() for code in connections_str.split("|") if code.strip()]
+            connection_names = []
+            for connection_code in connection_codes:
+                connection_name = self.get_location_icon_mapping(connection_code)
+                if connection_name:
+                    connection_names.append(connection_name)
+
+            if connection_names:
+                result["location_link"] = connection_names
+
+        return result
+
+    # -----------------------------------------------------
     # 公共转换方法
     # -----------------------------------------------------
 
@@ -831,11 +958,19 @@ class ArkhamDBConverter:
         if self.data.get("subname"):
             card_data["subtitle"] = self.data.get("subname")
         card_data["location_type"] = "未揭示"
-        if self.data.get("location_icon"):
-            card_data["location_icon"] = self.data.get("location_icon")
-        # 连接地点图标（需要根据实际数据结构调整）
-        if self.data.get("location_connections"):
-            card_data["location_link"] = self.data.get("location_connections")
+
+        # 从gmnotes_index.json中获取地点图标信息
+        card_code = self.data.get("code", "")
+        location_icons = self._extract_location_icons_from_gmnotes(card_code, is_back=True)
+
+        # 设置地点图标
+        if "location_icon" in location_icons:
+            card_data["location_icon"] = location_icons["location_icon"]
+
+        # 设置连接图标
+        if "location_link" in location_icons:
+            card_data["location_link"] = location_icons["location_link"]
+
         # 特性
         traits_str = self.data.get("traits", "")
         if traits_str:
@@ -1117,11 +1252,19 @@ class ArkhamDBConverter:
             card_data["subtitle"] = self.data.get("subname")
         # 地点类型（已揭示/未揭示）
         card_data["location_type"] = "已揭示"
-        if self.data.get("location_icon"):
-            card_data["location_icon"] = self.data.get("location_icon")
-        # 连接地点图标（需要根据实际数据结构调整）
-        if self.data.get("location_connections"):
-            card_data["location_link"] = self.data.get("location_connections")
+
+        # 从gmnotes_index.json中获取地点图标信息
+        card_code = self.data.get("code", "")
+        location_icons = self._extract_location_icons_from_gmnotes(card_code, is_back=False)
+
+        # 设置地点图标
+        if "location_icon" in location_icons:
+            card_data["location_icon"] = location_icons["location_icon"]
+
+        # 设置连接图标
+        if "location_link" in location_icons:
+            card_data["location_link"] = location_icons["location_link"]
+
         # 隐藏值和线索值
         card_data["shroud"] = self._format_compound_number("shroud", "shroud_per_investigator")
         card_data["clues"] = self._format_compound_number("clues", "clues_fixed", False)
