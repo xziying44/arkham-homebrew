@@ -849,41 +849,21 @@ class RichTextRenderer:
                 border_width=border_width,
                 border_color=border_color
             )
+            if not self.font_manager.silence:
+                if vertical:
+                    # 垂直模式：每个字符居中对齐在列中
+                    char_x = start_x + (max_width - segment['width']) // 2
+                    char_y = current_y
 
-            if vertical:
-                # 垂直模式：每个字符居中对齐在列中
-                char_x = start_x + (max_width - segment['width']) // 2
-                char_y = current_y
+                    # 创建RenderItem并添加到列表
+                    render_item = RenderItem(
+                        obj=text_obj,
+                        x=char_x,
+                        y=char_y
+                    )
+                    render_items.append(render_item)
 
-                # 创建RenderItem并添加到列表
-                render_item = RenderItem(
-                    obj=text_obj,
-                    x=char_x,
-                    y=char_y
-                )
-                render_items.append(render_item)
-
-                # 绘制文本
-                self.draw.text(
-                    (char_x, char_y),
-                    segment['text'],
-                    font=segment['font'],
-                    fill=segment['color']
-                )
-
-                # 如果有边框效果
-                if options.has_border:
-                    # 绘制边框效果（描边）
-                    for dx in [-options.border_width, 0, options.border_width]:
-                        for dy in [-options.border_width, 0, options.border_width]:
-                            if dx != 0 or dy != 0:  # 不重复绘制中心点
-                                self.draw.text(
-                                    (char_x + dx, char_y + dy),
-                                    segment['text'],
-                                    font=segment['font'],
-                                    fill=options.border_color
-                                )
-                    # 重新绘制主文本（覆盖边框）
+                    # 绘制文本
                     self.draw.text(
                         (char_x, char_y),
                         segment['text'],
@@ -891,39 +871,39 @@ class RichTextRenderer:
                         fill=segment['color']
                     )
 
-                # 更新y坐标（垂直移动），使用带间距的高度
-                current_y += segment['spaced_height']
-            else:
-                # 水平模式（原有逻辑）
-                # 创建RenderItem并添加到列表
-                render_item = RenderItem(
-                    obj=text_obj,
-                    x=current_x,
-                    y=start_y
-                )
-                render_items.append(render_item)
+                    # 如果有边框效果
+                    if options.has_border:
+                        # 绘制边框效果（描边）
+                        for dx in [-options.border_width, 0, options.border_width]:
+                            for dy in [-options.border_width, 0, options.border_width]:
+                                if dx != 0 or dy != 0:  # 不重复绘制中心点
+                                    self.draw.text(
+                                        (char_x + dx, char_y + dy),
+                                        segment['text'],
+                                        font=segment['font'],
+                                        fill=options.border_color
+                                    )
+                        # 重新绘制主文本（覆盖边框）
+                        self.draw.text(
+                            (char_x, char_y),
+                            segment['text'],
+                            font=segment['font'],
+                            fill=segment['color']
+                        )
 
-                # 绘制文本
-                self.draw.text(
-                    (current_x, start_y),
-                    segment['text'],
-                    font=segment['font'],
-                    fill=segment['color']
-                )
+                    # 更新y坐标（垂直移动），使用带间距的高度
+                    current_y += segment['spaced_height']
+                else:
+                    # 水平模式（原有逻辑）
+                    # 创建RenderItem并添加到列表
+                    render_item = RenderItem(
+                        obj=text_obj,
+                        x=current_x,
+                        y=start_y
+                    )
+                    render_items.append(render_item)
 
-                # 如果有边框效果
-                if options.has_border:
-                    # 绘制边框效果（描边）
-                    for dx in [-options.border_width, 0, options.border_width]:
-                        for dy in [-options.border_width, 0, options.border_width]:
-                            if dx != 0 or dy != 0:  # 不重复绘制中心点
-                                self.draw.text(
-                                    (current_x + dx, start_y + dy),
-                                    segment['text'],
-                                    font=segment['font'],
-                                    fill=options.border_color
-                                )
-                    # 重新绘制主文本（覆盖边框）
+                    # 绘制文本
                     self.draw.text(
                         (current_x, start_y),
                         segment['text'],
@@ -931,8 +911,28 @@ class RichTextRenderer:
                         fill=segment['color']
                     )
 
-                # 更新x坐标
-                current_x += segment['width']
+                    # 如果有边框效果
+                    if options.has_border:
+                        # 绘制边框效果（描边）
+                        for dx in [-options.border_width, 0, options.border_width]:
+                            for dy in [-options.border_width, 0, options.border_width]:
+                                if dx != 0 or dy != 0:  # 不重复绘制中心点
+                                    self.draw.text(
+                                        (current_x + dx, start_y + dy),
+                                        segment['text'],
+                                        font=segment['font'],
+                                        fill=options.border_color
+                                    )
+                        # 重新绘制主文本（覆盖边框）
+                        self.draw.text(
+                            (current_x, start_y),
+                            segment['text'],
+                            font=segment['font'],
+                            fill=segment['color']
+                        )
+
+                    # 更新x坐标
+                    current_x += segment['width']
 
         # 如果有下划线效果，在所有文本绘制完成后绘制整条下划线
         if options.has_underline:
