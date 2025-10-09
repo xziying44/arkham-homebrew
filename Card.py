@@ -981,7 +981,7 @@ class Card:
             # 特殊处理弱点诡计卡的UI
             if self.card_class == '弱点':
                 encounter_group_ui = self.image_manager.get_image('弱点-诡计卡-遭遇组')
-                self._paste_by_center(encounter_group_ui, (346, 527), (70, 70))
+                self._paste_by_center(encounter_group_ui, (371, 530), (122, 73))
         elif self.card_type == '故事卡':
             config_key = '故事卡'
         elif self.card_type == '冒险参考卡':

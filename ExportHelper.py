@@ -491,7 +491,7 @@ if __name__ == "__main__":
         "format": "PNG",
         "size": ExportSize.POKER_SIZE.value,  # "63.5mm × 88.9mm (2.5″ × 3.5″)"
         "dpi": 300,
-        "bleed": 3,
+        "bleed": 0,
         "bleed_mode": "拉伸",
         "bleed_model": "镜像出血",  # LaMa模型出血 镜像出血
         "quality": 90,  # 系统默认JPG质量
@@ -499,11 +499,11 @@ if __name__ == "__main__":
         "brightness": 1.0,
         "gamma": 1.0,
     }
-    export_helper = ExportHelper(system_defaults, WorkspaceManager(r'D:\诡镇奇谈\重置剧本卡\01_基础游戏\卡牌'))
+    export_helper = ExportHelper(system_defaults, WorkspaceManager(r'D:\诡镇奇谈\重置剧本卡'))
     print(export_helper)
     # 计算出血时间
     t = time.time()
-    export_helper.export_card(r'01104_a.card').show()
+    export_helper.export_card(r'04_失落的时代\卡牌\04264_a.card').show()
     # 输出耗时 单位秒 保留2位小数
     print(f'耗时: {round(time.time() - t, 2)}s')
     # export_helper = ExportHelper(system_defaults, WorkspaceManager(r'D:\汉化文件夹\测试工作空间'))
