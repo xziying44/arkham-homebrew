@@ -576,7 +576,8 @@ class RichTextRenderer:
     # ==================== 修改 draw_complex_text 方法 ====================
     def draw_complex_text(self, text: str, polygon_vertices: List[Tuple[int, int]],
                           padding: int, options: DrawOptions,
-                          draw_debug_frame: bool = False) -> list[RenderItem]:
+                          draw_debug_frame: bool = False,
+                          ignore_silence=False) -> list[RenderItem]:
         """
         在指定多边形区域内绘制复杂文本，并自动寻找最佳字体大小。
 
@@ -626,19 +627,20 @@ class RichTextRenderer:
         # ==================== 新增代码结束 ====================
 
         # 遍历渲染列表并绘制到图片上
-        for render_item in render_list:
-            obj = render_item.obj
-            x, y = render_item.x, render_item.y
+        if not self.font_manager.silence or ignore_silence:
+            for render_item in render_list:
+                obj = render_item.obj
+                x, y = render_item.x, render_item.y
 
-            if isinstance(obj, TextObject):
-                self.draw.text((x, y), obj.text, font=obj.font, fill=options.font_color)
-            elif isinstance(obj, ImageObject):
-                if obj.image.mode == 'RGBA':
-                    self.image.paste(obj.image, (x, y), obj.image)
-                else:
-                    self.image.paste(obj.image, (x, y))
-                if draw_debug_frame:
-                    self.draw.rectangle([(x, y), (x + obj.width, y + obj.height)], outline="green", width=1)
+                if isinstance(obj, TextObject):
+                    self.draw.text((x, y), obj.text, font=obj.font, fill=options.font_color)
+                elif isinstance(obj, ImageObject):
+                    if obj.image.mode == 'RGBA':
+                        self.image.paste(obj.image, (x, y), obj.image)
+                    else:
+                        self.image.paste(obj.image, (x, y))
+                    if draw_debug_frame:
+                        self.draw.rectangle([(x, y), (x + obj.width, y + obj.height)], outline="green", width=1)
         return render_list
 
     def draw_line(self, text: str, position: Tuple[int, int],

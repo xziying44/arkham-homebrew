@@ -412,6 +412,7 @@ class Card:
                 font_size=font_size,
                 font_color=font_color
             ),
+            ignore_silence=True
         )
         # 获取图片的主体范围
         bbox = line_height_img.getbbox()
@@ -499,8 +500,8 @@ class Card:
         :param padding: 内边距
         :param draw_virtual_box: 是否绘制调试框线
         """
-        if self.font_manager.silence:
-            return
+        # if self.font_manager.silence:
+        #     return
         # 兼容旧格式
         if (self.card_type in ['密谋卡', '场景卡'] and self.is_back) or self.card_type == '故事卡':
             text = re.sub(r'<relish>(.*?)</relish>', r'<flavor align="left" quote="true" flex="false">\1</flavor>',
