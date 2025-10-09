@@ -546,42 +546,47 @@ class ArkhamDBConverter:
             return icon_name
         return None
 
-    def _extract_location_icons_from_gmnotes(self, card_code: str, is_back: bool = False) -> Dict[str, Any]:
+    def _extract_location_icons_from_gmnotes(self, card_code: str, is_back: bool = False) -> tuple[dict[Any, Any], str]:
         """
         从gmnotes_index.json中提取地点图标信息
-        
+
         Args:
             card_code: 卡牌代码
             is_back: 是否为背面
-            
+
         Returns:
             包含location_icon和location_link的字典
         """
+        direction = ''
         result = {}
 
         # 获取gmnotes数据
         gmnotes_data = self._gmnotes_index.get(card_code)
         if not gmnotes_data:
-            return result
+            return result, direction
 
         # 检查是否为地点类型
         if gmnotes_data.get("type") != "Location":
-            return result
+            return result, direction
 
         # 根据是否为背面选择对应的数据
         location_data = None
         if 'locationFront' in gmnotes_data and 'locationBack' not in gmnotes_data:
             location_data = gmnotes_data['locationFront']
+            direction = 'front'
         elif 'locationFront' not in gmnotes_data and 'locationBack' in gmnotes_data:
             location_data = gmnotes_data['locationBack']
+            direction = 'back'
         else:
             if is_back:
                 location_data = gmnotes_data.get("locationFront")
+                direction = 'front'
             else:
                 location_data = gmnotes_data.get("locationBack")
+                direction = 'back'
 
         if not location_data:
-            return result
+            return result, direction
 
         # 处理地点图标
         icons_str = location_data.get("icons", "")
@@ -608,29 +613,35 @@ class ArkhamDBConverter:
             if connection_names:
                 result["location_link"] = connection_names
 
-        return result
+        return result, direction
 
     def _apply_special_card_handling(self, card_data: Dict[str, Any], is_back: bool = False) -> Dict[str, Any]:
         """
         对特定卡牌进行特殊处理的统一方法
-        
+
         Args:
             card_data: 已转换的卡牌数据
             is_back: 是否为背面
-            
+
         Returns:
             经过特殊处理的卡牌数据
         """
         card_code = self.data.get("code", "")
 
         # 特殊处理：code==01145 的背面设置 type 为"场景卡-大画"
-        if card_code in ["01145", "02314", "04048", "04049","04318"] and is_back:
+        if card_code in ["01145", "02314", "04048", "04049", "04318"] and is_back:
             card_data["type"] = "场景卡-大画"
             card_data["footer_copyright"] = ""
             card_data["footer_icon_font"] = ""
             card_data["encounter_group_number"] = ""
             card_data["illustrator"] = ""
             card_data["card_number"] = ""
+        if card_code in ['04121', '04122', '04210', '04214'] and not is_back:
+            card_data["threshold"] = "-"
+
+        if card_code == '04277':
+            card_data["scenario_type"] = 1
+            card_data["scenario_card"]['resource_name'] = '当前深度'
 
         # 可以在这里添加更多特殊处理逻辑
         # 例如：
@@ -752,6 +763,7 @@ class ArkhamDBConverter:
             elif type_code == "scenario":
                 card_data = self._convert_scenario_back()
             elif type_code == "investigator":
+                card_type_name = '调查员卡背'
                 card_data = self._convert_investigator_back()
             else:
                 return None
@@ -1025,7 +1037,8 @@ class ArkhamDBConverter:
 
         # 从gmnotes_index.json中获取地点图标信息
         card_code = self.data.get("code", "")
-        location_icons = self._extract_location_icons_from_gmnotes(card_code, is_back=True)
+        location_icons, direction = self._extract_location_icons_from_gmnotes(card_code, is_back=True)
+        card_data["Notes"] = direction
 
         # 设置地点图标
         if "location_icon" in location_icons:
@@ -1391,7 +1404,8 @@ class ArkhamDBConverter:
 
         # 从gmnotes_index.json中获取地点图标信息
         card_code = self.data.get("code", "")
-        location_icons = self._extract_location_icons_from_gmnotes(card_code, is_back=False)
+        location_icons, direction = self._extract_location_icons_from_gmnotes(card_code, is_back=False)
+        card_data["Notes"] = direction
 
         # 设置地点图标
         if "location_icon" in location_icons:

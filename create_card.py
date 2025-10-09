@@ -290,12 +290,14 @@ class CardCreator:
 
         # 复仇点
         if card_json.get('vengeance', None):
-            if card_json.get('victory', None):
-                victory_text = (f"复仇{card_json.get('vengeance')}。\n"
-                                f"胜利{card_json.get('victory')}。")
-            else:
-                victory_text = f"复仇{card_json.get('vengeance')}。"
-            card_json['victory'] = victory_text
+            victory = card_json.get('victory', None)
+            if not (victory and isinstance(victory, str)):
+                if card_json.get('victory', None):
+                    victory_text = (f"复仇{card_json.get('vengeance')}。\n"
+                                    f"胜利{card_json.get('victory')}。")
+                else:
+                    victory_text = f"复仇{card_json.get('vengeance')}。"
+                card_json['victory'] = victory_text
 
         text = json.dumps(card_json, ensure_ascii=False)
         text = text.replace('＜', '<').replace('＞', '>').replace('？', '?').replace('｛', '{').replace('｝', '}')
@@ -1361,7 +1363,7 @@ class CardCreator:
         card.draw_centered_text((313, 90), data['name'], "标题字体", 48, (0, 0, 0))
         card.draw_centered_text((370, 1008), '剧情', "卡牌类型字体", 30, (0, 0, 0))
 
-        body = self._tidy_body_flavor(data['body'], data['flavor'])
+        body = self._tidy_body_flavor(data['body'], data['flavor'], flavor_type=1, align='left', quote=True)
         card.draw_text(body, vertices=[(50, 207), (685, 207), (685, 960), (50, 960)],
                        default_font_name='正文字体', default_size=32, padding=15, draw_virtual_box=False)
 
