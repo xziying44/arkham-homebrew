@@ -275,6 +275,9 @@ class ArkhamDBConverter:
         formatted_text = re.sub(r'\n- ', r"\n<点> ", formatted_text)
         formatted_text = re.sub(r'\n-', r"\n<点> ", formatted_text)
 
+        formatted_text = re.sub(r'^- ', r"<点> ", formatted_text)
+        formatted_text = re.sub(r'^-(?![0-9X])', r"<点> ", formatted_text)
+
         return formatted_text
 
     def _format_flavor_text(self, text: Optional[str]) -> str:
@@ -607,6 +610,35 @@ class ArkhamDBConverter:
 
         return result
 
+    def _apply_special_card_handling(self, card_data: Dict[str, Any], is_back: bool = False) -> Dict[str, Any]:
+        """
+        对特定卡牌进行特殊处理的统一方法
+        
+        Args:
+            card_data: 已转换的卡牌数据
+            is_back: 是否为背面
+            
+        Returns:
+            经过特殊处理的卡牌数据
+        """
+        card_code = self.data.get("code", "")
+
+        # 特殊处理：code==01145 的背面设置 type 为"场景卡-大画"
+        if card_code in ["01145", "02314", "04048", "04049","04318"] and is_back:
+            card_data["type"] = "场景卡-大画"
+            card_data["footer_copyright"] = ""
+            card_data["footer_icon_font"] = ""
+            card_data["encounter_group_number"] = ""
+            card_data["illustrator"] = ""
+            card_data["card_number"] = ""
+
+        # 可以在这里添加更多特殊处理逻辑
+        # 例如：
+        # if card_code == "xxxxx" and is_back:
+        #     card_data["some_field"] = "some_value"
+
+        return card_data
+
     # -----------------------------------------------------
     # 公共转换方法
     # -----------------------------------------------------
@@ -699,6 +731,8 @@ class ArkhamDBConverter:
         card_data['type'] = card_type_name
         # 获取底标数据
         self.registered_base_mark_information(card_data)
+        # 应用特殊卡牌处理
+        card_data = self._apply_special_card_handling(card_data, is_back=False)
         return card_data
 
     def convert_back(self) -> Optional[Dict[str, Any]]:
@@ -727,6 +761,8 @@ class ArkhamDBConverter:
             if type_code in ["location", "act", "agenda", "scenario"]:
                 card_data['card_number'] = ''
                 card_data['encounter_group_number'] = ''
+            # 应用特殊卡牌处理
+            card_data = self._apply_special_card_handling(card_data, is_back=True)
             return card_data
         if 'linked_card' in self.data:
             back_data = ArkhamDBConverter(self.data['linked_card'])
@@ -749,6 +785,8 @@ class ArkhamDBConverter:
             return None
 
         card_data['type'] = card_type_name
+        # 应用特殊卡牌处理
+        card_data = self._apply_special_card_handling(card_data, is_back=True)
         return card_data
 
     # -----------------------------------------------------
