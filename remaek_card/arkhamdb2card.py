@@ -643,6 +643,20 @@ class ArkhamDBConverter:
             card_data["scenario_type"] = 1
             card_data["scenario_card"]['resource_name'] = '当前深度'
 
+        if card_code in ['04125a', '04126a', '04127', '04128a', '04129', '04130a', '04131',
+                         '04132'] and 'serial_number' in card_data:
+            if is_back:
+                card_data["serial_number"] = card_data["serial_number"].replace('b', 'd')
+            else:
+                card_data["serial_number"] = card_data["serial_number"].replace('a', 'c')
+
+        if card_code in ['04133a', '04134a', '04135', '04136', '04137a', '04138', '04139',
+                         '04140'] and 'serial_number' in card_data:
+            if is_back:
+                card_data["serial_number"] = card_data["serial_number"].replace('b', 'f')
+            else:
+                card_data["serial_number"] = card_data["serial_number"].replace('a', 'e')
+
         # 可以在这里添加更多特殊处理逻辑
         # 例如：
         # if card_code == "xxxxx" and is_back:
