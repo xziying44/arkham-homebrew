@@ -830,6 +830,8 @@ class ArkhamDBConverter:
 
         if self.data.get("victory") is not None:
             card_data["victory"] = self.data.get("victory")
+        if self.data.get("vengeance") is not None:
+            card_data["vengeance"] = self.data.get("vengeance")
 
         if self.data.get("encounter_code"):
             card_data["encounter_group"] = self._convert_encounter_group_code(self.data.get("encounter_code"))
@@ -908,6 +910,8 @@ class ArkhamDBConverter:
         card_data["flavor"] = self._format_flavor_text(self.data.get("flavor"))
         if self.data.get("victory") is not None:
             card_data["victory"] = self.data.get("victory")
+        if self.data.get("vengeance") is not None:
+            card_data["vengeance"] = self.data.get("vengeance")
         if self.data.get("encounter_code"):
             card_data["encounter_group"] = self._convert_encounter_group_code(self.data.get("encounter_code"))
         return card_data
@@ -924,6 +928,8 @@ class ArkhamDBConverter:
         card_data["flavor"] = self._format_flavor_text(self.data.get("flavor"))
         if self.data.get("victory") is not None:
             card_data["victory"] = self.data.get("victory")
+        if self.data.get("vengeance") is not None:
+            card_data["vengeance"] = self.data.get("vengeance")
         if self.data.get("encounter_code"):
             card_data["encounter_group"] = self._convert_encounter_group_code(self.data.get("encounter_code"))
         return card_data
@@ -939,7 +945,13 @@ class ArkhamDBConverter:
         card_data["flavor"] = self._format_flavor_text(self.data.get("flavor"))
         if self.data.get("victory") is not None:
             card_data["victory"] = self.data.get("victory")
+        if self.data.get("vengeance") is not None:
+            card_data["vengeance"] = self.data.get("vengeance")
 
+        if self.data.get("vengeance") is not None:
+            card_data["vengeance"] = self.data.get("vengeance")
+        if self.data.get("vengeance") is not None:
+            card_data["vengeance"] = self.data.get("vengeance")
         # 遭遇组
         if self.data.get("encounter_code"):
             card_data["encounter_group"] = self._convert_encounter_group_code(self.data.get("encounter_code"))
@@ -990,6 +1002,8 @@ class ArkhamDBConverter:
         card_data["flavor"] = self._format_flavor_text(self.data.get("flavor"))
         if self.data.get("victory") is not None:
             card_data["victory"] = self.data.get("victory")
+        if self.data.get("vengeance") is not None:
+            card_data["vengeance"] = self.data.get("vengeance")
 
         # 遭遇组
         if self.data.get("encounter_code"):
@@ -1220,6 +1234,8 @@ class ArkhamDBConverter:
         # 胜利点
         if self.data.get("victory") is not None:
             card_data["victory"] = self.data.get("victory")
+        if self.data.get("vengeance") is not None:
+            card_data["vengeance"] = self.data.get("vengeance")
 
         # 遭遇组
         if self.data.get("encounter_code"):
@@ -1252,6 +1268,8 @@ class ArkhamDBConverter:
         # 背面可能有胜利点
         if self.data.get("victory") is not None:
             card_data["victory"] = self.data.get("victory")
+        if self.data.get("vengeance") is not None:
+            card_data["vengeance"] = self.data.get("vengeance")
 
         # 遭遇组
         if self.data.get("encounter_code"):
@@ -1276,6 +1294,8 @@ class ArkhamDBConverter:
         # 胜利点
         if self.data.get("victory") is not None:
             card_data["victory"] = self.data.get("victory")
+        if self.data.get("vengeance") is not None:
+            card_data["vengeance"] = self.data.get("vengeance")
 
         # 遭遇组
         if self.data.get("encounter_code"):
@@ -1345,6 +1365,8 @@ class ArkhamDBConverter:
         # 背面可能有胜利点
         if self.data.get("victory") is not None:
             card_data["victory"] = self.data.get("victory")
+        if self.data.get("vengeance") is not None:
+            card_data["vengeance"] = self.data.get("vengeance")
 
         # 遭遇组
         if self.data.get("encounter_code"):
@@ -1394,6 +1416,8 @@ class ArkhamDBConverter:
         # 胜利点
         if self.data.get("victory") is not None:
             card_data["victory"] = self.data.get("victory")
+        if self.data.get("vengeance") is not None:
+            card_data["vengeance"] = self.data.get("vengeance")
         # 遭遇组
         if self.data.get("encounter_code"):
             card_data["encounter_group"] = self._convert_encounter_group_code(self.data.get("encounter_code"))
