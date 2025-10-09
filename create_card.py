@@ -1211,7 +1211,7 @@ class CardCreator:
         title_y = 513 if data['type'] == '场景卡-大画' else 464
         card.draw_centered_text((500, title_y), data['name'], "标题字体", 48, (0, 0, 0))
 
-        body = self._tidy_body_flavor(data['body'], data['flavor'])
+        body = self._tidy_body_flavor(data['body'], data['flavor'], flavor_type=1)
         text_y = 556 if data['type'] == '场景卡-大画' else 512
         card.draw_text(body, vertices=[(28, text_y), (1016, text_y), (1016, 686), (28, 686)],
                        default_font_name='正文字体', default_size=32, padding=15, draw_virtual_box=False)
