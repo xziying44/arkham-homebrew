@@ -255,7 +255,9 @@ class ArkhamDBConverter:
             return ""  # 如果找不到对应图标，返回空字符串
 
         formatted_text = re.sub(r'<span([^>]*)></span>', replace_span_icon, text)
-        formatted_text = re.sub(r'<blockquote><i>(.*?)</i></blockquote>', r'<flavor quote="true" padding="20" flavor align="left" flex="false">\1</flavor>', formatted_text)
+        formatted_text = re.sub(r'<blockquote><i>(.*?)</i></blockquote>',
+                                r'<flavor quote="true" padding="20" flavor align="left" flex="false">\1</flavor>',
+                                formatted_text)
         # 1. 替换HTML粗体标签为【】
         formatted_text = re.sub(r'<b><i>(.*?)</i></b>', r'{\1}', formatted_text)
         formatted_text = re.sub(r'\[\[(.*?)]]', r'{\1}', formatted_text)
@@ -684,6 +686,8 @@ class ArkhamDBConverter:
             card_data = self._convert_agenda_front()
         elif type_code == "scenario":  # 新增冒险参考卡处理
             card_data = self._convert_scenario_front()
+        elif type_code == "story":
+            card_data = self._convert_story_front()
         else:
             print(f"警告：尚未实现对 '{type_code}' 类型的正面转换")
             return None
@@ -708,6 +712,8 @@ class ArkhamDBConverter:
                 card_data = self._convert_agenda_back()
             elif type_code == "scenario":
                 card_data = self._convert_scenario_back()
+            elif type_code == "investigator":
+                card_data = self._convert_investigator_back()
             else:
                 return None
             card_data['type'] = card_type_name
@@ -1161,6 +1167,30 @@ class ArkhamDBConverter:
         card_data["flavor"] = self._format_flavor_text(self.data.get("back_flavor", ""))
 
         # 背面可能有胜利点
+        if self.data.get("victory") is not None:
+            card_data["victory"] = self.data.get("victory")
+
+        # 遭遇组
+        if self.data.get("encounter_code"):
+            card_data["encounter_group"] = self._convert_encounter_group_code(self.data.get("encounter_code"))
+
+        return card_data
+
+    def _convert_story_front(self) -> Dict[str, Any]:
+        """
+        私有方法，专门用于转换故事卡正面。
+        """
+        card_data = {}
+        # 基础信息
+        card_data["name"] = self.data.get("name", "")
+        if self.data.get("is_unique"):
+            card_data["name"] = f"🏅{card_data['name']}"
+
+        # 效果和风味文本
+        card_data["body"] = self._format_text(self.data.get("text"))
+        card_data["flavor"] = self._format_flavor_text(self.data.get("flavor"))
+
+        # 胜利点
         if self.data.get("victory") is not None:
             card_data["victory"] = self.data.get("victory")
 
