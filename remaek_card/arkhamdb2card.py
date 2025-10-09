@@ -1003,13 +1003,21 @@ class ArkhamDBConverter:
         if self.data.get("is_unique"):
             card_data["name"] = f"🏅{card_data['name']}"
 
-        # 解析text中的副标题（第一行的粗体内容）
+        # 解析text中的副标题（优先尝试第一行，如果没有<b>标签则直接取第一行）
         text = self.data.get("text", "")
         subtitle_match = re.search(r'<b>(.*?)</b>', text)
         if subtitle_match:
             card_data["subtitle"] = subtitle_match.group(1).strip()
-        elif self.data.get("subname"):
-            card_data["subtitle"] = self.data.get("subname")
+        else:
+            # 如果没有<b>标签，尝试取第一行作为副标题
+            lines = text.split('\n')
+            if lines and lines[0].strip():
+                first_line = lines[0].strip()
+                # 如果第一行包含图标（如💀、👤等），则不作为副标题
+                if not any(icon in first_line for icon in ['💀', '👤', '📜', '👹']):
+                    card_data["subtitle"] = first_line
+            elif self.data.get("subname"):
+                card_data["subtitle"] = self.data.get("subname")
 
         # 设置默认类型为0（默认类型）
         card_data["scenario_type"] = 0
@@ -1021,22 +1029,34 @@ class ArkhamDBConverter:
         # 匹配格式：💀 -X。X是你所在地点{食尸鬼}的数量。
         skull_match = re.search(r'💀\s*([^💀👤📜👹\n]*?)(?=\n|$|👤|📜|👹)', text)
         if skull_match:
-            scenario_card_data["skull"] = self._format_text(skull_match.group(1).strip())
+            skull_text = skull_match.group(1).strip()
+            # 删除图标文本中的冒号（如果存在）
+            skull_text = re.sub(r'^：', '', skull_text)
+            scenario_card_data["skull"] = self._format_text(skull_text)
 
         # 匹配👤效果
         cultist_match = re.search(r'👤\s*([^💀👤📜👹\n]*?)(?=\n|$|💀|📜|👹)', text)
         if cultist_match:
-            scenario_card_data["cultist"] = self._format_text(cultist_match.group(1).strip())
+            cultist_text = cultist_match.group(1).strip()
+            # 删除图标文本中的冒号（如果存在）
+            cultist_text = re.sub(r'^：', '', cultist_text)
+            scenario_card_data["cultist"] = self._format_text(cultist_text)
 
         # 匹配📜效果
         tablet_match = re.search(r'📜\s*([^💀👤📜👹\n]*?)(?=\n|$|💀|👤|👹)', text)
         if tablet_match:
-            scenario_card_data["tablet"] = self._format_text(tablet_match.group(1).strip())
+            tablet_text = tablet_match.group(1).strip()
+            # 删除图标文本中的冒号（如果存在）
+            tablet_text = re.sub(r'^：', '', tablet_text)
+            scenario_card_data["tablet"] = self._format_text(tablet_text)
 
         # 匹配👹效果
         elder_thing_match = re.search(r'👹\s*([^💀👤📜👹\n]*?)(?=\n|$|💀|👤|📜)', text)
         if elder_thing_match:
-            scenario_card_data["elder_thing"] = self._format_text(elder_thing_match.group(1).strip())
+            elder_thing_text = elder_thing_match.group(1).strip()
+            # 删除图标文本中的冒号（如果存在）
+            elder_thing_text = re.sub(r'^：', '', elder_thing_text)
+            scenario_card_data["elder_thing"] = self._format_text(elder_thing_text)
 
         # 将scenario_card数据包装到scenario_card字段中
         if scenario_card_data:
@@ -1059,13 +1079,21 @@ class ArkhamDBConverter:
         if self.data.get("is_unique"):
             card_data["name"] = f"🏅{card_data['name']}"
 
-        # 解析back_text中的副标题（第一行的粗体内容）
+        # 解析back_text中的副标题（优先尝试第一行，如果没有<b>标签则直接取第一行）
         back_text = self.data.get("back_text", "")
         subtitle_match = re.search(r'<b>(.*?)</b>', back_text)
         if subtitle_match:
             card_data["subtitle"] = subtitle_match.group(1).strip()
-        elif self.data.get("subname"):
-            card_data["subtitle"] = self.data.get("subname")
+        else:
+            # 如果没有<b>标签，尝试取第一行作为副标题
+            lines = back_text.split('\n')
+            if lines and lines[0].strip():
+                first_line = lines[0].strip()
+                # 如果第一行包含图标（如💀、👤等），则不作为副标题
+                if not any(icon in first_line for icon in ['💀', '👤', '📜', '👹']):
+                    card_data["subtitle"] = first_line
+            elif self.data.get("subname"):
+                card_data["subtitle"] = self.data.get("subname")
 
         # 设置为背面
         card_data["is_back"] = True
@@ -1080,22 +1108,34 @@ class ArkhamDBConverter:
         # 匹配格式：💀 -2。如果失败，在该次技能检定后，查找遭遇牌堆和弃牌堆，抽取一个{食尸鬼}敌人。混洗遭遇牌堆。
         skull_match = re.search(r'💀\s*([^💀👤📜👹\n]*?)(?=\n|$|👤|📜|👹)', back_text)
         if skull_match:
-            scenario_card_data["skull"] = self._format_text(skull_match.group(1).strip())
+            skull_text = skull_match.group(1).strip()
+            # 删除图标文本中的冒号（如果存在）
+            skull_text = re.sub(r'^：', '', skull_text)
+            scenario_card_data["skull"] = self._format_text(skull_text)
 
         # 匹配👤效果
         cultist_match = re.search(r'👤\s*([^💀👤📜👹\n]*?)(?=\n|$|💀|📜|👹)', back_text)
         if cultist_match:
-            scenario_card_data["cultist"] = self._format_text(cultist_match.group(1).strip())
+            cultist_text = cultist_match.group(1).strip()
+            # 删除图标文本中的冒号（如果存在）
+            cultist_text = re.sub(r'^：', '', cultist_text)
+            scenario_card_data["cultist"] = self._format_text(cultist_text)
 
         # 匹配📜效果
         tablet_match = re.search(r'📜\s*([^💀👤📜👹\n]*?)(?=\n|$|💀|👤|👹)', back_text)
         if tablet_match:
-            scenario_card_data["tablet"] = self._format_text(tablet_match.group(1).strip())
+            tablet_text = tablet_match.group(1).strip()
+            # 删除图标文本中的冒号（如果存在）
+            tablet_text = re.sub(r'^：', '', tablet_text)
+            scenario_card_data["tablet"] = self._format_text(tablet_text)
 
         # 匹配👹效果
         elder_thing_match = re.search(r'👹\s*([^💀👤📜👹\n]*?)(?=\n|$|💀|👤|📜)', back_text)
         if elder_thing_match:
-            scenario_card_data["elder_thing"] = self._format_text(elder_thing_match.group(1).strip())
+            elder_thing_text = elder_thing_match.group(1).strip()
+            # 删除图标文本中的冒号（如果存在）
+            elder_thing_text = re.sub(r'^：', '', elder_thing_text)
+            scenario_card_data["elder_thing"] = self._format_text(elder_thing_text)
 
         # 将scenario_card数据包装到scenario_card字段中
         if scenario_card_data:
