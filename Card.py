@@ -1102,7 +1102,7 @@ class Card:
         :param footer_icon_font:
         :return:
         """
-        print('footer_copyright',footer_copyright)
+        print('footer_copyright', footer_copyright)
         if self.card_type in ['密谋卡', '场景卡', '调查员卡'] and self.is_back:
             return
         if self.card_type == '升级卡':
@@ -1218,6 +1218,54 @@ class Card:
                 text=right_text,
                 font_name='收藏信息字体',
                 font_size=20,
+                font_color=font_color
+            )
+
+    def draw_victory_points(self, position, victory_value, font_name="加粗字体", font_size=28, font_color=(0, 0, 0)):
+        """
+        统一的画胜利点方法
+        
+        Args:
+            position: 位置坐标 (x, y)
+            victory_value: 胜利点值，可以是整数或字符串
+            font_name: 字体名称，默认"加粗字体"
+            font_size: 字体大小，默认28
+            font_color: 字体颜色，默认黑色
+        """
+        if victory_value is None:
+            return
+
+        # 根据victory值的类型决定显示方式
+        if isinstance(victory_value, int):
+            # 如果是整数，格式化为"胜利X。"
+            text = f"胜利{victory_value}。"
+        elif isinstance(victory_value, str):
+            # 如果是字符串，直接使用原文
+            text = victory_value
+        else:
+            # 其他类型，转换为字符串处理
+            text = str(victory_value)
+
+        if '\n' in text:
+            # 多行 分割换行
+            lines = text.split('\n')
+            x, y = position
+            for line in reversed(lines):
+                self.draw_centered_text(
+                    position=(x, y),
+                    text=line,
+                    font_name=font_name,
+                    font_size=font_size,
+                    font_color=font_color
+                )
+                y -= font_size
+
+        else:
+            self.draw_centered_text(
+                position=position,
+                text=text,
+                font_name=font_name,
+                font_size=font_size,
                 font_color=font_color
             )
 

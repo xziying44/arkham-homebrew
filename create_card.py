@@ -288,6 +288,15 @@ class CardCreator:
         if card_json.get('class', '') == '':
             card_json['class'] = '中立'
 
+        # 复仇点
+        if card_json.get('vengeance', None):
+            if card_json.get('victory', None):
+                victory_text = (f"复仇{card_json.get('vengeance')}。\n"
+                                f"胜利{card_json.get('victory')}。")
+            else:
+                victory_text = f"复仇{card_json.get('vengeance')}。"
+            card_json['victory'] = victory_text
+
         text = json.dumps(card_json, ensure_ascii=False)
         text = text.replace('＜', '<').replace('＞', '>').replace('？', '?').replace('｛', '{').replace('｝', '}')
 
@@ -428,15 +437,10 @@ class CardCreator:
             card.set_number_value(position=(508, 132 + 480), text=evade, font_size=44)
 
         # 写胜利点
-        victory = data.get('victory', None)
-        if victory is not None:
-            card.draw_centered_text(
-                position=(675, 907),
-                text=f"胜利{data['victory']}。",
-                font_name="加粗字体",
-                font_size=28,
-                font_color=(0, 0, 0)
-            )
+        card.draw_victory_points(
+            position=(675, 907),
+            victory_value=data.get('victory')
+        )
 
         # 画地点符号和连接符号
         if data.get('location_icon', '') != '':
@@ -514,15 +518,10 @@ class CardCreator:
         )
 
         # 画胜利点
-        victory = data.get('victory', None)
-        if victory is not None:
-            card.draw_centered_text(
-                position=(378, 980),
-                text=f"胜利{data['victory']}。",
-                font_name="加粗字体",
-                font_size=28,
-                font_color=(0, 0, 0)
-            )
+        card.draw_victory_points(
+            position=(378, 980),
+            victory_value=data.get('victory')
+        )
 
         return card
 
@@ -602,13 +601,10 @@ class CardCreator:
         body = self._tidy_body_flavor(data['body'], data['flavor'])
 
         # 写胜利点数和正文
-        if 'victory' in data and isinstance(data['victory'], int):
-            card.draw_centered_text(
+        if data.get('victory') is not None:
+            card.draw_victory_points(
                 position=(380, 512),
-                text=f"胜利{data['victory']}。",
-                font_name="加粗字体",
-                font_size=28,
-                font_color=(0, 0, 0)
+                victory_value=data.get('victory')
             )
             card.draw_text(
                 text=body,
@@ -857,8 +853,11 @@ class CardCreator:
         card.draw_centered_text((370, 218), self._integrate_traits_text(data.get('traits', [])), "特性字体", 32,
                                 (0, 0, 0))
 
-        if 'victory' in data and isinstance(data['victory'], int):
-            card.draw_centered_text((380, 512), f"胜利{data['victory']}。", "加粗字体", 28, (0, 0, 0))
+        if data.get('victory') is not None:
+            card.draw_victory_points(
+                position=(380, 512),
+                victory_value=data.get('victory')
+            )
             vertices = [(90, 230), (645, 230), (716, 270), (716, 450),
                         (538, 510), (190, 510), (20, 450), (20, 270)]
         else:
@@ -1146,9 +1145,10 @@ class CardCreator:
         if 'cost' in data and isinstance(data['cost'], int):
             card.set_card_cost(data['cost'])
 
-        victory = data.get('victory', None)
-        if victory is not None:
-            card.draw_centered_text((378, 960), f"胜利{data['victory']}。", "加粗字体", 28, (0, 0, 0))
+        card.draw_victory_points(
+            position=(378, 960),
+            victory_value=data.get('victory')
+        )
 
     def _setup_support_card_content(self, card, data, traits, body):
         """设置支援卡内容"""
@@ -1182,10 +1182,12 @@ class CardCreator:
         if health != -1 or horror != -1:
             card.set_health_and_horror(health, horror)
 
-        victory = data.get('victory', None)
-        if victory is not None:
+        if data.get('victory') is not None:
             pos = (675, 938) if 'slots' not in data else (379, 885)
-            card.draw_centered_text(pos, f"胜利{data['victory']}。", "加粗字体", 28, (0, 0, 0))
+            card.draw_victory_points(
+                position=pos,
+                victory_value=data.get('victory')
+            )
 
     def create_large_picture(self, card_json: dict, picture_path: Union[str, Image.Image, None] = None) -> Card:
         """制作大画卡"""
@@ -1329,9 +1331,10 @@ class CardCreator:
         )
 
         # 画胜利点
-        victory = data.get('victory', None)
-        if victory is not None:
-            card.draw_centered_text((590, 680), f"胜利{data['victory']}。", "加粗字体", 28, (0, 0, 0))
+        card.draw_victory_points(
+            position=(590, 680),
+            victory_value=data.get('victory')
+        )
 
         return card
 
@@ -1362,9 +1365,10 @@ class CardCreator:
         card.draw_text(body, vertices=[(50, 207), (685, 207), (685, 960), (50, 960)],
                        default_font_name='正文字体', default_size=32, padding=15, draw_virtual_box=False)
 
-        victory = data.get('victory', None)
-        if victory is not None:
-            card.draw_centered_text((386, 970), f"胜利{data['victory']}。", "加粗字体", 28, (0, 0, 0))
+        card.draw_victory_points(
+            position=(386, 970),
+            victory_value=data.get('victory')
+        )
 
         return card
 
@@ -1403,9 +1407,10 @@ class CardCreator:
         card.draw_text(body, vertices, default_font_name='正文字体', default_size=32,
                        padding=15, draw_virtual_box=False)
 
-        victory = data.get('victory', None)
-        if victory is not None:
-            card.draw_centered_text((386, 970), f"胜利{data['victory']}。", "加粗字体", 28, (0, 0, 0))
+        card.draw_victory_points(
+            position=(386, 970),
+            victory_value=data.get('victory')
+        )
 
         return card
 
@@ -1543,34 +1548,34 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "场景卡",
-        "is_back": True,
-        "name": "伟大之人",
+        "type": "地点卡",
+        "name": "时间石室",
         "id": "",
         "created_at": "",
         "version": "1.0",
         "language": "zh",
-        "level": 0,
-        "cost": -1,
-        "class": "中立",
-        "traits": [
-            "身份"
+        "location_type": "已揭示",
+        "location_icon": "暗红漏斗",
+        "location_link": [
+            "褐扭"
         ],
-        "body": "永久。\n你的牌组上限+3。\n你的调查员牌组构筑选项额外获得：“3张带有'胜利区'字样的潜修者（<潜修者>）事件卡等级0”。",
-        "picture_layout": {
-            "mode": "custom",
-            "offset": {
-                "x": -3.3333333333333335,
-                "y": -66.66666666666667
-            },
-            "scale": 0.65,
-            "crop": {
-                "top": 0,
-                "right": 0,
-                "bottom": 0,
-                "left": 0
-            }
-        }
+        "shroud": "4",
+        "clues": "2<调查员>",
+        "traits": [
+            "失落",
+            "遗迹"
+        ],
+        "body": "【强制】 - 在时间石室入场后：将放在一边的古代遗物支援附属到时间石室上。在时间石室上放置1个毁灭标记。",
+        "flavor": "这个石室中央的地面雕刻着精细纹路，发出诡异的光芒……",
+        "victory": 2,
+        "vengeance": 2,
+        "encounter_group": "the_doom_of_eztli",
+        "illustrator": "Andreas Zafiratos",
+        "card_number": "68",
+        "footer_copyright": "© 2017 FFG",
+        "footer_icon_font": "<font name=\"packicon_forgotten\"></font>",
+        "encounter_group_number": "15/15",
+        "image_mode": 1
     }
 
     # 创建字体和图片管理器
