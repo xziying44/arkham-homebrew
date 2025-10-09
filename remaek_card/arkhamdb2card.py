@@ -567,10 +567,15 @@ class ArkhamDBConverter:
 
         # 根据是否为背面选择对应的数据
         location_data = None
-        if is_back:
-            location_data = gmnotes_data.get("locationBack")
+        if 'locationFront' in gmnotes_data and 'locationBack' not in gmnotes_data:
+            location_data = gmnotes_data['locationFront']
+        elif 'locationFront' not in gmnotes_data and 'locationBack' in gmnotes_data:
+            location_data = gmnotes_data['locationBack']
         else:
-            location_data = gmnotes_data.get("locationFront")
+            if is_back:
+                location_data = gmnotes_data.get("locationFront")
+            else:
+                location_data = gmnotes_data.get("locationBack")
 
         if not location_data:
             return result
