@@ -46732,6 +46732,26 @@
       ]
     }
   },
+    "05166b": {
+    "id": "05166",
+    "type": "Location",
+    "cycle": "The Circle Undone",
+    "locationFront": {
+      "icons": "Tilde",
+      "connections": "Circle|Plus"
+    },
+    "locationBack": {
+      "icons": "Tilde",
+      "connections": "Circle|Plus",
+      "uses": [
+        {
+          "countPerInvestigator": 1,
+          "type": "Clue",
+          "token": "clue"
+        }
+      ]
+    }
+  },
   "05185": {
     "id": "05185",
     "type": "Treachery",

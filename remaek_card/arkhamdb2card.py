@@ -593,6 +593,8 @@ class ArkhamDBConverter:
         # 获取gmnotes数据
         gmnotes_data = self._gmnotes_index.get(card_code)
         if not gmnotes_data:
+            gmnotes_data = self._gmnotes_index.get(card_code.replace('b', ''))
+        if not gmnotes_data:
             return result, direction
 
         # 检查是否为地点类型
@@ -660,7 +662,7 @@ class ArkhamDBConverter:
 
         # 特殊处理：code==01145 的背面设置 type 为"场景卡-大画"
         if card_code in ["01145", "02314", "04048", "04049", "04318", "03322a", "03323a", "03276b",
-                         "03279b"] and is_back:
+                         "03279b", "05199","05247","05248"] and is_back:
             card_data["type"] = "场景卡-大画"
             card_data["footer_copyright"] = ""
             card_data["footer_icon_font"] = ""
@@ -707,7 +709,7 @@ class ArkhamDBConverter:
         if card_code in ['03283', '03284'] and is_back:
             card_data["flavor"] = card_data["flavor"].split("<hr>")[0]
 
-        if card_code in ['03065', '03066', '03067', '03068', '03069'] :
+        if card_code in ['03065', '03066', '03067', '03068', '03069']:
             if is_back:
                 card_data["Notes"] = 'front'
             else:
@@ -773,7 +775,7 @@ class ArkhamDBConverter:
         card_data['footer_copyright'] = middle_text
         return card_data
 
-    def convert_front(self) -> Optional[Dict[str, Any]]:
+    def convert_front(self, is_back: bool = False) -> Optional[Dict[str, Any]]:
         """
         转换卡牌正面数据。
         """
@@ -797,7 +799,7 @@ class ArkhamDBConverter:
         elif type_code == "enemy":
             card_data = self._convert_enemy_front()
         elif type_code == "location":  # 新增地点卡处理
-            card_data = self._convert_location_front()
+            card_data = self._convert_location_front(is_back)
         elif type_code == "act":  # 新增场景卡处理
             card_data = self._convert_act_front()
         elif type_code == "agenda":  # 新增密谋卡处理
@@ -848,7 +850,7 @@ class ArkhamDBConverter:
             return card_data
         if 'linked_card' in self.data:
             back_data = ArkhamDBConverter(self.data['linked_card'])
-            return back_data.convert_front()
+            return back_data.convert_front(True)
 
         # 查找连接面为自己的卡牌
         current_card_code = self.data.get('code')
@@ -858,7 +860,7 @@ class ArkhamDBConverter:
                 print(
                     f"通过linked_to_code找到背面对象: {current_card_code} -> {linked_card.get('code')} ({linked_card.get('name')})")
                 back_data = ArkhamDBConverter(linked_card)
-                return back_data.convert_front()
+                return back_data.convert_front(True)
 
         return None
 
@@ -1094,8 +1096,8 @@ class ArkhamDBConverter:
         card_data["name"] = self.data.get("name", "")
         if self.data.get("is_unique"):
             card_data["name"] = f"🏅{card_data['name']}"
-        if self.data.get("subname"):
-            card_data["subtitle"] = self.data.get("subname")
+        if self.data.get("back_subname"):
+            card_data["subtitle"] = self.data.get("back_subname")
         card_data["location_type"] = "未揭示"
 
         # 从gmnotes_index.json中获取地点图标信息
@@ -1451,7 +1453,7 @@ class ArkhamDBConverter:
         return card_data
 
     # 新增地点卡转换方法
-    def _convert_location_front(self) -> Dict[str, Any]:
+    def _convert_location_front(self, is_back: bool = False) -> Dict[str, Any]:
         """
         私有方法，专门用于转换地点卡正面。
         """
@@ -1467,7 +1469,7 @@ class ArkhamDBConverter:
 
         # 从gmnotes_index.json中获取地点图标信息
         card_code = self.data.get("code", "")
-        location_icons, direction = self._extract_location_icons_from_gmnotes(card_code, is_back=False)
+        location_icons, direction = self._extract_location_icons_from_gmnotes(card_code, is_back=is_back)
         card_data["Notes"] = direction
 
         # 设置地点图标
