@@ -631,9 +631,13 @@ class RichTextRenderer:
             for render_item in render_list:
                 obj = render_item.obj
                 x, y = render_item.x, render_item.y
+                offset_y = 0
+                offset_x = 0
+                if obj.font_name == '江城斜宋体':
+                    offset_y = -9
 
                 if isinstance(obj, TextObject):
-                    self.draw.text((x, y), obj.text, font=obj.font, fill=options.font_color)
+                    self.draw.text((x, y + offset_y), obj.text, font=obj.font, fill=options.font_color)
                 elif isinstance(obj, ImageObject):
                     if obj.image.mode == 'RGBA':
                         self.image.paste(obj.image, (x, y), obj.image)

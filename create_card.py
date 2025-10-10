@@ -1551,33 +1551,34 @@ class CardCreator:
 if __name__ == '__main__':
     json_data = {
         "type": "地点卡",
-        "name": "时间石室",
+        "name": "回忆迷宫",
         "id": "",
         "created_at": "",
         "version": "1.0",
         "language": "zh",
         "location_type": "已揭示",
-        "location_icon": "暗红漏斗",
+        "Notes": "back",
+        "location_icon": "深蓝T",
         "location_link": [
-            "褐扭"
+            "红方",
+            "紫月"
         ],
-        "shroud": "4",
-        "clues": "2<调查员>",
+        "shroud": "2",
+        "clues": "1<调查员>",
         "traits": [
-            "失落",
-            "遗迹"
+            "敦威治",
+            "树林",
+            "幻境"
         ],
-        "body": "【强制】 - 在时间石室入场后：将放在一边的古代遗物支援附属到时间石室上。在时间石室上放置1个毁灭标记。",
-        "flavor": "这个石室中央的地面雕刻着精细纹路，发出诡异的光芒……",
-        "victory": 2,
-        "vengeance": 2,
-        "encounter_group": "the_doom_of_eztli",
-        "illustrator": "Andreas Zafiratos",
-        "card_number": "68",
-        "footer_copyright": "© 2017 FFG",
-        "footer_icon_font": "<font name=\"packicon_forgotten\"></font>",
-        "encounter_group_number": "15/15",
-        "image_mode": 1
+        "body": "【强制】 - 在你揭示回忆迷宫后：你每剩余一个行动，受到1点恐惧。",
+        "flavor": "不……不，这不该在这儿！这<font name=\"江城斜宋体\">不可能</font>在这儿！",
+        "encounter_group": "where_doom_awaits",
+        "illustrator": "Matthew Cowdery",
+        "card_number": "292",
+        "footer_copyright": "© 2016 FFG",
+        "footer_icon_font": "<font name=\"packicon_dunwich\"></font>",
+        "encounter_group_number": "19/32",
+        "image_mode": 1,
     }
 
     # 创建字体和图片管理器

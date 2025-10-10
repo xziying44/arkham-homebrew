@@ -657,6 +657,11 @@ class ArkhamDBConverter:
             else:
                 card_data["serial_number"] = card_data["serial_number"].replace('a', 'e')
 
+        if card_code == '02292':
+            card_data["flavor"] = card_data["flavor"].replace(
+                "这<i>【不可能】</i>在这儿！",
+                '这<font name="江城斜宋体">不可能</font>在这儿！')
+
         # 可以在这里添加更多特殊处理逻辑
         # 例如：
         # if card_code == "xxxxx" and is_back:
