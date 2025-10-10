@@ -207,6 +207,51 @@ class CardMetadataScanner:
 
         return None, is_back
 
+    def _extract_code_from_filename(self, filename: str) -> Optional[str]:
+        """
+        从文件名中提取卡牌code
+
+        Args:
+            filename: 文件名(不含扩展名)
+
+        Returns:
+            卡牌code，未找到则返回None
+        """
+        # 检查是否为背面(文件名包含'b')
+        is_back = filename.lower().endswith('b')
+
+        # 移除可能的'b'后缀
+        clean_filename = filename.lower().rstrip('b')
+
+        # 尝试匹配文件名模式：如 178aa -> 05178a
+        # 提取数字部分和字母部分
+        match = re.match(r'^(\d+)([a-z]+)$', clean_filename)
+        if match:
+            numbers = match.group(1)
+            letters = match.group(2)
+            
+            # 根据用户提供的例子：
+            # 178aa -> 05178a
+            # 178ab -> 05178a  
+            # 178ca -> 05178c
+            # 178cb -> 05178c
+            # 178ea -> 05178e
+            # 178eb -> 05178e
+            
+            # 构造可能的code格式
+            if len(numbers) <= 3:
+                # 如果数字部分不超过3位，前面补0到3位
+                padded_numbers = numbers.zfill(3)
+                # 使用第一个字母作为code的最后一位
+                possible_code = self.code + padded_numbers + letters[0]
+                return possible_code
+            else:
+                # 如果数字部分超过3位，使用最后3位
+                possible_code = self.code + numbers[-3:] + letters[0]
+                return possible_code
+
+        return None
+
     def _find_card_by_position(self, position: int) -> Optional[Dict[str, Any]]:
         """
         根据code前N位和position查找卡牌
@@ -345,12 +390,26 @@ class CardMetadataScanner:
                 position, is_back = self._extract_position_from_filename(filename)
 
                 if position is not None:
-                    # 查找对应的卡牌数据
-                    card_data = self._find_card_by_position(position)
+                    # 首先尝试通过文件名匹配code
+                    card_data = None
+                    possible_code = self._extract_code_from_filename(filename)
+                    
+                    if possible_code:
+                        card_data = self._find_card_by_code(possible_code)
+                        if card_data:
+                            print(f"通过文件名匹配成功: {filename} -> {card_data.get('name')} [code: {card_data.get('code')}]")
+                    
+                    # 如果通过文件名匹配不到，使用原有的position匹配逻辑
+                    if not card_data:
+                        card_data = self._find_card_by_position(position)
+                        if card_data:
+                            print(f"通过position匹配成功: {filename} -> {card_data.get('name')} (位置: {position}) [code: {card_data.get('code')}]")
 
+                    # 特殊处理01代码的逻辑
                     if not card_data and self.code == '01':
                         card_data = self._find_card_by_code(self.code + filename.zfill(3))
-                        pass
+                        if card_data:
+                            print(f"通过01特殊逻辑匹配成功: {filename} -> {card_data.get('name')} [code: {card_data.get('code')}]")
 
                     if card_data:
                         # 构建元数据
