@@ -217,15 +217,9 @@ class CardMetadataScanner:
         Returns:
             卡牌code，未找到则返回None
         """
-        # 检查是否为背面(文件名包含'b')
-        is_back = filename.lower().endswith('b')
-
-        # 移除可能的'b'后缀
-        clean_filename = filename.lower().rstrip('b')
-
-        # 尝试匹配文件名模式：如 178aa -> 05178a
+        # 尝试匹配文件名模式：如 178aa -> 05178a, 47bb -> 03047b
         # 提取数字部分和字母部分
-        match = re.match(r'^(\d+)([a-z]+)$', clean_filename)
+        match = re.match(r'^(\d+)([a-z]+)$', filename.lower())
         if match:
             numbers = match.group(1)
             letters = match.group(2)
@@ -237,6 +231,7 @@ class CardMetadataScanner:
             # 178cb -> 05178c
             # 178ea -> 05178e
             # 178eb -> 05178e
+            # 47bb -> 03047b
             
             # 构造可能的code格式
             if len(numbers) <= 3:
