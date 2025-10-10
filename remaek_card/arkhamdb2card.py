@@ -674,7 +674,7 @@ class ArkhamDBConverter:
             card_data["scenario_card"]['resource_name'] = '当前深度'
 
         if card_code in ['04125a', '04126a', '04127', '04128a', '04129', '04130a', '04131',
-                         '04132'] and 'serial_number' in card_data:
+                         '04132', '03278', '03279a', '03280', '03282'] and 'serial_number' in card_data:
             if is_back:
                 card_data["serial_number"] = card_data["serial_number"].replace('b', 'd')
             else:
@@ -691,6 +691,14 @@ class ArkhamDBConverter:
             card_data["flavor"] = card_data["flavor"].replace(
                 "这<i>【不可能】</i>在这儿！",
                 '这<font name="江城斜宋体">不可能</font>在这儿！')
+        if card_code == '03062' and is_back:
+            card_data["flavor"] = card_data["flavor"].replace(
+                "现在【真正的】晚宴终于可以开始了",
+                '现在<font name="江城斜宋体">真正的</font>晚宴终于可以开始了')
+
+        # 密谋调查员数
+        if card_code in ['03121', '03122', '03123'] and not is_back:
+            card_data['threshold'] = card_data["threshold"] + '<调查员>'
 
         # 可以在这里添加更多特殊处理逻辑
         # 例如：
@@ -828,13 +836,14 @@ class ArkhamDBConverter:
         if 'linked_card' in self.data:
             back_data = ArkhamDBConverter(self.data['linked_card'])
             return back_data.convert_front()
-        
+
         # 查找连接面为自己的卡牌
         current_card_code = self.data.get('code')
         if current_card_code and self._full_database:
             linked_card = self.find_card_by_linked_to_code(current_card_code)
             if linked_card:
-                print(f"通过linked_to_code找到背面对象: {current_card_code} -> {linked_card.get('code')} ({linked_card.get('name')})")
+                print(
+                    f"通过linked_to_code找到背面对象: {current_card_code} -> {linked_card.get('code')} ({linked_card.get('name')})")
                 back_data = ArkhamDBConverter(linked_card)
                 return back_data.convert_front()
 
@@ -1020,6 +1029,8 @@ class ArkhamDBConverter:
         value = self.data.get(value_key)
         if value is None:
             return "-"  # ArkhamDB 使用 null 来表示 '-'
+        if value == -2:
+            return 'X'
         value_str = str(value)
         if self.data.get(per_investigator_key, False) == val:
             return f"{value_str}<调查员>"
