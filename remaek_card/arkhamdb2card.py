@@ -17,6 +17,9 @@ class ArkhamDBConverter:
     # 类变量：存储地点图标映射数据
     _location_icons_mapping: Dict[str, str] = {}
 
+    # 类变量：存储完整数据库引用，用于查找linked_to_code
+    _full_database: List[Dict[str, Any]] = []
+
     # 用于将 arkhamdb 的 faction_code/name 映射为目标格式的职阶名
     FACTION_MAP = {
         "guardian": "守护者",
@@ -546,6 +549,33 @@ class ArkhamDBConverter:
             return icon_name
         return None
 
+    @classmethod
+    def set_full_database(cls, full_database: List[Dict[str, Any]]):
+        """
+        设置完整数据库引用，用于查找linked_to_code
+        
+        Args:
+            full_database: 完整的卡牌数据库列表
+        """
+        cls._full_database = full_database
+
+    @classmethod
+    def find_card_by_linked_to_code(cls, target_code: str) -> Optional[Dict[str, Any]]:
+        """
+        在完整数据库中查找linked_to_code指向指定代码的卡牌
+        
+        Args:
+            target_code: 目标卡牌代码
+            
+        Returns:
+            找到的卡牌数据，如果不存在则返回None
+        """
+        for card in cls._full_database:
+            linked_to_code = card.get('linked_to_code')
+            if linked_to_code == target_code:
+                return card
+        return None
+
     def _extract_location_icons_from_gmnotes(self, card_code: str, is_back: bool = False) -> tuple[dict[Any, Any], str]:
         """
         从gmnotes_index.json中提取地点图标信息
@@ -798,27 +828,17 @@ class ArkhamDBConverter:
         if 'linked_card' in self.data:
             back_data = ArkhamDBConverter(self.data['linked_card'])
             return back_data.convert_front()
-        if not self.data.get("double_sided"):
-            return None
+        
+        # 查找连接面为自己的卡牌
+        current_card_code = self.data.get('code')
+        if current_card_code and self._full_database:
+            linked_card = self.find_card_by_linked_to_code(current_card_code)
+            if linked_card:
+                print(f"通过linked_to_code找到背面对象: {current_card_code} -> {linked_card.get('code')} ({linked_card.get('name')})")
+                back_data = ArkhamDBConverter(linked_card)
+                return back_data.convert_front()
 
-        if not type_code:
-            return None
-
-        card_type_name = self.TYPE_MAP_BACK.get(type_code)
-        if not card_type_name:
-            print(f"警告：未知的背面卡牌类型代码 '{type_code}'")
-            return None
-
-        if type_code == "investigator":
-            card_data = self._convert_investigator_back()
-        else:
-            print(f"警告：尚未实现对 '{type_code}' 类型的背面转换")
-            return None
-
-        card_data['type'] = card_type_name
-        # 应用特殊卡牌处理
-        card_data = self._apply_special_card_handling(card_data, is_back=True)
-        return card_data
+        return None
 
     # -----------------------------------------------------
     # 私有转换方法区域

@@ -166,6 +166,11 @@ class CardMetadataScanner:
             print(f"警告: 计算遭遇组信息失败: {e}")
             print("将继续处理，但卡牌可能缺少遭遇组编号信息")
 
+        # 设置完整数据库引用，用于linked_to_code查找
+        print("正在设置完整数据库引用...")
+        ArkhamDBConverter.set_full_database(self.db_cards)
+        print(f"成功设置完整数据库引用: {len(self.db_cards)} 张卡牌")
+
         # 加载地点图标映射数据
         print("正在加载地点图标映射数据...")
         try:
