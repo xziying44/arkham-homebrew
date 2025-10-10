@@ -32996,7 +32996,7 @@
       ]
     }
   },
-  "03328d": {
+  "03328c": {
     "id": "03328d",
     "type": "Location",
     "traits": "Otherworld.",
@@ -33013,7 +33013,7 @@
       ]
     }
   },
-  "03328f": {
+  "03328e": {
     "id": "03328f",
     "type": "Location",
     "traits": "Otherworld.",
@@ -33098,7 +33098,7 @@
       ]
     }
   },
-  "03329d": {
+  "03329c": {
     "id": "03329d",
     "type": "Location",
     "traits": "Otherworld.",
@@ -34886,7 +34886,7 @@
     },
     "locationBack": {
       "icons": "Circle",
-      "connections": "Hourglass|Triangle|Diamond",
+      "connections": "Triangle|Diamond|Hourglass",
       "uses": [
         {
           "countPerInvestigator": 1,

@@ -190,11 +190,14 @@ class CardMetadataScanner:
         Returns:
             tuple: (position数字, 是否为背面)
         """
-        # 检查是否为背面(文件名包含'b')
-        is_back = filename.lower().endswith('b')
+        filename_lower = filename.lower()
 
-        # 移除可能的'b'后缀
-        clean_filename = filename.lower().rstrip('b')
+        # 检查是否为背面（末尾为b）
+        is_back = filename_lower.endswith('b')
+
+        # 删除末尾的a|b（如果有的话）来获取干净的文件名
+        # 注意：只删除末尾的单个字母，像47ab会变成47a，47aa会变成47a
+        clean_filename = filename_lower[:-1] if filename_lower and filename_lower[-1] in 'ab' else filename_lower
 
         # 提取数字部分
         numbers = re.findall(r'\d+', clean_filename)
@@ -211,41 +214,43 @@ class CardMetadataScanner:
         """
         从文件名中提取卡牌code
 
+        匹配规则：
+        1. 检查末尾是否为a|b，如果末尾是b，表示这张图片是背面，其他为正面
+        2. 删除末尾的a|b（如果有的话），例如46b会变成46，47ab会变成47a
+        3. 将数字部分补充到3位数，例如46变成046，47a变成047a
+        4. 在前面添加循环编号，例如本次扫描的循环编号为03，则最后会变成03046和03047a
+
         Args:
             filename: 文件名(不含扩展名)
 
         Returns:
             卡牌code，未找到则返回None
         """
-        # 尝试匹配文件名模式：如 178aa -> 05178a, 47bb -> 03047b
-        # 提取数字部分和字母部分
-        match = re.match(r'^(\d+)([a-z]+)$', filename.lower())
-        if match:
-            numbers = match.group(1)
-            letters = match.group(2)
-            
-            # 根据用户提供的例子：
-            # 178aa -> 05178a
-            # 178ab -> 05178a  
-            # 178ca -> 05178c
-            # 178cb -> 05178c
-            # 178ea -> 05178e
-            # 178eb -> 05178e
-            # 47bb -> 03047b
-            
-            # 构造可能的code格式
-            if len(numbers) <= 3:
-                # 如果数字部分不超过3位，前面补0到3位
-                padded_numbers = numbers.zfill(3)
-                # 使用第一个字母作为code的最后一位
-                possible_code = self.code + padded_numbers + letters[0]
-                return possible_code
-            else:
-                # 如果数字部分超过3位，使用最后3位
-                possible_code = self.code + numbers[-3:] + letters[0]
-                return possible_code
+        filename_lower = filename.lower()
 
-        return None
+        # 步骤1：检查是否为背面（末尾为b）
+        is_back = filename_lower.endswith('b')
+
+        # 步骤2：删除末尾的a|b（如果有的话）
+        # 注意：只删除末尾的单个字母，像47ab会变成47a，47aa会变成47a
+        clean_filename = filename_lower[:-1] if filename_lower and filename_lower[-1] in 'ab' else filename_lower
+
+        # 步骤3：提取数字部分和字母部分
+        # 重新匹配，现在应该只剩下数字部分或数字+字母
+        match = re.match(r'^(\d+)([a-z]*)$', clean_filename)
+        if not match:
+            return None
+
+        numbers = match.group(1)
+        letters = match.group(2)  # 可能是空字符串或包含字母
+
+        # 将数字部分补充到3位数
+        padded_numbers = numbers.zfill(3)
+
+        # 构造code：循环编号 + 3位数字 + 字母（如果有）
+        code = self.code + padded_numbers + letters
+
+        return code
 
     def _find_card_by_position(self, position: int) -> Optional[Dict[str, Any]]:
         """
@@ -482,17 +487,19 @@ class CardMetadataScanner:
             try:
                 # 获取文件路径信息
                 file_path = metadata.get('file_path', '')
-                filename = metadata.get('card_code', '')
+                card_code = metadata.get('card_code', '')  # 使用数据库中的真实code
                 is_back = metadata.get('is_back', False)
                 card_data = metadata.get('card_data', {})
                 type_code = metadata.get('type_code', '')
                 if is_back and not card_data.get('double_sided') and 'linked_card' in card_data:
                     type_code = card_data['linked_card'].get('type_code', '')
                     pass
+
+                # 构建保存文件名：使用真实的card_code + _a/_b 后缀
                 if is_back:
-                    filename += '_b'
+                    filename = card_code + '_b'
                 else:
-                    filename += '_a'
+                    filename = card_code + '_a'
 
                 if not card_data:
                     print(f"警告: 元数据中缺少卡牌数据 - 文件: {filename}")
@@ -831,8 +838,8 @@ if __name__ == "__main__":
 
             # 如果需要处理剧本卡，取消下面的注释并注释上面的代码
             scanner = CardMetadataScanner(
-                work_directory=r"D:\诡镇奇谈\重置剧本卡\03_卡尔克萨之路",  # 替换为实际的工作目录路径
-                code="03"  # 使用code前缀，匹配前2位
+                work_directory=r"D:\诡镇奇谈\重置剧本卡\05_万象无终",  # 替换为实际的工作目录路径
+                code="05"  # 使用code前缀，匹配前2位
             )
 
             # 执行扫描并保存元数据
