@@ -700,6 +700,9 @@ class ArkhamDBConverter:
         if card_code in ['03121', '03122', '03123'] and not is_back:
             card_data['threshold'] = card_data["threshold"] + '<调查员>'
 
+        if card_code in ['03278','03279a','03280','03281'] and not is_back:
+            card_data['mirror'] = True
+
         # 可以在这里添加更多特殊处理逻辑
         # 例如：
         # if card_code == "xxxxx" and is_back:

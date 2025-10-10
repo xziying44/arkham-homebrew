@@ -82,7 +82,8 @@ class Card:
             image_manager=None,
             card_type='default',
             card_class='default',
-            is_back=False
+            is_back=False,
+            is_mirror=False,
     ):
         """
         初始化卡牌对象
@@ -109,6 +110,7 @@ class Card:
         self.icon_mark = []  # 图标标记
         self.subclass_num = 0  # 子类数量
         self.is_back = is_back  # 是否背面
+        self.is_mirror = is_mirror  # 是否背面
         self.rich_renderer = RichTextRenderer(font_manager, image_manager, self.image, lang=font_manager.lang)
         self.last_render_list: list[RenderItem] = []
 
@@ -962,7 +964,9 @@ class Card:
             '故事卡': {'center': (642, 98), 'default_size': (60, 60)},
             '冒险参考卡': {'center': (372, 152), 'default_size': (60, 60)},
             '密谋卡_正面': {'center': (742, 85), 'default_size': (60, 60)},
+            '密谋卡_正面_镜像': {'center': (282 + 26, 83), 'default_size': (60, 60)},
             '场景卡_正面': {'center': (282, 83), 'default_size': (60, 60)},
+            '场景卡_正面_镜像': {'center': (742 + 26, 85), 'default_size': (60, 60)},
             '密谋卡_背面': {'center': (98, 140), 'default_size': (68, 68)},
             '场景卡_背面': {'center': (98, 140), 'default_size': (68, 68)},
             '密谋卡-大画': {'center': (106, 448), 'default_size': (72, 72)},
@@ -987,9 +991,15 @@ class Card:
         elif self.card_type == '冒险参考卡':
             config_key = '冒险参考卡'
         elif self.card_type == '密谋卡':
-            config_key = '密谋卡_背面' if self.is_back else '密谋卡_正面'
+            if not self.is_back and self.is_mirror:
+                config_key = '密谋卡_正面_镜像'
+            else:
+                config_key = '密谋卡_背面' if self.is_back else '密谋卡_正面'
         elif self.card_type == '场景卡':
-            config_key = '场景卡_背面' if self.is_back else '场景卡_正面'
+            if not self.is_back and self.is_mirror:
+                config_key = '场景卡_正面_镜像'
+            else:
+                config_key = '场景卡_背面' if self.is_back else '场景卡_正面'
         elif self.card_type == '密谋卡-大画':
             config_key = '密谋卡-大画'
         elif self.card_type == '场景卡-大画':
@@ -1144,7 +1154,10 @@ class Card:
         # 特殊卡牌位置点
         if self.card_type in ['密谋卡', '场景卡']:
             card_width = 1049 - 400
-            offset_x = 400 if self.card_type == '密谋卡' else 0
+            if self.is_mirror:
+                offset_x = 400 + 26 if self.card_type == '场景卡' else 0
+            else:
+                offset_x = 400 if self.card_type == '密谋卡' else 0
             pos_left = (offset_x + 40, card_height - 28)
             pos_center = (offset_x + card_width // 2, card_height - 28)
             pos_icon = (offset_x + card_width - 110, card_height - 34)

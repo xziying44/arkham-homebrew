@@ -257,6 +257,10 @@ class ExportHelper:
         elif card_type in ['场景卡', '密谋卡'] and card_json.get('is_back', False):
             ui_name += card_type
             ui_name += '-卡背'
+        elif card_type in ['场景卡', '密谋卡'] and not card_json.get('is_back', False) and \
+                card_json.get('mirror', False):
+            ui_name += card_type
+            ui_name += '-镜像'
         else:
             # 其他卡牌
             ui_name += card_type
@@ -491,7 +495,7 @@ if __name__ == "__main__":
         "format": "PNG",
         "size": ExportSize.POKER_SIZE.value,  # "63.5mm × 88.9mm (2.5″ × 3.5″)"
         "dpi": 300,
-        "bleed": 0,
+        "bleed": 3,
         "bleed_mode": "拉伸",
         "bleed_model": "镜像出血",  # LaMa模型出血 镜像出血
         "quality": 90,  # 系统默认JPG质量
@@ -503,7 +507,7 @@ if __name__ == "__main__":
     print(export_helper)
     # 计算出血时间
     t = time.time()
-    export_helper.export_card(r'04_失落的时代\卡牌\04264_a.card').show()
+    export_helper.export_card(r'03_卡尔克萨之路\卡牌\03278_a.card').show()
     # 输出耗时 单位秒 保留2位小数
     print(f'耗时: {round(time.time() - t, 2)}s')
     # export_helper = ExportHelper(system_defaults, WorkspaceManager(r'D:\汉化文件夹\测试工作空间'))

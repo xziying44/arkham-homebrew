@@ -1234,7 +1234,9 @@ class CardCreator:
         if 'type' not in data or data['type'] not in ['场景卡', '密谋卡']:
             raise ValueError('卡牌类型错误')
 
-        card = Card(1049, 739, self.font_manager, self.image_manager, data['type'])
+        mirror = data.get('mirror')
+
+        card = Card(1049, 739, self.font_manager, self.image_manager, data['type'], is_mirror=mirror)
         dp = self._open_picture(card_json, picture_path)
 
         # 贴底图
@@ -1246,7 +1248,10 @@ class CardCreator:
         if data['type'] != '场景卡':
             encounter_list = [[(520, 636, 44), (500, 630, 44)], [(288 + 473, 76, 34), (288 + 473, 76, 34)]]
 
-        card.paste_image(self.image_manager.get_image(f'{data["type"]}'), (0, 0), 'contain')
+        if mirror:
+            card.paste_image(self.image_manager.get_image(f'{data["type"]}-镜像'), (0, 0), 'contain')
+        else:
+            card.paste_image(self.image_manager.get_image(f'{data["type"]}'), (0, 0), 'contain')
 
         # 贴遭遇组
         if self.transparent_encounter and dp:
@@ -1254,25 +1259,50 @@ class CardCreator:
                 card.copy_circle_to_image(dp, item[0], item[1])
 
         # 写序列号
-        if data['type'] == '场景卡':
-            card.draw_centered_text((280, 30), f"{self.font_manager.get_font_text('场景')}"
-                                               f"{data.get('serial_number', '')}", "卡牌类型字体", 28, (0, 0, 0))
+        if mirror:
+            if data['type'] == '场景卡':
+                card.draw_centered_text((740 + 26, 30), f"{self.font_manager.get_font_text('场景')}"
+                                                        f"{data.get('serial_number', '')}", "卡牌类型字体", 28,
+                                        (0, 0, 0))
+            else:
+                card.draw_centered_text((280 + 26, 38), f"{self.font_manager.get_font_text('密谋')}"
+                                                        f"{data.get('serial_number', '')}", "卡牌类型字体", 28,
+                                        (0, 0, 0))
         else:
-            card.draw_centered_text((740, 38), f"{self.font_manager.get_font_text('密谋')}"
-                                               f"{data.get('serial_number', '')}", "卡牌类型字体", 28, (0, 0, 0))
+            if data['type'] == '场景卡':
+                card.draw_centered_text((280, 30), f"{self.font_manager.get_font_text('场景')}"
+                                                   f"{data.get('serial_number', '')}", "卡牌类型字体", 28, (0, 0, 0))
+            else:
+                card.draw_centered_text((740, 38), f"{self.font_manager.get_font_text('密谋')}"
+                                                   f"{data.get('serial_number', '')}", "卡牌类型字体", 28, (0, 0, 0))
 
         # 写标题
-        title_x = 280 if data['type'] == '场景卡' else 740
+        if mirror:
+            title_x = 740 + 26 if data['type'] == '场景卡' else 280 + 26
+        else:
+            title_x = 280 if data['type'] == '场景卡' else 740
         card.draw_centered_text((title_x, 140), data['name'], "标题字体", 48, (0, 0, 0))
 
-        vertices = [(10, 185), (560, 185), (560, 574), (470, 574), (470, 678), (10, 678)]
-        offset_x = -20
-        if data['type'] != '场景卡':
-            vertices = [
-                (10 + 480 + offset_x, 185), (560 + 480 + offset_x, 185),
-                (560 + 480 + offset_x, 678), (10 + 480 + 80 + offset_x, 678),
-                (10 + 480 + 80 + offset_x, 574), (10 + 480 + offset_x, 574)
-            ]
+        if mirror:
+            offset_x = 12
+            vertices = [(10 + offset_x, 185), (560 + offset_x, 185), (560 + offset_x, 574), (470 + offset_x, 574),
+                        (470 + offset_x, 678), (10 + offset_x, 678)]
+            offset_x = 2
+            if data['type'] != '密谋卡':
+                vertices = [
+                    (10 + 480 + offset_x, 185), (560 + 480 + offset_x, 185),
+                    (560 + 480 + offset_x, 678), (10 + 480 + 80 + offset_x, 678),
+                    (10 + 480 + 80 + offset_x, 574), (10 + 480 + offset_x, 574)
+                ]
+        else:
+            vertices = [(10, 185), (560, 185), (560, 574), (470, 574), (470, 678), (10, 678)]
+            offset_x = -20
+            if data['type'] != '场景卡':
+                vertices = [
+                    (10 + 480 + offset_x, 185), (560 + 480 + offset_x, 185),
+                    (560 + 480 + offset_x, 678), (10 + 480 + 80 + offset_x, 678),
+                    (10 + 480 + 80 + offset_x, 574), (10 + 480 + offset_x, 574)
+                ]
 
         # 写正文
         body = self._tidy_body_flavor(data['body'], data['flavor'], flavor_type=1, align='left')
@@ -1281,7 +1311,10 @@ class CardCreator:
 
         # 写阈值
         if 'threshold' in data:
-            threshold_pos = (523, 626) if data['type'] == '场景卡' else (498, 624)
+            if mirror:
+                threshold_pos = (498 + 24, 624) if data['type'] == '场景卡' else (523 + 22, 624)
+            else:
+                threshold_pos = (523, 626) if data['type'] == '场景卡' else (498, 624)
             card.set_number_value(threshold_pos, data['threshold'], 54)
 
         return card
@@ -1550,35 +1583,25 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "地点卡",
-        "name": "回忆迷宫",
+        "type": "场景卡",
+        "name": "仪式开始",
         "id": "",
         "created_at": "",
         "version": "1.0",
         "language": "zh",
-        "location_type": "已揭示",
-        "Notes": "back",
-        "location_icon": "深蓝T",
-        "location_link": [
-            "红方",
-            "紫月"
-        ],
-        "shroud": "2",
-        "clues": "1<调查员>",
-        "traits": [
-            "敦威治",
-            "树林",
-            "幻境"
-        ],
-        "body": "【强制】 - 在你揭示回忆迷宫后：你每剩余一个行动，受到1点恐惧。",
-        "flavor": "不……不，这不该在这儿！这<font name=\"江城斜宋体\">不可能</font>在这儿！",
-        "encounter_group": "where_doom_awaits",
-        "illustrator": "Matthew Cowdery",
-        "card_number": "292",
-        "footer_copyright": "© 2016 FFG",
-        "footer_icon_font": "<font name=\"packicon_dunwich\"></font>",
-        "encounter_group_number": "19/32",
+        "serial_number": "1a",
+        "threshold": "5",
+        "stage": 1,
+        "body": "⚡调查员共同花费1🕵️个线索：在本密谋上放置1个毁灭标记(本效果能导致本密谋推进)。每位调查员抽取1张卡牌。(团队每轮仅限一次。)",
+        "flavor": "风暴中漆黑的乌云在头顶盘旋。在风暴中央，肆虐着一道邪恶能量形成的旋涡。仪式开始了。次元门也许会出现在修道院的上方，亦或是下方。你必须赶在哈斯塔的手下之前决定前进的方向，并抵达次元门。",
+        "encounter_group": "black_stars_rise",
+        "illustrator": "Michał Miłkowski",
+        "card_number": "278",
+        "footer_copyright": "© 2017 FFG",
+        "footer_icon_font": "<font name=\"packicon_carcosa\"></font>",
+        "encounter_group_number": "6/30",
         "image_mode": 1,
+        "mirror": True
     }
 
     # 创建字体和图片管理器
