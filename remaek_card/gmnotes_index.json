@@ -32945,7 +32945,7 @@
     "victory": 1,
     "cycle": "Standalone"
   },
-  "03326b": {
+  "03326a": {
     "id": "03326b",
     "type": "Location",
     "traits": "Otherworld.",
@@ -32979,7 +32979,7 @@
       ]
     }
   },
-  "03328b": {
+  "03328a": {
     "id": "03328b",
     "type": "Location",
     "traits": "Otherworld.",
@@ -33030,7 +33030,7 @@
       ]
     }
   },
-  "03327f": {
+  "03327a": {
     "id": "03327f",
     "type": "Location",
     "traits": "Otherworld.",
@@ -33081,7 +33081,7 @@
       ]
     }
   },
-  "03329b": {
+  "03329a": {
     "id": "03329b",
     "type": "Location",
     "traits": "Otherworld.",
@@ -33179,14 +33179,14 @@
     "doomThreshold": 7,
     "cycle": "Standalone"
   },
-  "03331b": {
+  "03331": {
     "id": "03331b",
     "type": "Location",
     "traits": "Otherworld.",
     "cycle": "Standalone",
     "locationFront": {
       "icons": "Star",
-      "connections": "Triangle|Diamond|Heart|Apostrophe|Hourglass",
+      "connections": "Triangle|Diamond",
       "uses": [
         {
           "countPerInvestigator": 3,
@@ -33196,7 +33196,7 @@
       ]
     }
   },
-  "03330b": {
+  "03330": {
     "id": "03330b",
     "type": "Location",
     "traits": "Otherworld.",

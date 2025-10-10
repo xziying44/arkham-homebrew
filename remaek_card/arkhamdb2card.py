@@ -659,7 +659,7 @@ class ArkhamDBConverter:
         card_code = self.data.get("code", "")
 
         # 特殊处理：code==01145 的背面设置 type 为"场景卡-大画"
-        if card_code in ["01145", "02314", "04048", "04049", "04318"] and is_back:
+        if card_code in ["01145", "02314", "04048", "04049", "04318","03322a","03323a"] and is_back:
             card_data["type"] = "场景卡-大画"
             card_data["footer_copyright"] = ""
             card_data["footer_icon_font"] = ""
@@ -691,7 +691,7 @@ class ArkhamDBConverter:
             card_data["flavor"] = card_data["flavor"].replace(
                 "这<i>【不可能】</i>在这儿！",
                 '这<font name="江城斜宋体">不可能</font>在这儿！')
-        if card_code == '03062' and is_back:
+        if card_code in ['03062', '03318'] and is_back:
             card_data["flavor"] = card_data["flavor"].replace(
                 "现在【真正的】晚宴终于可以开始了",
                 '现在<font name="江城斜宋体">真正的</font>晚宴终于可以开始了')
@@ -700,8 +700,11 @@ class ArkhamDBConverter:
         if card_code in ['03121', '03122', '03123'] and not is_back:
             card_data['threshold'] = card_data["threshold"] + '<调查员>'
 
-        if card_code in ['03278','03279a','03280','03281'] and not is_back:
+        if card_code in ['03278', '03279a', '03280', '03281'] and not is_back:
             card_data['mirror'] = True
+
+        if card_code in ['03283', '03284'] and is_back:
+            card_data["flavor"] = card_data["flavor"].split("<hr>")[0]
 
         # 可以在这里添加更多特殊处理逻辑
         # 例如：
