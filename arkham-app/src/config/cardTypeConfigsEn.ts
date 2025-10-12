@@ -1444,7 +1444,27 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   },
 };
 
-export const cardTypeOptions = Object.keys(cardTypeConfigs).map(key => ({
-  label: cardTypeConfigs[key].field_type_en || key,
-  value: key
-}));
+// System preset card back type configurations
+export const cardBackConfigs: Record<string, CardTypeConfig> = {
+  '玩家卡背': {
+    field_type_en: 'Player Card Back',
+    fields: []
+  },
+  '遭遇卡背': {
+    field_type_en: 'Encounter Card Back',
+    fields: []
+  }
+};
+
+export const cardTypeOptions = [
+  // System preset card back options
+  { label: '--- System Presets ---', value: '__divider__', disabled: true },
+  { label: '🎴 Player Card Back', value: '玩家卡背' },
+  { label: '🎯 Encounter Card Back', value: '遭遇卡背' },
+  { label: '--- Card Types ---', value: '__divider2__', disabled: true },
+  // Regular card types
+  ...Object.keys(cardTypeConfigs).map(key => ({
+    label: cardTypeConfigs[key].field_type_en || key,
+    value: key
+  }))
+];

@@ -11,6 +11,7 @@ from typing import List, Dict, Any, Optional, Union
 
 from PIL import Image
 
+from Card import Card
 from bin.deck_exporter import DeckExporter
 from bin.tts_card_converter import TTSCardConverter
 
@@ -511,7 +512,7 @@ class WorkspaceManager:
             json_data: 卡牌数据的JSON字典
 
         Returns:
-            PIL.Image对象，如果生成失败返回None
+            Card对象，如果生成失败返回None
         """
         if not CARD_GENERATION_AVAILABLE:
             print("卡牌生成功能不可用：缺少必要的模块")
@@ -522,6 +523,30 @@ class WorkspaceManager:
             return None
 
         try:
+            # 检查是否为卡背类型
+            card_type = json_data.get('type', '')
+            cardback_filename = None
+            if card_type == '玩家卡背':
+                # 生成玩家卡背
+                cardback_filename = 'cardback/player-back.jpg'
+            elif card_type == '遭遇卡背':
+                # 生成遭遇卡背
+                cardback_filename = 'cardback/encounter-back.jpg'
+            if cardback_filename:
+                cardback_path = os.path.join('.', cardback_filename)
+                # 如果是PyInstaller打包的程序
+                if hasattr(sys, '_MEIPASS'):
+                    cardback_path = os.path.join(sys._MEIPASS, cardback_filename)
+
+                if os.path.exists(cardback_path):
+                    # 创建Card对象并设置图片
+                    cardback_pil = Image.open(cardback_path)
+                    card = Card(cardback_pil.width, cardback_pil.height, image=cardback_pil)
+                    card.image = cardback_pil
+                    return card
+                else:
+                    print(f"遭遇卡背图片不存在: {cardback_path}")
+                    return None
 
             # 检测卡牌语言
             language = json_data.get('language', 'zh')

@@ -84,6 +84,7 @@ class Card:
             card_class='default',
             is_back=False,
             is_mirror=False,
+            image: Image.Image = None
     ):
         """
         初始化卡牌对象
@@ -95,6 +96,10 @@ class Card:
         :param card_type: 卡牌类型 技能卡、支援卡、事件卡
         :param lang:语言 zh 中文 en 英文
         """
+        if image:
+            self.image = image
+            self.width, self.height = image.size
+            return
         self.width = width
         self.height = height
         self.image = Image.new('RGBA', (width, height), (0, 0, 0, 0))

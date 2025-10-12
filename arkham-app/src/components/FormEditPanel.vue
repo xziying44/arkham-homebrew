@@ -291,8 +291,8 @@ import type { TreeOption } from 'naive-ui';
 import IllustrationLayoutEditor from './IllustrationLayoutEditor.vue';
 
 // 导入中文和英文配置
-import { cardTypeConfigs as cardTypeConfigsZh, cardTypeOptions as cardTypeOptionsZh, type FormField, type CardTypeConfig, type ShowCondition } from '@/config/cardTypeConfigs';
-import { cardTypeConfigs as cardTypeConfigsEn, cardTypeOptions as cardTypeOptionsEn } from '@/config/cardTypeConfigsEn';
+import { cardTypeConfigs as cardTypeConfigsZh, cardTypeOptions as cardTypeOptionsZh, cardBackConfigs as cardBackConfigsZh, type FormField, type CardTypeConfig, type ShowCondition } from '@/config/cardTypeConfigs';
+import { cardTypeConfigs as cardTypeConfigsEn, cardTypeOptions as cardTypeOptionsEn, cardBackConfigs as cardBackConfigsEn } from '@/config/cardTypeConfigsEn';
 
 import FormFieldComponent from './FormField.vue';
 import { WorkspaceService, CardService, ConfigService } from '@/api';
@@ -320,7 +320,9 @@ const message = useMessage();
 
 // 动态获取当前语言的配置
 const cardTypeConfigs = computed(() => {
-    return locale.value === 'en' ? cardTypeConfigsEn : cardTypeConfigsZh;
+    const baseConfigs = locale.value === 'en' ? cardTypeConfigsEn : cardTypeConfigsZh;
+    const cardBacks = locale.value === 'en' ? cardBackConfigsEn : cardBackConfigsZh;
+    return { ...baseConfigs, ...cardBacks };
 });
 
 const cardTypeOptions = computed(() => {

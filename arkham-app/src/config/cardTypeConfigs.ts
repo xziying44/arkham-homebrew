@@ -1421,7 +1421,25 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   },
 };
 
-export const cardTypeOptions = Object.keys(cardTypeConfigs).map(key => ({
-  label: key,
-  value: key
-}));
+// 系统预设卡背类型配置
+export const cardBackConfigs: Record<string, CardTypeConfig> = {
+  '玩家卡背': {
+    fields: []
+  },
+  '遭遇卡背': {
+    fields: []
+  }
+};
+
+export const cardTypeOptions = [
+  // 系统预设卡背选项
+  { label: '--- 系统预设 ---', value: '__divider__', disabled: true },
+  { label: '🎴 玩家卡背', value: '玩家卡背' },
+  { label: '🎯 遭遇卡背', value: '遭遇卡背' },
+  { label: '--- 卡牌类型 ---', value: '__divider2__', disabled: true },
+  // 常规卡牌类型
+  ...Object.keys(cardTypeConfigs).map(key => ({
+    label: key,
+    value: key
+  }))
+];
