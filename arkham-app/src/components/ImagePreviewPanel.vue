@@ -10,9 +10,27 @@
     </div>
 
     <div class="image-content" ref="imageContainer">
-      <div v-if="currentImage" class="image-viewer" :class="{ 'is-dragging': isDragging }" @wheel="handleImageWheel"
+      <!-- 双面卡牌切换按钮 -->
+      <div v-if="isDoubleSided" class="card-side-switch">
+        <n-button-group size="small">
+          <n-button
+            :type="currentDisplaySide === 'front' ? 'primary' : 'default'"
+            @click="currentDisplaySide = 'front'"
+          >
+            {{ $t('workspaceMain.imagePreview.frontSide') }}
+          </n-button>
+          <n-button
+            :type="currentDisplaySide === 'back' ? 'primary' : 'default'"
+            @click="currentDisplaySide = 'back'"
+          >
+            {{ $t('workspaceMain.imagePreview.backSide') }}
+          </n-button>
+        </n-button-group>
+      </div>
+
+      <div v-if="displayedImage" class="image-viewer" :class="{ 'is-dragging': isDragging }" @wheel="handleImageWheel"
         @mousedown="startImageDrag">
-        <img :src="currentImage" alt="预览图片" :style="{
+        <img :src="displayedImage" alt="预览图片" :style="{
           transform: `scale(${imageScale}) translate(${imageOffsetX}px, ${imageOffsetY}px)`,
           transformOrigin: 'center center'
         }" draggable="false" class="preview-image" @load="onImageLoad" />
@@ -27,7 +45,7 @@
       </div>
 
       <!-- 图片控制工具栏 -->
-      <div v-if="currentImage" class="image-controls">
+      <div v-if="displayedImage" class="image-controls">
         <n-button-group size="small">
           <n-button @click="zoomIn" :title="$t('workspaceMain.imagePreview.controls.zoomIn')">
             <n-icon :component="AddOutline" />
@@ -53,14 +71,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted, watch, nextTick } from 'vue';
+import { ref, computed, onUnmounted, watch, nextTick } from 'vue';
 import { ImageOutline, Close, AddOutline, RemoveOutline, CopyOutline } from '@vicons/ionicons5';
 import { useMessage } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 
 interface Props {
   width: number;
-  currentImage: string;
+  currentImage: string | { front: string; back?: string };
   // 新增：用于识别图片是否为新文件的唯一标识
   imageKey: string | null;
 }
@@ -73,6 +91,25 @@ const emit = defineEmits<{
 
 const message = useMessage();
 const { t } = useI18n();
+
+// 双面卡牌状态
+const currentDisplaySide = ref<'front' | 'back'>('front');
+
+// 判断是否为双面卡牌
+const isDoubleSided = computed(() => {
+  return typeof props.currentImage === 'object' && props.currentImage.front;
+});
+
+// 获取当前显示的图片URL
+const displayedImage = computed(() => {
+  if (isDoubleSided.value) {
+    const imageObj = props.currentImage as { front: string; back?: string };
+    return currentDisplaySide.value === 'back' && imageObj.back
+      ? imageObj.back
+      : imageObj.front;
+  }
+  return props.currentImage as string;
+});
 
 // 图片预览状态
 const imageScale = ref(1);
@@ -93,7 +130,7 @@ let dragAnimationFrameId: number;
 
 // 复制图片到剪贴板
 const copyImageToClipboard = async () => {
-  if (!props.currentImage || isCopying.value) return;
+  if (!displayedImage.value || isCopying.value) return;
 
   try {
     isCopying.value = true;
@@ -105,7 +142,7 @@ const copyImageToClipboard = async () => {
     }
 
     // 获取图片数据
-    const response = await fetch(props.currentImage);
+    const response = await fetch(displayedImage.value);
     if (!response.ok) {
       throw new Error('获取图片失败');
     }
@@ -270,6 +307,8 @@ watch(() => props.imageKey, (newKey, oldKey) => {
   // 当 key 变化时，说明加载了一个全新的文件，此时应重置视图控制状态，允许自动适应
   if (newKey !== oldKey) {
     isViewUserControlled.value = false;
+    // 如果是新图片，重置显示面为正面
+    currentDisplaySide.value = 'front';
     console.log(`✨ New image key detected: ${newKey}. Auto-fit re-enabled.`);
   }
 });
@@ -369,6 +408,29 @@ onUnmounted(() => {
   justify-content: center;
   align-items: center;
   background: radial-gradient(circle at center, rgba(102, 126, 234, 0.1) 0%, transparent 70%);
+}
+
+.card-side-switch {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.card-side-switch :deep(.n-button) {
+  min-width: 60px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.card-side-switch :deep(.n-button--primary-type) {
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
 }
 
 .image-controls {

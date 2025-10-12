@@ -60,6 +60,8 @@ export default {
     // 卡牌类型
     cardType: '卡牌类型',
     selectCardType: '选择卡牌类型',
+    frontSide: '正面',
+    backSide: '反面',
 
     language: "语言",
     selectLanguage: "选择语言",

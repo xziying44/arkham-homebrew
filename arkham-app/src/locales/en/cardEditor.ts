@@ -60,6 +60,8 @@ export default {
     // Card type
     cardType: 'Card Type',
     selectCardType: 'Select Card Type',
+    frontSide: 'Front',
+    backSide: 'Back',
 
     // Card properties
     cardProperties: 'Card Properties',

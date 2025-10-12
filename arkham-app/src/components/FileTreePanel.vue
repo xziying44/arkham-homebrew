@@ -1076,8 +1076,8 @@ const handleCreateCard = async () => {
 
     const parentPath = contextMenuTarget.value?.path;
 
-    // 创建空的JSON对象
-    const defaultContent = '{}';
+    // 创建空的JSON对象（默认2.0版本用于双面卡牌）
+    const defaultContent = '{"version": "2.0"}';
 
     await WorkspaceService.createFile(fileName, defaultContent, parentPath);
 

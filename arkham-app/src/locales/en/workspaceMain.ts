@@ -258,6 +258,8 @@ export default {
     title: 'Image Preview',
     adjustWidth: 'Drag to adjust preview area width',
     emptyText: 'Select an image to preview',
+    frontSide: 'Front',
+    backSide: 'Back',
     controls: {
       zoomIn: 'Zoom In',
       zoomOut: 'Zoom Out',

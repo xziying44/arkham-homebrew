@@ -255,6 +255,8 @@ export default {
     title: '图片预览',
     adjustWidth: '拖拽调整预览区宽度',
     emptyText: '选择图片进行预览',
+    frontSide: '正面',
+    backSide: '反面',
     controls: {
       zoomIn: '放大',
       zoomOut: '缩小',

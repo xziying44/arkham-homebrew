@@ -646,8 +646,8 @@ def generate_card():
             front_card = double_sided_result['front']
             back_card = double_sided_result['back']
 
-            card_image = front_card.image
-            back_image = back_card.image
+            card_image = front_card.image if front_card else None
+            back_image = back_card.image if back_card else None
             card = front_card
         else:
             # 单面卡牌处理

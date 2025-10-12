@@ -329,18 +329,39 @@ class WorkspaceManager:
         try:
             # 确保路径在工作目录内
             if not self._is_path_in_workspace(file_path):
+                print(f"❌ 路径不在工作目录内: {file_path}")
                 return None
 
             abs_file_path = self._get_absolute_path(file_path)
-            print(f"获取文件内容: {abs_file_path}")
+            print(f"📄 获取文件内容: {abs_file_path}")
+            print(f"   - 文件是否存在: {os.path.exists(abs_file_path)}")
+            print(f"   - 是否为文件: {os.path.isfile(abs_file_path)}")
+
             if not os.path.isfile(abs_file_path):
+                print(f"❌ 文件不存在或不是文件")
                 return None
 
-            with open(abs_file_path, 'r', encoding='utf-8') as f:
-                return f.read()
+            # 尝试以不同编码读取文件
+            encodings = ['utf-8', 'utf-8-sig', 'gbk', 'gb2312']
+            last_error = None
+
+            for encoding in encodings:
+                try:
+                    with open(abs_file_path, 'r', encoding=encoding) as f:
+                        content = f.read()
+                    print(f"✅ 使用 {encoding} 编码成功读取文件")
+                    return content
+                except UnicodeDecodeError as e:
+                    last_error = e
+                    print(f"⚠️  使用 {encoding} 编码失败: {str(e)[:50]}")
+                    continue
+
+            print(f"❌ 所有编码尝试失败，最后错误: {last_error}")
+            return None
 
         except Exception as e:
-            print(f"读取文件内容失败: {e}")
+            print(f"❌ 读取文件内容失败: {e}")
+            traceback.print_exc()
             return None
 
     def get_image_as_base64(self, image_path: str) -> Optional[str]:
@@ -595,7 +616,10 @@ class WorkspaceManager:
             back_data = json_data.get('back', {})
             if not back_data:
                 print("双面卡牌缺少背面数据")
-                return None
+                return {
+                    'front': front_card,
+                    'back': None
+                }
 
             # 为背面数据复制一些必要字段（从正面继承）
             back_json_data = back_data.copy()
@@ -609,7 +633,10 @@ class WorkspaceManager:
             back_card = self.generate_card_image(back_json_data, silence)
             if back_card is None:
                 print("生成背面卡牌失败")
-                return None
+                return {
+                    'front': front_card,
+                    'back': None
+                }
 
             return {
                 'front': front_card,
@@ -668,7 +695,8 @@ class WorkspaceManager:
                         if 'back' in referenced_card_data:
                             # 复制背面数据，但保持当前卡牌的一些基本属性
                             result_data = referenced_card_data['back'].copy()
-                            result_data['language'] = json_data.get('language', referenced_card_data.get('language', 'zh'))
+                            result_data['language'] = json_data.get('language',
+                                                                    referenced_card_data.get('language', 'zh'))
                             result_data['version'] = referenced_version
                             return result_data
                         else:

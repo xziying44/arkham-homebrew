@@ -67,11 +67,19 @@
                 <div class="form-wrapper">
                     <!-- 卡牌类型选择 -->
                     <n-card :title="$t('cardEditor.panel.cardType')" size="small" class="form-card">
+                        <!-- 双面卡牌标签页切换 -->
+                        <div v-if="isDoubleSided" class="card-side-selector">
+                            <n-radio-group v-model:value="currentSide" size="medium" style="margin-bottom: 16px;">
+                                <n-radio-button value="front">{{ $t('cardEditor.panel.frontSide') }}</n-radio-button>
+                                <n-radio-button value="back">{{ $t('cardEditor.panel.backSide') }}</n-radio-button>
+                            </n-radio-group>
+                        </div>
+
                         <div class="form-row">
                             <!-- 语言选择 - 左列 -->
                             <div class="form-field layout-half">
                                 <n-form-item :label="$t('cardEditor.panel.language')">
-                                    <n-select v-model:value="currentCardData.language" :options="languageOptions"
+                                    <n-select v-model:value="currentLanguage" :options="languageOptions"
                                         :placeholder="$t('cardEditor.panel.selectLanguage')" />
                                 </n-form-item>
                             </div>
@@ -79,7 +87,7 @@
                             <!-- 卡牌类型选择 - 右列 -->
                             <div class="form-field layout-half">
                                 <n-form-item :label="$t('cardEditor.panel.selectCardType')">
-                                    <n-select v-model:value="currentCardData.type" :options="cardTypeOptions"
+                                    <n-select v-model:value="currentSideType" :options="cardTypeOptions"
                                         :placeholder="$t('cardEditor.panel.selectCardType')"
                                         @update:value="onCardTypeChange" />
                                 </n-form-item>
@@ -303,7 +311,7 @@ const props = defineProps<Props>();
 const emit = defineEmits<{
     'toggle-file-tree': [];
     'toggle-image-preview': [];
-    'update-preview-image': [image: string];
+    'update-preview-image': [image: string | { front: string; back?: string }];
     'refresh-file-tree': [];
 }>();
 
@@ -328,6 +336,46 @@ const currentCardData = reactive({
     version: '1.0',
     language: 'zh', // 新增：默认语言为中文
 });
+
+// 双面卡牌状态
+const currentSide = ref<'front' | 'back'>('front');
+const isDoubleSided = computed(() => currentCardData.version === '2.0');
+
+// 获取当前编辑的数据对象
+const getEditingDataObject = () => {
+    if (currentSide.value === 'back') {
+        if (!currentCardData.back) {
+            currentCardData.back = {
+                type: '',
+                language: 'zh'
+            };
+        }
+        return currentCardData.back;
+    }
+    return currentCardData;
+};
+
+// 当前面的语言
+const currentLanguage = computed({
+    get: () => getEditingDataObject().language || 'zh',
+    set: (value) => {
+        getEditingDataObject().language = value;
+    }
+});
+
+// 当前面的类型
+const currentSideType = computed({
+    get: () => getEditingDataObject().type || '',
+    set: (value) => {
+        getEditingDataObject().type = value;
+    }
+});
+
+// 监听 currentSide 变化，更新 currentCardType
+watch(currentSide, () => {
+    const editingData = getEditingDataObject();
+    currentCardType.value = editingData.type || '';
+}, { immediate: false });
 
 // 新增：语言选项
 const languageOptions = computed(() => [
@@ -700,11 +748,12 @@ const getFieldPath = (field: FormField): string => {
 
 // 表单操作方法
 const getFieldValue = (field: FormField) => {
+    const targetData = getEditingDataObject();
     if (field.index !== undefined) {
-        const array = getDeepValue(currentCardData, field.key);
+        const array = getDeepValue(targetData, field.key);
         return Array.isArray(array) ? array[field.index] : undefined;
     }
-    return getDeepValue(currentCardData, field.key);
+    return getDeepValue(targetData, field.key);
 };
 
 const getDeepValue = (obj: any, path: string) => {
@@ -721,10 +770,11 @@ const getDeepValue = (obj: any, path: string) => {
 };
 
 const setFieldValue = (field: FormField, value: any) => {
+    const targetData = getEditingDataObject();
     if (field.index !== undefined) {
-        setArrayValue(field.key, field.index, value);
+        setArrayValue(field.key, field.index, value, targetData);
     } else {
-        setDeepValue(currentCardData, field.key, value);
+        setDeepValue(targetData, field.key, value);
     }
 
     // 触发防抖预览更新
@@ -747,11 +797,12 @@ const setDeepValue = (obj: any, path: string, value: any) => {
     target[finalKey] = value;
 };
 
-const setArrayValue = (arrayPath: string, index: number, value: any) => {
-    let array = getDeepValue(currentCardData, arrayPath);
+const setArrayValue = (arrayPath: string, index: number, value: any, targetData: any = null) => {
+    const data = targetData || currentCardData;
+    let array = getDeepValue(data, arrayPath);
     if (!Array.isArray(array)) {
         array = [];
-        setDeepValue(currentCardData, arrayPath, array);
+        setDeepValue(data, arrayPath, array);
     }
 
     // 确保数组长度足够
@@ -828,33 +879,45 @@ const editStringArrayItem = (field: FormField, index: number, newValue: string) 
 };
 
 const onCardTypeChange = (newType: string) => {
-    currentCardType.value = newType;
+    const editingData = getEditingDataObject();
 
     // 将 language 添加到需要保留的字段中
     const hiddenFields = ['id', 'created_at', 'version', 'type', 'name', 'language'];
     const newData = {};
 
     hiddenFields.forEach(field => {
-        if (currentCardData[field] !== undefined) {
-            newData[field] = currentCardData[field];
+        if (editingData[field] !== undefined) {
+            newData[field] = editingData[field];
         }
     });
 
-    Object.keys(currentCardData).forEach(key => {
+    // 保存 back 字段（如果在编辑正面且存在 back）
+    if (currentSide.value === 'front' && currentCardData.back) {
+        newData['back'] = currentCardData.back;
+    }
+
+    Object.keys(editingData).forEach(key => {
         if (hiddenFields.includes(key)) {
             return;
         }
-        delete currentCardData[key];
+        // 如果在编辑正面，保留 back 字段
+        if (currentSide.value === 'front' && key === 'back') {
+            return;
+        }
+        delete editingData[key];
     });
 
-    Object.assign(currentCardData, newData);
+    Object.assign(editingData, newData);
+
+    // 更新 currentCardType
+    currentCardType.value = newType;
 
     // 应用默认值
     const config = cardTypeConfigs.value[newType];
     if (config) {
         config.fields.forEach(field => {
             if (field.defaultValue !== undefined) {
-                setFieldValue(field, field.defaultValue);
+                setDeepValue(editingData, field.key, field.defaultValue);
             }
         });
     }
@@ -938,7 +1001,7 @@ const loadCardData = async () => {
 };
 
 // 生成卡图的通用方法
-const generateCardImage = async (): Promise<string | null> => {
+const generateCardImage = async (): Promise<string | { front: string; back?: string } | null> => {
     // 验证卡牌数据
     const validation = CardService.validateCardData(currentCardData as CardData);
     if (!validation.isValid) {
@@ -948,7 +1011,16 @@ const generateCardImage = async (): Promise<string | null> => {
 
     try {
         const result_card = await CardService.generateCard(currentCardData as CardData);
-        const imageBase64 = result_card?.image
+        const imageBase64 = result_card?.image;
+
+        // 检查是否为双面卡牌
+        if (result_card?.back_image) {
+            return {
+                front: imageBase64,
+                back: result_card.back_image
+            };
+        }
+
         return imageBase64;
     } catch (error) {
         console.error('生成卡图失败:', error);
@@ -1438,6 +1510,7 @@ onUnmounted(() => {
     flex: 0 0 calc(25% - 12px);
 }
 
+/* 响应式设计 */
 @media (max-width: 768px) {
     .form-row {
         flex-direction: column;
@@ -1449,6 +1522,30 @@ onUnmounted(() => {
     .layout-quarter {
         flex: 1;
     }
+}
+
+/* 双面卡牌切换器样式 */
+.card-side-selector {
+    display: flex;
+    justify-content: center;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+}
+
+.card-side-selector :deep(.n-radio-group) {
+    background: rgba(102, 126, 234, 0.05);
+    border-radius: 8px;
+    padding: 4px;
+}
+
+.card-side-selector :deep(.n-radio-button) {
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.card-side-selector :deep(.n-radio-button--checked) {
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    color: white;
 }
 
 .form-actions {
