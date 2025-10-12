@@ -280,6 +280,7 @@ class CardCreator:
             text = re.sub(r'\[([^]]+)]', replace_bracketed_content, text, flags=re.DOTALL)
             text = text.replace('】。', '】<font name="加粗字体">\uff61</font>')
             text = text.replace('。】', '】<font name="加粗字体">\uff61</font>')
+            text = re.sub(r'(?<!\n)<hr>', r'\n<hr>', text)
 
             card_json['body'] = text
         if card_json.get('class', '') == '弱点' and 'weakness_type' not in card_json:
