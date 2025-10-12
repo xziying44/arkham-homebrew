@@ -185,6 +185,12 @@
         </div>
       </div>
     </div>
+
+    <!-- 语言欢迎弹窗 -->
+    <LanguageWelcomeModal
+      v-model:show="showLanguageWelcome"
+      @language-selected="handleLanguageSelected"
+    />
   </div>
 </template>
 
@@ -211,6 +217,7 @@ import { DirectoryService } from '@/api/directory-service';
 import { ConfigService } from '@/api'; // ConfigService 导入
 import { ApiError } from '@/api/http-client';
 import { setLanguage } from '@/locales';
+import LanguageWelcomeModal from '@/components/LanguageWelcomeModal.vue';
 
 // ----------- Types -----------
 interface RecentDirectory {
@@ -276,6 +283,77 @@ const removingRecentPath = ref<string | null>(null);
 
 // ----------- 语言切换保存状态 -----------
 const savingLanguage = ref(false);
+
+// ----------- 首次访问语言欢迎弹窗 -----------
+const showLanguageWelcome = ref(false);
+
+/**
+ * 检查是否是首次访问
+ */
+const checkFirstVisit = async () => {
+  try {
+    console.log('🔍 [首次访问检测] 检查后端配置...');
+    const config = await ConfigService.getConfig();
+
+    const firstVisitCompleted = config.first_visit_completed;
+    const hasLanguageSetting = config.language;
+
+    console.log('🔍 [首次访问检测] 配置状态:', {
+      firstVisitCompleted,
+      hasLanguageSetting
+    });
+
+    // 如果首次访问未完成且没有语言设置，则显示欢迎弹窗
+    if (!firstVisitCompleted) {
+      console.log('🎉 [首次访问] 检测到首次访问，将显示语言选择弹窗');
+      showLanguageWelcome.value = true;
+    }
+  } catch (error) {
+    console.warn('🔍 [首次访问检测] 检查配置失败，回退到localStorage:', error);
+
+    // 回退到localStorage检测（保持向后兼容）
+    const hasCompletedWelcome = localStorage.getItem('language-welcome-completed');
+    const hasLanguageSetting = localStorage.getItem('language');
+
+    if (!hasCompletedWelcome && !hasLanguageSetting) {
+      console.log('🎉 [首次访问] localStorage检测到首次访问，将显示语言选择弹窗');
+      showLanguageWelcome.value = true;
+    }
+  }
+};
+
+/**
+ * 处理语言选择完成
+ */
+const handleLanguageSelected = async (selectedLanguage: string) => {
+  console.log('🌐 [语言选择] 用户选择了语言:', selectedLanguage);
+
+  try {
+    // 通过后端API保存首次访问状态和语言设置
+    const currentConfig = await ConfigService.getConfig();
+
+    const updatedConfig = {
+      ...currentConfig,
+      language: selectedLanguage,
+      first_visit_completed: true
+    };
+
+    await ConfigService.saveConfig(updatedConfig);
+
+    console.log('✅ [语言选择] 配置已保存到后端');
+    message.success(t('languageWelcome.success'));
+
+  } catch (error) {
+    console.error('❌ [语言选择] 保存配置失败:', error);
+
+    // 回退到localStorage保存（保持向后兼容）
+    localStorage.setItem('language', selectedLanguage);
+    localStorage.setItem('language-welcome-completed', 'true');
+
+    console.log('⚠️ [语言选择] 已回退保存到localStorage');
+    message.warning(t('languageWelcome.error'));
+  }
+};
 
 // ----------- 语言配置加载和保存 -----------
 
@@ -682,6 +760,9 @@ const handleOpenRecent = async (directory: RecentDirectory) => {
 
 onMounted(async () => {
   console.log('🎯 [阿卡姆印牌姬] Welcome组件已挂载');
+
+  // 检查首次访问（异步）
+  await checkFirstVisit();
 
   // 首先加载语言配置并自动切换
   await loadLanguageConfig();

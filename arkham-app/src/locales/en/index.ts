@@ -9,6 +9,7 @@ import deckBuilder from './deckBuilder'
 import cardEditor from './cardEditor'
 // 新增下面这一行
 import ttsScriptEditor from './ttsScriptEditor' // 确保路径正确
+import languageWelcome from './languageWelcome'
 
 export default {
   common,
@@ -21,5 +22,6 @@ export default {
   deckBuilder,
   cardEditor,
   // 新增下面这一行
-  ttsScriptEditor
+  ttsScriptEditor,
+  languageWelcome
 }

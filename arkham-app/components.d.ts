@@ -14,6 +14,7 @@ declare module 'vue' {
     FormField: typeof import('./src/components/FormField.vue')['default']
     IllustrationLayoutEditor: typeof import('./src/components/IllustrationLayoutEditor.vue')['default']
     ImagePreviewPanel: typeof import('./src/components/ImagePreviewPanel.vue')['default']
+    LanguageWelcomeModal: typeof import('./src/components/LanguageWelcomeModal.vue')['default']
     NAlert: typeof import('naive-ui')['NAlert']
     NBadge: typeof import('naive-ui')['NBadge']
     NButton: typeof import('naive-ui')['NButton']

@@ -685,6 +685,7 @@ def generate_card():
 
     except Exception as e:
         # 打印异常栈
+        print(f"生成卡图失败: {str(e)}")
         return jsonify(create_response(
             code=4003,
             msg=f"生成卡图失败: {str(e)}"
@@ -1289,9 +1290,20 @@ def export_card():
 
 
 if __name__ == '__main__':
+    # 设置控制台编码为UTF-8
+    import sys
+    if sys.platform == 'win32':
+        import os
+        os.system('chcp 65001 >nul')
+
+    # 强制刷新输出缓冲区
+    import sys
+    sys.stdout.reconfigure(line_buffering=True, encoding='utf-8')
+    sys.stderr.reconfigure(line_buffering=True, encoding='utf-8')
+
     app.run(
         host='127.0.0.1',
         port=5000,
-        debug=False,
+        debug=True,  # 开启调试模式以获得更详细的日志
         threaded=True
     )

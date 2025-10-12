@@ -35,6 +35,7 @@ class WorkspaceManager:
         "github_branch",  # GitHub分支名
         "github_folder",  # GitHub文件夹
         "language",  # 界面语言
+        "first_visit_completed",  # 首次访问是否完成
         # 可以在这里添加更多系统级配置字段
     ]
 
@@ -630,6 +631,8 @@ class WorkspaceManager:
                 config[field] = "images"
             elif field == "language":
                 config[field] = "zh"
+            elif field == "first_visit_completed":
+                config[field] = False
             else:
                 config[field] = ""
         return config
