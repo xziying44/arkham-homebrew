@@ -31,6 +31,8 @@ export interface FormField {
 
 export interface CardTypeConfig {
   fields: FormField[];
+  field_type_display?: string; // 用于显示的名称（带emoji）
+  card_category?: 'player' | 'encounter'; // 卡牌分类
 }
 
 // 提示文本
@@ -86,6 +88,8 @@ const nameTip = `支持添加独特标记：🏅 或 <独特>`
 
 export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   '支援卡': {
+    field_type_display: '📦 支援卡',
+    card_category: 'player',
     fields: [
       {
         key: 'name',
@@ -314,6 +318,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
     ]
   },
   '事件卡': {
+    field_type_display: '⚡ 事件卡',
+    card_category: 'player',
     fields: [
       {
         key: 'name',
@@ -468,6 +474,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
     ]
   },
   '技能卡': {
+    field_type_display: '🎯 技能卡',
+    card_category: 'player',
     fields: [
       {
         key: 'name',
@@ -552,6 +560,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
     ]
   },
   '调查员': {
+    field_type_display: '👤 调查员',
+    card_category: 'player',
     fields: [
       {
         key: 'subtype',
@@ -678,6 +688,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
     ]
   },
   '调查员背面': {
+    field_type_display: '🔄 调查员背面',
+    card_category: 'player',
     fields: [
       {
         key: 'subtype',
@@ -759,6 +771,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
     ]
   },
   '定制卡': {
+    field_type_display: '🎨 定制卡',
+    card_category: 'player',
     fields: [
       {
         key: 'name',
@@ -777,6 +791,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
     ]
   },
   '故事卡': {
+    field_type_display: '📖 故事卡',
+    card_category: 'encounter',
     fields: [
       {
         key: 'name',
@@ -807,6 +823,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
     ]
   },
   '诡计卡': {
+    field_type_display: '🎭 诡计卡',
+    card_category: 'encounter',
     fields: [
       {
         key: 'name',
@@ -867,6 +885,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
     ]
   },
   '敌人卡': {
+    field_type_display: '👹 敌人卡',
+    card_category: 'encounter',
     fields: [
       {
         key: 'name',
@@ -974,6 +994,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
     ]
   },
   '地点卡': {
+    field_type_display: '📍 地点卡',
+    card_category: 'encounter',
     fields: [
       {
         key: 'name',
@@ -1097,6 +1119,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
     ]
   },
   '密谋卡': {
+    field_type_display: '🌙 密谋卡',
+    card_category: 'encounter',
     fields: [
       {
         key: 'name',
@@ -1177,6 +1201,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
     ]
   },
   '密谋卡-大画': {
+    field_type_display: '🌕 密谋卡-大画',
+    card_category: 'encounter',
     fields: [
       {
         key: 'name',
@@ -1214,6 +1240,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
     ]
   },
   '场景卡': {
+    field_type_display: '🎬 场景卡',
+    card_category: 'encounter',
     fields: [
       {
         key: 'name',
@@ -1294,6 +1322,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
     ]
   },
   '场景卡-大画': {
+    field_type_display: '🎞️ 场景卡-大画',
+    card_category: 'encounter',
     fields: [
       {
         key: 'name',
@@ -1331,6 +1361,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
     ]
   },
   '冒险参考卡': {
+    field_type_display: '📋 冒险参考卡',
+    card_category: 'encounter',
     fields: [
       {
         key: 'name',
@@ -1424,9 +1456,13 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
 // 系统预设卡背类型配置
 export const cardBackConfigs: Record<string, CardTypeConfig> = {
   '玩家卡背': {
+    field_type_display: '🎴 玩家卡背',
+    card_category: 'player',
     fields: []
   },
   '遭遇卡背': {
+    field_type_display: '🎯 遭遇卡背',
+    card_category: 'encounter',
     fields: []
   }
 };
@@ -1434,12 +1470,22 @@ export const cardBackConfigs: Record<string, CardTypeConfig> = {
 export const cardTypeOptions = [
   // 系统预设卡背选项
   { label: '--- 系统预设 ---', value: '__divider__', disabled: true },
-  { label: '🎴 玩家卡背', value: '玩家卡背' },
-  { label: '🎯 遭遇卡背', value: '遭遇卡背' },
-  { label: '--- 卡牌类型 ---', value: '__divider2__', disabled: true },
-  // 常规卡牌类型
-  ...Object.keys(cardTypeConfigs).map(key => ({
-    label: key,
-    value: key
-  }))
+  { label: cardBackConfigs['玩家卡背'].field_type_display, value: '玩家卡背' },
+  { label: cardBackConfigs['遭遇卡背'].field_type_display, value: '遭遇卡背' },
+  { label: '--- 玩家卡 ---', value: '__divider_player__', disabled: true },
+  // 玩家卡类型
+  ...Object.keys(cardTypeConfigs)
+    .filter(key => cardTypeConfigs[key].card_category === 'player')
+    .map(key => ({
+      label: cardTypeConfigs[key].field_type_display || key,
+      value: key
+    })),
+  { label: '--- 遭遇卡 ---', value: '__divider_encounter__', disabled: true },
+  // 遭遇卡类型
+  ...Object.keys(cardTypeConfigs)
+    .filter(key => cardTypeConfigs[key].card_category === 'encounter')
+    .map(key => ({
+      label: cardTypeConfigs[key].field_type_display || key,
+      value: key
+    }))
 ];

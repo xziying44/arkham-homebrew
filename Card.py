@@ -461,7 +461,10 @@ class Card:
             pass
         if remaining_height < 0:
             remaining_height = 0
-        gap = remaining_height // len(scenario_card_object)
+        if len(scenario_card_object) > 0:
+            gap = remaining_height // len(scenario_card_object)
+        else:
+            gap = 0
         # 开始画
         start_x = 88
         start_y = 300

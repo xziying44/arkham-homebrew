@@ -30,6 +30,8 @@ export interface FormField {
 export interface CardTypeConfig {
   fields: FormField[];
   field_type_en?: string; // English display name
+  field_type_display?: string; // Display name with emoji
+  card_category?: 'player' | 'encounter'; // Card category
 }
 
 // Help text
@@ -87,6 +89,8 @@ const nameTip = `Support unique marker: 🏅 or <独特>`;
 export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   '支援卡': {
     field_type_en: 'Asset Card',
+    field_type_display: '📦 Asset Card',
+    card_category: 'player',
     fields: [
       {
         key: 'name',
@@ -316,6 +320,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   },
   '事件卡': {
     field_type_en: 'Event Card',
+    field_type_display: '⚡ Event Card',
+    card_category: 'player',
     fields: [
       {
         key: 'name',
@@ -471,6 +477,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   },
   '技能卡': {
     field_type_en: 'Skill Card',
+    field_type_display: '🎯 Skill Card',
+    card_category: 'player',
     fields: [
       {
         key: 'name',
@@ -556,6 +564,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   },
   '调查员': {
     field_type_en: 'Investigator',
+    field_type_display: '👤 Investigator',
+    card_category: 'player',
     fields: [
       {
         key: 'subtype',
@@ -683,6 +693,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   },
   '调查员背面': {
     field_type_en: 'Investigator Back',
+    field_type_display: '🔄 Investigator Back',
+    card_category: 'player',
     fields: [
       {
         key: 'subtype',
@@ -765,6 +777,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   },
   '定制卡': {
     field_type_en: 'Custom Card',
+    field_type_display: '🎨 Custom Card',
+    card_category: 'player',
     fields: [
       {
         key: 'name',
@@ -784,6 +798,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   },
   '故事卡': {
     field_type_en: 'Story Card',
+    field_type_display: '📖 Story Card',
+    card_category: 'encounter',
     fields: [
       {
         key: 'name',
@@ -815,6 +831,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   },
   '诡计卡': {
     field_type_en: 'Treachery Card',
+    field_type_display: '🎭 Treachery Card',
+    card_category: 'encounter',
     fields: [
       {
         key: 'name',
@@ -876,6 +894,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   },
   '敌人卡': {
     field_type_en: 'Enemy Card',
+    field_type_display: '👹 Enemy Card',
+    card_category: 'encounter',
     fields: [
       {
         key: 'name',
@@ -984,6 +1004,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   },
   '地点卡': {
     field_type_en: 'Location Card',
+    field_type_display: '📍 Location Card',
+    card_category: 'encounter',
     fields: [
       {
         key: 'name',
@@ -1108,6 +1130,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   },
   '密谋卡': {
     field_type_en: 'Agenda Card',
+    field_type_display: '🌙 Agenda Card',
+    card_category: 'encounter',
     fields: [
       {
         key: 'name',
@@ -1193,6 +1217,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   },
   '密谋卡-大画': {
     field_type_en: 'Agenda Card - Large Art',
+    field_type_display: '🌕 Agenda Card - Large Art',
+    card_category: 'encounter',
     fields: [
       {
         key: 'name',
@@ -1231,6 +1257,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   },
   '场景卡': {
     field_type_en: 'Act Card',
+    field_type_display: '🎬 Act Card',
+    card_category: 'encounter',
     fields: [
       {
         key: 'name',
@@ -1316,6 +1344,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   },
   '场景卡-大画': {
     field_type_en: 'Act Card - Large Art',
+    field_type_display: '🎞️ Act Card - Large Art',
+    card_category: 'encounter',
     fields: [
       {
         key: 'name',
@@ -1354,6 +1384,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   },
   '冒险参考卡': {
     field_type_en: 'Scenario Reference Card',
+    field_type_display: '📋 Scenario Reference Card',
+    card_category: 'encounter',
     fields: [
       {
         key: 'name',
@@ -1448,10 +1480,14 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
 export const cardBackConfigs: Record<string, CardTypeConfig> = {
   '玩家卡背': {
     field_type_en: 'Player Card Back',
+    field_type_display: '🎴 Player Card Back',
+    card_category: 'player',
     fields: []
   },
   '遭遇卡背': {
     field_type_en: 'Encounter Card Back',
+    field_type_display: '🎯 Encounter Card Back',
+    card_category: 'encounter',
     fields: []
   }
 };
@@ -1459,12 +1495,22 @@ export const cardBackConfigs: Record<string, CardTypeConfig> = {
 export const cardTypeOptions = [
   // System preset card back options
   { label: '--- System Presets ---', value: '__divider__', disabled: true },
-  { label: '🎴 Player Card Back', value: '玩家卡背' },
-  { label: '🎯 Encounter Card Back', value: '遭遇卡背' },
-  { label: '--- Card Types ---', value: '__divider2__', disabled: true },
-  // Regular card types
-  ...Object.keys(cardTypeConfigs).map(key => ({
-    label: cardTypeConfigs[key].field_type_en || key,
-    value: key
-  }))
+  { label: cardBackConfigs['玩家卡背'].field_type_display, value: '玩家卡背' },
+  { label: cardBackConfigs['遭遇卡背'].field_type_display, value: '遭遇卡背' },
+  { label: '--- Player Cards ---', value: '__divider_player__', disabled: true },
+  // Player card types
+  ...Object.keys(cardTypeConfigs)
+    .filter(key => cardTypeConfigs[key].card_category === 'player')
+    .map(key => ({
+      label: cardTypeConfigs[key].field_type_display || cardTypeConfigs[key].field_type_en || key,
+      value: key
+    })),
+  { label: '--- Encounter Cards ---', value: '__divider_encounter__', disabled: true },
+  // Encounter card types
+  ...Object.keys(cardTypeConfigs)
+    .filter(key => cardTypeConfigs[key].card_category === 'encounter')
+    .map(key => ({
+      label: cardTypeConfigs[key].field_type_display || cardTypeConfigs[key].field_type_en || key,
+      value: key
+    }))
 ];
