@@ -573,6 +573,125 @@ class WorkspaceManager:
             print(f"生成卡图失败: {e}")
             return None
 
+    def generate_double_sided_card_image(self, json_data: Dict[str, Any], silence: bool = False):
+        """
+        生成双面卡图
+
+        Args:
+            json_data: 卡牌数据的JSON字典
+            silence: 是否静默模式
+
+        Returns:
+            dict: 包含正面和背面卡牌的字典，格式为 {'front': card, 'back': card}
+        """
+        try:
+            # 生成正面卡牌
+            front_card = self.generate_card_image(json_data, silence)
+            if front_card is None:
+                print("生成正面卡牌失败")
+                return None
+
+            # 获取背面数据
+            back_data = json_data.get('back', {})
+            if not back_data:
+                print("双面卡牌缺少背面数据")
+                return None
+
+            # 为背面数据复制一些必要字段（从正面继承）
+            back_json_data = back_data.copy()
+            # 继承正面的语言设置
+            back_json_data['language'] = json_data.get('language', 'zh')
+            # 继承其他必要字段
+            if 'version' not in back_json_data:
+                back_json_data['version'] = json_data.get('version', '2.0')
+
+            # 生成背面卡牌
+            back_card = self.generate_card_image(back_json_data, silence)
+            if back_card is None:
+                print("生成背面卡牌失败")
+                return None
+
+            return {
+                'front': front_card,
+                'back': back_card
+            }
+
+        except Exception as e:
+            print(f"生成双面卡图失败: {e}")
+            traceback.print_exc()
+            return None
+
+    def resolve_reference_card(self, json_data: Dict[str, Any], allow_reference: bool = True) -> Dict[str, Any]:
+        """
+        解析引用卡牌
+
+        Args:
+            json_data: 卡牌数据的JSON字典
+            allow_reference: 是否允许解析引用（防止无限引用）
+
+        Returns:
+            dict: 解析后的卡牌数据
+        """
+        try:
+            card_type = json_data.get('type', '')
+
+            # 检查是否为引用类型
+            if card_type == '引用卡牌' and allow_reference:
+                reference_path = json_data.get('reference_path', '')
+                reference_side = json_data.get('reference_side', 'front')
+
+                if not reference_path:
+                    print("引用卡牌缺少引用地址")
+                    return json_data
+
+                # 确保路径在工作目录内
+                if not self._is_path_in_workspace(reference_path):
+                    print(f"引用路径不在工作目录内: {reference_path}")
+                    return json_data
+
+                # 读取引用的卡牌文件
+                abs_reference_path = self._get_absolute_path(reference_path)
+                if not os.path.exists(abs_reference_path):
+                    print(f"引用的卡牌文件不存在: {reference_path}")
+                    return json_data
+
+                with open(abs_reference_path, 'r', encoding='utf-8') as f:
+                    referenced_card_data = json.load(f)
+
+                # 检查引用目标卡牌的版本
+                referenced_version = referenced_card_data.get('version', '')
+
+                if referenced_version == '2.0':
+                    # 版本2.0，需要区分正面和反面
+                    if reference_side == 'back':
+                        # 使用背面数据
+                        if 'back' in referenced_card_data:
+                            # 复制背面数据，但保持当前卡牌的一些基本属性
+                            result_data = referenced_card_data['back'].copy()
+                            result_data['language'] = json_data.get('language', referenced_card_data.get('language', 'zh'))
+                            result_data['version'] = referenced_version
+                            return result_data
+                        else:
+                            print("引用的卡牌没有背面数据")
+                            return json_data
+                    else:
+                        # 使用正面数据（默认）
+                        result_data = referenced_card_data.copy()
+                        # 移除背面数据，因为我们只需要正面
+                        if 'back' in result_data:
+                            del result_data['back']
+                        return result_data
+                else:
+                    # 非2.0版本，直接使用整个数据
+                    return referenced_card_data
+            else:
+                # 非引用类型或不允许引用，直接返回原数据
+                return json_data
+
+        except Exception as e:
+            print(f"解析引用卡牌失败: {e}")
+            return json_data
+
     def save_card_image(self, json_data: Dict[str, Any], filename: str, parent_path: Optional[str] = None) -> bool:
         """
         保存卡图到文件

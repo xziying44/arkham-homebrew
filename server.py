@@ -610,12 +610,22 @@ def generate_card():
 
         json_data = data['json_data']
 
+        # 处理引用卡牌
+        json_data = current_workspace.resolve_reference_card(json_data, allow_reference=True)
+
+        # 检查版本号判断是否为双面卡牌
+        version = json_data.get('version', '')
+
         card_type = json_data.get('type', '')
         cardback_filename = None
         if card_type == '玩家卡背':
             cardback_filename = 'cardback/player-back.jpg'
         elif card_type == '遭遇卡背':
             cardback_filename = 'cardback/encounter-back.jpg'
+        card = None
+        card_image = None
+        back_image = None
+
         print(cardback_filename)
         if cardback_filename:
             # 从程序目录读取
@@ -624,9 +634,23 @@ def generate_card():
             if hasattr(sys, '_MEIPASS'):
                 cardback_path = os.path.join(sys._MEIPASS, cardback_filename)
             card_image = Image.open(cardback_path)
-            card = None
+        elif version == "2.0":
+            # 双面卡牌处理
+            double_sided_result = current_workspace.generate_double_sided_card_image(json_data)
+            if double_sided_result is None:
+                return jsonify(create_response(
+                    code=4002,
+                    msg="生成双面卡图失败"
+                )), 500
+
+            front_card = double_sided_result['front']
+            back_card = double_sided_result['back']
+
+            card_image = front_card.image
+            back_image = back_card.image
+            card = front_card
         else:
-            # 生成卡图
+            # 单面卡牌处理
             card = current_workspace.generate_card_image(json_data)
             card_image = card.image
 
@@ -675,17 +699,28 @@ def generate_card():
         card_image.save(img_buffer, format='PNG')
         img_str = base64.b64encode(img_buffer.getvalue()).decode()
 
+        # 构建响应数据
+        response_data = {
+            "image": f"data:image/png;base64,{img_str}",
+            "box_position": card.get_upgrade_card_box_position() if card else []
+        }
+
+        # 如果有背面图片，也转换为base64并添加到响应中
+        if back_image is not None:
+            back_buffer = io.BytesIO()
+            back_image.save(back_buffer, format='PNG')
+            back_str = base64.b64encode(back_buffer.getvalue()).decode()
+            response_data["back_image"] = f"data:image/png;base64,{back_str}"
+
         return jsonify(create_response(
             msg="生成卡图成功",
-            data={
-                "image": f"data:image/png;base64,{img_str}",
-                "box_position": card.get_upgrade_card_box_position() if card else []
-            }
+            data=response_data
         ))
 
     except Exception as e:
         # 打印异常栈
         print(f"生成卡图失败: {str(e)}")
+        traceback.print_exc()
         return jsonify(create_response(
             code=4003,
             msg=f"生成卡图失败: {str(e)}"
