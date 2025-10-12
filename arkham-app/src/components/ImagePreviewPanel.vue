@@ -309,21 +309,36 @@ watch(() => props.imageKey, (newKey, oldKey) => {
     isViewUserControlled.value = false;
     // 如果是新图片，重置显示面为正面
     currentDisplaySide.value = 'front';
-    console.log(`✨ New image key detected: ${newKey}. Auto-fit re-enabled.`);
+    console.log(`✨ New image key detected: ${newKey}. Auto-fit re-enabled, reset to front side.`);
   }
 });
 
-// 监听图片为空的情况
-watch(() => props.currentImage, (newImage) => {
+// 新增：监听 currentImage 的变化，特别是双面卡牌数据结构的变化
+watch(() => props.currentImage, (newImage, oldImage) => {
+  // 检测双面卡牌数据结构的变化
+  const wasDoubleSided = typeof oldImage === 'object' && oldImage.front;
+  const isDoubleSidedNow = typeof newImage === 'object' && newImage.front;
+
+  if (isDoubleSidedNow && !wasDoubleSided) {
+    // 从单面卡牌切换到双面卡牌，或加载新的双面卡牌
+    console.log('🔄 双面卡牌数据加载，重置为正面显示');
+    currentDisplaySide.value = 'front';
+    // 允许自动适应新图片
+    isViewUserControlled.value = false;
+  }
+
+  // 如果图片被清空，重置所有状态
   if (!newImage) {
-    // 如果图片被清空，重置所有状态
     isViewUserControlled.value = false;
     imageScale.value = 1;
     imageOffsetX.value = 0;
     imageOffsetY.value = 0;
+    currentDisplaySide.value = 'front';
     console.log('🗑️ 图片被清空，重置所有状态');
   }
-});
+}, { deep: true });
+
+// 注意：上面的watch已经包含了图片为空的情况处理，不需要重复监听
 
 // 导出方法供父组件调用
 defineExpose({

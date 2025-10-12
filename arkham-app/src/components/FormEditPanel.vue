@@ -375,6 +375,14 @@ const currentSideType = computed({
 watch(currentSide, () => {
     const editingData = getEditingDataObject();
     currentCardType.value = editingData.type || '';
+
+    // 双面卡牌切换时，如果数据有效则触发预览更新
+    if (isDoubleSided.value && editingData.name && editingData.type) {
+        console.log('🔄 双面卡牌切换面，触发预览更新:', currentSide.value);
+        setTimeout(() => {
+            autoGeneratePreview();
+        }, 100);
+    }
 }, { immediate: false });
 
 // 新增：语言选项
@@ -938,10 +946,23 @@ const autoGeneratePreview = async () => {
     if (currentCardData.name && currentCardData.name.trim() &&
         currentCardData.type && currentCardData.type.trim()) {
         try {
+            console.log('🔄 自动生成预览开始，当前编辑面:', currentSide.value);
             const result_card = await CardService.generateCard(currentCardData as CardData);
             const imageBase64 = result_card?.image;
+
             if (imageBase64) {
-                emit('update-preview-image', imageBase64);
+                // 检查是否为双面卡牌
+                if (result_card?.back_image) {
+                    const doubleSidedImage = {
+                        front: imageBase64,
+                        back: result_card.back_image
+                    };
+                    emit('update-preview-image', doubleSidedImage);
+                    console.log('✅ 双面卡牌预览生成成功');
+                } else {
+                    emit('update-preview-image', imageBase64);
+                    console.log('✅ 单面卡牌预览生成成功');
+                }
             }
         } catch (error) {
             // 自动生成失败不显示错误消息，避免打扰用户
@@ -994,6 +1015,14 @@ const loadCardData = async () => {
             // 加载完成后自动生成预览
             autoGeneratePreview();
         }, 100);
+
+        // 双面卡牌额外处理：确保图片预览立即更新
+        if (cardData.version === '2.0') {
+            console.log('🔄 检测到双面卡牌，立即触发预览更新');
+            setTimeout(() => {
+                autoGeneratePreview();
+            }, 200);
+        }
     } catch (error) {
         console.error('加载卡牌数据失败:', error);
         message.error(t('cardEditor.panel.loadCardDataFailed'));
@@ -1082,7 +1111,18 @@ const saveCard = async () => {
         // 显示卡图（使用已生成的结果）
         const imageBase64 = result_card?.image;
         if (imageBase64) {
-            emit('update-preview-image', imageBase64);
+            // 检查是否为双面卡牌，确保传递正确的数据格式
+            if (result_card?.back_image) {
+                const doubleSidedImage = {
+                    front: imageBase64,
+                    back: result_card.back_image
+                };
+                emit('update-preview-image', doubleSidedImage);
+                console.log('✅ 保存后双面卡牌预览更新成功');
+            } else {
+                emit('update-preview-image', imageBase64);
+                console.log('✅ 保存后单面卡牌预览更新成功');
+            }
         }
         message.success(t('cardEditor.panel.cardSavedSuccessfully'));
         return true;
