@@ -474,6 +474,7 @@ export enum ImageHostErrorCode {
 export enum ImageHostType {
   CLOUDINARY = 'cloudinary',
   IMGBB = 'imgbb',
+  LOCAL = 'local',
 }
 
 // 图床上传请求类型

@@ -163,9 +163,14 @@
                   class="card-item"
                   :class="{ 'unsupported': getCardStatus(card.filename).version !== '2.0' }"
                 >
-                  <!-- 云端状态图标 - 左上角 -->
-                  <div v-if="hasCloudUrls(card)" class="cloud-status-icon">
-                    <n-icon :component="CloudOutline" size="16" title="已上传到云端" />
+                  <!-- 状态图标 - 左上角 -->
+                  <div v-if="hasAnyUrls(card)" class="status-icon">
+                    <n-icon
+                      :component="hasCloudUrls(card) ? CloudOutline : FolderOutline"
+                      size="16"
+                      :title="hasCloudUrls(card) ? '已上传到云端' : '已保存到本地'"
+                      :class="hasCloudUrls(card) ? 'cloud-icon' : 'local-icon'"
+                    />
                   </div>
 
                   <div class="card-preview">
@@ -479,6 +484,7 @@ import {
   DownloadOutline,
   CloudUploadOutline,
   CloudOutline,
+  FolderOutline,
   TrashOutline,
   DocumentTextOutline,
   WarningOutline,
@@ -897,9 +903,20 @@ const removeCard = (index: number) => {
   message.success('卡牌已删除');
 };
 
+// 检查卡牌是否有URL（云端或本地）
+const hasAnyUrls = (card: ContentPackageCard): boolean => {
+  return !!(card.front_url || card.back_url);
+};
+
 // 检查卡牌是否有云端URL
 const hasCloudUrls = (card: ContentPackageCard): boolean => {
-  return !!(card.front_url || card.back_url);
+  return !!(card.front_url?.startsWith('http://') || card.front_url?.startsWith('https://') ||
+             card.back_url?.startsWith('http://') || card.back_url?.startsWith('https://'));
+};
+
+// 检查卡牌是否有本地URL
+const hasLocalUrls = (card: ContentPackageCard): boolean => {
+  return !!(card.front_url?.startsWith('file:///') || card.back_url?.startsWith('file:///'));
 };
 
 // 计算属性：检查是否有v2.0卡牌需要上传
@@ -1522,6 +1539,31 @@ watch(() => packageData.value, async (newPackage, oldPackage) => {
   padding: 1rem;
   transition: all 0.2s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 状态图标样式 */
+.status-icon {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.cloud-icon {
+  background: rgba(34, 197, 94, 0.9);
+  color: white;
+}
+
+.local-icon {
+  background: rgba(59, 130, 246, 0.9);
+  color: white;
 }
 
 /* 云端状态图标 */

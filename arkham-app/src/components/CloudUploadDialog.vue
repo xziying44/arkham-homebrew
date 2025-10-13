@@ -6,7 +6,16 @@
       <n-radio-group v-model:value="selectedHost" size="medium">
         <n-radio-button value="cloudinary">Cloudinary</n-radio-button>
         <n-radio-button value="imgbb">ImgBB</n-radio-button>
+        <n-radio-button value="local">本地测试</n-radio-button>
       </n-radio-group>
+      <div v-if="selectedHost === 'local'" class="local-info">
+        <n-alert type="info" size="small">
+          <template #icon>
+            <n-icon :component="InformationCircleOutline" />
+          </template>
+          本地测试模式：只导出图片到本地，不上传到云端，使用 file:/// 格式URL
+        </n-alert>
+      </div>
     </div>
 
     <!-- Cloudinary 配置 -->
@@ -136,6 +145,8 @@ import { ConfigService } from '@/api/config-service';
 import { ImageHostService } from '@/api/image-host-service';
 import { CardService } from '@/api/card-service';
 import { WorkspaceService } from '@/api/workspace-service';
+import { DirectoryService } from '@/api/directory-service';
+import { InformationCircleOutline } from '@vicons/ionicons5';
 import type { ImageHostType } from '@/api/types';
 import type { ContentPackageCard } from '@/types/content-package';
 
@@ -195,6 +206,20 @@ const addLog = (message: string, type: 'info' | 'error' = 'info') => {
   });
 };
 
+// 获取工作空间绝对路径
+const getWorkspaceAbsolutePath = async (): Promise<string> => {
+  try {
+    const workspacePath = await DirectoryService.getCurrentWorkspacePath();
+    if (workspacePath) {
+      return workspacePath;
+    }
+    throw new Error('无法获取工作空间路径');
+  } catch (error) {
+    console.error('获取工作空间路径失败:', error);
+    throw error;
+  }
+};
+
 // 加载配置
 const loadConfig = async () => {
   try {
@@ -225,6 +250,12 @@ const loadConfig = async () => {
 // 保存配置
 const saveConfig = async () => {
   try {
+    // 本地模式不需要保存配置
+    if (selectedHost.value === 'local') {
+      addLog('本地测试模式，无需保存配置', 'info');
+      return;
+    }
+
     const config: any = {};
 
     // 保存Cloudinary配置
@@ -248,7 +279,9 @@ const saveConfig = async () => {
 
 // 验证配置
 const validateConfig = (): boolean => {
-  if (selectedHost.value === 'cloudinary') {
+  if (selectedHost.value === 'local') {
+    return true; // 本地模式不需要验证配置
+  } else if (selectedHost.value === 'cloudinary') {
     return !!(cloudinaryConfig.value.cloud_name &&
              cloudinaryConfig.value.api_key &&
              cloudinaryConfig.value.api_secret);
@@ -284,6 +317,22 @@ const exportImageToWorkspace = async (cardData: any, filename: string): Promise<
 // 上传单个图片
 const uploadSingleImage = async (imagePath: string, onlineName: string): Promise<string> => {
   try {
+    // 如果是本地模式，直接返回file:///格式URL
+    if (selectedHost.value === 'local') {
+      // 获取当前工作空间的绝对路径
+      const workspacePath = await getWorkspaceAbsolutePath();
+      // 构建完整的绝对路径
+      const fullPath = imagePath.startsWith('/') || imagePath.includes(':')
+        ? imagePath
+        : `${workspacePath}/${imagePath}`;
+      // 创建file:/// URL，处理Windows路径
+      const fileUrl = fullPath.includes(':')
+        ? `file:///${fullPath.replace(/\\/g, '/')}`
+        : `file://${fullPath}`;
+      addLog(`本地模式，使用本地URL: ${fileUrl}`, 'info');
+      return fileUrl;
+    }
+
     addLog(`开始上传图片: ${imagePath}`, 'info');
 
     const result = await ImageHostService.smartUpload(
@@ -545,13 +594,27 @@ const batchUploadConfig = async () => {
           const cleanCardName = card.filename.replace(/.*[\/\\]/, '').replace('.card', '');
           const frontOnlineName = `${cleanCardName}_front`;
 
-          const result = await ImageHostService.smartUpload(
-            savedFiles[0],
-            selectedHostType,
-            frontOnlineName
-          );
-          if (result.code === 0 && result.data?.url) {
-            uploadedUrls.front = result.data.url;
+          // 如果是本地模式，使用本地URL
+          if (selectedHostType === 'local') {
+            // 获取工作空间绝对路径
+            const workspacePath = await getWorkspaceAbsolutePath();
+            const fullPath = savedFiles[0].startsWith('/') || savedFiles[0].includes(':')
+              ? savedFiles[0]
+              : `${workspacePath}/${savedFiles[0]}`;
+            const fileUrl = fullPath.includes(':')
+              ? `file:///${fullPath.replace(/\\/g, '/')}`
+              : `file://${fullPath}`;
+            uploadedUrls.front = fileUrl;
+            addLog(`本地模式，正面使用本地URL: ${fileUrl}`, 'info');
+          } else {
+            const result = await ImageHostService.smartUpload(
+              savedFiles[0],
+              selectedHostType,
+              frontOnlineName
+            );
+            if (result.code === 0 && result.data?.url) {
+              uploadedUrls.front = result.data.url;
+            }
           }
         }
 
@@ -577,17 +640,31 @@ const batchUploadConfig = async () => {
               uploadedUrls.back = "https://steamusercontent-a.akamaihd.net/ugc/2342503777940351785/F64D8EFB75A9E15446D24343DA0A6EEF5B3E43DB/";
               addLog(`文件名识别为遭遇卡背，使用预定义URL`, 'info');
             } else {
-              // 正常上传
-              const cleanCardName = card.filename.replace(/.*[\/\\]/, '').replace('.card', '');
-              const backOnlineName = `${cleanCardName}_back`;
+              // 如果是本地模式，使用本地URL
+              if (selectedHostType === 'local') {
+                // 获取工作空间绝对路径
+                const workspacePath = await getWorkspaceAbsolutePath();
+                const fullPath = savedFiles[1].startsWith('/') || savedFiles[1].includes(':')
+                  ? savedFiles[1]
+                  : `${workspacePath}/${savedFiles[1]}`;
+                const fileUrl = fullPath.includes(':')
+                  ? `file:///${fullPath.replace(/\\/g, '/')}`
+                  : `file://${fullPath}`;
+                uploadedUrls.back = fileUrl;
+                addLog(`本地模式，背面使用本地URL: ${fileUrl}`, 'info');
+              } else {
+                // 正常上传
+                const cleanCardName = card.filename.replace(/.*[\/\\]/, '').replace('.card', '');
+                const backOnlineName = `${cleanCardName}_back`;
 
-              const result = await ImageHostService.smartUpload(
-                savedFiles[1],
-                selectedHostType,
-                backOnlineName
-              );
-              if (result.code === 0 && result.data?.url) {
-                uploadedUrls.back = result.data.url;
+                const result = await ImageHostService.smartUpload(
+                  savedFiles[1],
+                  selectedHostType,
+                  backOnlineName
+                );
+                if (result.code === 0 && result.data?.url) {
+                  uploadedUrls.back = result.data.url;
+                }
               }
             }
           }
