@@ -1,9 +1,9 @@
 <template>
   <div class="workspace-sidebar" :class="{ 'collapsed': collapsed }">
     <div class="sidebar-header">
-      <div class="logo" v-if="!collapsed">工作区</div>
+      <div class="logo" v-if="!collapsed">{{ t('workspace.sidebar.title') }}</div>
       <button class="collapse-btn" @click="toggleCollapse">
-        <svg :style="{ transform: collapsed ? 'rotate(0deg)' : 'rotate(180deg)' }" 
+        <svg :style="{ transform: collapsed ? 'rotate(0deg)' : 'rotate(180deg)' }"
              width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
           <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
         </svg>
@@ -28,14 +28,15 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
           <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
         </svg>
-        返回首页
+        {{ t('workspace.sidebar.backToHome') }}
       </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 const props = defineProps<{
   activeItem: string;
@@ -46,35 +47,36 @@ const emit = defineEmits<{
   'go-back': [];
 }>();
 
+const { t } = useI18n();
 const collapsed = ref(true);
 
-const navItems = [
+const navItems = computed(() => [
   {
     key: 'workspace',
-    label: '工作区',
+    label: t('workspace.sidebar.navItems.workspace'),
     icon: '🏠'
   },
   {
     key: 'deck-builder',
-    label: '牌库制作',
+    label: t('workspace.sidebar.navItems.deckBuilder'),
     icon: '🃏'
   },
   {
     key: 'tts-items',
-    label: 'TTS物品',
+    label: t('workspace.sidebar.navItems.ttsItems'),
     icon: '📦'
   },
   {
     key: 'settings',
-    label: '其他设置',
+    label: t('workspace.sidebar.navItems.settings'),
     icon: '⚙️'
   },
   {
-    key: 'about', // 新增关于页面
-    label: '关于',
+    key: 'about',
+    label: t('workspace.sidebar.navItems.about'),
     icon: 'ℹ️'
   }
-];
+]);
 
 const toggleCollapse = () => {
   collapsed.value = !collapsed.value;
