@@ -177,6 +177,19 @@ export const API_ENDPOINTS = {
     method: HttpMethod.POST,
     timeout: 120000 // 120秒超时，卡牌导出可能需要较长时间
   } as ApiConfig,
+
+  // 图床上传相关接口
+  IMAGE_HOST_UPLOAD: {
+    url: '/api/image-host/upload',
+    method: HttpMethod.POST,
+    timeout: 60000 // 60秒超时，图片上传可能需要较长时间
+  } as ApiConfig,
+
+  IMAGE_HOST_CHECK: {
+    url: '/api/image-host/check',
+    method: HttpMethod.POST,
+    timeout: 30000 // 30秒超时，检查图片是否存在
+  } as ApiConfig,
 } as const;
 
 

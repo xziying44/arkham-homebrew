@@ -37,6 +37,14 @@ class WorkspaceManager:
         "github_folder",  # GitHub文件夹
         "language",  # 界面语言
         "first_visit_completed",  # 首次访问是否完成
+        # Cloudinary图床配置
+        "cloud_name",  # Cloudinary云名称
+        "api_key",  # Cloudinary API密钥
+        "api_secret",  # Cloudinary API密钥
+        "folder",  # Cloudinary自定义上传目录
+        # ImgBB图床配置
+        "imgbb_api_key",  # ImgBB API密钥
+        "imgbb_expiration",  # ImgBB图片过期时间
         # 可以在这里添加更多系统级配置字段
     ]
 
@@ -805,6 +813,10 @@ class WorkspaceManager:
                 config[field] = "zh"
             elif field == "first_visit_completed":
                 config[field] = False
+            elif field == "folder":
+                config[field] = "AH_LCG"  # Cloudinary默认文件夹
+            elif field == "imgbb_expiration":
+                config[field] = 0  # ImgBB默认永不过期
             else:
                 config[field] = ""
         return config

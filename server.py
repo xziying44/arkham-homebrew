@@ -14,6 +14,7 @@ from bin.file_manager import QuickStart
 # 在文件顶部添加导入
 from bin.gitHub_image import GitHubImageHost
 from bin.workspace_manager import WorkspaceManager
+from bin.image_uploader import create_uploader
 
 app = Flask(__name__)
 if not hasattr(app, 'window'):
@@ -1321,6 +1322,175 @@ def export_card():
         return jsonify(create_response(
             code=12003,
             msg=f"导出卡牌失败: {str(e)}"
+        )), 500
+
+
+# ================= 图床上传相关接口 =================
+
+@app.route('/api/image-host/upload', methods=['POST'])
+def upload_to_image_host():
+    """上传图片到图床"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    try:
+        data = request.get_json()
+        if not data or 'image_path' not in data or 'host_type' not in data:
+            return jsonify(create_response(
+                code=13001,
+                msg="请提供图片路径和图床类型"
+            )), 400
+
+        image_path = data['image_path']
+        host_type = data['host_type']
+        online_name = data.get('online_name')  # 可选，如果不提供则使用文件名
+
+        # 验证图床类型
+        if host_type not in ['cloudinary', 'imgbb']:
+            return jsonify(create_response(
+                code=13002,
+                msg="图床类型只支持 cloudinary 和 imgbb"
+            )), 400
+
+        # 获取配置
+        config = current_workspace.get_config()
+
+        # 根据图床类型验证配置
+        if host_type == 'cloudinary':
+            required_fields = ['cloud_name', 'api_key', 'api_secret']
+            missing_fields = [field for field in required_fields if not config.get(field)]
+            if missing_fields:
+                return jsonify(create_response(
+                    code=13003,
+                    msg=f"Cloudinary配置缺失: {', '.join(missing_fields)}"
+                )), 400
+        elif host_type == 'imgbb':
+            if not config.get('imgbb_api_key'):
+                return jsonify(create_response(
+                    code=13004,
+                    msg="ImgBB API Key 未配置"
+                )), 400
+
+        # 验证图片路径
+        if not current_workspace._is_path_in_workspace(image_path):
+            return jsonify(create_response(
+                code=13005,
+                msg="图片路径无效"
+            )), 400
+
+        abs_image_path = current_workspace._get_absolute_path(image_path)
+
+        if not os.path.exists(abs_image_path):
+            return jsonify(create_response(
+                code=13006,
+                msg="图片文件不存在"
+            )), 404
+
+        # 准备图床配置
+        host_config = config.copy()
+        host_config['image_host'] = host_type
+
+        # 创建图床上传器
+        uploader = create_uploader(host_config)
+
+        # 生成在线文件名
+        if not online_name:
+            online_name = os.path.splitext(os.path.basename(abs_image_path))[0]
+
+        # 上传图片
+        upload_url = uploader.upload_file(online_name, abs_image_path)
+
+        if upload_url:
+            return jsonify(create_response(
+                msg="图片上传成功",
+                data={
+                    "url": upload_url,
+                    "host_type": host_type,
+                    "online_name": online_name
+                }
+            ))
+        else:
+            return jsonify(create_response(
+                code=13007,
+                msg="图片上传失败"
+            )), 500
+
+    except Exception as e:
+        return jsonify(create_response(
+            code=13008,
+            msg=f"图片上传失败: {str(e)}"
+        )), 500
+
+
+@app.route('/api/image-host/check', methods=['POST'])
+def check_image_exists():
+    """检查图片是否已存在于图床"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    try:
+        data = request.get_json()
+        if not data or 'online_name' not in data or 'host_type' not in data:
+            return jsonify(create_response(
+                code=13009,
+                msg="请提供在线文件名和图床类型"
+            )), 400
+
+        online_name = data['online_name']
+        host_type = data['host_type']
+
+        # 验证图床类型
+        if host_type not in ['cloudinary', 'imgbb']:
+            return jsonify(create_response(
+                code=13010,
+                msg="图床类型只支持 cloudinary 和 imgbb"
+            )), 400
+
+        # 获取配置
+        config = current_workspace.get_config()
+
+        # 根据图床类型验证配置
+        if host_type == 'cloudinary':
+            required_fields = ['cloud_name', 'api_key', 'api_secret']
+            missing_fields = [field for field in required_fields if not config.get(field)]
+            if missing_fields:
+                return jsonify(create_response(
+                    code=13011,
+                    msg=f"Cloudinary配置缺失: {', '.join(missing_fields)}"
+                )), 400
+        elif host_type == 'imgbb':
+            if not config.get('imgbb_api_key'):
+                return jsonify(create_response(
+                    code=13012,
+                    msg="ImgBB API Key 未配置"
+                )), 400
+
+        # 准备图床配置
+        host_config = config.copy()
+        host_config['image_host'] = host_type
+
+        # 创建图床上传器
+        uploader = create_uploader(host_config)
+
+        # 检查文件是否存在
+        existing_url = uploader.check_file_exists(online_name)
+
+        return jsonify(create_response(
+            msg="检查完成",
+            data={
+                "exists": existing_url is not None,
+                "url": existing_url,
+                "host_type": host_type,
+                "online_name": online_name
+            }
+        ))
+
+    except Exception as e:
+        return jsonify(create_response(
+            code=13013,
+            msg=f"检查图片失败: {str(e)}"
         )), 500
 
 

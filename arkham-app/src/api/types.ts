@@ -436,3 +436,71 @@ export type GitHubLoginResponse = BaseResponse<GitHubLoginData>;
 export type GitHubRepositoriesResponse = BaseResponse<GitHubRepositoriesData>;
 export type GitHubUploadResponse = BaseResponse<GitHubUploadData>;
 export type GitHubStatusResponse = BaseResponse<GitHubStatusData>;
+
+// 图床上传相关错误码
+export enum ImageHostErrorCode {
+  // 图床上传相关错误码 (13001-13099)
+  IMAGE_HOST_MISSING_PARAMS = 13001,
+  IMAGE_HOST_TYPE_UNSUPPORTED = 13002,
+  CLOUDINARY_CONFIG_MISSING = 13003,
+  IMGBB_API_KEY_MISSING = 13004,
+  IMAGE_PATH_INVALID = 13005,
+  IMAGE_FILE_NOT_FOUND = 13006,
+  IMAGE_UPLOAD_FAILED = 13007,
+  IMAGE_UPLOAD_SYSTEM_ERROR = 13008,
+  IMAGE_CHECK_MISSING_PARAMS = 13009,
+  IMAGE_CHECK_TYPE_UNSUPPORTED = 13010,
+  IMAGE_CHECK_CLOUDINARY_CONFIG_MISSING = 13011,
+  IMAGE_CHECK_IMGBB_API_KEY_MISSING = 13012,
+  IMAGE_CHECK_SYSTEM_ERROR = 13013,
+}
+
+// 图床类型枚举
+export enum ImageHostType {
+  CLOUDINARY = 'cloudinary',
+  IMGBB = 'imgbb',
+}
+
+// 图床上传请求类型
+export interface ImageHostUploadRequest {
+  image_path: string;
+  host_type: ImageHostType;
+  online_name?: string;
+}
+
+// 图床上传响应数据类型
+export interface ImageHostUploadData {
+  url: string;
+  host_type: ImageHostType;
+  online_name: string;
+}
+
+// 图床检查请求类型
+export interface ImageHostCheckRequest {
+  online_name: string;
+  host_type: ImageHostType;
+}
+
+// 图床检查响应数据类型
+export interface ImageHostCheckData {
+  exists: boolean;
+  url: string | null;
+  host_type: ImageHostType;
+  online_name: string;
+}
+
+// 图床配置类型
+export interface ImageHostConfig {
+  // Cloudinary配置
+  cloud_name?: string;
+  api_key?: string;
+  api_secret?: string;
+  folder?: string;
+  // ImgBB配置
+  imgbb_api_key?: string;
+  imgbb_expiration?: number;
+}
+
+// 图床API响应类型
+export type ImageHostUploadResponse = BaseResponse<ImageHostUploadData>;
+export type ImageHostCheckResponse = BaseResponse<ImageHostCheckData>;
