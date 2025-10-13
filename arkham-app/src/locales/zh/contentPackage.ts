@@ -1,5 +1,14 @@
 export default {
   title: '内容包管理',
+  languages: {
+    zh: '中文',
+    en: '英文'
+  },
+  packageTypes: {
+    investigators: '调查员卡',
+    player_cards: '玩家卡',
+    campaign: '剧本卡'
+  },
   editor: {
     tabs: {
       info: '基础信息',
@@ -22,7 +31,8 @@ export default {
       status: '状态',
       dateUpdated: '更新时间',
       generator: '生成器',
-      externalLink: '外部地址'
+      externalLink: '外部地址',
+      banner: '封面'
     },
     editMeta: {
       title: '编辑内容包信息',

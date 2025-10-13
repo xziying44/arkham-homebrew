@@ -80,12 +80,12 @@
         <n-grid :cols="2" :x-gap="12">
           <n-grid-item>
             <n-form-item path="language" :label="$t('contentPackage.forms.newPackage.language')">
-              <n-select v-model:value="newPackageForm.language" :options="LANGUAGE_OPTIONS" clearable />
+              <n-select v-model:value="newPackageForm.language" :options="languageOptions" clearable />
             </n-form-item>
           </n-grid-item>
           <n-grid-item>
             <n-form-item path="types" :label="$t('contentPackage.forms.newPackage.types')">
-              <n-select v-model:value="newPackageForm.types" :options="PACKAGE_TYPE_OPTIONS" multiple clearable />
+              <n-select v-model:value="newPackageForm.types" :options="packageTypeOptions" multiple clearable />
             </n-form-item>
           </n-grid-item>
         </n-grid>
@@ -286,10 +286,23 @@ const createRules = computed((): FormRules => ({
   ]
 }));
 
+// 本地化的语言选项
+const languageOptions = computed(() => [
+  { label: t('contentPackage.languages.zh'), value: 'zh' },
+  { label: t('contentPackage.languages.en'), value: 'en' }
+]);
+
+// 本地化的内容包类型选项
+const packageTypeOptions = computed(() => [
+  { label: t('contentPackage.packageTypes.investigators'), value: 'investigators' as PackageType },
+  { label: t('contentPackage.packageTypes.player_cards'), value: 'player_cards' as PackageType },
+  { label: t('contentPackage.packageTypes.campaign'), value: 'campaign' as PackageType }
+]);
+
 // 格式化内容包类型显示
 const formatPackageTypes = (types: PackageType[]): string => {
   return types.map(type => {
-    const option = PACKAGE_TYPE_OPTIONS.find(opt => opt.value === type);
+    const option = packageTypeOptions.value.find(opt => opt.value === type);
     return option ? option.label : type;
   }).join('、');
 };

@@ -5,9 +5,9 @@
       <div class="package-info">
         <h3>{{ packageData.meta.name }}</h3>
         <div class="package-meta">
-          <n-tag type="info" size="small">{{ packageData.meta.language === 'zh' ? '中文' : '英文' }}</n-tag>
+          <n-tag type="info" size="small">{{ t(`contentPackage.languages.${packageData.meta.language}`) }}</n-tag>
           <n-tag v-for="type in packageData.meta.types" :key="type" type="default" size="small">
-            {{ getPackageTypeLabel(type) }}
+            {{ t(`contentPackage.packageTypes.${type}`) }}
           </n-tag>
           <n-tag type="success" size="small">ID: {{ packageData.meta.code }}</n-tag>
         </div>
@@ -55,17 +55,17 @@
                   <n-text code>{{ packageData.meta.code }}</n-text>
                 </n-descriptions-item>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.name')">
-                  {{ packageData.meta.name }}
+                  <n-tag type="info" size="small">{{ packageData.meta.name }}</n-tag>
                 </n-descriptions-item>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.author')">
-                  {{ packageData.meta.author }}
+                  <n-tag type="success" size="small">{{ packageData.meta.author }}</n-tag>
                 </n-descriptions-item>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.language')">
-                  {{ packageData.meta.language === 'zh' ? '中文' : '英文' }}
+                  <n-tag type="warning" size="small">{{ t(`contentPackage.languages.${packageData.meta.language}`) }}</n-tag>
                 </n-descriptions-item>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.types')">
-                  <n-tag v-for="type in packageData.meta.types" :key="type" size="small">
-                    {{ getPackageTypeLabel(type) }}
+                  <n-tag v-for="type in packageData.meta.types" :key="type" :type="getTypeTagColor(type)" size="small">
+                    {{ t(`contentPackage.packageTypes.${type}`) }}
                   </n-tag>
                 </n-descriptions-item>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.status')">
@@ -74,10 +74,10 @@
                   </n-tag>
                 </n-descriptions-item>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.dateUpdated')">
-                  {{ formatDate(packageData.meta.date_updated) }}
+                  <n-tag type="default" size="small">{{ formatDate(packageData.meta.date_updated) }}</n-tag>
                 </n-descriptions-item>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.generator')">
-                  {{ packageData.meta.generator }}
+                  <n-tag type="default" size="small">{{ packageData.meta.generator }}</n-tag>
                 </n-descriptions-item>
               </n-descriptions>
 
@@ -320,6 +320,16 @@ const getPackageTypeLabel = (type: PackageType): string => {
   return option ? option.label : type;
 };
 
+// 获取内容包类型标签颜色
+const getTypeTagColor = (type: PackageType): string => {
+  const colorMap = {
+    investigators: 'info',
+    player_cards: 'success',
+    campaign: 'error'
+  };
+  return colorMap[type] || 'default';
+};
+
 // 格式化日期
 const formatDate = (dateString: string): string => {
   try {
@@ -409,6 +419,9 @@ const saveMetaChanges = () => {
       emit('update:package', updatedPackage);
       closeEditDialog();
       message.success(t('contentPackage.editor.editMeta.saveSuccess'));
+
+      // 直接触发保存到文件，避免用户需要再次点击保存按钮
+      emit('save');
     }
   });
 };
@@ -547,6 +560,19 @@ watch(showEditMetaDialog, (show) => {
   margin: 0 0 1rem 0;
   color: #2c3e50;
   font-size: 1.1rem;
+}
+
+/* 表格标签样式加粗 */
+.info-section :deep(.n-descriptions-table .n-descriptions-table-label) {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 0.9rem;
+}
+
+/* 表格值颜色调整，降低对比度 */
+.info-section :deep(.n-descriptions-table .n-descriptions-table-content) {
+  color: #5a6c7d;
+  font-size: 0.9rem;
 }
 
 .description-section {

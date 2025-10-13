@@ -4,7 +4,7 @@ export default {
     navItems: {
       workspace: 'Workspace',
       deckBuilder: 'Deck Builder',
-      ttsItems: 'TTS Items',
+      contentPackage: 'Content Package',
       settings: 'Settings',
       about: 'About'
     },

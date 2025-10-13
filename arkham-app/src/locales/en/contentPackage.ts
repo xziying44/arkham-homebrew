@@ -1,5 +1,54 @@
 export default {
   title: 'Content Package Management',
+  languages: {
+    zh: 'Chinese',
+    en: 'English'
+  },
+  packageTypes: {
+    investigators: 'Investigators',
+    player_cards: 'Player Cards',
+    campaign: 'Campaign'
+  },
+  editor: {
+    tabs: {
+      info: 'Basic Info',
+      cards: 'Card Management',
+      export: 'Export Settings'
+    },
+    sections: {
+      banner: 'Banner Preview',
+      basicInfo: 'Basic Info',
+      cards: 'Card Management',
+      export: 'Export Settings'
+    },
+    fields: {
+      code: 'ID',
+      name: 'Name',
+      description: 'Description',
+      author: 'Author',
+      language: 'Language',
+      types: 'Package Types',
+      status: 'Status',
+      dateUpdated: 'Updated Date',
+      generator: 'Generator',
+      externalLink: 'External Link',
+      banner: 'Banner'
+    },
+    editMeta: {
+      title: 'Edit Package Info',
+      namePlaceholder: 'Enter package name',
+      descriptionPlaceholder: 'Enter package description',
+      authorPlaceholder: 'Enter author name',
+      externalLinkPlaceholder: 'Optional: Enter external link URL',
+      bannerUrl: 'Banner URL',
+      bannerUrlPlaceholder: 'Enter banner image URL',
+      bannerFile: 'Banner File',
+      dragToUpload: 'Click or drag image here to upload',
+      uploadHint: 'Supports JPG, PNG, GIF and other formats',
+      saveSuccess: 'Saved successfully'
+    },
+    noBanner: 'No banner'
+  },
   actions: {
     newPackage: 'New Package',
     refresh: 'Refresh',

@@ -4,6 +4,7 @@ import settings from './settings'
 import workspace from './workspace'
 import workspaceMain from './workspaceMain'
 import ttsItems from './ttsItems'
+import contentPackage from './contentPackage'
 import about from './about'
 import deckBuilder from './deckBuilder'
 import cardEditor from './cardEditor'
@@ -18,6 +19,7 @@ export default {
   workspace,
   workspaceMain,
   ttsItems,
+  contentPackage,
   about,
   deckBuilder,
   cardEditor,
