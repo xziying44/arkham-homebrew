@@ -43,9 +43,12 @@ class CloudinaryUploader(ImageUploader):
     def check_file_exists(self, online_name: str) -> Optional[str]:
         """检查文件是否已上传到 Cloudinary"""
         try:
+            # 清理文件名，确保与上传时使用的名称一致
+            clean_name = online_name.replace('\\', '_').replace('/', '_').replace(':', '_').replace('*', '_').replace('?', '_').replace('"', '_').replace('<', '_').replace('>', '_').replace('|', '_')
+
             result = (
                 cloudinary.Search()
-                .expression(f"filename={online_name}")
+                .expression(f"filename={clean_name}")
                 .max_results("1")
                 .execute()
             )
@@ -63,14 +66,18 @@ class CloudinaryUploader(ImageUploader):
             # 获取自定义文件夹配置
             folder = self.config.get("folder", "AH_LCG")
 
+            # 清理文件名，移除无效的路径分隔符
+            clean_name = online_name.replace('\\', '_').replace('/', '_').replace(':', '_').replace('*', '_').replace('?', '_').replace('"', '_').replace('<', '_').replace('>', '_').replace('|', '_')
+
             upload_options = {
-                "public_id": online_name,
+                "public_id": clean_name,
                 "folder": folder,
                 "resource_type": "image",
                 "use_filename": True,
                 "unique_filename": False
             }
 
+            print(f"清理后的public_id: {clean_name}")
             result = cloudinary.uploader.upload(file_path, **upload_options)
             return result["secure_url"]
         except Exception as e:

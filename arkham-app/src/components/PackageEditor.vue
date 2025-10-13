@@ -37,13 +37,28 @@
             <!-- 封面预览 -->
             <div class="banner-section">
               <h4>{{ $t('contentPackage.editor.sections.banner') }}</h4>
-              <div class="banner-preview">
-                <img v-if="packageData.meta.banner_url" :src="packageData.meta.banner_url" alt="封面" />
-                <img v-else-if="packageData.banner_base64" :src="packageData.banner_base64" alt="封面" />
-                <div v-else class="no-banner">
-                  <n-icon :component="ImageOutline" size="48" />
-                  <span>{{ $t('contentPackage.editor.noBanner') }}</span>
+              <div class="banner-preview-container">
+                <div class="banner-preview">
+                  <img v-if="packageData.meta.banner_url" :src="packageData.meta.banner_url" alt="封面" />
+                  <img v-else-if="packageData.banner_base64" :src="packageData.banner_base64" alt="封面" />
+                  <div v-else class="no-banner">
+                    <n-icon :component="ImageOutline" size="48" />
+                    <span>{{ $t('contentPackage.editor.noBanner') }}</span>
+                  </div>
                 </div>
+                <!-- 上传云端按钮 - 当有base64数据时显示 -->
+                <n-button
+                  v-if="packageData.banner_base64"
+                  type="primary"
+                  size="small"
+                  @click="showUploadBannerDialog = true"
+                  class="upload-cloud-btn"
+                >
+                  <template #icon>
+                    <n-icon :component="CloudUploadOutline" />
+                  </template>
+                  {{ packageData.meta.banner_url ? '重新上传云端' : '上传云端' }}
+                </n-button>
               </div>
             </div>
 
@@ -108,12 +123,25 @@
           <div class="cards-panel">
             <div class="cards-header">
               <h4>{{ $t('contentPackage.editor.sections.cards') }}</h4>
-              <n-button type="primary" @click="showAddCardDialog = true" size="small">
-                <template #icon>
-                  <n-icon :component="AddOutline" />
-                </template>
-                添加卡牌
-              </n-button>
+              <n-space>
+                <n-button
+                  v-if="hasV2CardsWithoutCloudUrls"
+                  type="warning"
+                  @click="showBatchUploadDialog = true"
+                  size="small"
+                >
+                  <template #icon>
+                    <n-icon :component="CloudUploadOutline" />
+                  </template>
+                  批量上传 ({{ v2CardsWithoutCloudUrls.length }})
+                </n-button>
+                <n-button type="primary" @click="showAddCardDialog = true" size="small">
+                  <template #icon>
+                    <n-icon :component="AddOutline" />
+                  </template>
+                  添加卡牌
+                </n-button>
+              </n-space>
             </div>
 
             <!-- 卡牌列表 -->
@@ -135,6 +163,11 @@
                   class="card-item"
                   :class="{ 'unsupported': getCardStatus(card.filename).version !== '2.0' }"
                 >
+                  <!-- 云端状态图标 - 左上角 -->
+                  <div v-if="hasCloudUrls(card)" class="cloud-status-icon">
+                    <n-icon :component="CloudOutline" size="16" title="已上传到云端" />
+                  </div>
+
                   <div class="card-preview">
                     <div v-if="getCardStatus(card.filename).isGenerating" class="preview-loading">
                       <n-spin size="small" />
@@ -151,7 +184,9 @@
                     </div>
                   </div>
                   <div class="card-info">
-                    <div class="card-name">{{ card.filename }}</div>
+                    <div class="card-name">
+                      {{ card.filename }}
+                    </div>
                     <div class="card-meta">
                       <n-tag v-if="getCardStatus(card.filename).version !== '2.0'" type="error" size="tiny">
                         不支持 (v{{ getCardStatus(card.filename).version }})
@@ -166,6 +201,21 @@
                       <template #icon>
                         <n-icon :component="TrashOutline" />
                       </template>
+                    </n-button>
+                  </div>
+                  <!-- 上传此卡按钮 - 移到底部 -->
+                  <div class="card-upload-action">
+                    <n-button
+                      v-if="getCardStatus(card.filename).version === '2.0'"
+                      type="primary"
+                      size="small"
+                      @click="openUploadCardDialog(card)"
+                      :loading="isCardUploading && uploadingCard?.filename === card.filename"
+                    >
+                      <template #icon>
+                        <n-icon :component="CloudUploadOutline" />
+                      </template>
+                      {{ hasCloudUrls(card) ? '重新上传' : '上传此卡' }}
                     </n-button>
                   </div>
                 </div>
@@ -285,6 +335,129 @@
         @confirm="handleAddCards"
       />
     </n-modal>
+
+    <!-- 上传云端对话框 -->
+    <n-modal v-model:show="showUploadBannerDialog" preset="dialog" title="上传封面到云端" style="width: 600px;">
+      <CloudUploadDialog
+        ref="bannerUploadDialogRef"
+        :is-banner="true"
+        :config="uploadConfig"
+        @confirm="handleUploadBanner"
+        @cancel="showUploadBannerDialog = false"
+      />
+      <template #action>
+        <n-space>
+          <n-button @click="showUploadBannerDialog = false">取消</n-button>
+          <n-button type="primary" @click="triggerBannerUpload" :loading="isBannerUploading">
+            上传云端
+          </n-button>
+        </n-space>
+      </template>
+    </n-modal>
+
+    <n-modal v-model:show="showUploadCardDialog" preset="dialog" title="上传卡牌到云端" style="width: 600px;">
+      <CloudUploadDialog
+        ref="cardUploadDialogRef"
+        :is-banner="false"
+        :card="uploadingCard"
+        :config="uploadConfig"
+        @confirm="handleUploadCard"
+        @cancel="showUploadCardDialog = false; uploadingCard = null"
+      />
+      <template #action>
+        <n-space>
+          <n-button @click="showUploadCardDialog = false; uploadingCard = null">取消</n-button>
+          <n-button type="primary" @click="triggerCardUpload" :loading="isCardUploading">
+            上传云端
+          </n-button>
+        </n-space>
+      </template>
+    </n-modal>
+
+    <!-- 批量上传对话框 -->
+    <n-modal v-model:show="showBatchUploadDialog" preset="dialog" title="批量上传卡牌到云端" style="width: 600px;">
+      <div class="batch-upload-container">
+        <div class="batch-upload-info">
+          <n-alert type="info" style="margin-bottom: 1rem;">
+            <template #icon>
+              <n-icon :component="CloudUploadOutline" />
+            </template>
+            将为所有v2.0卡牌批量配置图床并上传。已上传过的卡牌将被覆盖更新。
+          </n-alert>
+
+          <n-descriptions :column="2" bordered>
+            <n-descriptions-item label="v2.0卡牌总数">
+              <n-tag type="info" size="small">{{ v2CardsWithoutCloudUrls.length }}</n-tag>
+            </n-descriptions-item>
+            <n-descriptions-item label="已上传云端">
+              <n-tag type="success" size="small">{{ v2CardsWithCloudUrls.length }}</n-tag>
+            </n-descriptions-item>
+          </n-descriptions>
+        </div>
+
+        <div class="batch-upload-cards" v-if="v2CardsWithoutCloudUrls.length > 0">
+          <h5>v2.0卡牌列表</h5>
+          <n-scrollbar style="max-height: 300px;">
+            <div class="batch-card-list">
+              <div v-for="card in v2CardsWithoutCloudUrls" :key="card.filename" class="batch-card-item">
+                <div class="batch-card-info">
+                  <n-text strong>{{ card.filename }}</n-text>
+                  <n-text depth="3" style="font-size: 0.875rem;">{{ getCardStatus(card.filename).version }}</n-text>
+                </div>
+                <div v-if="getCardStatus(card.filename).previewImage" class="batch-card-preview">
+                  <img :src="getCardStatus(card.filename).previewImage" :alt="card.filename" />
+                </div>
+              </div>
+            </div>
+          </n-scrollbar>
+        </div>
+
+        <div class="batch-upload-progress" v-if="batchUploading">
+          <h5>上传进度</h5>
+          <n-progress
+            :percentage="batchUploadProgress"
+            :status="batchUploadProgress === 100 ? 'success' : 'default'"
+            :indicator-placement="'inside'"
+          />
+          <div class="batch-upload-status">
+            <n-text depth="3">{{ batchUploadStatus }}</n-text>
+          </div>
+        </div>
+      </div>
+      <template #action>
+        <n-space>
+          <n-button @click="showBatchUploadDialog = false">取消</n-button>
+          <n-button
+            type="primary"
+            @click="startBatchUploadWithDialog"
+            :loading="batchUploading"
+            :disabled="v2CardsWithoutCloudUrls.length === 0"
+          >
+            开始配置 ({{ v2CardsWithoutCloudUrls.length }} 张)
+          </n-button>
+        </n-space>
+      </template>
+    </n-modal>
+
+    <!-- 批量上传配置对话框 -->
+    <n-modal v-model:show="showBatchUploadConfigDialog" preset="dialog" title="配置批量上传" style="width: 600px;">
+      <CloudUploadDialog
+        ref="batchUploadDialogRef"
+        :is-banner="false"
+        :is-batch-upload="true"
+        :config="uploadConfig"
+        @confirm="handleBatchUpload"
+        @cancel="showBatchUploadConfigDialog = false"
+      />
+      <template #action>
+        <n-space>
+          <n-button @click="showBatchUploadConfigDialog = false">取消</n-button>
+          <n-button type="primary" @click="triggerBatchUpload" :loading="isBatchUploading">
+            开始上传
+          </n-button>
+        </n-space>
+      </template>
+    </n-modal>
   </div>
 </template>
 
@@ -305,6 +478,7 @@ import {
   ConstructOutline,
   DownloadOutline,
   CloudUploadOutline,
+  CloudOutline,
   TrashOutline,
   DocumentTextOutline,
   WarningOutline,
@@ -314,7 +488,10 @@ import type { ContentPackageFile, PackageType, ContentPackageCard } from '@/type
 import { PACKAGE_TYPE_OPTIONS } from '@/types/content-package';
 import { WorkspaceService } from '@/api';
 import { CardService } from '@/api/card-service';
+import { ConfigService } from '@/api/config-service';
+import { ImageHostService } from '@/api/image-host-service';
 import CardFileBrowser from '@/components/CardFileBrowser.vue';
+import CloudUploadDialog from './CloudUploadDialog.vue';
 
 interface Props {
   package: ContentPackageFile;
@@ -337,8 +514,33 @@ const showEditMetaDialog = ref(false);
 const showAddCardDialog = ref(false);
 const editFormRef = ref<FormInst | null>(null);
 
+// 上传云端状态
+const showUploadBannerDialog = ref(false);
+const showUploadCardDialog = ref(false);
+const showBatchUploadDialog = ref(false);
+const uploadingCard = ref<ContentPackageCard | null>(null);
+const uploadProgress = ref(0);
+const uploadLogs = ref<string[]>([]);
+const isUploading = ref(false);
+const isBannerUploading = ref(false);
+const isCardUploading = ref(false);
+
+// 批量上传状态
+const batchUploading = ref(false);
+const batchUploadProgress = ref(0);
+const batchUploadStatus = ref('');
+
 // 文件输入框引用
 const editFileInputRef = ref<HTMLInputElement | null>(null);
+
+// 上传对话框引用
+const bannerUploadDialogRef = ref<any>(null);
+const cardUploadDialogRef = ref<any>(null);
+const batchUploadDialogRef = ref<any>(null);
+
+// 批量上传配置对话框状态
+const showBatchUploadConfigDialog = ref(false);
+const isBatchUploading = ref(false);
 
 // 卡牌预览生成队列
 const previewGenerationQueue = ref<string[]>([]);
@@ -693,6 +895,263 @@ const removeCard = (index: number) => {
   emit('update:package', updatedPackage);
 
   message.success('卡牌已删除');
+};
+
+// 检查卡牌是否有云端URL
+const hasCloudUrls = (card: ContentPackageCard): boolean => {
+  return !!(card.front_url || card.back_url);
+};
+
+// 计算属性：检查是否有v2.0卡牌需要上传
+const hasV2CardsWithoutCloudUrls = computed(() => {
+  return v2CardsWithoutCloudUrls.value.length > 0;
+});
+
+// 计算属性：获取可以上传的v2.0卡牌（包括已上传的）
+const v2CardsWithoutCloudUrls = computed(() => {
+  if (!packageData.value?.cards) return [];
+  return packageData.value.cards.filter(card => {
+    const status = getCardStatus(card.filename);
+    return status.version === '2.0';
+  });
+});
+
+// 计算属性：获取已上传的v2.0卡牌
+const v2CardsWithCloudUrls = computed(() => {
+  if (!packageData.value?.cards) return [];
+  return packageData.value.cards.filter(card => {
+    const status = getCardStatus(card.filename);
+    return status.version === '2.0' && hasCloudUrls(card);
+  });
+});
+
+// 上传配置
+const uploadConfig = computed(() => {
+  return {
+    banner_base64: packageData.value.banner_base64,
+    meta: packageData.value.meta,
+    cards: packageData.value.cards
+  };
+});
+
+// 显示上传卡牌对话框
+const openUploadCardDialog = (card: ContentPackageCard) => {
+  uploadingCard.value = card;
+  showUploadCardDialog.value = true;
+};
+
+// 触发封面上传
+const triggerBannerUpload = () => {
+  isBannerUploading.value = true;
+  if (bannerUploadDialogRef.value) {
+    bannerUploadDialogRef.value.handleConfirm();
+  }
+};
+
+// 触发卡牌上传
+const triggerCardUpload = () => {
+  isCardUploading.value = true;
+  if (cardUploadDialogRef.value) {
+    cardUploadDialogRef.value.handleConfirm();
+  }
+};
+
+// 处理封面上传
+const handleUploadBanner = (updatedPackage: any) => {
+  isBannerUploading.value = false;
+  showUploadBannerDialog.value = false;
+
+  // 更新包数据
+  emit('update:package', updatedPackage);
+
+  // 直接触发保存到文件
+  emit('save');
+
+  message.success('封面上传成功');
+};
+
+// 处理卡牌上传
+const handleUploadCard = (updatedPackage: any) => {
+  isCardUploading.value = false;
+  showUploadCardDialog.value = false;
+  uploadingCard.value = null;
+
+  // 更新包数据
+  emit('update:package', updatedPackage);
+
+  // 直接触发保存到文件
+  emit('save');
+
+  message.success('卡牌上传成功');
+};
+
+// 开始批量上传配置
+const startBatchUploadWithDialog = () => {
+  showBatchUploadDialog.value = false;
+  showBatchUploadConfigDialog.value = true;
+};
+
+// 触发批量上传
+const triggerBatchUpload = () => {
+  isBatchUploading.value = true;
+  if (batchUploadDialogRef.value) {
+    batchUploadDialogRef.value.handleConfirm();
+  }
+};
+
+// 处理批量上传
+const handleBatchUpload = (updatedPackage: any) => {
+  isBatchUploading.value = false;
+  showBatchUploadConfigDialog.value = false;
+
+  // 更新包数据
+  emit('update:package', updatedPackage);
+
+  // 直接触发保存到文件
+  emit('save');
+
+  message.success('批量上传成功');
+};
+
+// 开始批量上传
+const startBatchUpload = async () => {
+  if (v2CardsWithoutCloudUrls.value.length === 0) {
+    message.warning('没有需要上传的卡牌');
+    return;
+  }
+
+  batchUploading.value = true;
+  batchUploadProgress.value = 0;
+  batchUploadStatus.value = '准备批量上传...';
+
+  const cardsToUpload = v2CardsWithoutCloudUrls.value;
+  const totalCards = cardsToUpload.length;
+  let successCount = 0;
+  let failureCount = 0;
+
+  try {
+    // 获取图床配置
+    const config = await ConfigService.getConfig();
+
+    // 验证配置
+    const selectedHost = config.cloud_name ? 'cloudinary' : 'imgbb';
+    let configValid = false;
+
+    if (selectedHost === 'cloudinary') {
+      configValid = !!(config.cloud_name && config.api_key && config.api_secret);
+    } else {
+      configValid = !!config.imgbb_api_key;
+    }
+
+    if (!configValid) {
+      message.error('图床配置不完整，请先配置图床信息');
+      batchUploading.value = false;
+      return;
+    }
+
+    batchUploadStatus.value = '开始批量上传...';
+
+    // 逐个上传卡牌
+    for (let i = 0; i < cardsToUpload.length; i++) {
+      const card = cardsToUpload[i];
+
+      try {
+        batchUploadStatus.value = `正在上传: ${card.filename} (${i + 1}/${totalCards})`;
+
+        // 读取卡牌数据
+        const cardData = await WorkspaceService.getFileContent(card.filename);
+        const parsedCard = JSON.parse(cardData);
+
+        // 导出图片到工作目录
+        const savedFiles = await CardService.saveCardEnhanced(parsedCard, card.filename.replace('.card', ''), {
+          parentPath: '.cards',
+          format: 'JPG',
+          quality: 95
+        });
+
+        // 上传图片
+        const uploadedUrls: { front?: string; back?: string } = {};
+
+        if (savedFiles.length > 0) {
+          // 清理文件名，移除路径分隔符和特殊字符
+          const cleanCardName = card.filename.replace(/.*[\/\\]/, '').replace('.card', '');
+          const frontOnlineName = `${cleanCardName}_front`;
+
+          const frontResult = await ImageHostService.smartUpload(
+            savedFiles[0],
+            selectedHost,
+            frontOnlineName
+          );
+          if (frontResult.code === 0 && frontResult.data?.url) {
+            uploadedUrls.front = frontResult.data.url;
+          }
+        }
+
+        if (savedFiles.length > 1) {
+          // 清理文件名，移除路径分隔符和特殊字符
+          const cleanCardName = card.filename.replace(/.*[\/\\]/, '').replace('.card', '');
+          const backOnlineName = `${cleanCardName}_back`;
+
+          const backResult = await ImageHostService.smartUpload(
+            savedFiles[1],
+            selectedHost,
+            backOnlineName
+          );
+          if (backResult.code === 0 && backResult.data?.url) {
+            uploadedUrls.back = backResult.data.url;
+          }
+        }
+
+        // 更新卡牌的云端URL
+        const updatedPackage = { ...packageData.value };
+        const cardIndex = updatedPackage.cards?.findIndex(c => c.filename === card.filename);
+        if (cardIndex !== undefined && cardIndex >= 0) {
+          updatedPackage.cards![cardIndex] = {
+            ...updatedPackage.cards![cardIndex],
+            front_url: uploadedUrls.front,
+            back_url: uploadedUrls.back
+          };
+        }
+
+        // 更新包数据
+        emit('update:package', updatedPackage);
+
+        successCount++;
+
+        // 更新进度
+        batchUploadProgress.value = Math.round(((i + 1) / totalCards) * 100);
+
+      } catch (error) {
+        console.error(`上传卡牌失败: ${card.filename}`, error);
+        failureCount++;
+      }
+
+      // 短暂延迟避免过于频繁的请求
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    // 保存最终结果
+    emit('save');
+
+    // 显示结果
+    batchUploadStatus.value = `批量上传完成: 成功 ${successCount} 张，失败 ${failureCount} 张`;
+
+    if (failureCount === 0) {
+      message.success(`批量上传成功！共上传 ${successCount} 张卡牌`);
+      setTimeout(() => {
+        showBatchUploadDialog.value = false;
+      }, 2000);
+    } else {
+      message.warning(`批量上传完成，成功 ${successCount} 张，失败 ${failureCount} 张`);
+    }
+
+  } catch (error) {
+    console.error('批量上传失败:', error);
+    message.error(`批量上传失败: ${error.message}`);
+    batchUploadStatus.value = '批量上传失败';
+  } finally {
+    batchUploading.value = false;
+  }
 };
 
 // 检查单张卡牌的版本
@@ -1065,6 +1524,23 @@ watch(() => packageData.value, async (newPackage, oldPackage) => {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* 云端状态图标 */
+.cloud-status-icon {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  background: rgba(34, 197, 94, 0.9);
+  color: white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
 .card-item:hover {
   border-color: #667eea;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -1165,6 +1641,17 @@ watch(() => packageData.value, async (newPackage, oldPackage) => {
   opacity: 1;
 }
 
+.card-upload-action {
+  margin-top: 0.75rem;
+  display: flex;
+  justify-content: center;
+}
+
+.card-upload-action .n-button,
+.card-upload-action .n-tag {
+  width: 100%;
+}
+
 .export-panel {
   display: flex;
   flex-direction: column;
@@ -1248,6 +1735,90 @@ watch(() => packageData.value, async (newPackage, oldPackage) => {
   opacity: 1;
 }
 
+/* 封面预览容器 */
+.banner-preview-container {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+}
+
+.upload-cloud-btn {
+  margin-top: 0.75rem;
+  width: 100%;
+  max-width: 400px;
+}
+
+/* 批量上传样式 */
+.batch-upload-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.batch-upload-info h5 {
+  margin: 0 0 0.5rem 0;
+  color: #2c3e50;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.batch-upload-cards h5 {
+  margin: 0 0 1rem 0;
+  color: #2c3e50;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.batch-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.batch-card-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+}
+
+.batch-card-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.batch-card-preview {
+  width: 60px;
+  height: 84px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #dee2e6;
+}
+
+.batch-card-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: white;
+}
+
+.batch-upload-progress h5 {
+  margin: 0 0 0.75rem 0;
+  color: #2c3e50;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.batch-upload-status {
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .editor-header {
@@ -1271,6 +1842,16 @@ watch(() => packageData.value, async (newPackage, oldPackage) => {
   .banner-preview {
     max-width: 100%;
     height: 150px;
+  }
+
+  .batch-card-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .batch-card-preview {
+    width: 100%;
+    height: 120px;
   }
 }
 </style>

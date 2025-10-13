@@ -386,6 +386,11 @@ const selectPackage = async (pkg: ContentPackageFile) => {
 
 // 更新选中的内容包
 const updateSelectedPackage = (updatedPackage: ContentPackageFile) => {
+  if (!updatedPackage || !updatedPackage.path) {
+    console.error('updateSelectedPackage: updatedPackage 或 path 为空', updatedPackage);
+    return;
+  }
+
   if (selectedPackage.value && selectedPackage.value.path === updatedPackage.path) {
     Object.assign(selectedPackage.value, updatedPackage);
     const index = packageList.value.findIndex(pkg => pkg.path === updatedPackage.path);
