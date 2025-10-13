@@ -336,11 +336,17 @@ const loadPackages = async () => {
           const content = await WorkspaceService.getFileContent(file.path);
           const packageData: ContentPackage = JSON.parse(content);
 
+          console.log(`加载内容包 ${file.path}:`, {
+            cards: packageData.cards?.length || 0,
+            cardFiles: packageData.cards?.map(c => c.filename) || []
+          });
+
           packages.push({
             name: packageData.meta.name,
             path: file.path,
             meta: packageData.meta,
-            banner_base64: packageData.banner_base64
+            banner_base64: packageData.banner_base64,
+            cards: packageData.cards || []
           });
         } catch (error) {
           console.error(`加载内容包文件失败: ${file.path}`, error);
@@ -459,7 +465,8 @@ const createPackage = async () => {
 
     const packageData: ContentPackage = {
       meta,
-      banner_base64: newPackageForm.value.banner_base64
+      banner_base64: newPackageForm.value.banner_base64,
+      cards: []
     };
 
     const fileName = `${newPackageForm.value.name}.pack`;
@@ -471,7 +478,8 @@ const createPackage = async () => {
       name: packageData.meta.name,
       path: filePath,
       meta: packageData.meta,
-      banner_base64: packageData.banner_base64
+      banner_base64: packageData.banner_base64,
+      cards: []
     };
 
     packageList.value.push(newPackage);
@@ -513,7 +521,8 @@ const savePackage = async () => {
   try {
     const packageData: ContentPackage = {
       meta: selectedPackage.value.meta,
-      banner_base64: selectedPackage.value.banner_base64
+      banner_base64: selectedPackage.value.banner_base64,
+      cards: selectedPackage.value.cards || []
     };
 
     await WorkspaceService.saveFileContent(

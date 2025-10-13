@@ -18,11 +18,20 @@ export interface ContentPackageMeta {
 }
 
 /**
+ * 内容包卡牌信息
+ */
+export interface ContentPackageCard {
+  filename: string;    // 相对于工作目录的文件名
+  version?: string;    // 卡牌版本号（读取自卡牌文件）
+}
+
+/**
  * 内容包数据结构
  */
 export interface ContentPackage {
   meta: ContentPackageMeta;
   banner_base64: string;  // 封面base64数据
+  cards?: ContentPackageCard[]; // 卡牌列表
 }
 
 /**
@@ -38,6 +47,7 @@ export interface ContentPackageFile {
   path: string;
   meta: ContentPackageMeta;
   banner_base64: string;
+  cards?: ContentPackageCard[]; // 卡牌列表
 }
 
 /**
@@ -86,7 +96,8 @@ export const createDefaultMeta = (): ContentPackageMeta => ({
  */
 export const createDefaultPackage = (): ContentPackage => ({
   meta: createDefaultMeta(),
-  banner_base64: ''
+  banner_base64: '',
+  cards: []
 });
 
 /**

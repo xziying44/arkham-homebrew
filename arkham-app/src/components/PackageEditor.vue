@@ -116,16 +116,60 @@
               </n-button>
             </div>
 
-            <!-- 卡牌列表占位 -->
+            <!-- 卡牌列表 -->
             <div class="cards-content">
-              <n-empty description="卡牌功能开发中">
-                <template #icon>
-                  <n-icon :component="ConstructOutline" />
-                </template>
-                <template #extra>
-                  <n-text depth="3">该功能将在后续版本中实现</n-text>
-                </template>
-              </n-empty>
+              <div v-if="!packageData.cards || packageData.cards.length === 0" class="empty-cards">
+                <n-empty description="还没有添加任何卡牌">
+                  <template #icon>
+                    <n-icon :component="DocumentTextOutline" />
+                  </template>
+                  <template #extra>
+                    <n-text depth="3">点击上方"添加卡牌"按钮开始添加</n-text>
+                  </template>
+                </n-empty>
+              </div>
+              <div v-else class="cards-grid">
+                <div
+                  v-for="(card, index) in packageData.cards"
+                  :key="card.filename"
+                  class="card-item"
+                  :class="{ 'unsupported': getCardStatus(card.filename).version !== '2.0' }"
+                >
+                  <div class="card-preview">
+                    <div v-if="getCardStatus(card.filename).isGenerating" class="preview-loading">
+                      <n-spin size="small" />
+                    </div>
+                    <div v-else-if="getCardStatus(card.filename).generationError" class="preview-error">
+                      <n-icon :component="WarningOutline" />
+                      <span class="error-text">生成失败</span>
+                    </div>
+                    <div v-else-if="getCardStatus(card.filename).previewImage" class="preview-image">
+                      <img :src="getCardStatus(card.filename).previewImage" :alt="card.filename" />
+                    </div>
+                    <div v-else class="preview-placeholder">
+                      <n-icon :component="DocumentTextOutline" size="24" />
+                    </div>
+                  </div>
+                  <div class="card-info">
+                    <div class="card-name">{{ card.filename }}</div>
+                    <div class="card-meta">
+                      <n-tag v-if="getCardStatus(card.filename).version !== '2.0'" type="error" size="tiny">
+                        不支持 (v{{ getCardStatus(card.filename).version }})
+                      </n-tag>
+                      <n-tag v-else type="success" size="tiny">
+                        v{{ getCardStatus(card.filename).version }}
+                      </n-tag>
+                    </div>
+                  </div>
+                  <div class="card-actions">
+                    <n-button circle size="tiny" type="error" @click="removeCard(index)">
+                      <template #icon>
+                        <n-icon :component="TrashOutline" />
+                      </template>
+                    </n-button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </n-tab-pane>
@@ -233,11 +277,19 @@
         </n-space>
       </template>
     </n-modal>
+
+    <!-- 添加卡牌对话框 -->
+    <n-modal v-model:show="showAddCardDialog" preset="card" title="添加卡牌" style="width: 900px; height: 700px;">
+      <CardFileBrowser
+        v-model:visible="showAddCardDialog"
+        @confirm="handleAddCards"
+      />
+    </n-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 import {
   useMessage,
   type FormInst,
@@ -253,10 +305,16 @@ import {
   ConstructOutline,
   DownloadOutline,
   CloudUploadOutline,
-  TrashOutline
+  TrashOutline,
+  DocumentTextOutline,
+  WarningOutline,
+  AddOutline
 } from '@vicons/ionicons5';
-import type { ContentPackageFile, PackageType } from '@/types/content-package';
+import type { ContentPackageFile, PackageType, ContentPackageCard } from '@/types/content-package';
 import { PACKAGE_TYPE_OPTIONS } from '@/types/content-package';
+import { WorkspaceService } from '@/api';
+import { CardService } from '@/api/card-service';
+import CardFileBrowser from '@/components/CardFileBrowser.vue';
 
 interface Props {
   package: ContentPackageFile;
@@ -282,6 +340,18 @@ const editFormRef = ref<FormInst | null>(null);
 // 文件输入框引用
 const editFileInputRef = ref<HTMLInputElement | null>(null);
 
+// 卡牌预览生成队列
+const previewGenerationQueue = ref<string[]>([]);
+const isGeneratingPreview = ref(false);
+
+// 运行时卡牌状态管理（不保存到文件）
+const cardStatusMap = ref<Map<string, {
+  version: string;
+  previewImage?: string;
+  isGenerating: boolean;
+  generationError?: string;
+}>>(new Map());
+
 // 编辑表单数据
 const editForm = ref({
   name: '',
@@ -297,6 +367,23 @@ const packageData = computed({
   get: () => props.package,
   set: (value) => emit('update:package', value)
 });
+
+// 中止预览生成队列
+const abortPreviewGeneration = () => {
+  previewGenerationQueue.value = [];
+  isGeneratingPreview.value = false;
+
+  // 清除所有正在生成状态
+  for (const [filename, status] of cardStatusMap.value.entries()) {
+    if (status.isGenerating) {
+      cardStatusMap.value.set(filename, {
+        ...status,
+        isGenerating: false,
+        generationError: '已中止'
+      });
+    }
+  }
+};
 
 // 表单验证规则
 const editRules = computed((): FormRules => ({
@@ -451,6 +538,340 @@ watch(showEditMetaDialog, (show) => {
     openEditDialog();
   }
 });
+
+// 获取卡牌运行时状态
+const getCardStatus = (filename: string) => {
+  try {
+    if (!cardStatusMap.value.has(filename)) {
+      cardStatusMap.value.set(filename, {
+        version: '1.0',
+        isGenerating: false,
+        generationError: undefined,
+        previewImage: undefined
+      });
+    }
+    return cardStatusMap.value.get(filename)!;
+  } catch (error) {
+    console.error('获取卡牌状态时出错:', error);
+    return {
+      version: '1.0',
+      isGenerating: false,
+      generationError: undefined,
+      previewImage: undefined
+    };
+  }
+};
+
+// 卡牌管理相关方法
+
+// 处理添加卡牌
+const handleAddCards = async (items: any[]) => {
+  try {
+    const newCards: ContentPackageCard[] = [];
+
+    // 处理选中的项目（文件夹和文件）
+    for (const item of items) {
+      if (item.type === 'directory') {
+        // 如果是文件夹，递归获取所有.card文件
+        const folderCards = await getCardsFromFolder(item.path);
+        newCards.push(...folderCards);
+      } else if (item.type === 'card') {
+        // 如果是单个文件，读取版本信息
+        const cardInfo = await getCardInfo(item.path);
+        newCards.push(cardInfo);
+      }
+    }
+
+    // 合并到现有卡牌列表（去重）
+    const existingCards = packageData.value.cards || [];
+    const allCards = [...existingCards];
+
+    for (const newCard of newCards) {
+      if (!allCards.some(card => card.filename === newCard.filename)) {
+        allCards.push(newCard);
+      }
+    }
+
+    // 更新包数据
+    const updatedPackage = {
+      ...packageData.value,
+      cards: allCards
+    };
+
+    emit('update:package', updatedPackage);
+
+    // 立即更新 cardStatusMap 以确保UI显示正确的版本信息
+    newCards.forEach(card => {
+      cardStatusMap.value.set(card.filename, {
+        version: card.version,
+        isGenerating: false,
+        generationError: undefined,
+        previewImage: undefined
+      });
+    });
+
+    // 开始生成预览图（仅对version 2.0的卡牌）
+    startPreviewGeneration(newCards.filter(card => card.version === '2.0'));
+
+    message.success(`成功添加 ${newCards.length} 张卡牌`);
+  } catch (error) {
+    console.error('添加卡牌失败:', error);
+    message.error('添加卡牌失败');
+  }
+};
+
+// 从文件夹获取所有卡牌
+const getCardsFromFolder = async (folderPath: string): Promise<ContentPackageCard[]> => {
+  try {
+    const response = await WorkspaceService.getFileTree(false);
+    const cards: ContentPackageCard[] = [];
+
+    const findCardsInFolder = (node: any): void => {
+      if (node.path === folderPath && node.children) {
+        // 找到目标文件夹，收集所有.card文件
+        node.children.forEach((child: any) => {
+          if (child.type === 'card' || (child.type === 'file' && child.label.endsWith('.card'))) {
+            const cardInfo = {
+              filename: child.path,
+              version: '1.0' // 默认版本，后续会更新
+            };
+            cards.push(cardInfo);
+          }
+        });
+      } else if (node.children) {
+        // 递归查找
+        node.children.forEach((child: any) => {
+          findCardsInFolder(child);
+        });
+      }
+    };
+
+    findCardsInFolder(response.fileTree);
+
+    // 读取每张卡牌的版本信息
+    for (const card of cards) {
+      try {
+        const versionInfo = await checkCardVersion(card.filename);
+        card.version = versionInfo.version;
+      } catch (error) {
+        card.version = '1.0';
+      }
+    }
+
+    return cards;
+  } catch (error) {
+    console.error('获取文件夹卡牌失败:', error);
+    return [];
+  }
+};
+
+// 获取单个卡牌信息
+const getCardInfo = async (filePath: string): Promise<ContentPackageCard> => {
+  try {
+    const versionInfo = await checkCardVersion(filePath);
+
+    return {
+      filename: filePath,
+      version: versionInfo.version
+    };
+  } catch (error) {
+    return {
+      filename: filePath,
+      version: '1.0'
+    };
+  }
+};
+
+// 删除卡牌
+const removeCard = (index: number) => {
+  const updatedPackage = {
+    ...packageData.value,
+    cards: [...(packageData.value.cards || [])]
+  };
+
+  updatedPackage.cards?.splice(index, 1);
+  emit('update:package', updatedPackage);
+
+  message.success('卡牌已删除');
+};
+
+// 检查单张卡牌的版本
+const checkCardVersion = async (filename: string): Promise<{
+  version: string;
+  isV2: boolean;
+  error?: string;
+}> => {
+  try {
+    // 直接读取文件内容来检查版本
+    const cardData = await WorkspaceService.getFileContent(filename);
+    const parsed = JSON.parse(cardData);
+    const version = parsed.version || '1.0';
+    const isV2 = version === '2.0';
+
+    return {
+      version,
+      isV2,
+      error: undefined
+    };
+  } catch (error) {
+    return {
+      version: '1.0',
+      isV2: false,
+      error: `读取文件失败: ${error.message}`
+    };
+  }
+};
+
+// 刷新卡牌版本信息
+const refreshCardVersions = async () => {
+  if (!packageData.value?.cards || packageData.value.cards.length === 0) {
+    return;
+  }
+
+  const cards = packageData.value.cards;
+  const v2Cards: ContentPackageCard[] = [];
+
+  // 首先检查所有卡牌的版本
+  for (const card of cards) {
+    try {
+      // 使用 checkCardVersion 函数来检查版本
+      const versionInfo = await checkCardVersion(card.filename);
+
+      cardStatusMap.value.set(card.filename, {
+        version: versionInfo.version,
+        isGenerating: false,
+        generationError: versionInfo.error,
+        previewImage: undefined
+      });
+
+      // 收集v2.0的卡牌用于预览生成
+      if (versionInfo.version === '2.0') {
+        v2Cards.push(card);
+      }
+    } catch (error) {
+      cardStatusMap.value.set(card.filename, {
+        version: '1.0',
+        isGenerating: false,
+        generationError: '版本检查失败',
+        previewImage: undefined
+      });
+    }
+  }
+
+  // 为所有v2.0的卡牌启动预览生成
+  if (v2Cards.length > 0) {
+    startPreviewGeneration(v2Cards);
+  }
+};
+
+// 为当前内容包开始预览生成
+const startPreviewGenerationForCurrentPackage = async () => {
+  try {
+    if (!packageData.value?.cards || packageData.value.cards.length === 0) return;
+
+    const validCards = packageData.value.cards.filter(card => {
+      const status = getCardStatus(card.filename);
+      return status.version === '2.0';
+    });
+
+    if (validCards.length === 0) return;
+
+    // 添加到队列
+    previewGenerationQueue.value.push(...validCards.map(card => card.filename));
+
+    // 如果当前没有正在生成的，开始生成
+    if (!isGeneratingPreview.value) {
+      processPreviewQueue();
+    }
+  } catch (error) {
+    // 预览生成失败时的错误处理
+  }
+};
+
+// 开始预览图生成队列（兼容旧函数）
+const startPreviewGeneration = async (cards: ContentPackageCard[]) => {
+  const validCards = cards.filter(card => {
+    const status = getCardStatus(card.filename);
+    return status.version === '2.0';
+  });
+
+  if (validCards.length === 0) return;
+
+  // 添加到队列
+  previewGenerationQueue.value.push(...validCards.map(card => card.filename));
+
+  // 如果当前没有正在生成的，开始生成
+  if (!isGeneratingPreview.value) {
+    processPreviewQueue();
+  }
+};
+
+// 处理预览生成队列
+const processPreviewQueue = async () => {
+  if (previewGenerationQueue.value.length === 0) {
+    isGeneratingPreview.value = false;
+    return;
+  }
+
+  isGeneratingPreview.value = true;
+
+  while (previewGenerationQueue.value.length > 0) {
+    const filename = previewGenerationQueue.value.shift()!;
+
+    try {
+      // 标记为正在生成
+      cardStatusMap.value.set(filename, {
+        ...getCardStatus(filename),
+        isGenerating: true,
+        generationError: undefined
+      });
+
+      // 读取卡牌数据
+      const cardData = await WorkspaceService.getFileContent(filename);
+      const parsedCard = JSON.parse(cardData);
+
+      // 生成预览图
+      const result = await CardService.generateCard(parsedCard);
+
+      // 更新预览图
+      cardStatusMap.value.set(filename, {
+        ...getCardStatus(filename),
+        previewImage: result.image,
+        isGenerating: false,
+        generationError: undefined
+      });
+
+      // 预览图生成成功
+    } catch (error) {
+      // 预览图生成失败
+      cardStatusMap.value.set(filename, {
+        ...getCardStatus(filename),
+        isGenerating: false,
+        generationError: '生成失败'
+      });
+    }
+
+    // 短暂延迟避免过于频繁的请求
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+
+  isGeneratingPreview.value = false;
+};
+
+// 监听内容包变化，自动刷新版本信息
+watch(() => packageData.value, async (newPackage, oldPackage) => {
+  if (newPackage && (!oldPackage || newPackage.path !== oldPackage.path || JSON.stringify(newPackage.cards) !== JSON.stringify(oldPackage.cards))) {
+    // 中止正在进行的预览生成队列
+    abortPreviewGeneration();
+
+    // 等待一小段时间确保DOM更新完成
+    await nextTick();
+
+    // 刷新版本信息
+    await refreshCardVersions();
+  }
+}, { immediate: true, deep: true });
+
 </script>
 
 <style scoped>
@@ -614,9 +1035,134 @@ watch(showEditMetaDialog, (show) => {
 
 .cards-content {
   flex: 1;
+  min-height: 400px;
+}
+
+.empty-cards {
   display: flex;
   align-items: center;
   justify-content: center;
+  height: 100%;
+  min-height: 300px;
+}
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.card-item {
+  position: relative;
+  background: white;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card-item:hover {
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.card-item.unsupported {
+  border-color: #f56565;
+  background: #fff5f5;
+}
+
+.card-item.unsupported:hover {
+  border-color: #e53e3e;
+}
+
+.card-preview {
+  width: 100%;
+  height: 140px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+  border: 1px solid #e9ecef;
+}
+
+.preview-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.preview-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #e53e3e;
+  gap: 0.5rem;
+}
+
+.error-text {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.preview-image {
+  width: 100%;
+  height: 100%;
+}
+
+.preview-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.preview-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #6c757d;
+}
+
+.card-info {
+  margin-bottom: 0.5rem;
+}
+
+.card-name {
+  font-weight: 500;
+  color: #2c3e50;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+  word-break: break-word;
+  line-height: 1.2;
+}
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.card-actions {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.card-item:hover .card-actions {
+  opacity: 1;
 }
 
 .export-panel {

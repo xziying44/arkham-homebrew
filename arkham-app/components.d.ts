@@ -8,6 +8,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    CardFileBrowser: typeof import('./src/components/CardFileBrowser.vue')['default']
     DeckEditor: typeof import('./src/components/DeckEditor.vue')['default']
     FileTreePanel: typeof import('./src/components/FileTreePanel.vue')['default']
     FormEditPanel: typeof import('./src/components/FormEditPanel.vue')['default']
