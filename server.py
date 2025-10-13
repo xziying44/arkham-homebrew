@@ -730,28 +730,54 @@ def generate_card():
 
 @app.route('/api/save-card', methods=['POST'])
 def save_card():
-    """保存卡图到文件"""
+    """保存卡图到文件（支持双面卡牌、多种格式和质量设置）"""
     error_response = check_workspace()
     if error_response:
         return error_response
 
     try:
         data = request.get_json()
-        if not data or 'json_data' not in data or 'filename' not in data:
+        required_fields = ['json_data', 'filename']
+        missing_fields = [field for field in required_fields if field not in data]
+
+        if missing_fields:
             return jsonify(create_response(
                 code=4004,
-                msg="请提供卡牌JSON数据和文件名"
+                msg=f"请提供必要字段: {', '.join(missing_fields)}"
             )), 400
 
         json_data = data['json_data']
         filename = data['filename']
         parent_path = data.get('parent_path')
 
-        # 保存卡图
-        success = current_workspace.save_card_image(json_data, filename, parent_path)
+        # 新增参数：导出格式和质量
+        export_format = data.get('format', 'JPG').upper()  # 默认JPG
+        quality = data.get('quality', 95)  # 默认95%质量
 
-        if success:
-            return jsonify(create_response(msg="保存卡图成功"))
+        # 验证格式参数
+        if export_format not in ['PNG', 'JPG']:
+            return jsonify(create_response(
+                code=4007,
+                msg="导出格式只支持PNG和JPG"
+            )), 400
+
+        # 验证质量参数
+        if not isinstance(quality, int) or not (1 <= quality <= 100):
+            return jsonify(create_response(
+                code=4008,
+                msg="图片质量必须是1-100之间的整数"
+            )), 400
+
+        # 保存卡图（支持双面卡牌和格式参数）
+        saved_files = current_workspace.save_card_image_enhanced(
+            json_data, filename, parent_path, export_format, quality
+        )
+
+        if saved_files and len(saved_files) > 0:
+            return jsonify(create_response(
+                msg="保存卡图成功",
+                data={"saved_files": saved_files}
+            ))
         else:
             return jsonify(create_response(
                 code=4005,

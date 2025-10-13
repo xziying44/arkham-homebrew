@@ -793,6 +793,130 @@ class WorkspaceManager:
             print(f"保存卡图失败: {e}")
             return False
 
+    def save_card_image_enhanced(self, json_data: Dict[str, Any], filename: str,
+                               parent_path: Optional[str] = None, export_format: str = 'JPG',
+                               quality: int = 95) -> List[str]:
+        """
+        保存卡图到文件（增强版：支持双面卡牌、格式选择和质量设置）
+
+        Args:
+            json_data: 卡牌数据的JSON字典
+            filename: 保存的文件名（不包含扩展名）
+            parent_path: 保存的父目录相对路径，如果为None则保存到工作目录
+            export_format: 导出格式（PNG或JPG），默认JPG
+            quality: 图片质量（1-100），仅对JPG有效，默认95
+
+        Returns:
+            List[str]: 保存成功的文件路径列表（相对路径），失败时返回空列表
+        """
+        saved_files = []
+
+        try:
+            # 检查版本号判断是否为双面卡牌
+            version = json_data.get('version', '')
+
+            if version == '2.0':
+                # 双面卡牌处理
+                print("检测到双面卡牌，开始保存正面和背面")
+                double_sided_result = self.generate_double_sided_card_image(json_data)
+
+                if double_sided_result is None:
+                    print("生成双面卡图失败")
+                    return saved_files
+
+                front_card = double_sided_result.get('front')
+                back_card = double_sided_result.get('back')
+
+                # 保存正面图片
+                if front_card and front_card.image:
+                    front_filename = f"{filename}_front.{export_format.lower()}"
+                    front_path = self._save_single_image(
+                        front_card.image, front_filename, parent_path, export_format, quality
+                    )
+                    if front_path:
+                        saved_files.append(front_path)
+
+                # 保存背面图片（如果存在）
+                if back_card and back_card.image:
+                    back_filename = f"{filename}_back.{export_format.lower()}"
+                    back_path = self._save_single_image(
+                        back_card.image, back_filename, parent_path, export_format, quality
+                    )
+                    if back_path:
+                        saved_files.append(back_path)
+
+                print(f"双面卡牌保存完成，共保存 {len(saved_files)} 个文件")
+            else:
+                # 单面卡牌处理
+                print("检测到单面卡牌，开始保存")
+                card = self.generate_card_image(json_data)
+
+                if card is None or card.image is None:
+                    print("生成卡图失败")
+                    return saved_files
+
+                # 保存单面图片
+                final_filename = f"{filename}.{export_format.lower()}"
+                save_path = self._save_single_image(
+                    card.image, final_filename, parent_path, export_format, quality
+                )
+                if save_path:
+                    saved_files.append(save_path)
+
+                print("单面卡牌保存完成")
+
+            return saved_files
+
+        except Exception as e:
+            print(f"保存卡图失败: {e}")
+            traceback.print_exc()
+            return saved_files
+
+    def _save_single_image(self, image: Image.Image, filename: str, parent_path: Optional[str],
+                          export_format: str, quality: int) -> Optional[str]:
+        """
+        保存单张图片到文件
+
+        Args:
+            image: PIL图片对象
+            filename: 文件名（包含扩展名）
+            parent_path: 父目录相对路径
+            export_format: 导出格式
+            quality: 图片质量
+
+        Returns:
+            str: 保存成功的文件相对路径，失败时返回None
+        """
+        try:
+            # 确定保存路径
+            if parent_path:
+                # 确保parent_path在工作目录内
+                if not self._is_path_in_workspace(parent_path):
+                    return None
+                save_path = self._get_absolute_path(os.path.join(parent_path, filename))
+            else:
+                save_path = os.path.join(self.workspace_path, filename)
+
+            # 确保父目录存在
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+
+            # 根据格式保存图片
+            if export_format == 'JPG':
+                # JPG格式需要转换为RGB模式
+                if image.mode != 'RGB':
+                    image = image.convert('RGB')
+                image.save(save_path, format='JPEG', quality=quality, optimize=True)
+            else:
+                # PNG格式保持透明通道
+                image.save(save_path, format='PNG', optimize=True)
+
+            print(f"图片已保存到: {self._get_relative_path(save_path)}")
+            return self._get_relative_path(save_path)
+
+        except Exception as e:
+            print(f"保存图片失败: {e}")
+            return None
+
     @staticmethod
     def _get_global_config_path() -> str:
         """获取全局配置文件路径"""

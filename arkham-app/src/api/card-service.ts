@@ -5,7 +5,9 @@ import type {
     CardData,
     GenerateCardRequest,
     SaveCardRequest,
-    GenerateCardData
+    SaveCardEnhancedRequest,
+    GenerateCardData,
+    SaveCardData
 } from './types';
 
 /**
@@ -67,6 +69,49 @@ export class CardService {
                     timeout: API_ENDPOINTS.SAVE_CARD.timeout
                 }
             );
+        } catch (error) {
+            if (error instanceof ApiError) {
+                throw error;
+            }
+            throw new ApiError(4005, '保存卡图失败', error);
+        }
+    }
+
+    /**
+     * 保存卡图（增强版：支持双面卡牌、格式选择和质量设置）
+     * @param cardData 卡牌数据JSON
+     * @param filename 保存的文件名（不含扩展名）
+     * @param options 保存选项
+     * @returns 保存成功的文件路径列表
+     * @throws {ApiError} 当保存失败时抛出错误
+     */
+    public static async saveCardEnhanced(
+        cardData: CardData,
+        filename: string,
+        options?: {
+            parentPath?: string;
+            format?: 'PNG' | 'JPG';
+            quality?: number;
+        }
+    ): Promise<string[]> {
+        try {
+            const requestData: SaveCardEnhancedRequest = {
+                json_data: cardData,
+                filename,
+                parent_path: options?.parentPath,
+                format: options?.format || 'JPG',
+                quality: options?.quality || 95
+            };
+
+            const response = await httpClient.post<SaveCardData>(
+                API_ENDPOINTS.SAVE_CARD.url,
+                requestData,
+                {
+                    timeout: API_ENDPOINTS.SAVE_CARD.timeout
+                }
+            );
+
+            return response.data.data?.saved_files || [];
         } catch (error) {
             if (error instanceof ApiError) {
                 throw error;
@@ -165,6 +210,7 @@ export class CardService {
 export const {
     generateCard,
     saveCard,
+    saveCardEnhanced,
     generateAndSaveCard,
     validateCardData,
     createDefaultCardData

@@ -1276,16 +1276,27 @@ const exportCard = async () => {
 
         // 使用文件名作为导出的图片文件名，去掉.card扩展名
         const cardFileName = props.selectedFile.label?.replace('.card', '') || 'untitled';
-        const filename = `${cardFileName}.png`;
 
-        console.log('使用文件名作为导出文件名:', filename);
+        console.log('使用文件名作为导出文件名:', cardFileName);
 
-        await CardService.saveCard(currentCardData as CardData, filename, parentPath);
+        // 使用增强版保存卡牌API，支持双面卡牌和格式选择
+        const savedFiles = await CardService.saveCardEnhanced(currentCardData as CardData, cardFileName, {
+            parentPath,
+            format: 'PNG', // 可以改为 'JPG' 如果需要
+            quality: 95    // 仅对JPG格式有效
+        });
 
         // 刷新文件树以显示新生成的图片文件
         emit('refresh-file-tree');
 
-        message.success(t('cardEditor.panel.imageExported', { filename }));
+        // 根据保存的文件数量显示不同的成功消息
+        if (savedFiles.length === 1) {
+            message.success(t('cardEditor.panel.imageExported', { filename: savedFiles[0] }));
+        } else if (savedFiles.length === 2) {
+            message.success(`双面卡牌导出成功: ${savedFiles.join(', ')}`);
+        } else {
+            message.warning('未保存任何文件');
+        }
     } catch (error) {
         console.error('导出图片失败:', error);
         message.error(`${t('cardEditor.panel.exportImageFailed')}: ${error.message || '未知错误'}`);

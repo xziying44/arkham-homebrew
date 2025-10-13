@@ -158,6 +158,20 @@ export interface SaveCardRequest {
   parent_path?: string;
 }
 
+// 增强版保存卡图请求数据类型（支持格式和质量设置）
+export interface SaveCardEnhancedRequest {
+  json_data: CardData;
+  filename: string; // 不包含扩展名
+  parent_path?: string;
+  format?: 'PNG' | 'JPG'; // 导出格式，默认JPG
+  quality?: number; // 图片质量1-100，仅对JPG有效，默认95
+}
+
+// 保存卡图响应数据类型
+export interface SaveCardData {
+  saved_files: string[]; // 保存成功的文件路径列表（相对路径）
+}
+
 // 生成卡图响应数据类型
 export interface GenerateCardData {
   image: string; // base64编码的图片数据，包含data URL前缀
@@ -203,6 +217,7 @@ export type FileInfoResponse = BaseResponse<FileInfoData>;
 export type ServiceStatusResponse = BaseResponse<ServiceStatusData>;
 export type GenerateCardResponse = BaseResponse<GenerateCardData>;
 export type SaveCardResponse = BaseResponse<null>;
+export type SaveCardEnhancedResponse = BaseResponse<SaveCardData>;
 export type BasicResponse = BaseResponse<null>;
 
 // HTTP方法枚举
