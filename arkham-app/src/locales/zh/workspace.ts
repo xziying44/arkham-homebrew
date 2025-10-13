@@ -4,7 +4,7 @@ export default {
     navItems: {
       workspace: '工作区',
       deckBuilder: '牌库制作',
-      ttsItems: 'TTS物品',
+      contentPackage: '内容包管理',
       settings: '设置',
       about: '关于'
     },

@@ -26,7 +26,7 @@ import { useI18n } from 'vue-i18n';
 import WorkspaceSidebar from '@/components/WorkspaceSidebar.vue';
 import WorkspaceMain from './workspace/WorkspaceMain.vue';
 import DeckBuilder from './workspace/DeckBuilder.vue';
-import TTSItems from './workspace/TTSItems.vue';
+import ContentPackageManager from './workspace/TTSItems.vue'; // 文件名暂时保持不变，内容已改为内容包管理
 import Settings from './workspace/Settings.vue';
 import About from './workspace/About.vue';
 
@@ -52,7 +52,7 @@ const activeTab = ref('workspace');
 const componentMap = {
   'workspace': markRaw(WorkspaceMain),
   'deck-builder': markRaw(DeckBuilder),
-  'tts-items': markRaw(TTSItems),
+  'content-package': markRaw(ContentPackageManager),
   'settings': markRaw(Settings),
   'about': markRaw(About)
 };

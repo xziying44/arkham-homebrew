@@ -62,8 +62,8 @@ const navItems = computed(() => [
     icon: '🃏'
   },
   {
-    key: 'tts-items',
-    label: t('workspace.sidebar.navItems.ttsItems'),
+    key: 'content-package',
+    label: t('workspace.sidebar.navItems.contentPackage'),
     icon: '📦'
   },
   {
