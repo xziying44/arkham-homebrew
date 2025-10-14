@@ -662,7 +662,7 @@ class ArkhamDBConverter:
 
         # 特殊处理：code==01145 的背面设置 type 为"场景卡-大画"
         if card_code in ["01145", "02314", "04048", "04049", "04318", "03322a", "03323a", "03276b",
-                         "03279b", "05199","05247","05248"] and is_back:
+                         "03279b", "05199", "05247", "05248"] and is_back:
             card_data["type"] = "场景卡-大画"
             card_data["footer_copyright"] = ""
             card_data["footer_icon_font"] = ""
@@ -1093,9 +1093,9 @@ class ArkhamDBConverter:
         """
         card_data = {}
         # 基础信息
-        card_data["name"] = self.data.get("name", "")
+        card_data["name"] = self.data.get("back_name", self.data.get("name", ""))
         if self.data.get("is_unique"):
-            card_data["name"] = f"🏅{card_data['name']}"
+            card_data["name"] = f'🏅{self.data.get("back_name", self.data.get("name", ""))}'
         if self.data.get("back_subname"):
             card_data["subtitle"] = self.data.get("back_subname")
         card_data["location_type"] = "未揭示"
@@ -1114,7 +1114,7 @@ class ArkhamDBConverter:
             card_data["location_link"] = location_icons["location_link"]
 
         # 特性
-        traits_str = self.data.get("traits", "")
+        traits_str = self.data.get("back_traits", "")
         if traits_str:
             card_data["traits"] = [trait.strip() for trait in traits_str.replace('.', ' ').split() if trait.strip()]
         else:
