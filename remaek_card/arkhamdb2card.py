@@ -715,6 +715,9 @@ class ArkhamDBConverter:
             else:
                 card_data["Notes"] = 'back'
 
+        if card_code in ['04130a'] is not is_back:
+            card_data['threshold'] = '-'
+
         # 可以在这里添加更多特殊处理逻辑
         # 例如：
         # if card_code == "xxxxx" and is_back:
@@ -1015,6 +1018,8 @@ class ArkhamDBConverter:
         """
         # 1. 获取所有玩家卡通用属性
         card_data = self._extract_common_player_card_properties()
+        if 'subtitle' in card_data:
+            card_data["name"] = f'{card_data["name"]}({card_data["subtitle"]})'
         # 效果、风味文本和胜利点
         card_data["body"] = self._format_text(self.data.get("text"))
         card_data["flavor"] = self._format_flavor_text(self.data.get("flavor"))
@@ -1350,7 +1355,9 @@ class ArkhamDBConverter:
             card_data["vengeance"] = self.data.get("vengeance")
 
         # 遭遇组
-        if self.data.get("encounter_code"):
+        if self.data.get("back_encounter_code"):
+            card_data["encounter_group"] = self._convert_encounter_group_code(self.data.get("back_encounter_code"))
+        elif self.data.get("encounter_code"):
             card_data["encounter_group"] = self._convert_encounter_group_code(self.data.get("encounter_code"))
 
         return card_data
@@ -1447,7 +1454,9 @@ class ArkhamDBConverter:
             card_data["vengeance"] = self.data.get("vengeance")
 
         # 遭遇组
-        if self.data.get("encounter_code"):
+        if self.data.get("back_encounter_code"):
+            card_data["encounter_group"] = self._convert_encounter_group_code(self.data.get("back_encounter_code"))
+        elif self.data.get("encounter_code"):
             card_data["encounter_group"] = self._convert_encounter_group_code(self.data.get("encounter_code"))
 
         return card_data
