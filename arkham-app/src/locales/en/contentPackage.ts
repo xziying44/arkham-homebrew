@@ -114,6 +114,74 @@ export default {
     saveFailed: 'Save failed',
     deleteSuccess: 'Deleted successfully',
     deleteFailed: 'Delete failed',
-    readBannerFailed: 'Failed to read banner file'
+    readBannerFailed: 'Failed to read banner file',
+    addCardSuccess: 'Successfully added {count} cards',
+    addCardFailed: 'Failed to add cards',
+    cardDeleted: 'Card deleted',
+    bannerUploadSuccess: 'Banner uploaded successfully',
+    cardUploadSuccess: 'Card uploaded successfully',
+    batchUploadSuccess: 'Batch upload successful! Total {count} cards uploaded',
+    batchUploadCompleted: 'Batch upload completed: {success} successful, {failure} failed',
+    noCardsToUpload: 'No cards to upload',
+    imageHostConfigIncomplete: 'Image hosting configuration incomplete, please configure first',
+    batchUploadFailed: 'Batch upload failed',
+    batchPreparing: 'Preparing batch upload...',
+    batchStarting: 'Starting batch upload...',
+    batchUploading: 'Uploading: {filename} ({index}/{total})'
+  },
+  upload: {
+    button: {
+      uploadToCloud: 'Upload to Cloud',
+      reuploadToCloud: 'Reupload to Cloud',
+      uploadCard: 'Upload Card',
+      reupload: 'Reupload'
+    },
+    title: {
+      uploadBannerToCloud: 'Upload Banner to Cloud',
+      uploadCardToCloud: 'Upload Card to Cloud',
+      batchUploadToCloud: 'Batch Upload Cards to Cloud',
+      configureBatchUpload: 'Configure Batch Upload'
+    },
+    status: {
+      uploadedToCloud: 'Uploaded to Cloud',
+      savedToLocal: 'Saved to Local'
+    },
+    info: {
+      willUploadAllV2Cards: 'Will configure image hosting and upload all v2.0 cards. Previously uploaded cards will be overwritten.',
+      v2CardCount: 'Total v2.0 Cards',
+      cloudUploaded: 'Cloud Uploaded',
+      v2CardList: 'v2.0 Card List',
+      uploadProgress: 'Upload Progress',
+      batchUploadCompleted: 'Batch upload completed: {success} successful, {failure} failed'
+    },
+    action: {
+      startConfiguration: 'Start Configuration ({count} cards)',
+      startUpload: 'Start Upload'
+    }
+  },
+  cards: {
+    empty: {
+      title: 'No cards added yet',
+      description: 'Click the "Add Card" button above to start adding'
+    },
+    status: {
+      unsupported: 'Unsupported (v{version})',
+      supported: 'v{version}',
+      generating: 'Generation failed',
+      generationStopped: 'Stopped',
+      versionCheckFailed: 'Version check failed'
+    },
+    actions: {
+      addCard: 'Add Card'
+    },
+    dialog: {
+      title: 'Add Card'
+    }
+  },
+  export: {
+    notImplemented: {
+      title: 'Export feature in development',
+      description: 'This feature will be implemented in future versions'
+    }
   }
 }

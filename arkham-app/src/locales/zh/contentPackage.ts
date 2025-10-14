@@ -114,6 +114,74 @@ export default {
     saveFailed: '保存失败',
     deleteSuccess: '删除成功',
     deleteFailed: '删除失败',
-    readBannerFailed: '读取封面文件失败'
+    readBannerFailed: '读取封面文件失败',
+    addCardSuccess: '成功添加 {count} 张卡牌',
+    addCardFailed: '添加卡牌失败',
+    cardDeleted: '卡牌已删除',
+    bannerUploadSuccess: '封面上传成功',
+    cardUploadSuccess: '卡牌上传成功',
+    batchUploadSuccess: '批量上传成功！共上传 {count} 张卡牌',
+    batchUploadCompleted: '批量上传完成，成功 {success} 张，失败 {failure} 张',
+    noCardsToUpload: '没有需要上传的卡牌',
+    imageHostConfigIncomplete: '图床配置不完整，请先配置图床信息',
+    batchUploadFailed: '批量上传失败',
+    batchPreparing: '准备批量上传...',
+    batchStarting: '开始批量上传...',
+    batchUploading: '正在上传: {filename} ({index}/{total})'
+  },
+  upload: {
+    button: {
+      uploadToCloud: '上传云端',
+      reuploadToCloud: '重新上传云端',
+      uploadCard: '上传此卡',
+      reupload: '重新上传'
+    },
+    title: {
+      uploadBannerToCloud: '上传封面到云端',
+      uploadCardToCloud: '上传卡牌到云端',
+      batchUploadToCloud: '批量上传卡牌到云端',
+      configureBatchUpload: '配置批量上传'
+    },
+    status: {
+      uploadedToCloud: '已上传到云端',
+      savedToLocal: '已保存到本地'
+    },
+    info: {
+      willUploadAllV2Cards: '将为所有v2.0卡牌批量配置图床并上传。已上传过的卡牌将被覆盖更新。',
+      v2CardCount: 'v2.0卡牌总数',
+      cloudUploaded: '已上传云端',
+      v2CardList: 'v2.0卡牌列表',
+      uploadProgress: '上传进度',
+      batchUploadCompleted: '批量上传完成: 成功 {success} 张，失败 {failure} 张'
+    },
+    action: {
+      startConfiguration: '开始配置 ({count} 张)',
+      startUpload: '开始上传'
+    }
+  },
+  cards: {
+    empty: {
+      title: '还没有添加任何卡牌',
+      description: '点击上方"添加卡牌"按钮开始添加'
+    },
+    status: {
+      unsupported: '不支持 (v{version})',
+      supported: 'v{version}',
+      generating: '生成失败',
+      generationStopped: '已中止',
+      versionCheckFailed: '版本检查失败'
+    },
+    actions: {
+      addCard: '添加卡牌'
+    },
+    dialog: {
+      title: '添加卡牌'
+    }
+  },
+  export: {
+    notImplemented: {
+      title: '导出功能开发中',
+      description: '该功能将在后续版本中实现'
+    }
   }
 }

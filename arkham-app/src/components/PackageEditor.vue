@@ -39,8 +39,8 @@
               <h4>{{ $t('contentPackage.editor.sections.banner') }}</h4>
               <div class="banner-preview-container">
                 <div class="banner-preview">
-                  <img v-if="packageData.meta.banner_url" :src="packageData.meta.banner_url" alt="封面" />
-                  <img v-else-if="packageData.banner_base64" :src="packageData.banner_base64" alt="封面" />
+                  <img v-if="packageData.meta.banner_url" :src="packageData.meta.banner_url" :alt="t('contentPackage.editor.fields.banner')" />
+                  <img v-else-if="packageData.banner_base64" :src="packageData.banner_base64" :alt="t('contentPackage.editor.fields.banner')" />
                   <div v-else class="no-banner">
                     <n-icon :component="ImageOutline" size="48" />
                     <span>{{ $t('contentPackage.editor.noBanner') }}</span>
@@ -57,7 +57,7 @@
                   <template #icon>
                     <n-icon :component="CloudUploadOutline" />
                   </template>
-                  {{ packageData.meta.banner_url ? '重新上传云端' : '上传云端' }}
+                  {{ packageData.meta.banner_url ? t('contentPackage.upload.button.reuploadToCloud') : t('contentPackage.upload.button.uploadToCloud') }}
                 </n-button>
               </div>
             </div>
@@ -147,12 +147,12 @@
             <!-- 卡牌列表 -->
             <div class="cards-content">
               <div v-if="!packageData.cards || packageData.cards.length === 0" class="empty-cards">
-                <n-empty description="还没有添加任何卡牌">
+                <n-empty :description="t('contentPackage.cards.empty.title')">
                   <template #icon>
                     <n-icon :component="DocumentTextOutline" />
                   </template>
                   <template #extra>
-                    <n-text depth="3">点击上方"添加卡牌"按钮开始添加</n-text>
+                    <n-text depth="3">{{ t('contentPackage.cards.empty.description') }}</n-text>
                   </template>
                 </n-empty>
               </div>
@@ -168,7 +168,7 @@
                     <n-icon
                       :component="hasCloudUrls(card) ? CloudOutline : FolderOutline"
                       size="16"
-                      :title="hasCloudUrls(card) ? '已上传到云端' : '已保存到本地'"
+                      :title="hasCloudUrls(card) ? t('contentPackage.upload.status.uploadedToCloud') : t('contentPackage.upload.status.savedToLocal')"
                       :class="hasCloudUrls(card) ? 'cloud-icon' : 'local-icon'"
                     />
                   </div>
@@ -220,7 +220,7 @@
                       <template #icon>
                         <n-icon :component="CloudUploadOutline" />
                       </template>
-                      {{ hasCloudUrls(card) ? '重新上传' : '上传此卡' }}
+                      {{ hasCloudUrls(card) ? t('contentPackage.upload.button.reupload') : t('contentPackage.upload.button.uploadCard') }}
                     </n-button>
                   </div>
                 </div>
@@ -236,12 +236,12 @@
 
             <!-- 导出设置占位 -->
             <div class="export-content">
-              <n-empty description="导出功能开发中">
+              <n-empty :description="t('contentPackage.export.notImplemented.title')">
                 <template #icon>
                   <n-icon :component="DownloadOutline" />
                 </template>
                 <template #extra>
-                  <n-text depth="3">该功能将在后续版本中实现</n-text>
+                  <n-text depth="3">{{ t('contentPackage.export.notImplemented.description') }}</n-text>
                 </template>
               </n-empty>
             </div>
@@ -298,7 +298,7 @@
                   </n-upload>
                 </div>
                 <div v-else class="banner-preview" @click="triggerEditFileInput">
-                  <img :src="editForm.banner_base64" alt="封面预览" />
+                  <img :src="editForm.banner_base64" :alt="t('contentPackage.editor.sections.banner')" />
                   <div class="banner-preview-overlay">
                     <n-button circle type="error" @click.stop="handleEditBannerRemove">
                       <template #icon>
@@ -334,7 +334,7 @@
     </n-modal>
 
     <!-- 添加卡牌对话框 -->
-    <n-modal v-model:show="showAddCardDialog" preset="card" title="添加卡牌" style="width: 900px; height: 700px;">
+    <n-modal v-model:show="showAddCardDialog" preset="card" :title="t('contentPackage.cards.dialog.title')" style="width: 900px; height: 700px;">
       <CardFileBrowser
         v-model:visible="showAddCardDialog"
         @confirm="handleAddCards"
@@ -342,7 +342,7 @@
     </n-modal>
 
     <!-- 上传云端对话框 -->
-    <n-modal v-model:show="showUploadBannerDialog" preset="dialog" title="上传封面到云端" style="width: 600px;">
+    <n-modal v-model:show="showUploadBannerDialog" preset="dialog" :title="t('contentPackage.upload.title.uploadBannerToCloud')" style="width: 600px;">
       <CloudUploadDialog
         ref="bannerUploadDialogRef"
         :is-banner="true"
@@ -360,7 +360,7 @@
       </template>
     </n-modal>
 
-    <n-modal v-model:show="showUploadCardDialog" preset="dialog" title="上传卡牌到云端" style="width: 600px;">
+    <n-modal v-model:show="showUploadCardDialog" preset="dialog" :title="t('contentPackage.upload.title.uploadCardToCloud')" style="width: 600px;">
       <CloudUploadDialog
         ref="cardUploadDialogRef"
         :is-banner="false"
@@ -380,28 +380,28 @@
     </n-modal>
 
     <!-- 批量上传对话框 -->
-    <n-modal v-model:show="showBatchUploadDialog" preset="dialog" title="批量上传卡牌到云端" style="width: 600px;">
+    <n-modal v-model:show="showBatchUploadDialog" preset="dialog" :title="t('contentPackage.upload.title.batchUploadToCloud')" style="width: 600px;">
       <div class="batch-upload-container">
         <div class="batch-upload-info">
           <n-alert type="info" style="margin-bottom: 1rem;">
             <template #icon>
               <n-icon :component="CloudUploadOutline" />
             </template>
-            将为所有v2.0卡牌批量配置图床并上传。已上传过的卡牌将被覆盖更新。
+            {{ t('contentPackage.upload.info.willUploadAllV2Cards') }}
           </n-alert>
 
           <n-descriptions :column="2" bordered>
-            <n-descriptions-item label="v2.0卡牌总数">
+            <n-descriptions-item :label="t('contentPackage.upload.info.v2CardCount')">
               <n-tag type="info" size="small">{{ v2CardsWithoutCloudUrls.length }}</n-tag>
             </n-descriptions-item>
-            <n-descriptions-item label="已上传云端">
+            <n-descriptions-item :label="t('contentPackage.upload.info.cloudUploaded')">
               <n-tag type="success" size="small">{{ v2CardsWithCloudUrls.length }}</n-tag>
             </n-descriptions-item>
           </n-descriptions>
         </div>
 
         <div class="batch-upload-cards" v-if="v2CardsWithoutCloudUrls.length > 0">
-          <h5>v2.0卡牌列表</h5>
+          <h5>{{ t('contentPackage.upload.info.v2CardList') }}</h5>
           <n-scrollbar style="max-height: 300px;">
             <div class="batch-card-list">
               <div v-for="card in v2CardsWithoutCloudUrls" :key="card.filename" class="batch-card-item">
@@ -418,7 +418,7 @@
         </div>
 
         <div class="batch-upload-progress" v-if="batchUploading">
-          <h5>上传进度</h5>
+          <h5>{{ t('contentPackage.upload.info.uploadProgress') }}</h5>
           <n-progress
             :percentage="batchUploadProgress"
             :status="batchUploadProgress === 100 ? 'success' : 'default'"
@@ -431,21 +431,21 @@
       </div>
       <template #action>
         <n-space>
-          <n-button @click="showBatchUploadDialog = false">取消</n-button>
+          <n-button @click="showBatchUploadDialog = false">{{ t('contentPackage.actions.cancel') }}</n-button>
           <n-button
             type="primary"
             @click="startBatchUploadWithDialog"
             :loading="batchUploading"
             :disabled="v2CardsWithoutCloudUrls.length === 0"
           >
-            开始配置 ({{ v2CardsWithoutCloudUrls.length }} 张)
+            {{ t('contentPackage.upload.action.startConfiguration', { count: v2CardsWithoutCloudUrls.length }) }}
           </n-button>
         </n-space>
       </template>
     </n-modal>
 
     <!-- 批量上传配置对话框 -->
-    <n-modal v-model:show="showBatchUploadConfigDialog" preset="dialog" title="配置批量上传" style="width: 600px;">
+    <n-modal v-model:show="showBatchUploadConfigDialog" preset="dialog" :title="t('contentPackage.upload.title.configureBatchUpload')" style="width: 600px;">
       <CloudUploadDialog
         ref="batchUploadDialogRef"
         :is-banner="false"
@@ -456,9 +456,9 @@
       />
       <template #action>
         <n-space>
-          <n-button @click="showBatchUploadConfigDialog = false">取消</n-button>
+          <n-button @click="showBatchUploadConfigDialog = false">{{ t('contentPackage.actions.cancel') }}</n-button>
           <n-button type="primary" @click="triggerBatchUpload" :loading="isBatchUploading">
-            开始上传
+            {{ t('contentPackage.upload.action.startUpload') }}
           </n-button>
         </n-space>
       </template>
@@ -587,7 +587,7 @@ const abortPreviewGeneration = () => {
       cardStatusMap.value.set(filename, {
         ...status,
         isGenerating: false,
-        generationError: '已中止'
+        generationError: t('contentPackage.cards.status.generationStopped')
       });
     }
   }
@@ -821,10 +821,10 @@ const handleAddCards = async (items: any[]) => {
     // 开始生成预览图（仅对version 2.0的卡牌）
     startPreviewGeneration(newCards.filter(card => card.version === '2.0'));
 
-    message.success(`成功添加 ${newCards.length} 张卡牌`);
+    message.success(t('contentPackage.messages.addCardSuccess', { count: newCards.length }));
   } catch (error) {
     console.error('添加卡牌失败:', error);
-    message.error('添加卡牌失败');
+    message.error(t('contentPackage.messages.addCardFailed'));
   }
 };
 
@@ -900,7 +900,7 @@ const removeCard = (index: number) => {
   updatedPackage.cards?.splice(index, 1);
   emit('update:package', updatedPackage);
 
-  message.success('卡牌已删除');
+  message.success(t('contentPackage.messages.cardDeleted'));
 };
 
 // 检查卡牌是否有URL（云端或本地）
@@ -984,7 +984,7 @@ const handleUploadBanner = (updatedPackage: any) => {
   // 直接触发保存到文件
   emit('save');
 
-  message.success('封面上传成功');
+  message.success(t('contentPackage.messages.bannerUploadSuccess'));
 };
 
 // 处理卡牌上传
@@ -999,7 +999,7 @@ const handleUploadCard = (updatedPackage: any) => {
   // 直接触发保存到文件
   emit('save');
 
-  message.success('卡牌上传成功');
+  message.success(t('contentPackage.messages.cardUploadSuccess'));
 };
 
 // 开始批量上传配置
@@ -1027,19 +1027,19 @@ const handleBatchUpload = (updatedPackage: any) => {
   // 直接触发保存到文件
   emit('save');
 
-  message.success('批量上传成功');
+  message.success(t('contentPackage.messages.batchUploadSuccess', { count: totalCards }));
 };
 
 // 开始批量上传
 const startBatchUpload = async () => {
   if (v2CardsWithoutCloudUrls.value.length === 0) {
-    message.warning('没有需要上传的卡牌');
+    message.warning(t('contentPackage.messages.noCardsToUpload'));
     return;
   }
 
   batchUploading.value = true;
   batchUploadProgress.value = 0;
-  batchUploadStatus.value = '准备批量上传...';
+  batchUploadStatus.value = t('contentPackage.messages.batchPreparing');
 
   const cardsToUpload = v2CardsWithoutCloudUrls.value;
   const totalCards = cardsToUpload.length;
@@ -1061,19 +1061,19 @@ const startBatchUpload = async () => {
     }
 
     if (!configValid) {
-      message.error('图床配置不完整，请先配置图床信息');
+      message.error(t('contentPackage.messages.imageHostConfigIncomplete'));
       batchUploading.value = false;
       return;
     }
 
-    batchUploadStatus.value = '开始批量上传...';
+    batchUploadStatus.value = t('contentPackage.messages.batchStarting');
 
     // 逐个上传卡牌
     for (let i = 0; i < cardsToUpload.length; i++) {
       const card = cardsToUpload[i];
 
       try {
-        batchUploadStatus.value = `正在上传: ${card.filename} (${i + 1}/${totalCards})`;
+        batchUploadStatus.value = t('contentPackage.messages.batchUploading', { filename: card.filename, index: i + 1, total: totalCards });
 
         // 读取卡牌数据
         const cardData = await WorkspaceService.getFileContent(card.filename);
@@ -1151,21 +1151,21 @@ const startBatchUpload = async () => {
     emit('save');
 
     // 显示结果
-    batchUploadStatus.value = `批量上传完成: 成功 ${successCount} 张，失败 ${failureCount} 张`;
+    batchUploadStatus.value = t('contentPackage.messages.batchUploadCompleted', { success: successCount, failure: failureCount });
 
     if (failureCount === 0) {
-      message.success(`批量上传成功！共上传 ${successCount} 张卡牌`);
+      message.success(t('contentPackage.messages.batchUploadSuccess', { count: successCount }));
       setTimeout(() => {
         showBatchUploadDialog.value = false;
       }, 2000);
     } else {
-      message.warning(`批量上传完成，成功 ${successCount} 张，失败 ${failureCount} 张`);
+      message.warning(t('contentPackage.messages.batchUploadCompleted', { success: successCount, failure: failureCount }));
     }
 
   } catch (error) {
     console.error('批量上传失败:', error);
-    message.error(`批量上传失败: ${error.message}`);
-    batchUploadStatus.value = '批量上传失败';
+    message.error(t('contentPackage.messages.batchUploadFailed'));
+    batchUploadStatus.value = t('contentPackage.messages.batchUploadFailed');
   } finally {
     batchUploading.value = false;
   }
@@ -1228,7 +1228,7 @@ const refreshCardVersions = async () => {
       cardStatusMap.value.set(card.filename, {
         version: '1.0',
         isGenerating: false,
-        generationError: '版本检查失败',
+        generationError: t('contentPackage.cards.status.versionCheckFailed'),
         previewImage: undefined
       });
     }
@@ -1323,7 +1323,7 @@ const processPreviewQueue = async () => {
       cardStatusMap.value.set(filename, {
         ...getCardStatus(filename),
         isGenerating: false,
-        generationError: '生成失败'
+        generationError: t('contentPackage.cards.status.generating')
       });
     }
 
