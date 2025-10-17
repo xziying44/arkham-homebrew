@@ -5,7 +5,8 @@
       <div class="package-info">
         <h3>{{ packageData.meta?.name || '未命名内容包' }}</h3>
         <div class="package-meta">
-          <n-tag type="info" size="small">{{ t(`contentPackage.languages.${packageData.meta?.language || 'zh-cn'}`) }}</n-tag>
+          <n-tag type="info" size="small">{{ t(`contentPackage.languages.${packageData.meta?.language || 'zh-cn'}`)
+          }}</n-tag>
           <n-tag v-for="type in (packageData.meta?.types || [])" :key="type" type="default" size="small">
             {{ t(`contentPackage.packageTypes.${type}`) }}
           </n-tag>
@@ -39,25 +40,23 @@
               <h4>{{ $t('contentPackage.editor.sections.banner') }}</h4>
               <div class="banner-preview-container">
                 <div class="banner-preview">
-                  <img v-if="packageData.meta?.banner_url" :src="packageData.meta.banner_url" :alt="t('contentPackage.editor.fields.banner')" />
-                  <img v-else-if="packageData.banner_base64" :src="packageData.banner_base64" :alt="t('contentPackage.editor.fields.banner')" />
+                  <img v-if="packageData.meta?.banner_url" :src="packageData.meta.banner_url"
+                    :alt="t('contentPackage.editor.fields.banner')" />
+                  <img v-else-if="packageData.banner_base64" :src="packageData.banner_base64"
+                    :alt="t('contentPackage.editor.fields.banner')" />
                   <div v-else class="no-banner">
                     <n-icon :component="ImageOutline" size="48" />
                     <span>{{ $t('contentPackage.editor.noBanner') }}</span>
                   </div>
                 </div>
                 <!-- 上传云端按钮 - 当有base64数据时显示 -->
-                <n-button
-                  v-if="packageData.banner_base64"
-                  type="primary"
-                  size="small"
-                  @click="showUploadBannerDialog = true"
-                  class="upload-cloud-btn"
-                >
+                <n-button v-if="packageData.banner_base64" type="primary" size="small"
+                  @click="showUploadBannerDialog = true" class="upload-cloud-btn">
                   <template #icon>
                     <n-icon :component="CloudUploadOutline" />
                   </template>
-                  {{ packageData.meta?.banner_url ? t('contentPackage.upload.button.reuploadToCloud') : t('contentPackage.upload.button.uploadToCloud') }}
+                  {{ packageData.meta?.banner_url ? t('contentPackage.upload.button.reuploadToCloud') :
+                    t('contentPackage.upload.button.uploadToCloud') }}
                 </n-button>
               </div>
             </div>
@@ -76,10 +75,12 @@
                   <n-tag type="success" size="small">{{ packageData.meta?.author || '未知作者' }}</n-tag>
                 </n-descriptions-item>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.language')">
-                  <n-tag type="warning" size="small">{{ t(`contentPackage.languages.${packageData.meta?.language || 'zh-cn'}`) }}</n-tag>
+                  <n-tag type="warning" size="small">{{ t(`contentPackage.languages.${packageData.meta?.language ||
+                    'zh-cn'}`) }}</n-tag>
                 </n-descriptions-item>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.types')">
-                  <n-tag v-for="type in (packageData.meta?.types || [])" :key="type" :type="getTypeTagColor(type)" size="small">
+                  <n-tag v-for="type in (packageData.meta?.types || [])" :key="type" :type="getTypeTagColor(type)"
+                    size="small">
                     {{ t(`contentPackage.packageTypes.${type}`) }}
                   </n-tag>
                 </n-descriptions-item>
@@ -89,7 +90,8 @@
                   </n-tag>
                 </n-descriptions-item>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.dateUpdated')">
-                  <n-tag type="default" size="small">{{ formatDate(packageData.meta?.date_updated || new Date().toISOString()) }}</n-tag>
+                  <n-tag type="default" size="small">{{ formatDate(packageData.meta?.date_updated || new
+                    Date().toISOString()) }}</n-tag>
                 </n-descriptions-item>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.generator')">
                   <n-tag type="default" size="small">{{ packageData.meta?.generator || '未知' }}</n-tag>
@@ -124,16 +126,12 @@
             <div class="cards-header">
               <h4>{{ $t('contentPackage.editor.sections.cards') }}</h4>
               <n-space>
-                <n-button
-                  v-if="hasV2CardsWithoutCloudUrls"
-                  type="warning"
-                  @click="showBatchUploadDialog = true"
-                  size="small"
-                >
+                <n-button v-if="v2CardsWithoutCloudUrls.length > 0" type="warning" @click="showBatchUploadDialog = true"
+                  size="small">
                   <template #icon>
                     <n-icon :component="CloudUploadOutline" />
                   </template>
-                  批量上传 ({{ v2CardsWithoutCloudUrls.value?.length || 0 }})
+                  批量上传 ({{ v2CardsWithoutCloudUrls.length }})
                 </n-button>
                 <n-button type="primary" @click="showAddCardDialog = true" size="small">
                   <template #icon>
@@ -157,20 +155,13 @@
                 </n-empty>
               </div>
               <div v-else class="cards-grid">
-                <div
-                  v-for="(card, index) in packageData.cards"
-                  :key="card.filename"
-                  class="card-item"
-                  :class="{ 'unsupported': getCardStatus(card.filename).version !== '2.0' }"
-                >
+                <div v-for="(card, index) in packageData.cards" :key="card.filename" class="card-item"
+                  :class="{ 'unsupported': getCardStatus(card.filename).version !== '2.0' }">
                   <!-- 状态图标 - 左上角 -->
                   <div v-if="hasAnyUrls(card)" class="status-icon">
-                    <n-icon
-                      :component="hasCloudUrls(card) ? CloudOutline : FolderOutline"
-                      size="18"
+                    <n-icon :component="hasCloudUrls(card) ? CloudOutline : FolderOutline" size="18"
                       :title="hasCloudUrls(card) ? t('contentPackage.upload.status.uploadedToCloud') : t('contentPackage.upload.status.savedToLocal')"
-                      :class="hasCloudUrls(card) ? 'cloud-status-icon' : 'local-status-icon'"
-                    />
+                      :class="hasCloudUrls(card) ? 'cloud-status-icon' : 'local-status-icon'" />
                   </div>
 
                   <div class="card-preview">
@@ -210,17 +201,14 @@
                   </div>
                   <!-- 上传此卡按钮 - 移到底部 -->
                   <div class="card-upload-action">
-                    <n-button
-                      v-if="getCardStatus(card.filename).version === '2.0'"
-                      type="primary"
-                      size="small"
+                    <n-button v-if="getCardStatus(card.filename).version === '2.0'" type="primary" size="small"
                       @click="openUploadCardDialog(card)"
-                      :loading="isCardUploading && uploadingCard?.filename === card.filename"
-                    >
+                      :loading="isCardUploading && uploadingCard?.filename === card.filename">
                       <template #icon>
                         <n-icon :component="CloudUploadOutline" />
                       </template>
-                      {{ hasCloudUrls(card) ? t('contentPackage.upload.button.reupload') : t('contentPackage.upload.button.uploadCard') }}
+                      {{ hasCloudUrls(card) ? t('contentPackage.upload.button.reupload') :
+                        t('contentPackage.upload.button.uploadCard') }}
                     </n-button>
                   </div>
                 </div>
@@ -274,19 +262,12 @@
                         <div v-for="card in packageData.cards" :key="card.filename" class="tts-card-item">
                           <div class="tts-card-info">
                             <n-text>{{ card.filename }}</n-text>
-                            <n-tag
-                              :type="getCardExportStatus(card).type"
-                              size="tiny"
-                              style="margin-left: 0.5rem;"
-                            >
+                            <n-tag :type="getCardExportStatus(card).type" size="tiny" style="margin-left: 0.5rem;">
                               {{ getCardExportStatus(card).text }}
                             </n-tag>
                           </div>
-                          <n-icon
-                            :component="getCardExportStatus(card).icon"
-                            :color="getCardExportStatus(card).color"
-                            size="16"
-                          />
+                          <n-icon :component="getCardExportStatus(card).icon" :color="getCardExportStatus(card).color"
+                            size="16" />
                         </div>
                       </div>
                     </n-scrollbar>
@@ -295,12 +276,7 @@
 
                 <template #action>
                   <n-space>
-                    <n-button
-                      type="primary"
-                      @click="exportToTts"
-                      :loading="exportingToTts"
-                      :disabled="!canExportToTts"
-                    >
+                    <n-button type="primary" @click="exportToTts" :loading="exportingToTts" :disabled="!canExportToTts">
                       <template #icon>
                         <n-icon :component="DownloadOutline" />
                       </template>
@@ -324,11 +300,7 @@
                 <template #action>
                   <n-space>
                     <n-button @click="showExportLogsDialog = false">关闭</n-button>
-                    <n-button
-                      v-if="exportResult?.tts_path"
-                      type="primary"
-                      @click="openTtsFileLocation"
-                    >
+                    <n-button v-if="exportResult?.tts_path" type="primary" @click="openTtsFileLocation">
                       打开文件夹
                     </n-button>
                   </n-space>
@@ -341,37 +313,36 @@
     </div>
 
     <!-- 编辑元数据对话框 -->
-    <n-modal v-model:show="showEditMetaDialog" preset="dialog" :title="$t('contentPackage.editor.editMeta.title')" style="width: 600px;">
+    <n-modal v-model:show="showEditMetaDialog" preset="dialog" :title="$t('contentPackage.editor.editMeta.title')"
+      style="width: 600px;">
       <n-form ref="editFormRef" :model="editForm" :rules="editRules" label-placement="left" label-width="100px">
         <n-form-item path="name" :label="$t('contentPackage.editor.fields.name')">
-          <n-input v-model:value="editForm.name" :placeholder="$t('contentPackage.editor.editMeta.namePlaceholder')" clearable />
+          <n-input v-model:value="editForm.name" :placeholder="$t('contentPackage.editor.editMeta.namePlaceholder')"
+            clearable />
         </n-form-item>
         <n-form-item path="description" :label="$t('contentPackage.editor.fields.description')">
-          <n-input v-model:value="editForm.description" type="textarea" :placeholder="$t('contentPackage.editor.editMeta.descriptionPlaceholder')"
-            :rows="3" clearable />
+          <n-input v-model:value="editForm.description" type="textarea"
+            :placeholder="$t('contentPackage.editor.editMeta.descriptionPlaceholder')" :rows="3" clearable />
         </n-form-item>
         <n-form-item path="author" :label="$t('contentPackage.editor.fields.author')">
-          <n-input v-model:value="editForm.author" :placeholder="$t('contentPackage.editor.editMeta.authorPlaceholder')" clearable />
+          <n-input v-model:value="editForm.author" :placeholder="$t('contentPackage.editor.editMeta.authorPlaceholder')"
+            clearable />
         </n-form-item>
         <n-form-item path="external_link" :label="$t('contentPackage.editor.fields.externalLink')">
-          <n-input v-model:value="editForm.external_link" :placeholder="$t('contentPackage.editor.editMeta.externalLinkPlaceholder')" clearable />
+          <n-input v-model:value="editForm.external_link"
+            :placeholder="$t('contentPackage.editor.editMeta.externalLinkPlaceholder')" clearable />
         </n-form-item>
         <n-form-item :label="$t('contentPackage.editor.fields.banner')">
           <n-tabs type="line" default-value="url">
             <n-tab-pane name="url" :tab="$t('contentPackage.editor.editMeta.bannerUrl')">
-              <n-input v-model:value="editForm.banner_url" :placeholder="$t('contentPackage.editor.editMeta.bannerUrlPlaceholder')" clearable />
+              <n-input v-model:value="editForm.banner_url"
+                :placeholder="$t('contentPackage.editor.editMeta.bannerUrlPlaceholder')" clearable />
             </n-tab-pane>
             <n-tab-pane name="file" :tab="$t('contentPackage.editor.editMeta.bannerFile')">
               <div class="banner-upload-container">
                 <div v-if="!editForm.banner_base64" class="upload-area">
-                  <n-upload
-                    :max="1"
-                    accept="image/*"
-                    @change="handleEditBannerUpload"
-                    :show-download-button="false"
-                    :default-upload="false"
-                    :show-file-list="false"
-                  >
+                  <n-upload :max="1" accept="image/*" @change="handleEditBannerUpload" :show-download-button="false"
+                    :default-upload="false" :show-file-list="false">
                     <n-upload-dragger>
                       <div style="margin-bottom: 12px">
                         <n-icon size="48" :depth="3">
@@ -403,13 +374,8 @@
                   </div>
                 </div>
                 <!-- 隐藏的文件输入框，用于重新上传 -->
-                <input
-                  ref="editFileInputRef"
-                  type="file"
-                  accept="image/*"
-                  style="display: none"
-                  @change="handleEditFileInputChange"
-                />
+                <input ref="editFileInputRef" type="file" accept="image/*" style="display: none"
+                  @change="handleEditFileInputChange" />
               </div>
             </n-tab-pane>
           </n-tabs>
@@ -424,22 +390,16 @@
     </n-modal>
 
     <!-- 添加卡牌对话框 -->
-    <n-modal v-model:show="showAddCardDialog" preset="card" :title="t('contentPackage.cards.dialog.title')" style="width: 900px; height: 700px;">
-      <CardFileBrowser
-        v-model:visible="showAddCardDialog"
-        @confirm="handleAddCards"
-      />
+    <n-modal v-model:show="showAddCardDialog" preset="card" :title="t('contentPackage.cards.dialog.title')"
+      style="width: 900px; height: 700px;">
+      <CardFileBrowser v-model:visible="showAddCardDialog" @confirm="handleAddCards" />
     </n-modal>
 
     <!-- 上传云端对话框 -->
-    <n-modal v-model:show="showUploadBannerDialog" preset="dialog" :title="t('contentPackage.upload.title.uploadBannerToCloud')" style="width: 600px;">
-      <CloudUploadDialog
-        ref="bannerUploadDialogRef"
-        :is-banner="true"
-        :config="uploadConfig"
-        @confirm="handleUploadBanner"
-        @cancel="showUploadBannerDialog = false"
-      />
+    <n-modal v-model:show="showUploadBannerDialog" preset="dialog"
+      :title="t('contentPackage.upload.title.uploadBannerToCloud')" style="width: 600px;">
+      <CloudUploadDialog ref="bannerUploadDialogRef" :is-banner="true" :config="uploadConfig"
+        @confirm="handleUploadBanner" @cancel="showUploadBannerDialog = false" />
       <template #action>
         <n-space>
           <n-button @click="showUploadBannerDialog = false">取消</n-button>
@@ -450,15 +410,10 @@
       </template>
     </n-modal>
 
-    <n-modal v-model:show="showUploadCardDialog" preset="dialog" :title="t('contentPackage.upload.title.uploadCardToCloud')" style="width: 600px;">
-      <CloudUploadDialog
-        ref="cardUploadDialogRef"
-        :is-banner="false"
-        :card="uploadingCard"
-        :config="uploadConfig"
-        @confirm="handleUploadCard"
-        @cancel="showUploadCardDialog = false; uploadingCard = null"
-      />
+    <n-modal v-model:show="showUploadCardDialog" preset="dialog"
+      :title="t('contentPackage.upload.title.uploadCardToCloud')" style="width: 600px;">
+      <CloudUploadDialog ref="cardUploadDialogRef" :is-banner="false" :card="uploadingCard" :config="uploadConfig"
+        @confirm="handleUploadCard" @cancel="showUploadCardDialog = false; uploadingCard = null" />
       <template #action>
         <n-space>
           <n-button @click="showUploadCardDialog = false; uploadingCard = null">取消</n-button>
@@ -470,7 +425,8 @@
     </n-modal>
 
     <!-- 批量上传对话框 -->
-    <n-modal v-model:show="showBatchUploadDialog" preset="dialog" :title="t('contentPackage.upload.title.batchUploadToCloud')" style="width: 600px;">
+    <n-modal v-model:show="showBatchUploadDialog" preset="dialog"
+      :title="t('contentPackage.upload.title.batchUploadToCloud')" style="width: 600px;">
       <div class="batch-upload-container">
         <div class="batch-upload-info">
           <n-alert type="info" style="margin-bottom: 1rem;">
@@ -482,7 +438,7 @@
 
           <n-descriptions :column="2" bordered>
             <n-descriptions-item :label="t('contentPackage.upload.info.v2CardCount')">
-              <n-tag type="info" size="small">{{ v2CardsWithoutCloudUrls.value?.length || 0 }}</n-tag>
+              <n-tag type="info" size="small">{{ v2CardsWithoutCloudUrls.length }}</n-tag>
             </n-descriptions-item>
             <n-descriptions-item :label="t('contentPackage.upload.info.cloudUploaded')">
               <n-tag type="success" size="small">{{ v2CardsWithCloudUrls.value?.length || 0 }}</n-tag>
@@ -490,11 +446,11 @@
           </n-descriptions>
         </div>
 
-        <div class="batch-upload-cards" v-if="v2CardsWithoutCloudUrls.value?.length > 0">
+        <div class="batch-upload-cards" v-if="v2CardsWithoutCloudUrls.length > 0">
           <h5>{{ t('contentPackage.upload.info.v2CardList') }}</h5>
           <n-scrollbar style="max-height: 300px;">
             <div class="batch-card-list">
-              <div v-for="card in v2CardsWithoutCloudUrls.value" :key="card.filename" class="batch-card-item">
+              <div v-for="card in v2CardsWithoutCloudUrls" :key="card.filename" class="batch-card-item">
                 <div class="batch-card-info">
                   <n-text strong>{{ card.filename }}</n-text>
                   <n-text depth="3" style="font-size: 0.875rem;">{{ getCardStatus(card.filename).version }}</n-text>
@@ -509,11 +465,8 @@
 
         <div class="batch-upload-progress" v-if="batchUploading">
           <h5>{{ t('contentPackage.upload.info.uploadProgress') }}</h5>
-          <n-progress
-            :percentage="batchUploadProgress"
-            :status="batchUploadProgress === 100 ? 'success' : 'default'"
-            :indicator-placement="'inside'"
-          />
+          <n-progress :percentage="batchUploadProgress" :status="batchUploadProgress === 100 ? 'success' : 'default'"
+            :indicator-placement="'inside'" />
           <div class="batch-upload-status">
             <n-text depth="3">{{ batchUploadStatus }}</n-text>
           </div>
@@ -522,28 +475,19 @@
       <template #action>
         <n-space>
           <n-button @click="showBatchUploadDialog = false">{{ t('contentPackage.actions.cancel') }}</n-button>
-          <n-button
-            type="primary"
-            @click="startBatchUploadWithDialog"
-            :loading="batchUploading"
-            :disabled="v2CardsWithoutCloudUrls.value?.length === 0"
-          >
-            {{ t('contentPackage.upload.action.startConfiguration', { count: v2CardsWithoutCloudUrls.value?.length || 0 }) }}
+          <n-button type="primary" @click="startBatchUploadWithDialog" :loading="batchUploading"
+            :disabled="v2CardsWithoutCloudUrls.length === 0">
+            {{ t('contentPackage.upload.action.startConfiguration', { count: v2CardsWithoutCloudUrls.length }) }}
           </n-button>
         </n-space>
       </template>
     </n-modal>
 
     <!-- 批量上传配置对话框 -->
-    <n-modal v-model:show="showBatchUploadConfigDialog" preset="dialog" :title="t('contentPackage.upload.title.configureBatchUpload')" style="width: 600px;">
-      <CloudUploadDialog
-        ref="batchUploadDialogRef"
-        :is-banner="false"
-        :is-batch-upload="true"
-        :config="uploadConfig"
-        @confirm="handleBatchUpload"
-        @cancel="showBatchUploadConfigDialog = false"
-      />
+    <n-modal v-model:show="showBatchUploadConfigDialog" preset="dialog"
+      :title="t('contentPackage.upload.title.configureBatchUpload')" style="width: 600px;">
+      <CloudUploadDialog ref="batchUploadDialogRef" :is-banner="false" :is-batch-upload="true" :config="uploadConfig"
+        @confirm="handleBatchUpload" @cancel="showBatchUploadConfigDialog = false" />
       <template #action>
         <n-space>
           <n-button @click="showBatchUploadConfigDialog = false">{{ t('contentPackage.actions.cancel') }}</n-button>
@@ -1091,7 +1035,8 @@ const v2CardsWithoutCloudUrls = computed(() => {
   if (!packageData.value?.cards) return [];
   return packageData.value.cards.filter(card => {
     const status = getCardStatus(card.filename);
-    return status.version === '2.0';
+    // v2.0 且没有云端URL的卡牌
+    return status.version === '2.0' && !hasCloudUrls(card);
   });
 });
 
@@ -2026,7 +1971,8 @@ watch(() => packageData.value, async (newPackage, oldPackage) => {
   position: relative;
   width: 100%;
   max-width: 400px;
-  height: 225px; /* 16:9 比例 */
+  height: 225px;
+  /* 16:9 比例 */
   border-radius: 8px;
   overflow: hidden;
   border: 2px solid #e9ecef;
