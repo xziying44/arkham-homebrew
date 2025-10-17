@@ -796,9 +796,9 @@ class WorkspaceManager:
 
     def save_card_image_enhanced(self, json_data: Dict[str, Any], filename: str,
                                parent_path: Optional[str] = None, export_format: str = 'JPG',
-                               quality: int = 95) -> List[str]:
+                               quality: int = 95, rotate_landscape: bool = False) -> List[str]:
         """
-        保存卡图到文件（增强版：支持双面卡牌、格式选择和质量设置）
+        保存卡图到文件（增强版：支持双面卡牌、格式选择、质量设置和横向图片旋转）
 
         Args:
             json_data: 卡牌数据的JSON字典
@@ -806,6 +806,7 @@ class WorkspaceManager:
             parent_path: 保存的父目录相对路径，如果为None则保存到工作目录
             export_format: 导出格式（PNG或JPG），默认JPG
             quality: 图片质量（1-100），仅对JPG有效，默认95
+            rotate_landscape: 是否旋转横向图片（宽大于高），默认False
 
         Returns:
             List[str]: 保存成功的文件路径列表（相对路径），失败时返回空列表
@@ -832,7 +833,7 @@ class WorkspaceManager:
                 if front_card and front_card.image:
                     front_filename = f"{filename}_front.{export_format.lower()}"
                     front_path = self._save_single_image(
-                        front_card.image, front_filename, parent_path, export_format, quality
+                        front_card.image, front_filename, parent_path, export_format, quality, rotate_landscape
                     )
                     if front_path:
                         saved_files.append(front_path)
@@ -841,7 +842,7 @@ class WorkspaceManager:
                 if back_card and back_card.image:
                     back_filename = f"{filename}_back.{export_format.lower()}"
                     back_path = self._save_single_image(
-                        back_card.image, back_filename, parent_path, export_format, quality
+                        back_card.image, back_filename, parent_path, export_format, quality, rotate_landscape
                     )
                     if back_path:
                         saved_files.append(back_path)
@@ -859,7 +860,7 @@ class WorkspaceManager:
                 # 保存单面图片
                 final_filename = f"{filename}.{export_format.lower()}"
                 save_path = self._save_single_image(
-                    card.image, final_filename, parent_path, export_format, quality
+                    card.image, final_filename, parent_path, export_format, quality, rotate_landscape
                 )
                 if save_path:
                     saved_files.append(save_path)
@@ -874,7 +875,7 @@ class WorkspaceManager:
             return saved_files
 
     def _save_single_image(self, image: Image.Image, filename: str, parent_path: Optional[str],
-                          export_format: str, quality: int) -> Optional[str]:
+                          export_format: str, quality: int, rotate_landscape: bool = False) -> Optional[str]:
         """
         保存单张图片到文件
 
@@ -884,11 +885,20 @@ class WorkspaceManager:
             parent_path: 父目录相对路径
             export_format: 导出格式
             quality: 图片质量
+            rotate_landscape: 是否旋转横向图片（宽大于高）
 
         Returns:
             str: 保存成功的文件相对路径，失败时返回None
         """
         try:
+            # 处理横向图片旋转
+            if rotate_landscape:
+                width, height = image.size
+                if width > height:
+                    # 横向图片顺时针旋转90度
+                    image = image.rotate(-90, expand=True)
+                    print(f"横向图片已旋转90度，原尺寸: {width}x{height}，新尺寸: {image.size}")
+
             # 确定保存路径
             if parent_path:
                 # 确保parent_path在工作目录内

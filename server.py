@@ -730,7 +730,7 @@ def generate_card():
 
 @app.route('/api/save-card', methods=['POST'])
 def save_card():
-    """保存卡图到文件（支持双面卡牌、多种格式和质量设置）"""
+    """保存卡图到文件（支持双面卡牌、多种格式和质量设置，以及内容包导出旋转）"""
     error_response = check_workspace()
     if error_response:
         return error_response
@@ -753,6 +753,7 @@ def save_card():
         # 新增参数：导出格式和质量
         export_format = data.get('format', 'JPG').upper()  # 默认JPG
         quality = data.get('quality', 95)  # 默认95%质量
+        rotate_landscape = data.get('rotate_landscape', False)  # 新增：是否旋转横向图片
 
         # 验证格式参数
         if export_format not in ['PNG', 'JPG']:
@@ -768,9 +769,9 @@ def save_card():
                 msg="图片质量必须是1-100之间的整数"
             )), 400
 
-        # 保存卡图（支持双面卡牌和格式参数）
+        # 保存卡图（支持双面卡牌、格式参数和旋转横向图片）
         saved_files = current_workspace.save_card_image_enhanced(
-            json_data, filename, parent_path, export_format, quality
+            json_data, filename, parent_path, export_format, quality, rotate_landscape
         )
 
         if saved_files and len(saved_files) > 0:

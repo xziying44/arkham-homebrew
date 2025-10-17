@@ -165,6 +165,7 @@ export interface SaveCardEnhancedRequest {
   parent_path?: string;
   format?: 'PNG' | 'JPG'; // 导出格式，默认JPG
   quality?: number; // 图片质量1-100，仅对JPG有效，默认95
+  rotate_landscape?: boolean; // 是否旋转横向图片（宽大于高），默认false
 }
 
 // 保存卡图响应数据类型

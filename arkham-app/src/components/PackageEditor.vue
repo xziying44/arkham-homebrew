@@ -1219,7 +1219,8 @@ const startBatchUpload = async () => {
         const savedFiles = await CardService.saveCardEnhanced(parsedCard, card.filename.replace('.card', ''), {
           parentPath: '.cards',
           format: 'JPG',
-          quality: 95
+          quality: 95,
+          rotateLandscape: true  // 内容包导出时自动旋转横向图片
         });
 
         // 上传图片

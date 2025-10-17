@@ -303,7 +303,8 @@ const exportImageToWorkspace = async (cardData: any, filename: string): Promise<
     const savedFiles = await CardService.saveCardEnhanced(cardData, filename, {
       parentPath: contentPackageDir,
       format: exportFormat.value,
-      quality: exportQuality.value
+      quality: exportQuality.value,
+      rotateLandscape: true  // 内容包导出时自动旋转横向图片
     });
 
     addLog(`图片导出成功: ${savedFiles.join(', ')}`, 'info');
@@ -592,7 +593,8 @@ const batchUploadConfig = async () => {
         const savedFiles = await CardService.saveCardEnhanced(parsedCard, card.filename.replace('.card', ''), {
           parentPath: '.cards',
           format: exportFormat.value,
-          quality: exportQuality.value
+          quality: exportQuality.value,
+          rotateLandscape: true  // 内容包导出时自动旋转横向图片
         });
 
         // 上传图片

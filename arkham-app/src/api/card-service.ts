@@ -78,7 +78,7 @@ export class CardService {
     }
 
     /**
-     * 保存卡图（增强版：支持双面卡牌、格式选择和质量设置）
+     * 保存卡图（增强版：支持双面卡牌、格式选择、质量设置和横向图片旋转）
      * @param cardData 卡牌数据JSON
      * @param filename 保存的文件名（不含扩展名）
      * @param options 保存选项
@@ -92,6 +92,7 @@ export class CardService {
             parentPath?: string;
             format?: 'PNG' | 'JPG';
             quality?: number;
+            rotateLandscape?: boolean;
         }
     ): Promise<string[]> {
         try {
@@ -100,7 +101,8 @@ export class CardService {
                 filename,
                 parent_path: options?.parentPath,
                 format: options?.format || 'JPG',
-                quality: options?.quality || 95
+                quality: options?.quality || 95,
+                rotate_landscape: options?.rotateLandscape || false
             };
 
             const response = await httpClient.post<SaveCardData>(
