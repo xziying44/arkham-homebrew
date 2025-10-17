@@ -3,13 +3,13 @@
     <!-- 编辑器头部 -->
     <div class="editor-header">
       <div class="package-info">
-        <h3>{{ packageData.meta.name }}</h3>
+        <h3>{{ packageData.value?.meta?.name || '未命名内容包' }}</h3>
         <div class="package-meta">
-          <n-tag type="info" size="small">{{ t(`contentPackage.languages.${packageData.meta.language}`) }}</n-tag>
-          <n-tag v-for="type in packageData.meta.types" :key="type" type="default" size="small">
+          <n-tag type="info" size="small">{{ t(`contentPackage.languages.${packageData.value?.meta?.language || 'zh-cn'}`) }}</n-tag>
+          <n-tag v-for="type in (packageData.value?.meta?.types || [])" :key="type" type="default" size="small">
             {{ t(`contentPackage.packageTypes.${type}`) }}
           </n-tag>
-          <n-tag type="success" size="small">ID: {{ packageData.meta.code }}</n-tag>
+          <n-tag type="success" size="small">ID: {{ packageData.value?.meta?.code || '未知' }}</n-tag>
         </div>
       </div>
       <div class="editor-actions">
@@ -39,8 +39,8 @@
               <h4>{{ $t('contentPackage.editor.sections.banner') }}</h4>
               <div class="banner-preview-container">
                 <div class="banner-preview">
-                  <img v-if="packageData.meta.banner_url" :src="packageData.meta.banner_url" :alt="t('contentPackage.editor.fields.banner')" />
-                  <img v-else-if="packageData.banner_base64" :src="packageData.banner_base64" :alt="t('contentPackage.editor.fields.banner')" />
+                  <img v-if="packageData.value?.meta?.banner_url" :src="packageData.value.meta.banner_url" :alt="t('contentPackage.editor.fields.banner')" />
+                  <img v-else-if="packageData.value?.banner_base64" :src="packageData.value.banner_base64" :alt="t('contentPackage.editor.fields.banner')" />
                   <div v-else class="no-banner">
                     <n-icon :component="ImageOutline" size="48" />
                     <span>{{ $t('contentPackage.editor.noBanner') }}</span>
@@ -48,7 +48,7 @@
                 </div>
                 <!-- 上传云端按钮 - 当有base64数据时显示 -->
                 <n-button
-                  v-if="packageData.banner_base64"
+                  v-if="packageData.value?.banner_base64"
                   type="primary"
                   size="small"
                   @click="showUploadBannerDialog = true"
@@ -57,7 +57,7 @@
                   <template #icon>
                     <n-icon :component="CloudUploadOutline" />
                   </template>
-                  {{ packageData.meta.banner_url ? t('contentPackage.upload.button.reuploadToCloud') : t('contentPackage.upload.button.uploadToCloud') }}
+                  {{ packageData.value?.meta?.banner_url ? t('contentPackage.upload.button.reuploadToCloud') : t('contentPackage.upload.button.uploadToCloud') }}
                 </n-button>
               </div>
             </div>
@@ -67,32 +67,32 @@
               <h4>{{ $t('contentPackage.editor.sections.basicInfo') }}</h4>
               <n-descriptions :column="2" bordered>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.code')">
-                  <n-text code>{{ packageData.meta.code }}</n-text>
+                  <n-text code>{{ packageData.value?.meta?.code || '未知' }}</n-text>
                 </n-descriptions-item>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.name')">
-                  <n-tag type="info" size="small">{{ packageData.meta.name }}</n-tag>
+                  <n-tag type="info" size="small">{{ packageData.value?.meta?.name || '未命名内容包' }}</n-tag>
                 </n-descriptions-item>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.author')">
-                  <n-tag type="success" size="small">{{ packageData.meta.author }}</n-tag>
+                  <n-tag type="success" size="small">{{ packageData.value?.meta?.author || '未知作者' }}</n-tag>
                 </n-descriptions-item>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.language')">
-                  <n-tag type="warning" size="small">{{ t(`contentPackage.languages.${packageData.meta.language}`) }}</n-tag>
+                  <n-tag type="warning" size="small">{{ t(`contentPackage.languages.${packageData.value?.meta?.language || 'zh-cn'}`) }}</n-tag>
                 </n-descriptions-item>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.types')">
-                  <n-tag v-for="type in packageData.meta.types" :key="type" :type="getTypeTagColor(type)" size="small">
+                  <n-tag v-for="type in (packageData.value?.meta?.types || [])" :key="type" :type="getTypeTagColor(type)" size="small">
                     {{ t(`contentPackage.packageTypes.${type}`) }}
                   </n-tag>
                 </n-descriptions-item>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.status')">
-                  <n-tag :type="packageData.meta.status === 'final' ? 'success' : 'warning'" size="small">
-                    {{ packageData.meta.status }}
+                  <n-tag :type="(packageData.value?.meta?.status || 'draft') === 'final' ? 'success' : 'warning'" size="small">
+                    {{ packageData.value?.meta?.status || 'draft' }}
                   </n-tag>
                 </n-descriptions-item>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.dateUpdated')">
-                  <n-tag type="default" size="small">{{ formatDate(packageData.meta.date_updated) }}</n-tag>
+                  <n-tag type="default" size="small">{{ formatDate(packageData.value?.meta?.date_updated || new Date().toISOString()) }}</n-tag>
                 </n-descriptions-item>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.generator')">
-                  <n-tag type="default" size="small">{{ packageData.meta.generator }}</n-tag>
+                  <n-tag type="default" size="small">{{ packageData.value?.meta?.generator || '未知' }}</n-tag>
                 </n-descriptions-item>
               </n-descriptions>
 
@@ -100,18 +100,18 @@
               <div class="description-section">
                 <h4>{{ $t('contentPackage.editor.fields.description') }}</h4>
                 <n-card>
-                  <n-text>{{ packageData.meta.description }}</n-text>
+                  <n-text>{{ packageData.value?.meta?.description || '暂无描述' }}</n-text>
                 </n-card>
               </div>
 
               <!-- 外部链接 -->
-              <div v-if="packageData.meta.external_link" class="external-link-section">
+              <div v-if="packageData.value?.meta?.external_link" class="external-link-section">
                 <h4>{{ $t('contentPackage.editor.fields.externalLink') }}</h4>
                 <n-button text @click="openExternalLink">
                   <template #icon>
                     <n-icon :component="OpenOutline" />
                   </template>
-                  {{ packageData.meta.external_link }}
+                  {{ packageData.value.meta.external_link }}
                 </n-button>
               </div>
             </div>
@@ -133,7 +133,7 @@
                   <template #icon>
                     <n-icon :component="CloudUploadOutline" />
                   </template>
-                  批量上传 ({{ v2CardsWithoutCloudUrls.length }})
+                  批量上传 ({{ v2CardsWithoutCloudUrls.value?.length || 0 }})
                 </n-button>
                 <n-button type="primary" @click="showAddCardDialog = true" size="small">
                   <template #icon>
@@ -146,7 +146,7 @@
 
             <!-- 卡牌列表 -->
             <div class="cards-content">
-              <div v-if="!packageData.cards || packageData.cards.length === 0" class="empty-cards">
+              <div v-if="!packageData.value?.cards || packageData.value.cards.length === 0" class="empty-cards">
                 <n-empty :description="t('contentPackage.cards.empty.title')">
                   <template #icon>
                     <n-icon :component="DocumentTextOutline" />
@@ -158,7 +158,7 @@
               </div>
               <div v-else class="cards-grid">
                 <div
-                  v-for="(card, index) in packageData.cards"
+                  v-for="(card, index) in packageData.value.cards"
                   :key="card.filename"
                   class="card-item"
                   :class="{ 'unsupported': getCardStatus(card.filename).version !== '2.0' }"
@@ -234,16 +234,106 @@
           <div class="export-panel">
             <h4>{{ $t('contentPackage.editor.sections.export') }}</h4>
 
-            <!-- 导出设置占位 -->
+            <!-- TTS导出区域 -->
             <div class="export-content">
-              <n-empty :description="t('contentPackage.export.notImplemented.title')">
-                <template #icon>
-                  <n-icon :component="DownloadOutline" />
+              <n-card title="导出到TTS物品" :bordered="false">
+                <template #header-extra>
+                  <n-tag type="info" size="small">Tabletop Simulator</n-tag>
                 </template>
-                <template #extra>
-                  <n-text depth="3">{{ t('contentPackage.export.notImplemented.description') }}</n-text>
+
+                <div class="tts-export-info">
+                  <n-alert type="info" style="margin-bottom: 1rem;">
+                    <template #icon>
+                      <n-icon :component="ConstructOutline" />
+                    </template>
+                    将内容包导出为TTS可用的JSON文件，包含所有已生成图片的卡牌（支持云端图片和本地图片）
+                  </n-alert>
+
+                  <n-descriptions :column="2" bordered style="margin-bottom: 1.5rem;">
+                    <n-descriptions-item label="内容包名称">
+                      <n-text strong>{{ packageData.value?.meta?.name || '未知内容包' }}</n-text>
+                    </n-descriptions-item>
+                    <n-descriptions-item label="卡牌数量">
+                      <n-tag type="info" size="small">{{ packageData.value?.cards?.length || 0 }} 张</n-tag>
+                    </n-descriptions-item>
+                    <n-descriptions-item label="有图片的卡牌">
+                      <n-tag type="success" size="small">{{ cardsWithAnyUrls.length }} 张</n-tag>
+                    </n-descriptions-item>
+                    <n-descriptions-item label="导出状态">
+                      <n-tag :type="canExportToTts ? 'success' : 'warning'" size="small">
+                        {{ canExportToTts ? '可导出' : '需要生成图片' }}
+                      </n-tag>
+                    </n-descriptions-item>
+                  </n-descriptions>
+
+                  <!-- 卡牌状态列表 -->
+                  <div v-if="packageData.value?.cards && packageData.value.cards.length > 0" class="tts-cards-status">
+                    <h5>卡牌导出状态</h5>
+                    <n-scrollbar style="max-height: 200px;">
+                      <div class="tts-cards-list">
+                        <div v-for="card in packageData.value.cards" :key="card.filename" class="tts-card-item">
+                          <div class="tts-card-info">
+                            <n-text>{{ card.filename }}</n-text>
+                            <n-tag
+                              :type="getCardExportStatus(card).type"
+                              size="tiny"
+                              style="margin-left: 0.5rem;"
+                            >
+                              {{ getCardExportStatus(card).text }}
+                            </n-tag>
+                          </div>
+                          <n-icon
+                            :component="getCardExportStatus(card).icon"
+                            :color="getCardExportStatus(card).color"
+                            size="16"
+                          />
+                        </div>
+                      </div>
+                    </n-scrollbar>
+                  </div>
+                </div>
+
+                <template #action>
+                  <n-space>
+                    <n-button
+                      type="primary"
+                      @click="exportToTts"
+                      :loading="exportingToTts"
+                      :disabled="!canExportToTts"
+                    >
+                      <template #icon>
+                        <n-icon :component="DownloadOutline" />
+                      </template>
+                      导出TTS物品
+                    </n-button>
+                  </n-space>
                 </template>
-              </n-empty>
+              </n-card>
+
+              <!-- 导出日志对话框 -->
+              <n-modal v-model:show="showExportLogsDialog" preset="dialog" title="导出日志" style="width: 800px;">
+                <div class="export-logs-content">
+                  <n-scrollbar style="max-height: 400px;">
+                    <div class="logs-container">
+                      <div v-for="(log, index) in exportLogs" :key="index" :class="['log-item', getLogItemClass(log)]">
+                        <n-text>{{ log }}</n-text>
+                      </div>
+                    </div>
+                  </n-scrollbar>
+                </div>
+                <template #action>
+                  <n-space>
+                    <n-button @click="showExportLogsDialog = false">关闭</n-button>
+                    <n-button
+                      v-if="exportResult?.tts_path"
+                      type="primary"
+                      @click="openTtsFileLocation"
+                    >
+                      打开文件夹
+                    </n-button>
+                  </n-space>
+                </template>
+              </n-modal>
             </div>
           </div>
         </n-tab-pane>
@@ -392,19 +482,19 @@
 
           <n-descriptions :column="2" bordered>
             <n-descriptions-item :label="t('contentPackage.upload.info.v2CardCount')">
-              <n-tag type="info" size="small">{{ v2CardsWithoutCloudUrls.length }}</n-tag>
+              <n-tag type="info" size="small">{{ v2CardsWithoutCloudUrls.value?.length || 0 }}</n-tag>
             </n-descriptions-item>
             <n-descriptions-item :label="t('contentPackage.upload.info.cloudUploaded')">
-              <n-tag type="success" size="small">{{ v2CardsWithCloudUrls.length }}</n-tag>
+              <n-tag type="success" size="small">{{ v2CardsWithCloudUrls.value?.length || 0 }}</n-tag>
             </n-descriptions-item>
           </n-descriptions>
         </div>
 
-        <div class="batch-upload-cards" v-if="v2CardsWithoutCloudUrls.length > 0">
+        <div class="batch-upload-cards" v-if="v2CardsWithoutCloudUrls.value?.length > 0">
           <h5>{{ t('contentPackage.upload.info.v2CardList') }}</h5>
           <n-scrollbar style="max-height: 300px;">
             <div class="batch-card-list">
-              <div v-for="card in v2CardsWithoutCloudUrls" :key="card.filename" class="batch-card-item">
+              <div v-for="card in v2CardsWithoutCloudUrls.value" :key="card.filename" class="batch-card-item">
                 <div class="batch-card-info">
                   <n-text strong>{{ card.filename }}</n-text>
                   <n-text depth="3" style="font-size: 0.875rem;">{{ getCardStatus(card.filename).version }}</n-text>
@@ -436,9 +526,9 @@
             type="primary"
             @click="startBatchUploadWithDialog"
             :loading="batchUploading"
-            :disabled="v2CardsWithoutCloudUrls.length === 0"
+            :disabled="v2CardsWithoutCloudUrls.value?.length === 0"
           >
-            {{ t('contentPackage.upload.action.startConfiguration', { count: v2CardsWithoutCloudUrls.length }) }}
+            {{ t('contentPackage.upload.action.startConfiguration', { count: v2CardsWithoutCloudUrls.value?.length || 0 }) }}
           </n-button>
         </n-space>
       </template>
@@ -496,6 +586,7 @@ import { WorkspaceService } from '@/api';
 import { CardService } from '@/api/card-service';
 import { ConfigService } from '@/api/config-service';
 import { ImageHostService } from '@/api/image-host-service';
+import { ContentPackageService } from '@/api/content-package-service';
 import CardFileBrowser from '@/components/CardFileBrowser.vue';
 import CloudUploadDialog from './CloudUploadDialog.vue';
 
@@ -547,6 +638,12 @@ const batchUploadDialogRef = ref<any>(null);
 // 批量上传配置对话框状态
 const showBatchUploadConfigDialog = ref(false);
 const isBatchUploading = ref(false);
+
+// TTS导出状态
+const exportingToTts = ref(false);
+const showExportLogsDialog = ref(false);
+const exportLogs = ref<string[]>([]);
+const exportResult = ref<any>(null);
 
 // 卡牌预览生成队列
 const previewGenerationQueue = ref<string[]>([]);
@@ -636,7 +733,7 @@ const formatDate = (dateString: string): string => {
 
 // 打开外部链接
 const openExternalLink = () => {
-  if (packageData.value.meta.external_link) {
+  if (packageData.value?.meta?.external_link) {
     window.open(packageData.value.meta.external_link, '_blank');
   }
 };
@@ -700,7 +797,7 @@ const saveMetaChanges = () => {
       const updatedPackage = {
         ...packageData.value,
         meta: {
-          ...packageData.value.meta,
+          ...packageData.value?.meta,
           name: editForm.value.name,
           description: editForm.value.description,
           author: editForm.value.author,
@@ -708,7 +805,7 @@ const saveMetaChanges = () => {
           banner_url: editForm.value.banner_url,
           date_updated: new Date().toISOString()
         },
-        banner_base64: editForm.value.banner_base64 || packageData.value.banner_base64
+        banner_base64: editForm.value.banner_base64 || packageData.value?.banner_base64
       };
 
       emit('update:package', updatedPackage);
@@ -730,12 +827,12 @@ const closeEditDialog = () => {
 // 打开编辑对话框时初始化表单数据
 const openEditDialog = () => {
   editForm.value = {
-    name: packageData.value.meta.name,
-    description: packageData.value.meta.description,
-    author: packageData.value.meta.author,
-    external_link: packageData.value.meta.external_link || '',
-    banner_url: packageData.value.meta.banner_url,
-    banner_base64: packageData.value.banner_base64
+    name: packageData.value?.meta?.name || '',
+    description: packageData.value?.meta?.description || '',
+    author: packageData.value?.meta?.author || '',
+    external_link: packageData.value?.meta?.external_link || '',
+    banner_url: packageData.value?.meta?.banner_url || '',
+    banner_base64: packageData.value?.banner_base64 || ''
   };
   showEditMetaDialog.value = true;
 };
@@ -791,7 +888,7 @@ const handleAddCards = async (items: any[]) => {
     }
 
     // 合并到现有卡牌列表（去重）
-    const existingCards = packageData.value.cards || [];
+    const existingCards = packageData.value?.cards || [];
     const allCards = [...existingCards];
 
     for (const newCard of newCards) {
@@ -894,7 +991,7 @@ const getCardInfo = async (filePath: string): Promise<ContentPackageCard> => {
 const removeCard = (index: number) => {
   const updatedPackage = {
     ...packageData.value,
-    cards: [...(packageData.value.cards || [])]
+    cards: [...(packageData.value?.cards || [])]
   };
 
   updatedPackage.cards?.splice(index, 1);
@@ -917,6 +1014,69 @@ const hasCloudUrls = (card: ContentPackageCard): boolean => {
 // 检查卡牌是否有本地URL
 const hasLocalUrls = (card: ContentPackageCard): boolean => {
   return !!(card.front_url?.startsWith('file:///') || card.back_url?.startsWith('file:///'));
+};
+
+// 计算属性：检查是否可以导出到TTS
+const canExportToTts = computed(() => {
+  return cardsWithAnyUrls.value.length > 0;
+});
+
+// 计算属性：获取已上传云端图片的卡牌
+const cardsWithCloudUrls = computed(() => {
+  if (!packageData.value?.cards) return [];
+  return packageData.value.cards.filter(card => hasCloudUrls(card));
+});
+
+// 计算属性：获取有任意图片URL的卡牌（云端或本地）
+const cardsWithAnyUrls = computed(() => {
+  if (!packageData.value?.cards) return [];
+  return packageData.value.cards.filter(card => hasAnyUrls(card));
+});
+
+// 获取卡牌导出状态
+const getCardExportStatus = (card: ContentPackageCard) => {
+  if (hasCloudUrls(card)) {
+    return {
+      type: 'success' as const,
+      text: '云端',
+      icon: CloudOutline,
+      color: '#18a058'
+    };
+  } else if (hasLocalUrls(card)) {
+    return {
+      type: 'info' as const,
+      text: '本地',
+      icon: FolderOutline,
+      color: '#2080f0'
+    };
+  } else {
+    return {
+      type: 'warning' as const,
+      text: '无图片',
+      icon: WarningOutline,
+      color: '#f0a020'
+    };
+  }
+};
+
+// 获取日志项的CSS类
+const getLogItemClass = (log: string) => {
+  const classes = [];
+
+  if (log.includes('✅')) classes.push('log-success');
+  if (log.includes('❌')) classes.push('log-error');
+  if (log.includes('⏳')) classes.push('log-processing');
+  if (log.includes('💡')) classes.push('log-tip');
+  if (log.includes('🚀')) classes.push('log-start');
+  if (log.includes('🎉')) classes.push('log-complete');
+  if (log.includes('📂')) classes.push('log-file');
+  if (log.includes('💾')) classes.push('log-save');
+  if (log.includes('📦')) classes.push('log-package');
+  if (log.includes('📊')) classes.push('log-stats');
+  if (log.includes('☁️')) classes.push('log-cloud');
+  if (log.includes('💻')) classes.push('log-local');
+
+  return classes.join(' ');
 };
 
 // 计算属性：检查是否有v2.0卡牌需要上传
@@ -945,11 +1105,11 @@ const v2CardsWithCloudUrls = computed(() => {
 // 上传配置
 const uploadConfig = computed(() => {
   return {
-    name: packageData.value.name,
-    path: packageData.value.path,
-    banner_base64: packageData.value.banner_base64,
-    meta: packageData.value.meta,
-    cards: packageData.value.cards
+    name: packageData.value?.meta?.name || '',
+    path: packageData.value?.path || '',
+    banner_base64: packageData.value?.banner_base64 || '',
+    meta: packageData.value?.meta || {},
+    cards: packageData.value?.cards || []
   };
 });
 
@@ -1338,9 +1498,132 @@ const processPreviewQueue = async () => {
   isGeneratingPreview.value = false;
 };
 
+// TTS导出方法
+const exportToTts = async () => {
+  if (!packageData.value?.path) {
+    message.error('内容包路径无效');
+    return;
+  }
+
+  if (!canExportToTts.value) {
+    message.warning('没有已生成图片的卡牌，无法导出到TTS');
+    return;
+  }
+
+  exportingToTts.value = true;
+  exportLogs.value = [];
+
+  try {
+    // 添加调试信息
+    console.log('TTS导出调试信息:', {
+      packageData: packageData.value,
+      packageDataExists: !!packageData.value,
+      meta: packageData.value?.meta,
+      metaExists: !!packageData.value?.meta,
+      cards: packageData.value?.cards,
+      cardsLength: packageData.value?.cards?.length,
+      canExport: canExportToTts.value,
+      cardsWithAnyUrls: cardsWithAnyUrls.value.length
+    });
+
+    // 添加开始日志
+    exportLogs.value.push('🚀 开始导出到TTS...');
+    exportLogs.value.push(`📦 内容包: ${packageData.value?.meta?.name || '未知内容包'}`);
+    exportLogs.value.push(`📊 总卡牌数: ${packageData.value?.cards?.length || 0} 张`);
+    exportLogs.value.push(`✅ 可导出卡牌: ${cardsWithAnyUrls.value.length} 张`);
+
+    // 统计图片类型
+    const cloudCards = cardsWithCloudUrls.value.length;
+    const localCards = cardsWithAnyUrls.value.length - cloudCards;
+    if (cloudCards > 0) {
+      exportLogs.value.push(`☁️ 云端图片: ${cloudCards} 张`);
+    }
+    if (localCards > 0) {
+      exportLogs.value.push(`💻 本地图片: ${localCards} 张`);
+    }
+
+    exportLogs.value.push('⏳ 正在处理卡牌数据...');
+
+    const result = await ContentPackageService.exportToTts(packageData.value.path);
+
+    // 添加成功日志
+    exportLogs.value.push('✅ TTS物品导出成功！');
+
+    // 确保result有logs属性
+    if (result && Array.isArray(result.logs)) {
+      // 过滤掉重复的开始日志，避免重复显示
+      const backendLogs = result.logs.filter(log =>
+        !log.includes('开始导出TTS') &&
+        !log.includes('设置盒子信息') &&
+        !log.includes('找到') &&
+        !log.includes('成功读取卡牌') &&
+        !log.includes('成功处理卡牌')
+      );
+
+      if (backendLogs.length > 0) {
+        exportLogs.value.push(...backendLogs);
+      }
+    } else {
+      exportLogs.value.push('📝 导出完成，但未收到详细处理日志');
+    }
+
+    // 添加文件保存信息
+    if (result.tts_path) {
+      exportLogs.value.push(`📂 TTS文件已保存到: ${result.tts_path}`);
+    }
+    if (result.local_path) {
+      exportLogs.value.push(`💾 本地副本已保存到: ${result.local_path}`);
+    }
+
+    // 添加完成提示
+    exportLogs.value.push('');
+    exportLogs.value.push('🎉 导出完成！您可以在Tabletop Simulator中导入此物品。');
+    exportLogs.value.push('💡 提示：导入后请在TTS中检查卡牌图片是否正常显示。');
+
+    exportResult.value = result;
+    showExportLogsDialog.value = true;
+    message.success('TTS物品导出成功！');
+
+  } catch (error: any) {
+    console.error('导出TTS物品失败:', error);
+
+    // 添加错误信息
+    exportLogs.value.push('❌ 导出失败！');
+
+    if (error.code === 14002) {
+      exportLogs.value.push(`💡 错误原因: ${error.message}`);
+      exportLogs.value.push('💡 建议请检查卡牌是否已生成图片');
+    } else {
+      exportLogs.value.push(`💡 错误原因: ${error.message || '未知错误'}`);
+      exportLogs.value.push('💡 建议请检查网络连接或重试导出');
+    }
+
+    showExportLogsDialog.value = true;
+    message.error('TTS物品导出失败，请查看日志了解详情');
+  } finally {
+    exportingToTts.value = false;
+  }
+};
+
+// 打开TTS文件位置
+const openTtsFileLocation = () => {
+  if (exportResult.value?.local_path) {
+    // 提取目录路径
+    const dirPath = exportResult.value.local_path.substring(0, exportResult.value.local_path.lastIndexOf('/'));
+    if (dirPath) {
+      WorkspaceService.openDirectory(dirPath).catch(error => {
+        console.error('打开目录失败:', error);
+        message.error('无法打开文件夹');
+      });
+    }
+  } else if (exportResult.value?.tts_path) {
+    message.info('文件已保存到TTS保存目录，请检查Tabletop Simulator的Saved Objects文件夹');
+  }
+};
+
 // 监听内容包变化，自动刷新版本信息
 watch(() => packageData.value, async (newPackage, oldPackage) => {
-  if (newPackage && (!oldPackage || newPackage.path !== oldPackage.path || JSON.stringify(newPackage.cards) !== JSON.stringify(oldPackage.cards))) {
+  if (newPackage && (!oldPackage || newPackage.path !== oldPackage.path || JSON.stringify(newPackage?.cards) !== JSON.stringify(oldPackage?.cards))) {
     // 中止正在进行的预览生成队列
     abortPreviewGeneration();
 
@@ -1863,6 +2146,142 @@ watch(() => packageData.value, async (newPackage, oldPackage) => {
 .batch-upload-status {
   margin-top: 0.5rem;
   text-align: center;
+}
+
+/* TTS导出样式 */
+.tts-export-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.tts-cards-status {
+  margin-top: 1rem;
+}
+
+.tts-cards-status h5 {
+  margin: 0 0 0.75rem 0;
+  color: #2c3e50;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.tts-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tts-card-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  background: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+}
+
+.tts-card-info {
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.export-logs-content {
+  min-height: 300px;
+}
+
+.logs-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  border: 1px solid #e9ecef;
+}
+
+.log-item {
+  padding: 0.4rem 0.6rem;
+  word-break: break-word;
+  border-radius: 4px;
+  background: white;
+  border-left: 3px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.log-item:hover {
+  background: #f0f8ff;
+  border-left-color: #667eea;
+}
+
+/* 特定类型日志的样式 */
+.log-item.log-start {
+  border-left-color: #667eea;
+  font-weight: 600;
+  background: #f0f4ff;
+}
+
+.log-item.log-package,
+.log-item.log-stats {
+  border-left-color: #28a745;
+  background: #f8fff9;
+}
+
+.log-item.log-cloud {
+  border-left-color: #17a2b8;
+  background: #f0fbfc;
+}
+
+.log-item.log-local {
+  border-left-color: #6f42c1;
+  background: #f8f7ff;
+}
+
+.log-item.log-processing {
+  border-left-color: #ffc107;
+  background: #fffbf0;
+}
+
+.log-item.log-success {
+  border-left-color: #28a745;
+  background: #f8fff9;
+}
+
+.log-item.log-complete {
+  border-left-color: #007bff;
+  background: #e7f3ff;
+  font-weight: 600;
+}
+
+.log-item.log-file,
+.log-item.log-save {
+  border-left-color: #fd7e14;
+  background: #fff8f0;
+}
+
+.log-item.log-error {
+  border-left-color: #dc3545;
+  background: #fff5f5;
+  font-weight: 500;
+}
+
+.log-item.log-tip {
+  border-left-color: #6c757d;
+  background: #f8f9fa;
+  font-style: italic;
+}
+
+/* 空行样式 */
+.log-item:empty {
+  height: 0.5rem;
+  background: transparent;
+  border: none;
+  padding: 0;
 }
 
 /* 响应式设计 */

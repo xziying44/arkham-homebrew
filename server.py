@@ -1263,6 +1263,49 @@ def export_tts():
         )), 500
 
 
+@app.route('/api/content-package/export-tts', methods=['POST'])
+def export_content_package_to_tts():
+    """导出内容包到TTS物品"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    try:
+        data = request.get_json()
+        if not data or 'package_path' not in data:
+            return jsonify(create_response(
+                code=14001,
+                msg="请提供内容包文件路径"
+            )), 400
+
+        package_path = data['package_path']
+
+        # 调用工作空间的导出方法
+        result = current_workspace.export_content_package_to_tts(package_path)
+
+        if result.get("success"):
+            return jsonify(create_response(
+                msg="内容包导出TTS物品成功",
+                data={
+                    "logs": result.get("logs", []),
+                    "tts_path": result.get("tts_path"),
+                    "local_path": result.get("local_path")
+                }
+            ))
+        else:
+            return jsonify(create_response(
+                code=14002,
+                msg=result.get("error", "内容包导出TTS物品失败"),
+                data={"logs": result.get("logs", [])}
+            )), 500
+
+    except Exception as e:
+        return jsonify(create_response(
+            code=14003,
+            msg=f"导出内容包到TTS失败: {str(e)}"
+        )), 500
+
+
 @app.route('/api/export-deck-pdf', methods=['POST'])
 def export_deck_pdf():
     """导出牌库PDF"""

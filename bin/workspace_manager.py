@@ -14,6 +14,7 @@ from PIL import Image
 from Card import Card
 from bin.deck_exporter import DeckExporter
 from bin.tts_card_converter import TTSCardConverter
+from bin.content_package_manager import ContentPackageManager
 
 # 导入卡牌生成相关模块
 try:
@@ -1673,3 +1674,93 @@ class WorkspaceManager:
             print(f"导出卡牌失败: {e}")
             traceback.print_exc()
             return False
+
+    def export_content_package_to_tts(self, package_relative_path: str) -> Dict[str, Any]:
+        """
+        导出内容包到TTS物品
+
+        Args:
+            package_relative_path: 内容包文件的相对路径
+
+        Returns:
+            dict: 包含成功状态和日志信息的字典
+        """
+        try:
+            # 确保路径在工作空间内
+            if not self._is_path_in_workspace(package_relative_path):
+                return {
+                    "success": False,
+                    "logs": [f"内容包路径不在工作空间内: {package_relative_path}"],
+                    "error": "路径安全检查失败"
+                }
+
+            # 读取内容包文件
+            package_path = self._get_absolute_path(package_relative_path)
+            if not os.path.exists(package_path):
+                return {
+                    "success": False,
+                    "logs": [f"内容包文件不存在: {package_relative_path}"],
+                    "error": "文件不存在"
+                }
+
+            with open(package_path, 'r', encoding='utf-8') as f:
+                content_package_data = json.load(f)
+
+            # 创建内容包管理器并导出
+            manager = ContentPackageManager(content_package_data, self)
+            result = manager.export_to_tts()
+
+            if not result.get("success"):
+                return result
+
+            # 保存到TTS保存目录（Windows系统）
+            if os.name == 'nt':  # Windows系统
+                try:
+                    tts_save_dir = self._get_tts_save_directory()
+                    if tts_save_dir:
+                        # 生成文件名
+                        package_dir = os.path.dirname(package_relative_path)
+                        package_name = os.path.splitext(os.path.basename(package_relative_path))[0]
+                        tts_filename = f"{package_name}_tts.json"
+                        tts_path = os.path.join(tts_save_dir, tts_filename)
+
+                        # 保存JSON文件
+                        with open(tts_path, 'w', encoding='utf-8') as f:
+                            json.dump(result["box_json"], f, indent=2, ensure_ascii=False)
+
+                        result["logs"].append(f"TTS物品已保存到: {tts_path}")
+                        result["tts_path"] = tts_path
+                except Exception as e:
+                    result["logs"].append(f"保存到TTS目录失败（不影响导出）: {e}")
+
+            # 保存到内容包目录
+            try:
+                package_dir = os.path.dirname(package_relative_path)
+                package_name = os.path.splitext(os.path.basename(package_relative_path))[0]
+                local_filename = f"{package_name}_tts.json"
+                local_path = self._get_absolute_path(os.path.join(package_dir, local_filename))
+
+                # 确保目录存在
+                os.makedirs(os.path.dirname(local_path), exist_ok=True)
+
+                # 保存JSON文件
+                with open(local_path, 'w', encoding='utf-8') as f:
+                    json.dump(result["box_json"], f, indent=2, ensure_ascii=False)
+
+                result["logs"].append(f"TTS物品已保存到内容包目录: {os.path.join(package_dir, local_filename)}")
+                result["local_path"] = os.path.join(package_dir, local_filename)
+
+            except Exception as e:
+                result["logs"].append(f"保存到内容包目录失败: {e}")
+                result["success"] = False
+
+            return result
+
+        except Exception as e:
+            error_msg = f"导出内容包到TTS失败: {e}"
+            print(error_msg)
+            return {
+                "success": False,
+                "logs": [error_msg],
+                "error": str(e)
+            }

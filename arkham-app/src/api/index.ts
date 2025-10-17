@@ -11,6 +11,7 @@ export * from './config-service';
 export * from './tts-export-service';
 export * from './github-service'; // GitHub服务
 export * from './image-host-service'; // 图床服务
+export * from './content-package-service'; // 内容包服务
 
 // 默认导出所有服务
 export { default as DirectoryService } from './directory-service';
@@ -21,3 +22,4 @@ export { default as httpClient } from './http-client';
 export { default as TtsExportService } from './tts-export-service';
 export { default as GitHubService } from './github-service'; // GitHub服务
 export { default as ImageHostService } from './image-host-service'; // 图床服务
+export { default as ContentPackageService } from './content-package-service'; // 内容包服务
