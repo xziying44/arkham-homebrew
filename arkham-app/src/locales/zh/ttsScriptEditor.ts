@@ -51,6 +51,13 @@ export default {
     perInvestigator: '每调查员',
     fixedCount: '固定数量',
     notSet: '未设置',
+    frontSide: '正面',
+    backSide: '背面',
+    locationCard: '地点卡',
+    bothSidesLocation: '双面均为地点卡，正背面数据分别存储在locationFront和locationBack字段',
+    frontIsLocation: '正面为地点卡，数据存储在locationFront字段',
+    backIsLocation: '背面为地点卡，数据存储在locationBack字段',
+    onlyBackIsLocation: '仅背面为地点卡，数据存储在locationBack字段',
   },
 
   // GMNotes 预览部分

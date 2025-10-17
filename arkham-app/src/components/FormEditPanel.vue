@@ -181,6 +181,7 @@
 
                     <!-- TTS脚本编辑器 -->
                     <TtsScriptEditor v-if="currentCardType" :card-data="currentCardData" :card-type="currentCardType"
+                        :is-double-sided="isDoubleSided" :current-side="currentSide"
                         @update-tts-script="updateTtsScript" />
 
                     <!-- 操作按钮 -->

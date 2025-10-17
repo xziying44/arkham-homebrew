@@ -51,6 +51,13 @@ export default {
     perInvestigator: 'Per Investigator',
     fixedCount: 'Fixed Count',
     notSet: 'Not Set',
+    frontSide: 'Front Side',
+    backSide: 'Back Side',
+    locationCard: 'Location Card',
+    bothSidesLocation: 'Both sides are location cards, data stored separately in locationFront and locationBack fields',
+    frontIsLocation: 'Front side is location card, data stored in locationFront field',
+    backIsLocation: 'Back side is location card, data stored in locationBack field',
+    onlyBackIsLocation: 'Only back side is location card, data stored in locationBack field',
   },
 
   // GMNotes Preview Section
