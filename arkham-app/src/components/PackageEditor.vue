@@ -945,6 +945,8 @@ const v2CardsWithCloudUrls = computed(() => {
 // 上传配置
 const uploadConfig = computed(() => {
   return {
+    name: packageData.value.name,
+    path: packageData.value.path,
     banner_base64: packageData.value.banner_base64,
     meta: packageData.value.meta,
     cards: packageData.value.cards
@@ -1027,7 +1029,9 @@ const handleBatchUpload = (updatedPackage: any) => {
   // 直接触发保存到文件
   emit('save');
 
-  message.success(t('contentPackage.messages.batchUploadSuccess', { count: totalCards }));
+  // 使用v2CardsWithoutCloudUrls的长度作为计数
+  const uploadedCount = v2CardsWithoutCloudUrls.value.length;
+  message.success(t('contentPackage.messages.batchUploadSuccess', { count: uploadedCount }));
 };
 
 // 开始批量上传

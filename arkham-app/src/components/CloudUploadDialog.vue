@@ -569,7 +569,15 @@ const batchUploadConfig = async () => {
     uploadStatus.value = '准备批量上传...';
 
     // 执行批量上传
-    const updatedPackage = { ...props.config };
+    const updatedPackage = {
+      ...props.config,
+      // 确保包含必要的字段
+      name: props.config?.name || '',
+      path: props.config?.path || '',
+      banner_base64: props.config?.banner_base64 || '',
+      meta: props.config?.meta || {},
+      cards: props.config?.cards || []
+    };
     const selectedHostType = selectedHost.value;
 
     for (let i = 0; i < v2Cards.length; i++) {
