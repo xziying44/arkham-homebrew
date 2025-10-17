@@ -167,9 +167,9 @@
                   <div v-if="hasAnyUrls(card)" class="status-icon">
                     <n-icon
                       :component="hasCloudUrls(card) ? CloudOutline : FolderOutline"
-                      size="16"
+                      size="18"
                       :title="hasCloudUrls(card) ? t('contentPackage.upload.status.uploadedToCloud') : t('contentPackage.upload.status.savedToLocal')"
-                      :class="hasCloudUrls(card) ? 'cloud-icon' : 'local-icon'"
+                      :class="hasCloudUrls(card) ? 'cloud-status-icon' : 'local-status-icon'"
                     />
                   </div>
 
@@ -1007,8 +1007,10 @@ const hasAnyUrls = (card: ContentPackageCard): boolean => {
 
 // 检查卡牌是否有云端URL
 const hasCloudUrls = (card: ContentPackageCard): boolean => {
-  return !!(card.front_url?.startsWith('http://') || card.front_url?.startsWith('https://') ||
-             card.back_url?.startsWith('http://') || card.back_url?.startsWith('https://'));
+  const frontIsCloud = !!(card.front_url?.startsWith('http://') || card.front_url?.startsWith('https://'));
+  const backIsCloud = !!(card.back_url?.startsWith('http://') || card.back_url?.startsWith('https://'));
+  // 只有双面都是云端地址时才算云端状态
+  return frontIsCloud && backIsCloud;
 };
 
 // 检查卡牌是否有本地URL
@@ -1828,46 +1830,47 @@ watch(() => packageData.value, async (newPackage, oldPackage) => {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* 状态图标样式 */
+/* 状态图标样式 - 重新设计 */
 .status-icon {
   position: absolute;
   top: 0.5rem;
   left: 0.5rem;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 10;
-  border-radius: 50%;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(4px);
+  transition: all 0.2s ease;
 }
 
-.cloud-icon {
-  background: rgba(34, 197, 94, 0.9);
-  color: white;
-}
-
-.local-icon {
-  background: rgba(59, 130, 246, 0.9);
-  color: white;
-}
-
-/* 云端状态图标 */
 .cloud-status-icon {
-  position: absolute;
-  top: 0.5rem;
-  left: 0.5rem;
-  background: rgba(34, 197, 94, 0.9);
-  color: white;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  color: #10b981;
+  filter: drop-shadow(0 1px 2px rgba(16, 185, 129, 0.3));
+}
+
+.local-status-icon {
+  color: #3b82f6;
+  filter: drop-shadow(0 1px 2px rgba(59, 130, 246, 0.3));
+}
+
+.status-icon:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.cloud-status-icon:hover {
+  color: #059669;
+  filter: drop-shadow(0 2px 4px rgba(16, 185, 129, 0.4));
+}
+
+.local-status-icon:hover {
+  color: #2563eb;
+  filter: drop-shadow(0 2px 4px rgba(59, 130, 246, 0.4));
 }
 
 .card-item:hover {
