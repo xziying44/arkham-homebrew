@@ -126,12 +126,16 @@
             <div class="cards-header">
               <h4>{{ $t('contentPackage.editor.sections.cards') }}</h4>
               <n-space>
-                <n-button v-if="v2CardsWithoutCloudUrls.length > 0" type="warning" @click="showBatchUploadDialog = true"
-                  size="small">
+                <n-button
+                  v-if="v2Cards.length > 0"
+                  type="warning"
+                  @click="showBatchUploadDialog = true"
+                  size="small"
+                >
                   <template #icon>
                     <n-icon :component="CloudUploadOutline" />
                   </template>
-                  批量上传 ({{ v2CardsWithoutCloudUrls.length }})
+                  批量上传 ({{ v2CardsWithCloudUrls.length }}/{{ v2Cards.length }})
                 </n-button>
                 <n-button type="primary" @click="showAddCardDialog = true" size="small">
                   <template #icon>
@@ -433,27 +437,36 @@
             <template #icon>
               <n-icon :component="CloudUploadOutline" />
             </template>
-            {{ t('contentPackage.upload.info.willUploadAllV2Cards') }}
+            {{ v2CardsWithoutCloudUrls.length > 0
+              ? `将上传 ${v2CardsWithoutCloudUrls.length} 张新卡牌，重新上传 ${v2CardsWithCloudUrls.length} 张已有卡牌`
+              : `将重新上传 ${v2CardsWithCloudUrls.length} 张卡牌到云端` }}
           </n-alert>
 
           <n-descriptions :column="2" bordered>
             <n-descriptions-item :label="t('contentPackage.upload.info.v2CardCount')">
-              <n-tag type="info" size="small">{{ v2CardsWithoutCloudUrls.length }}</n-tag>
+              <n-tag type="info" size="small">{{ v2Cards.length }}</n-tag>
             </n-descriptions-item>
             <n-descriptions-item :label="t('contentPackage.upload.info.cloudUploaded')">
-              <n-tag type="success" size="small">{{ v2CardsWithCloudUrls.value?.length || 0 }}</n-tag>
+              <n-tag type="success" size="small">{{ v2CardsWithCloudUrls.length }}</n-tag>
+            </n-descriptions-item>
+            <n-descriptions-item label="待上传">
+              <n-tag type="warning" size="small">{{ v2CardsWithoutCloudUrls.length }}</n-tag>
             </n-descriptions-item>
           </n-descriptions>
         </div>
 
-        <div class="batch-upload-cards" v-if="v2CardsWithoutCloudUrls.length > 0">
+        <div class="batch-upload-cards" v-if="v2Cards.length > 0">
           <h5>{{ t('contentPackage.upload.info.v2CardList') }}</h5>
           <n-scrollbar style="max-height: 300px;">
             <div class="batch-card-list">
-              <div v-for="card in v2CardsWithoutCloudUrls" :key="card.filename" class="batch-card-item">
+              <div v-for="card in v2Cards" :key="card.filename" class="batch-card-item">
                 <div class="batch-card-info">
                   <n-text strong>{{ card.filename }}</n-text>
-                  <n-text depth="3" style="font-size: 0.875rem;">{{ getCardStatus(card.filename).version }}</n-text>
+                  <n-space size="small">
+                    <n-text depth="3" style="font-size: 0.875rem;">{{ getCardStatus(card.filename).version }}</n-text>
+                    <n-tag v-if="hasCloudUrls(card)" type="success" size="tiny">已上传</n-tag>
+                    <n-tag v-else type="warning" size="tiny">待上传</n-tag>
+                  </n-space>
                 </div>
                 <div v-if="getCardStatus(card.filename).previewImage" class="batch-card-preview">
                   <img :src="getCardStatus(card.filename).previewImage" :alt="card.filename" />
@@ -475,9 +488,13 @@
       <template #action>
         <n-space>
           <n-button @click="showBatchUploadDialog = false">{{ t('contentPackage.actions.cancel') }}</n-button>
-          <n-button type="primary" @click="startBatchUploadWithDialog" :loading="batchUploading"
-            :disabled="v2CardsWithoutCloudUrls.length === 0">
-            {{ t('contentPackage.upload.action.startConfiguration', { count: v2CardsWithoutCloudUrls.length }) }}
+          <n-button
+            type="primary"
+            @click="startBatchUploadWithDialog"
+            :loading="batchUploading"
+            :disabled="v2Cards.length === 0"
+          >
+            {{ t('contentPackage.upload.action.startConfiguration', { count: v2Cards.length }) }}
           </n-button>
         </n-space>
       </template>
@@ -1025,28 +1042,36 @@ const getLogItemClass = (log: string) => {
   return classes.join(' ');
 };
 
-// 计算属性：检查是否有v2.0卡牌需要上传
-const hasV2CardsWithoutCloudUrls = computed(() => {
-  return v2CardsWithoutCloudUrls.value.length > 0;
-});
-
-// 计算属性：获取可以上传的v2.0卡牌（包括已上传的）
-const v2CardsWithoutCloudUrls = computed(() => {
+// 计算属性：所有v2.0卡牌
+const v2Cards = computed(() => {
   if (!packageData.value?.cards) return [];
   return packageData.value.cards.filter(card => {
     const status = getCardStatus(card.filename);
-    // v2.0 且没有云端URL的卡牌
-    return status.version === '2.0' && !hasCloudUrls(card);
+    return status.version === '2.0';
   });
 });
 
-// 计算属性：获取已上传的v2.0卡牌
+// 计算属性：已上传云端的v2.0卡牌
 const v2CardsWithCloudUrls = computed(() => {
   if (!packageData.value?.cards) return [];
   return packageData.value.cards.filter(card => {
     const status = getCardStatus(card.filename);
     return status.version === '2.0' && hasCloudUrls(card);
   });
+});
+
+// 计算属性：未上传云端的v2.0卡牌
+const v2CardsWithoutCloudUrls = computed(() => {
+  if (!packageData.value?.cards) return [];
+  return packageData.value.cards.filter(card => {
+    const status = getCardStatus(card.filename);
+    return status.version === '2.0' && !hasCloudUrls(card);
+  });
+});
+
+// 计算属性：检查是否有v2.0卡牌需要上传
+const hasV2CardsWithoutCloudUrls = computed(() => {
+  return v2CardsWithoutCloudUrls.value.length > 0;
 });
 
 // 上传配置
@@ -1143,7 +1168,7 @@ const handleBatchUpload = (updatedPackage: any) => {
 
 // 开始批量上传
 const startBatchUpload = async () => {
-  if (v2CardsWithoutCloudUrls.value.length === 0) {
+  if (v2Cards.value.length === 0) {
     message.warning(t('contentPackage.messages.noCardsToUpload'));
     return;
   }
@@ -1152,7 +1177,7 @@ const startBatchUpload = async () => {
   batchUploadProgress.value = 0;
   batchUploadStatus.value = t('contentPackage.messages.batchPreparing');
 
-  const cardsToUpload = v2CardsWithoutCloudUrls.value;
+  const cardsToUpload = v2Cards.value;  // 改为使用所有v2卡牌
   const totalCards = cardsToUpload.length;
   let successCount = 0;
   let failureCount = 0;
