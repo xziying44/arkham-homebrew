@@ -3,13 +3,13 @@
     <!-- 编辑器头部 -->
     <div class="editor-header">
       <div class="package-info">
-        <h3>{{ packageData.value?.meta?.name || '未命名内容包' }}</h3>
+        <h3>{{ packageData.meta?.name || '未命名内容包' }}</h3>
         <div class="package-meta">
-          <n-tag type="info" size="small">{{ t(`contentPackage.languages.${packageData.value?.meta?.language || 'zh-cn'}`) }}</n-tag>
-          <n-tag v-for="type in (packageData.value?.meta?.types || [])" :key="type" type="default" size="small">
+          <n-tag type="info" size="small">{{ t(`contentPackage.languages.${packageData.meta?.language || 'zh-cn'}`) }}</n-tag>
+          <n-tag v-for="type in (packageData.meta?.types || [])" :key="type" type="default" size="small">
             {{ t(`contentPackage.packageTypes.${type}`) }}
           </n-tag>
-          <n-tag type="success" size="small">ID: {{ packageData.value?.meta?.code || '未知' }}</n-tag>
+          <n-tag type="success" size="small">ID: {{ packageData.meta?.code || '未知' }}</n-tag>
         </div>
       </div>
       <div class="editor-actions">
@@ -39,8 +39,8 @@
               <h4>{{ $t('contentPackage.editor.sections.banner') }}</h4>
               <div class="banner-preview-container">
                 <div class="banner-preview">
-                  <img v-if="packageData.value?.meta?.banner_url" :src="packageData.value.meta.banner_url" :alt="t('contentPackage.editor.fields.banner')" />
-                  <img v-else-if="packageData.value?.banner_base64" :src="packageData.value.banner_base64" :alt="t('contentPackage.editor.fields.banner')" />
+                  <img v-if="packageData.meta?.banner_url" :src="packageData.meta.banner_url" :alt="t('contentPackage.editor.fields.banner')" />
+                  <img v-else-if="packageData.banner_base64" :src="packageData.banner_base64" :alt="t('contentPackage.editor.fields.banner')" />
                   <div v-else class="no-banner">
                     <n-icon :component="ImageOutline" size="48" />
                     <span>{{ $t('contentPackage.editor.noBanner') }}</span>
@@ -48,7 +48,7 @@
                 </div>
                 <!-- 上传云端按钮 - 当有base64数据时显示 -->
                 <n-button
-                  v-if="packageData.value?.banner_base64"
+                  v-if="packageData.banner_base64"
                   type="primary"
                   size="small"
                   @click="showUploadBannerDialog = true"
@@ -57,7 +57,7 @@
                   <template #icon>
                     <n-icon :component="CloudUploadOutline" />
                   </template>
-                  {{ packageData.value?.meta?.banner_url ? t('contentPackage.upload.button.reuploadToCloud') : t('contentPackage.upload.button.uploadToCloud') }}
+                  {{ packageData.meta?.banner_url ? t('contentPackage.upload.button.reuploadToCloud') : t('contentPackage.upload.button.uploadToCloud') }}
                 </n-button>
               </div>
             </div>
@@ -67,32 +67,32 @@
               <h4>{{ $t('contentPackage.editor.sections.basicInfo') }}</h4>
               <n-descriptions :column="2" bordered>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.code')">
-                  <n-text code>{{ packageData.value?.meta?.code || '未知' }}</n-text>
+                  <n-text code>{{ packageData.meta?.code || '未知' }}</n-text>
                 </n-descriptions-item>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.name')">
-                  <n-tag type="info" size="small">{{ packageData.value?.meta?.name || '未命名内容包' }}</n-tag>
+                  <n-tag type="info" size="small">{{ packageData.meta?.name || '未命名内容包' }}</n-tag>
                 </n-descriptions-item>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.author')">
-                  <n-tag type="success" size="small">{{ packageData.value?.meta?.author || '未知作者' }}</n-tag>
+                  <n-tag type="success" size="small">{{ packageData.meta?.author || '未知作者' }}</n-tag>
                 </n-descriptions-item>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.language')">
-                  <n-tag type="warning" size="small">{{ t(`contentPackage.languages.${packageData.value?.meta?.language || 'zh-cn'}`) }}</n-tag>
+                  <n-tag type="warning" size="small">{{ t(`contentPackage.languages.${packageData.meta?.language || 'zh-cn'}`) }}</n-tag>
                 </n-descriptions-item>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.types')">
-                  <n-tag v-for="type in (packageData.value?.meta?.types || [])" :key="type" :type="getTypeTagColor(type)" size="small">
+                  <n-tag v-for="type in (packageData.meta?.types || [])" :key="type" :type="getTypeTagColor(type)" size="small">
                     {{ t(`contentPackage.packageTypes.${type}`) }}
                   </n-tag>
                 </n-descriptions-item>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.status')">
-                  <n-tag :type="(packageData.value?.meta?.status || 'draft') === 'final' ? 'success' : 'warning'" size="small">
-                    {{ packageData.value?.meta?.status || 'draft' }}
+                  <n-tag :type="(packageData.meta?.status || 'draft') === 'final' ? 'success' : 'warning'" size="small">
+                    {{ packageData.meta?.status || 'draft' }}
                   </n-tag>
                 </n-descriptions-item>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.dateUpdated')">
-                  <n-tag type="default" size="small">{{ formatDate(packageData.value?.meta?.date_updated || new Date().toISOString()) }}</n-tag>
+                  <n-tag type="default" size="small">{{ formatDate(packageData.meta?.date_updated || new Date().toISOString()) }}</n-tag>
                 </n-descriptions-item>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.generator')">
-                  <n-tag type="default" size="small">{{ packageData.value?.meta?.generator || '未知' }}</n-tag>
+                  <n-tag type="default" size="small">{{ packageData.meta?.generator || '未知' }}</n-tag>
                 </n-descriptions-item>
               </n-descriptions>
 
@@ -100,18 +100,18 @@
               <div class="description-section">
                 <h4>{{ $t('contentPackage.editor.fields.description') }}</h4>
                 <n-card>
-                  <n-text>{{ packageData.value?.meta?.description || '暂无描述' }}</n-text>
+                  <n-text>{{ packageData.meta?.description || '暂无描述' }}</n-text>
                 </n-card>
               </div>
 
               <!-- 外部链接 -->
-              <div v-if="packageData.value?.meta?.external_link" class="external-link-section">
+              <div v-if="packageData.meta?.external_link" class="external-link-section">
                 <h4>{{ $t('contentPackage.editor.fields.externalLink') }}</h4>
                 <n-button text @click="openExternalLink">
                   <template #icon>
                     <n-icon :component="OpenOutline" />
                   </template>
-                  {{ packageData.value.meta.external_link }}
+                  {{ packageData.meta.external_link }}
                 </n-button>
               </div>
             </div>
@@ -146,7 +146,7 @@
 
             <!-- 卡牌列表 -->
             <div class="cards-content">
-              <div v-if="!packageData.value?.cards || packageData.value.cards.length === 0" class="empty-cards">
+              <div v-if="!packageData.cards || packageData.cards.length === 0" class="empty-cards">
                 <n-empty :description="t('contentPackage.cards.empty.title')">
                   <template #icon>
                     <n-icon :component="DocumentTextOutline" />
@@ -158,7 +158,7 @@
               </div>
               <div v-else class="cards-grid">
                 <div
-                  v-for="(card, index) in packageData.value.cards"
+                  v-for="(card, index) in packageData.cards"
                   :key="card.filename"
                   class="card-item"
                   :class="{ 'unsupported': getCardStatus(card.filename).version !== '2.0' }"
@@ -251,10 +251,10 @@
 
                   <n-descriptions :column="2" bordered style="margin-bottom: 1.5rem;">
                     <n-descriptions-item label="内容包名称">
-                      <n-text strong>{{ packageData.value?.meta?.name || '未知内容包' }}</n-text>
+                      <n-text strong>{{ packageData.meta?.name || '未知内容包' }}</n-text>
                     </n-descriptions-item>
                     <n-descriptions-item label="卡牌数量">
-                      <n-tag type="info" size="small">{{ packageData.value?.cards?.length || 0 }} 张</n-tag>
+                      <n-tag type="info" size="small">{{ packageData.cards?.length || 0 }} 张</n-tag>
                     </n-descriptions-item>
                     <n-descriptions-item label="有图片的卡牌">
                       <n-tag type="success" size="small">{{ cardsWithAnyUrls.length }} 张</n-tag>
@@ -267,11 +267,11 @@
                   </n-descriptions>
 
                   <!-- 卡牌状态列表 -->
-                  <div v-if="packageData.value?.cards && packageData.value.cards.length > 0" class="tts-cards-status">
+                  <div v-if="packageData.cards && packageData.cards.length > 0" class="tts-cards-status">
                     <h5>卡牌导出状态</h5>
                     <n-scrollbar style="max-height: 200px;">
                       <div class="tts-cards-list">
-                        <div v-for="card in packageData.value.cards" :key="card.filename" class="tts-card-item">
+                        <div v-for="card in packageData.cards" :key="card.filename" class="tts-card-item">
                           <div class="tts-card-info">
                             <n-text>{{ card.filename }}</n-text>
                             <n-tag
