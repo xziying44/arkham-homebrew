@@ -9,6 +9,12 @@ export default {
     button: '🎲 随机',
   },
 
+  // 基础配置部分
+  basicConfig: {
+    title: 'ℹ️ 基础配置',
+    description: '此卡牌类型仅支持基础的TTS脚本配置。脚本ID用于在Tabletop Simulator中唯一标识此卡牌。',
+  },
+
   // 调查员专用配置
   investigator: {
     extraTokenLabel: '🏷️ 额外标记（每轮一次）',

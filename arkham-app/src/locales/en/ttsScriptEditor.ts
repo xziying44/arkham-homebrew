@@ -9,6 +9,12 @@ export default {
     button: '🎲 Random',
   },
 
+  // Basic Config Section
+  basicConfig: {
+    title: 'ℹ️ Basic Configuration',
+    description: 'This card type only supports basic TTS script configuration. The script ID is used to uniquely identify this card in Tabletop Simulator.',
+  },
+
   // Investigator Specific Config
   investigator: {
     extraTokenLabel: '🏷️ Extra Token (Once per round)',

@@ -1,7 +1,7 @@
 <template>
     <n-card v-if="shouldShowTtsScript" :title="$t('ttsScriptEditor.title')" size="small" class="form-card tts-card">
         <n-space vertical size="medium">
-            <!-- ID配置 -->
+            <!-- ID配置 - 所有卡牌类型都支持 -->
             <n-form-item :label="$t('ttsScriptEditor.scriptId.label')">
                 <n-space align="center">
                     <n-input v-model:value="scriptConfig.id" :placeholder="$t('ttsScriptEditor.scriptId.placeholder')"
@@ -12,9 +12,10 @@
                 </n-space>
             </n-form-item>
 
-
-            <!-- 调查员专用配置 -->
-            <template v-if="props.cardType === '调查员'">
+            <!-- 高级配置 - 仅支持的卡牌类型显示 -->
+            <template v-if="hasAdvancedConfig">
+                <!-- 调查员专用配置 -->
+                <template v-if="props.cardType === '调查员'">
                 <!-- 额外标记类型 -->
                 <n-form-item :label="$t('ttsScriptEditor.investigator.extraTokenLabel')">
                     <n-select v-model:value="investigatorConfig.extraToken" :options="computedExtraTokenOptions"
@@ -218,6 +219,14 @@
                     </div>
                 </div>
             </n-form-item>
+            </template>
+
+            <!-- 不支持高级配置的卡牌类型显示提示 -->
+            <template v-else>
+                <n-alert type="info" :title="$t('ttsScriptEditor.basicConfig.title')">
+                    {{ $t('ttsScriptEditor.basicConfig.description') }}
+                </n-alert>
+            </template>
         </n-space>
     </n-card>
 </template>
@@ -359,6 +368,33 @@ const typeMapping: Record<string, string> = {
     '地点卡': 'Location'
 };
 
+// 扩展的卡牌类型映射 - 支持所有卡牌类型
+const getCardTypeMapping = (cardType: string): string => {
+    // 先检查标准映射
+    if (typeMapping[cardType]) {
+        return typeMapping[cardType];
+    }
+
+    // 扩展映射
+    const extendedMapping: Record<string, string> = {
+        '技能卡': 'Skill',
+        '调查员背面': 'InvestigatorBack',
+        '定制卡': 'Custom',
+        '故事卡': 'Story',
+        '诡计卡': 'Treachery',
+        '敌人卡': 'Enemy',
+        '密谋卡': 'Agenda',
+        '密谋卡-大画': 'Agenda',
+        '场景卡': 'Act',
+        '场景卡-大画': 'Act',
+        '冒险参考卡': 'AgendaReference',
+        '玩家卡背': 'PlayerCardBack',
+        '遭遇卡背': 'EncounterCardBack'
+    };
+
+    return extendedMapping[cardType] || 'Asset'; // 默认为Asset
+};
+
 // 地点图标中英文映射
 const locationIconMapping: Record<string, string> = {
     '绿菱': 'GreenDiamond',
@@ -459,10 +495,16 @@ const getUsesTypeOptions = (token: string) => {
     return computedFixedTokenTypeMap.value[token] || [];
 };
 
-// 判断是否应该显示TTS脚本组件
+// 判断是否应该显示TTS脚本组件 - 现在支持所有卡牌类型
 const shouldShowTtsScript = computed(() => {
-    const supportedTypes = ['调查员', '支援卡', '事件卡', '地点卡'];
-    return supportedTypes.includes(props.cardType);
+    // 支持所有卡牌类型，包括系统预设的卡背类型
+    return true;
+});
+
+// 判断是否有高级配置（调查员、支援卡、事件卡、地点卡）
+const hasAdvancedConfig = computed(() => {
+    const advancedTypes = ['调查员', '支援卡', '事件卡', '地点卡'];
+    return advancedTypes.includes(props.cardType);
 });
 
 // 获取当前编辑的数据对象（支持双面卡牌）
@@ -482,128 +524,140 @@ const generatedGMNotes = computed(() => {
     const currentEditingData = getEditingCardData();
     const currentCardType = currentEditingData.type || cardType;
 
+    // 基础数据 - 所有卡牌类型都包含这些字段
     const baseData = {
         id: scriptConfig.value.id || generateUUID(),
-        type: typeMapping[currentCardType] || 'Asset',
-        class: classMapping[currentEditingData.class || props.cardData.class || '中立'] || 'Neutral',
-        level: currentEditingData.level || props.cardData.level || 0,
-        traits: (currentEditingData.traits || props.cardData.traits || []).join('.') + ((currentEditingData.traits || props.cardData.traits)?.length ? '.' : ''),
-        cost: currentEditingData.cost || props.cardData.cost || 0,
-        // 添加victory字段检测
+        type: typeMapping[currentCardType] || getCardTypeMapping(currentCardType),
+        // 添加其他可能的字段
+        ...(currentEditingData.name && { name: currentEditingData.name }),
+        ...(currentEditingData.traits && Array.isArray(currentEditingData.traits) && currentEditingData.traits.length > 0 && {
+            traits: currentEditingData.traits.join('.') + '.'
+        }),
+        ...(currentEditingData.class && { class: classMapping[currentEditingData.class] || currentEditingData.class }),
+        ...(currentEditingData.level != null && { level: currentEditingData.level }),
+        ...(currentEditingData.cost != null && { cost: currentEditingData.cost }),
         ...(currentEditingData.victory != null && { victory: currentEditingData.victory })
     };
 
     let gmNotesData: any;
 
-    switch (cardType) {
-        case '调查员':
-            gmNotesData = {
-                ...baseData,
-                type: 'Investigator',
-                willpowerIcons: investigatorConfig.value.willpowerIcons,
-                intellectIcons: investigatorConfig.value.intellectIcons,
-                combatIcons: investigatorConfig.value.combatIcons,
-                agilityIcons: investigatorConfig.value.agilityIcons,
-                extraToken: investigatorConfig.value.extraToken
-            };
-            break;
-
-        case '支援卡':
-        case '事件卡':
-            gmNotesData = {
-                ...baseData,
-                ...(props.cardData.slot && { slot: props.cardData.slot }),
-                ...(props.cardData.willpowerIcons && { willpowerIcons: props.cardData.willpowerIcons }),
-                ...(props.cardData.intellectIcons && { intellectIcons: props.cardData.intellectIcons }),
-                ...(props.cardData.combatIcons && { combatIcons: props.cardData.combatIcons }),
-                ...(props.cardData.agilityIcons && { agilityIcons: props.cardData.agilityIcons }),
-                ...(assetConfig.value.uses.length > 0 && { uses: assetConfig.value.uses })
-            };
-            break;
-
-        case '地点卡':
-            const locationData: any = {
-                icons: locationIconMapping[currentEditingData.location_icon] || currentEditingData.location_icon || 'Diamond',
-                connections: (currentEditingData.location_link || []).map(conn => locationIconMapping[conn] || conn).join('|'),
-                ...(currentEditingData.victory != null && { victory: currentEditingData.victory })
-            };
-
-            // 只有当地点类型为"已揭示"时才添加uses字段
-            if (currentEditingData.location_type === '已揭示') {
-                locationData.uses = [{
-                    ...(isPerInvestigator.value ? { countPerInvestigator: clueCount.value } : { count: clueCount.value }),
-                    type: 'Clue',
-                    token: 'clue'
-                }];
-            }
-
-            // 双面卡牌特殊处理：根据正背面存储到不同字段
-            if (props.isDoubleSided) {
+    // 对于有高级配置的卡牌类型，使用原来的逻辑
+    if (hasAdvancedConfig.value) {
+        switch (cardType) {
+            case '调查员':
                 gmNotesData = {
-                    id: scriptConfig.value.id || generateUUID(),
-                    type: 'Location',
-                    traits: (currentEditingData.traits || []).join('.') + (currentEditingData.traits?.length ? '.' : ''),
+                    ...baseData,
+                    type: 'Investigator',
+                    willpowerIcons: investigatorConfig.value.willpowerIcons,
+                    intellectIcons: investigatorConfig.value.intellectIcons,
+                    combatIcons: investigatorConfig.value.combatIcons,
+                    agilityIcons: investigatorConfig.value.agilityIcons,
+                    extraToken: investigatorConfig.value.extraToken
+                };
+                break;
+
+            case '支援卡':
+            case '事件卡':
+                gmNotesData = {
+                    ...baseData,
+                    ...(props.cardData.slot && { slot: props.cardData.slot }),
+                    ...(props.cardData.willpowerIcons && { willpowerIcons: props.cardData.willpowerIcons }),
+                    ...(props.cardData.intellectIcons && { intellectIcons: props.cardData.intellectIcons }),
+                    ...(props.cardData.combatIcons && { combatIcons: props.cardData.combatIcons }),
+                    ...(props.cardData.agilityIcons && { agilityIcons: props.cardData.agilityIcons }),
+                    ...(assetConfig.value.uses.length > 0 && { uses: assetConfig.value.uses })
+                };
+                break;
+
+            case '地点卡':
+                const locationData: any = {
+                    icons: locationIconMapping[currentEditingData.location_icon] || currentEditingData.location_icon || 'Diamond',
+                    connections: (currentEditingData.location_link || []).map(conn => locationIconMapping[conn] || conn).join('|'),
+                    ...(currentEditingData.victory != null && { victory: currentEditingData.victory })
                 };
 
-                // 根据当前编辑的面决定存储字段
-                if (props.currentSide === 'back') {
-                    // 背面是地点卡，直接存储到locationBack
-                    gmNotesData.locationBack = locationData;
+                // 只有当地点类型为"已揭示"时才添加uses字段
+                if (currentEditingData.location_type === '已揭示') {
+                    locationData.uses = [{
+                        ...(isPerInvestigator.value ? { countPerInvestigator: clueCount.value } : { count: clueCount.value }),
+                        type: 'Clue',
+                        token: 'clue'
+                    }];
+                }
 
-                    // 如果正面也是地点卡，需要从原始数据中获取locationFront
-                    if (props.cardData.type === '地点卡') {
-                        const frontLocationData: any = {
-                            icons: locationIconMapping[props.cardData.location_icon] || props.cardData.location_icon || 'Diamond',
-                            connections: (props.cardData.location_link || []).map(conn => locationIconMapping[conn] || conn).join('|'),
-                            ...(props.cardData.victory != null && { victory: props.cardData.victory })
-                        };
+                // 双面卡牌特殊处理：根据正背面存储到不同字段
+                if (props.isDoubleSided) {
+                    gmNotesData = {
+                        id: scriptConfig.value.id || generateUUID(),
+                        type: 'Location',
+                        traits: (currentEditingData.traits || []).join('.') + (currentEditingData.traits?.length ? '.' : ''),
+                    };
 
-                        if (props.cardData.location_type === '已揭示') {
-                            frontLocationData.uses = [{
-                                ...(isPerInvestigator.value ? { countPerInvestigator: clueCount.value } : { count: clueCount.value }),
-                                type: 'Clue',
-                                token: 'clue'
-                            }];
+                    // 根据当前编辑的面决定存储字段
+                    if (props.currentSide === 'back') {
+                        // 背面是地点卡，直接存储到locationBack
+                        gmNotesData.locationBack = locationData;
+
+                        // 如果正面也是地点卡，需要从原始数据中获取locationFront
+                        if (props.cardData.type === '地点卡') {
+                            const frontLocationData: any = {
+                                icons: locationIconMapping[props.cardData.location_icon] || props.cardData.location_icon || 'Diamond',
+                                connections: (props.cardData.location_link || []).map(conn => locationIconMapping[conn] || conn).join('|'),
+                                ...(props.cardData.victory != null && { victory: props.cardData.victory })
+                            };
+
+                            if (props.cardData.location_type === '已揭示') {
+                                frontLocationData.uses = [{
+                                    ...(isPerInvestigator.value ? { countPerInvestigator: clueCount.value } : { count: clueCount.value }),
+                                    type: 'Clue',
+                                    token: 'clue'
+                                }];
+                            }
+
+                            gmNotesData.locationFront = frontLocationData;
                         }
+                    } else {
+                        // 正面是地点卡，存储到locationFront
+                        gmNotesData.locationFront = locationData;
 
-                        gmNotesData.locationFront = frontLocationData;
+                        // 如果背面也是地点卡，需要从back数据中获取locationBack
+                        if (props.cardData.back && props.cardData.back.type === '地点卡') {
+                            const backLocationData: any = {
+                                icons: locationIconMapping[props.cardData.back.location_icon] || props.cardData.back.location_icon || 'Diamond',
+                                connections: (props.cardData.back.location_link || []).map(conn => locationIconMapping[conn] || conn).join('|'),
+                                ...(props.cardData.back.victory != null && { victory: props.cardData.back.victory })
+                            };
+
+                            if (props.cardData.back.location_type === '已揭示') {
+                                backLocationData.uses = [{
+                                    ...(isPerInvestigator.value ? { countPerInvestigator: clueCount.value } : { count: clueCount.value }),
+                                    type: 'Clue',
+                                    token: 'clue'
+                                }];
+                            }
+
+                            gmNotesData.locationBack = backLocationData;
+                        }
                     }
                 } else {
-                    // 正面是地点卡，存储到locationFront
-                    gmNotesData.locationFront = locationData;
-
-                    // 如果背面也是地点卡，需要从back数据中获取locationBack
-                    if (props.cardData.back && props.cardData.back.type === '地点卡') {
-                        const backLocationData: any = {
-                            icons: locationIconMapping[props.cardData.back.location_icon] || props.cardData.back.location_icon || 'Diamond',
-                            connections: (props.cardData.back.location_link || []).map(conn => locationIconMapping[conn] || conn).join('|'),
-                            ...(props.cardData.back.victory != null && { victory: props.cardData.back.victory })
-                        };
-
-                        if (props.cardData.back.location_type === '已揭示') {
-                            backLocationData.uses = [{
-                                ...(isPerInvestigator.value ? { countPerInvestigator: clueCount.value } : { count: clueCount.value }),
-                                type: 'Clue',
-                                token: 'clue'
-                            }];
-                        }
-
-                        gmNotesData.locationBack = backLocationData;
-                    }
+                    // 单面卡牌，使用原来的location字段
+                    gmNotesData = {
+                        id: scriptConfig.value.id || generateUUID(),
+                        type: 'Location',
+                        traits: (currentEditingData.traits || []).join('.') + (currentEditingData.traits?.length ? '.' : ''),
+                        location: locationData
+                    };
                 }
-            } else {
-                // 单面卡牌，使用原来的location字段
-                gmNotesData = {
-                    id: scriptConfig.value.id || generateUUID(),
-                    type: 'Location',
-                    traits: (currentEditingData.traits || []).join('.') + (currentEditingData.traits?.length ? '.' : ''),
-                    location: locationData
-                };
-            }
-            break;
+                break;
 
-        default:
-            return '';
+            default:
+                // 对于不支持高级配置的卡牌类型，使用基础数据
+                gmNotesData = baseData;
+                break;
+        }
+    } else {
+        // 不支持高级配置的卡牌类型，直接使用基础数据
+        gmNotesData = baseData;
     }
 
     try {
