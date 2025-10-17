@@ -90,6 +90,12 @@ class ArkhamDBConverter:
         # Modifiers
         r'\[bless\]': '🌟',
         r'\[curse\]': '🌑',
+        r'\[frost\]': '❄️',
+        r'\[seal_a\]': r'<font name=\"arkham-icons\">1</font>',
+        r'\[seal_c\]': r'<font name=\"arkham-icons\">3</font>',
+        r'\[seal_b\]': r'<font name=\"arkham-icons\">4</font>',
+        r'\[seal_d\]': r'<font name=\"arkham-icons\">5</font>',
+        r'\[seal_e\]': r'<font name=\"arkham-icons\">2</font>',
         # Other
         r'\[guardian\]': '🛡️',
         r'\[seeker\]': '🔍',
@@ -191,7 +197,8 @@ class ArkhamDBConverter:
         '05': {'name': '万象无终', 'year': 2018, 'font_text': '<font name="packicon_circle">\uE900</font>'},
         '06': {'name': '食梦者', 'year': 2019, 'font_text': '<font name="packicon_dreameaters">\uE900</font>'},
         '07': {'name': '印斯茅斯的阴谋', 'year': 2020, 'font_text': '<font name="packicon_innsmouth">A</font>'},
-        '08': {'name': '暗与地球之界', 'year': 2021, 'font_text': '<font name="packicon_edge">\uE900</font>'},
+        '08': {'name': '暗与地球之界', 'year': 2021, 'font_text': '<font name="packicon_edge">\uE900</font>',
+               "icon_campaign": '<font name="packicon_edge">\uE901</font>'},
         '09': {'name': '绯红密钥', 'year': 2022, 'font_text': '<font name="packicon_scarlet">\uE900</font>'},
         '10': {'name': '铁杉谷盛宴', 'year': 2024, 'font_text': '<font name="packicon_hemlock">\uE9B9</font>'},
         '50': {'name': '重返基础', 'year': 2017, 'font_text': '<font name="packicon_coreset">\uE90A</font>'},
@@ -669,6 +676,13 @@ class ArkhamDBConverter:
             card_data["encounter_group_number"] = ""
             card_data["illustrator"] = ""
             card_data["card_number"] = ""
+        if card_code in ["08681"] and not is_back:
+            card_data["type"] = "密谋卡-大画"
+            card_data["footer_copyright"] = ""
+            card_data["footer_icon_font"] = ""
+            card_data["encounter_group_number"] = ""
+            card_data["illustrator"] = ""
+            card_data["card_number"] = ""
         if card_code in ['04121', '04122', '04210', '04214'] and not is_back:
             card_data["threshold"] = "-"
 
@@ -718,6 +732,10 @@ class ArkhamDBConverter:
         if card_code in ['04130a'] is not is_back:
             card_data['threshold'] = '-'
 
+        if card_code in ['08679'] is not is_back:
+            card_data['attack'] = f"{card_data['attack']}<调查员>"
+            card_data['evade'] = f"{card_data['attack']}<调查员>"
+
         # 可以在这里添加更多特殊处理逻辑
         # 例如：
         # if card_code == "xxxxx" and is_back:
@@ -745,6 +763,9 @@ class ArkhamDBConverter:
         if self.data['code'][:2] in self.COPYRIGHT_DICT:
             middle_text = f"© {self.COPYRIGHT_DICT[pack_code]['year']} FFG"
             footer_icon_font = self.COPYRIGHT_DICT[pack_code]['font_text']
+            if 'icon_campaign' in self.COPYRIGHT_DICT[pack_code] and int(self.data['code'][2]) >= 5:
+                # 剧本卡
+                footer_icon_font = self.COPYRIGHT_DICT[pack_code]['icon_campaign']
         elif pack_code_three in self.COPYRIGHT_DICT_THREE:
             middle_text = f"© {self.COPYRIGHT_DICT_THREE[pack_code_three]['year']} FFG"
             footer_icon_font = self.COPYRIGHT_DICT_THREE[pack_code_three]['font_text']
@@ -1506,6 +1527,10 @@ class ArkhamDBConverter:
             card_data["victory"] = self.data.get("victory")
         if self.data.get("vengeance") is not None:
             card_data["vengeance"] = self.data.get("vengeance")
+        m = re.search(r"【(庇护\d+)】。?", card_data.get("body", ""))
+        if m:
+            card_data["victory"] = f'{m.group(1)}。'
+            card_data["body"] = re.sub(r"【庇护\d+】。?", "", card_data["body"]).strip()
         # 遭遇组
         if self.data.get("encounter_code"):
             card_data["encounter_group"] = self._convert_encounter_group_code(self.data.get("encounter_code"))

@@ -28678,11 +28678,6 @@
           "token": "clue"
         }
       ]
-    },
-    "locationBack": {
-      "victory": 2,
-      "icons": "Apostrophe",
-      "connections": "Circle"
     }
   },
   "08573": {
@@ -28700,11 +28695,6 @@
           "token": "clue"
         }
       ]
-    },
-    "locationBack": {
-      "victory": 2,
-      "icons": "Star",
-      "connections": "Circle"
     }
   },
   "08572": {
@@ -28722,11 +28712,6 @@
           "token": "clue"
         }
       ]
-    },
-    "locationBack": {
-      "victory": 2,
-      "icons": "SlantedEquals",
-      "connections": "Circle"
     }
   },
   "08571": {
@@ -28744,11 +28729,6 @@
           "token": "clue"
         }
       ]
-    },
-    "locationBack": {
-      "victory": 2,
-      "icons": "Tilde",
-      "connections": "Circle"
     }
   },
   "08570": {
@@ -28766,11 +28746,6 @@
           "token": "clue"
         }
       ]
-    },
-    "locationBack": {
-      "victory": 2,
-      "icons": "Tilde",
-      "connections": "Circle"
     }
   },
   "08569": {
@@ -28788,11 +28763,6 @@
           "token": "clue"
         }
       ]
-    },
-    "locationBack": {
-      "victory": 2,
-      "icons": "Apostrophe",
-      "connections": "Circle"
     }
   },
   "08568": {
@@ -28810,11 +28780,6 @@
           "token": "clue"
         }
       ]
-    },
-    "locationBack": {
-      "victory": 2,
-      "icons": "Tee",
-      "connections": "Circle"
     }
   },
   "08567": {
@@ -28832,11 +28797,6 @@
           "token": "clue"
         }
       ]
-    },
-    "locationBack": {
-      "victory": 2,
-      "icons": "Heart",
-      "connections": "Circle"
     }
   },
   "08566": {
@@ -28854,11 +28814,6 @@
           "token": "clue"
         }
       ]
-    },
-    "locationBack": {
-      "victory": 2,
-      "icons": "Star",
-      "connections": "Circle"
     }
   },
   "08565": {
@@ -28876,10 +28831,6 @@
           "token": "clue"
         }
       ]
-    },
-    "locationBack": {
-      "icons": "Hourglass",
-      "connections": "Circle|Apostrophe"
     }
   },
   "08564": {
@@ -28897,10 +28848,6 @@
           "token": "clue"
         }
       ]
-    },
-    "locationBack": {
-      "icons": "Clover",
-      "connections": "Circle|Tilde"
     }
   },
   "08563": {
@@ -28918,10 +28865,6 @@
           "token": "clue"
         }
       ]
-    },
-    "locationBack": {
-      "icons": "Crescent",
-      "connections": "Circle|Tee"
     }
   },
   "08562": {
@@ -28939,10 +28882,6 @@
           "token": "clue"
         }
       ]
-    },
-    "locationBack": {
-      "icons": "Square",
-      "connections": "Circle|Star"
     }
   },
   "08561": {
@@ -28960,10 +28899,6 @@
           "token": "clue"
         }
       ]
-    },
-    "locationBack": {
-      "icons": "Spade",
-      "connections": "Circle|Heart"
     }
   },
   "08560": {
@@ -28981,10 +28916,6 @@
           "token": "clue"
         }
       ]
-    },
-    "locationBack": {
-      "icons": "Diamond",
-      "connections": "Circle|SlantedEquals"
     }
   },
   "08559": {
@@ -29002,10 +28933,6 @@
           "token": "clue"
         }
       ]
-    },
-    "locationBack": {
-      "icons": "Triangle",
-      "connections": "Circle|Triangle|Crescent|Clover|Hourglass"
     }
   },
   "08558": {
@@ -29023,10 +28950,6 @@
           "token": "clue"
         }
       ]
-    },
-    "locationBack": {
-      "icons": "Triangle",
-      "connections": "Circle|Triangle|Hourglass|Square|Diamond"
     }
   },
   "08557": {
@@ -29044,10 +28967,6 @@
           "token": "clue"
         }
       ]
-    },
-    "locationBack": {
-      "icons": "Triangle",
-      "connections": "Circle|Triangle|Clover|Square|Spade"
     }
   },
   "08550": {
