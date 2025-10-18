@@ -1,5 +1,17 @@
 import argparse
+import io
 import os
+import sys
+
+# 在最开始处添加
+if hasattr(sys, '_MEIPASS'):  # 打包模式
+    # 重定向 stdout 和 stderr 到空设备或日志文件
+    sys.stdout = io.TextIOWrapper(
+        open(os.devnull, 'wb'),
+        encoding='utf-8',
+        errors='ignore'
+    )
+    sys.stderr = sys.stdout
 
 # 检测是否在 Android 平台
 IS_ANDROID = 'ANDROID_ARGUMENT' in os.environ
@@ -38,7 +50,7 @@ if __name__ == '__main__':
 
         # 创建窗口
         window = webview.create_window(
-            "阿卡姆印牌姬-V2.8.4",
+            "阿卡姆印牌姬-V2.9-Bate",
             app,
             width=1500,
             height=800,

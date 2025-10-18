@@ -599,7 +599,7 @@ class WorkspaceManager:
                 card_number = json_data.get('card_number', '')
                 footer_icon_name = self.config.get('footer_icon_dir', '')
                 footer_icon_font = json_data.get('footer_icon_font', '')
-                if footer_icon_font == '':
+                if not footer_icon_font or footer_icon_font == '':
                     footer_icon = None
                     if footer_icon_name:
                         footer_icon_path = self._get_absolute_path(footer_icon_name)
@@ -796,8 +796,8 @@ class WorkspaceManager:
             return False
 
     def save_card_image_enhanced(self, json_data: Dict[str, Any], filename: str,
-                               parent_path: Optional[str] = None, export_format: str = 'JPG',
-                               quality: int = 95, rotate_landscape: bool = False) -> List[str]:
+                                 parent_path: Optional[str] = None, export_format: str = 'JPG',
+                                 quality: int = 95, rotate_landscape: bool = False) -> List[str]:
         """
         保存卡图到文件（增强版：支持双面卡牌、格式选择、质量设置和横向图片旋转）
 
@@ -876,7 +876,7 @@ class WorkspaceManager:
             return saved_files
 
     def _save_single_image(self, image: Image.Image, filename: str, parent_path: Optional[str],
-                          export_format: str, quality: int, rotate_landscape: bool = False) -> Optional[str]:
+                           export_format: str, quality: int, rotate_landscape: bool = False) -> Optional[str]:
         """
         保存单张图片到文件
 
