@@ -45,6 +45,7 @@ class LanguageTexts:
     not_count: str = "不计入卡牌张数"
     agenda: str = "密谋"
     act: str = "场景"
+    Illus: str = "Illus."
 
 
 @dataclass
@@ -340,6 +341,8 @@ class FontManager:
             text_key = 'agenda'
         elif text_key == '场景':
             text_key = 'act'
+        elif text_key == '插画':
+            text_key = 'Illus'
         return getattr(config.texts, text_key, text_key)
 
     def get_available_languages(self):

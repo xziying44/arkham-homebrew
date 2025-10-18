@@ -58,7 +58,8 @@
       "deck_requirements": "牌库构筑需求",
       "not_count": "不计入卡牌张数",
       "agenda": "密谋",
-      "act": "场景"
+      "act": "场景",
+      "Illus": "Illus."
     }
   },
   {
@@ -120,7 +121,71 @@
       "deck_requirements": "Deckbuilding Requirements",
       "not_count": "do not count toward deck size",
       "agenda": "Agenda ",
-      "act": "Act "
+      "act": "Act ",
+      "Illus": "Illus."
+    }
+  },
+  {
+    "name": "Polish",
+    "code": "pl",
+    "fonts": {
+      "title": {
+        "name": "Arkhamic",
+        "size_percent": 0.95,
+        "vertical_offset": 9
+      },
+      "subtitle": {
+        "name": "ArnoPro-Smbd",
+        "size_percent": 0.95,
+        "vertical_offset": 4
+      },
+      "card_type": {
+        "name": "ArnoPro-Smbd",
+        "size_percent": 0.95,
+        "vertical_offset": 3
+      },
+      "trait": {
+        "name": "NimbusRomNo9L-MedIta",
+        "size_percent": 0.88,
+        "vertical_offset": 9
+      },
+      "bold": {
+        "name": "NimbusRomNo9L-Med",
+        "size_percent": 1.0,
+        "vertical_offset": 0
+      },
+      "body": {
+        "name": "ArnoPro-Regular",
+        "size_percent": 1.0,
+        "vertical_offset": 0
+      },
+      "flavor": {
+        "name": "ArnoPro-Italic",
+        "size_percent": 0.9,
+        "vertical_offset": 0
+      },
+      "collection_info": {
+        "name": "ArnoPro-Bold",
+        "size_percent": 1.0,
+        "vertical_offset": 0
+      }
+    },
+    "texts": {
+      "skill": "UMIEJĘT.",
+      "location": "LOKALIZACJA",
+      "event": "WYDARZ.",
+      "asset": "ATUT",
+      "treachery": "PODSTĘP",
+      "enemy": "WRÓG",
+      "weakness": "OSŁABIENIE",
+      "basic_weakness": "PODSTAWOWE OSŁABIENIE",
+      "deck_size": "Rozmiar talii",
+      "deck_options": "Opcje tworzenia talii",
+      "deck_requirements": "Wymogi tworzenia talii",
+      "not_count": "nie wliczane do wielkości talii",
+      "agenda": "Tajemnica ",
+      "act": "Akt ",
+      "Illus": "Ilus."
     }
   }
 ]
