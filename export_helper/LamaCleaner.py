@@ -50,20 +50,20 @@ class LamaCleaner:
             response = requests.get(self.base_url, timeout=timeout)
             # 如果状态码是 200-299 范围内，认为服务在线
             if response.status_code < 400:
-                print(f"✓ lama-cleaner 服务在线 (状态码: {response.status_code})")
+                print(f"lama-cleaner 服务在线 (状态码: {response.status_code})")
                 return True
             else:
-                print(f"✗ lama-cleaner 服务响应异常 (状态码: {response.status_code})")
+                print(f"lama-cleaner 服务响应异常 (状态码: {response.status_code})")
                 return False
 
         except requests.exceptions.ConnectionError:
-            print(f"✗ 无法连接到 lama-cleaner 服务: {self.base_url}")
+            print(f"无法连接到 lama-cleaner 服务: {self.base_url}")
             return False
         except requests.exceptions.Timeout:
-            print(f"✗ 连接 lama-cleaner 服务超时 (超过 {timeout} 秒)")
+            print(f"连接 lama-cleaner 服务超时 (超过 {timeout} 秒)")
             return False
         except Exception as e:
-            print(f"✗ 检查服务状态时发生错误: {e}")
+            print(f"检查服务状态时发生错误: {e}")
             return False
 
     def inpaint(self, image: Image.Image, mask: Image.Image, **kwargs) -> Image.Image:
