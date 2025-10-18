@@ -185,7 +185,7 @@
                         @update-tts-script="updateTtsScript" />
 
                     <!-- 牌库选项编辑器 -->
-                    <DeckOptionEditor :card-data="getEditingDataObject()" :card-type="currentSideType"
+                    <DeckOptionEditor :card-data="currentCardData" :card-type="currentSideType"
                         :is-double-sided="isDoubleSided" :current-side="currentSide"
                         @update-deck-options="updateDeckOptions" />
 
@@ -442,6 +442,14 @@ const updateIllustrationLayout = (newLayout) => {
 
 // 【新增】处理牌库选项更新的函数
 const updateDeckOptions = (options) => {
+    // 避免重复更新相同数据
+    const currentOptions = JSON.stringify(currentCardData.deck_options);
+    const newOptions = JSON.stringify(options);
+
+    if (currentOptions === newOptions) {
+        return;
+    }
+
     // 保存到根级deck_options字段，无论单面还是双面卡牌
     currentCardData.deck_options = options;
     // 触发防抖预览更新

@@ -10,6 +10,7 @@ a = Analysis(
         ('static', 'static'),
         ('prompt', 'prompt'),
         ('cardback', 'cardback'),
+        ('templates', 'templates'),
     ],
     hiddenimports=[],
     hookspath=[],

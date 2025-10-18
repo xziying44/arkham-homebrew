@@ -446,6 +446,11 @@ const removeOption = (index: number) => {
 
 // 自动保存选项（当数据变化时）
 const autoSaveOptions = () => {
+    // 避免在数据为空时触发保存
+    if (deckOptions.value.length === 0) {
+        return;
+    }
+
     // 清理空数据
     const cleanedOptions = deckOptions.value.map(option => {
         const cleaned: DeckOption = { ...option };
@@ -539,35 +544,51 @@ const refreshJsonPreview = () => {
 
 // 从卡牌数据加载选项
 const loadFromCardData = () => {
+    // deck_options 存储在根级别的 cardData 中
     const options = props.cardData.deck_options || [];
-    deckOptions.value = options.map((option: DeckOption, index: number) => ({
-        id: option.id || `option_${index + 1}`,
-        type: option.type || [],
-        faction: option.faction || [],
-        trait: option.trait || [],
-        slot: option.slot || [],
-        uses: option.uses || [],
-        text: option.text || [],
-        text_exact: option.text_exact || [],
-        level: option.level || { min: 0, max: 5 },
-        limit: option.limit || null,
-        faction_select: option.faction_select || [],
-        deck_size_select: option.deck_size_select || [],
-        not: option.not || false,
-        atleast: option.atleast || null
-    }));
+
+    if (options.length > 0) {
+        deckOptions.value = options.map((option: DeckOption, index: number) => ({
+            id: option.id || `option_${index + 1}`,
+            type: option.type || [],
+            faction: option.faction || [],
+            trait: option.trait || [],
+            slot: option.slot || [],
+            uses: option.uses || [],
+            text: option.text || [],
+            text_exact: option.text_exact || [],
+            level: option.level || { min: 0, max: 5 },
+            limit: option.limit || null,
+            faction_select: option.faction_select || [],
+            deck_size_select: option.deck_size_select || [],
+            not: option.not || false,
+            atleast: option.atleast || null
+        }));
+    } else {
+        deckOptions.value = [];
+    }
 
     editingIndex.value = -1;
     // 生成初始JSON预览
     generateJsonPreview();
 };
 
-// 监听卡牌数据变化
-watch(() => props.cardData, () => {
-    if (shouldShowEditor.value) {
-        loadFromCardData();
+// 监听卡牌数据变化 - 只在外部数据真正变化时更新
+let lastKnownDeckOptions = '';
+watch(() => props.cardData?.deck_options, (newOptions) => {
+    if (!shouldShowEditor.value) {
+        deckOptions.value = [];
+        return;
     }
-}, { immediate: true });
+
+    const newOptionsString = JSON.stringify(newOptions);
+    if (newOptionsString === lastKnownDeckOptions) {
+        return; // 数据没有变化，跳过
+    }
+
+    lastKnownDeckOptions = newOptionsString;
+    loadFromCardData();
+}, { immediate: true, deep: true });
 
 // 监听至少条件启用状态
 watch(atLeastEnabled, (enabled) => {
@@ -587,10 +608,20 @@ watch(atLeastEnabled, (enabled) => {
     autoSaveOptions();
 });
 
-// 监听选项数据变化，自动更新JSON预览和保存
+// 监听选项数据变化，自动更新JSON预览和保存 - 添加防抖
+let updateTimer: number | null = null;
 watch(deckOptions, () => {
-    generateJsonPreview();
-    autoSaveOptions();
+    // 清除之前的定时器
+    if (updateTimer !== null) {
+        clearTimeout(updateTimer);
+    }
+
+    // 延迟执行，避免频繁触发
+    updateTimer = window.setTimeout(() => {
+        generateJsonPreview();
+        autoSaveOptions();
+        updateTimer = null;
+    }, 100);
 }, { deep: true });
 
 // 初始化
