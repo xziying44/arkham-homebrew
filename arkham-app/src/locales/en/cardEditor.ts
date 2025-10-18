@@ -68,8 +68,9 @@ export default {
 
     language: "Language",
     selectLanguage: "Select Language",
-    chinese: "中文",
+    chinese: "Chinese",
     english: "English",
+    polski: "Polski",
 
     // Card info
     cardInfo: 'Card Information',

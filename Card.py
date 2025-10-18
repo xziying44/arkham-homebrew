@@ -1131,7 +1131,7 @@ class Card:
         right_text = ''
         footer_icon_copy = footer_icon
         if illustrator and illustrator != '':
-            left_text = 'Illus. ' + illustrator
+            left_text = f'{self.font_manager.get_font_text("插画")} ' + illustrator
         if footer_copyright and footer_copyright != '':
             center_text = footer_copyright
         if encounter_group_number and encounter_group_number != '':

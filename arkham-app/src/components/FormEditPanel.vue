@@ -403,6 +403,10 @@ const languageOptions = computed(() => [
     {
         label: t('cardEditor.panel.english'),
         value: 'en'
+    },
+    {
+        label: t('cardEditor.panel.polski'),
+        value: 'pl'
     }
 ]);
 

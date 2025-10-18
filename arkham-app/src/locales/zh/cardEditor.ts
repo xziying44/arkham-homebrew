@@ -66,7 +66,8 @@ export default {
     language: "语言",
     selectLanguage: "选择语言",
     chinese: "中文",
-    english: "English",
+    english: "英语",
+    polski: "波兰语",
 
     // 卡牌属性
     cardProperties: '卡牌属性',
