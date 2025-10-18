@@ -13,6 +13,7 @@ from PIL import Image
 
 from Card import Card
 from bin.deck_exporter import DeckExporter
+from bin.logger import logger_manager
 from bin.tts_card_converter import TTSCardConverter
 from bin.content_package_manager import ContentPackageManager
 
@@ -624,7 +625,7 @@ class WorkspaceManager:
 
         except Exception as e:
             # 打印异常栈
-            traceback.print_exc()
+            logger_manager.exception(e)
             print(f"生成卡图失败: {e}")
             return None
 
