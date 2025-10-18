@@ -36,6 +36,7 @@ export default {
   // 等级系统
   levelSystem: '🎚️ 等级系统',
   levelRange: '等级范围',
+  level: '等级',
   minLevel: '最低等级',
   maxLevel: '最高等级',
 
@@ -53,6 +54,7 @@ export default {
 
   // 高级规则
   advancedRules: '⚙️ 高级规则',
+  not: '否定条件',
   notEnabled: '启用否定条件',
   notDisabled: '禁用否定条件',
   atLeast: '至少条件',
@@ -60,10 +62,6 @@ export default {
   atLeastDisabled: '禁用至少条件',
   minCount: '最小数量',
   selectAtLeastTypes: '选择至少包含的卡牌类型',
-
-  // 操作按钮
-  resetAll: '重置所有',
-  saveOptions: '保存选项',
 
   // JSON预览
   finalPreview: '📋 最终配置预览',
@@ -74,8 +72,6 @@ export default {
   messages: {
     optionAdded: '牌库选项已添加',
     optionDeleted: '牌库选项已删除',
-    allReset: '所有选项已重置',
-    optionsSaved: '牌库选项已保存',
     copySuccess: 'JSON已复制到剪贴板',
     copyError: '复制失败，请手动复制',
     refreshSuccess: '预览已刷新'

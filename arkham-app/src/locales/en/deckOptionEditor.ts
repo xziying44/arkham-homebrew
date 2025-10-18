@@ -36,6 +36,7 @@ export default {
   // Level system
   levelSystem: '🎚️ Level System',
   levelRange: 'Level range',
+  level: 'Level',
   minLevel: 'Min level',
   maxLevel: 'Max level',
 
@@ -53,6 +54,7 @@ export default {
 
   // Advanced rules
   advancedRules: '⚙️ Advanced Rules',
+  not: 'Negative condition',
   notEnabled: 'Enable negative condition',
   notDisabled: 'Disable negative condition',
   atLeast: 'At Least',
@@ -60,10 +62,6 @@ export default {
   atLeastDisabled: 'Disable at least condition',
   minCount: 'Min count',
   selectAtLeastTypes: 'Select at least card types',
-
-  // Action buttons
-  resetAll: 'Reset All',
-  saveOptions: 'Save Options',
 
   // JSON preview
   finalPreview: '📋 Final Configuration Preview',
@@ -74,8 +72,6 @@ export default {
   messages: {
     optionAdded: 'Deck option added',
     optionDeleted: 'Deck option deleted',
-    allReset: 'All options reset',
-    optionsSaved: 'Deck options saved',
     copySuccess: 'JSON copied to clipboard',
     copyError: 'Copy failed, please copy manually',
     refreshSuccess: 'Preview refreshed'

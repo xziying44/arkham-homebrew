@@ -38,19 +38,28 @@
                         <div v-if="editingIndex !== index" class="option-preview">
                             <n-space size="small" wrap>
                                 <n-tag v-if="option.faction && option.faction.length > 0" size="tiny" type="primary">
-                                    {{ $t('deckOptionEditor.faction') }}: {{ option.faction.join(', ') }}
+                                    {{ $t('deckOptionEditor.faction') }}: {{ formatFactionDisplay(option.faction) }}
                                 </n-tag>
                                 <n-tag v-if="option.type && option.type.length > 0" size="tiny" type="success">
-                                    {{ $t('deckOptionEditor.type') }}: {{ option.type.join(', ') }}
+                                    {{ $t('deckOptionEditor.cardType') }}: {{ formatTypeDisplay(option.type) }}
                                 </n-tag>
                                 <n-tag v-if="option.level" size="tiny" type="warning">
-                                    {{ $t('deckOptionEditor.level') }}: {{ option.level.min }}-{{ option.level.max }}
+                                    {{ $t('deckOptionEditor.levelRange') }}: {{ option.level.min }}-{{ option.level.max }}
                                 </n-tag>
                                 <n-tag v-if="option.limit" size="tiny" type="error">
                                     {{ $t('deckOptionEditor.limit') }}: {{ option.limit }}
                                 </n-tag>
                                 <n-tag v-if="option.not" size="tiny" type="default">
                                     {{ $t('deckOptionEditor.not') }}
+                                </n-tag>
+                                <n-tag v-if="option.text && option.text.length > 0" size="tiny" type="info">
+                                    {{ $t('deckOptionEditor.textContains') }}: {{ option.text.join(', ') }}
+                                </n-tag>
+                                <n-tag v-if="option.text_exact && option.text_exact.length > 0" size="tiny" type="info">
+                                    {{ $t('deckOptionEditor.textExact') }}: {{ option.text_exact.join(', ') }}
+                                </n-tag>
+                                <n-tag v-if="option.trait && option.trait.length > 0" size="tiny" type="info">
+                                    {{ $t('deckOptionEditor.traits') }}: {{ option.trait.join(', ') }}
                                 </n-tag>
                             </n-space>
                         </div>
@@ -272,14 +281,7 @@
                 </div>
             </div>
 
-            <!-- 操作按钮 -->
-            <div class="editor-actions">
-                <n-space>
-                    <n-button @click="resetAllOptions">{{ $t('deckOptionEditor.resetAll') }}</n-button>
-                    <n-button type="primary" @click="saveOptions">{{ $t('deckOptionEditor.saveOptions') }}</n-button>
-                </n-space>
-            </div>
-        </n-space>
+          </n-space>
     </n-card>
 </template>
 
@@ -438,19 +440,12 @@ const removeOption = (index: number) => {
     } else if (editingIndex.value > index) {
         editingIndex.value--;
     }
-    message.success(t('deckOptionEditor.messages.optionDeleted'));
+    // 自动保存
+    autoSaveOptions();
 };
 
-// 重置所有选项
-const resetAllOptions = () => {
-    deckOptions.value = [];
-    editingIndex.value = -1;
-    atLeastEnabled.value = false;
-    message.info(t('deckOptionEditor.messages.allReset'));
-};
-
-// 保存选项
-const saveOptions = () => {
+// 自动保存选项（当数据变化时）
+const autoSaveOptions = () => {
     // 清理空数据
     const cleanedOptions = deckOptions.value.map(option => {
         const cleaned: DeckOption = { ...option };
@@ -471,7 +466,7 @@ const saveOptions = () => {
     });
 
     emit('update-deck-options', cleanedOptions);
-    message.success(t('deckOptionEditor.messages.optionsSaved'));
+    // 自动保存时不显示消息，避免干扰用户
 };
 
 // 生成最终的JSON预览
@@ -507,6 +502,22 @@ const generateJsonPreview = () => {
         finalJsonPreview.value = '// JSON generation failed';
         console.error('JSON预览生成失败:', error);
     }
+};
+
+// 格式化职阶显示
+const formatFactionDisplay = (factions: string[]) => {
+    return factions.map(faction => {
+        const factionOption = factionOptions.find(opt => opt.value === faction);
+        return factionOption ? factionOption.label : faction;
+    }).join(', ');
+};
+
+// 格式化类型显示
+const formatTypeDisplay = (types: string[]) => {
+    return types.map(type => {
+        const typeOption = cardTypeOptions.find(opt => opt.value === type);
+        return typeOption ? typeOption.label : type;
+    }).join(', ');
 };
 
 // 复制JSON到剪贴板
@@ -571,13 +582,15 @@ watch(atLeastEnabled, (enabled) => {
     } else if (!enabled && editingIndex.value >= 0) {
         delete deckOptions.value[editingIndex.value].atleast;
     }
-    // 更新JSON预览
+    // 更新JSON预览和自动保存
     generateJsonPreview();
+    autoSaveOptions();
 });
 
-// 监听选项数据变化，自动更新JSON预览
+// 监听选项数据变化，自动更新JSON预览和保存
 watch(deckOptions, () => {
     generateJsonPreview();
+    autoSaveOptions();
 }, { deep: true });
 
 // 初始化
@@ -671,11 +684,6 @@ if (shouldShowEditor.value) {
     border-bottom: 1px solid rgba(203, 213, 224, 0.5);
 }
 
-.editor-actions {
-    margin-top: 24px;
-    padding-top: 16px;
-    border-top: 1px solid rgba(0, 0, 0, 0.1);
-}
 
 /* 响应式设计 */
 @media (max-width: 768px) {
