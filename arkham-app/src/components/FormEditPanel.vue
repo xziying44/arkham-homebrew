@@ -184,6 +184,11 @@
                         :is-double-sided="isDoubleSided" :current-side="currentSide"
                         @update-tts-script="updateTtsScript" />
 
+                    <!-- 牌库选项编辑器 -->
+                    <DeckOptionEditor :card-data="getEditingDataObject()" :card-type="currentSideType"
+                        :is-double-sided="isDoubleSided" :current-side="currentSide"
+                        @update-deck-options="updateDeckOptions" />
+
                     <!-- 操作按钮 -->
                     <div class="form-actions">
                         <n-space>
@@ -290,6 +295,7 @@ import { useI18n } from 'vue-i18n';
 import type { TreeOption } from 'naive-ui';
 // 【新增】导入新的组件
 import IllustrationLayoutEditor from './IllustrationLayoutEditor.vue';
+import DeckOptionEditor from './DeckOptionEditor.vue';
 
 // 导入中文和英文配置
 import { cardTypeConfigs as cardTypeConfigsZh, cardTypeOptions as cardTypeOptionsZh, cardBackConfigs as cardBackConfigsZh, type FormField, type CardTypeConfig, type ShowCondition } from '@/config/cardTypeConfigs';
@@ -431,6 +437,14 @@ const lastDataSnapshot = ref<string>('');
 const updateIllustrationLayout = (newLayout) => {
     currentCardData.picture_layout = newLayout;
     // 触发防抖预览更新，以便实时看到布局变化效果
+    triggerDebouncedPreviewUpdate();
+};
+
+// 【新增】处理牌库选项更新的函数
+const updateDeckOptions = (options) => {
+    // 保存到根级deck_options字段，无论单面还是双面卡牌
+    currentCardData.deck_options = options;
+    // 触发防抖预览更新
     triggerDebouncedPreviewUpdate();
 };
 
@@ -892,8 +906,8 @@ const editStringArrayItem = (field: FormField, index: number, newValue: string) 
 const onCardTypeChange = (newType: string) => {
     const editingData = getEditingDataObject();
 
-    // 将 language 添加到需要保留的字段中
-    const hiddenFields = ['id', 'created_at', 'version', 'type', 'name', 'language'];
+    // 将 language 和 deck_options 添加到需要保留的字段中
+    const hiddenFields = ['id', 'created_at', 'version', 'type', 'name', 'language', 'deck_options'];
     const newData = {};
 
     hiddenFields.forEach(field => {
@@ -1309,8 +1323,8 @@ const exportCard = async () => {
 const resetForm = () => {
     clearDebounceTimer();
 
-    // 将 language 添加到需要保留的字段中
-    const hiddenFields = ['id', 'created_at', 'version', 'language'];
+    // 将 language 和 deck_options 添加到需要保留的字段中
+    const hiddenFields = ['id', 'created_at', 'version', 'language', 'deck_options'];
     const hiddenData = {};
     hiddenFields.forEach(field => {
         if (currentCardData[field] !== undefined) {

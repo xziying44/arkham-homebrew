@@ -10,6 +10,7 @@ import deckBuilder from './deckBuilder'
 import cardEditor from './cardEditor'
 // 新增下面这一行
 import ttsScriptEditor from './ttsScriptEditor' // 确保路径正确
+import deckOptionEditor from './deckOptionEditor'
 import languageWelcome from './languageWelcome'
 
 export default {
@@ -25,5 +26,6 @@ export default {
   cardEditor,
   // 新增下面这一行
   ttsScriptEditor,
+  deckOptionEditor,
   languageWelcome
 }
