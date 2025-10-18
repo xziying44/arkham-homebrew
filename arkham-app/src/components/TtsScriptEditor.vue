@@ -202,6 +202,33 @@
                 </n-form-item>
             </template>
 
+            <!-- 签名卡配置 -->
+            <template v-if="props.cardType === '调查员'">
+                <n-form-item :label="$t('ttsScriptEditor.investigator.signatureCardsLabel')">
+                    <n-space vertical size="medium">
+                        <!-- 已选择的签名卡列表 -->
+                        <div v-if="signatureConfig.length > 0" class="signature-list">
+                            <div v-for="(signature, index) in signatureConfig" :key="`${signature.id}-${index}`"
+                                class="signature-item">
+                                <n-space align="center">
+                                    <n-text>{{ signature.name }}</n-text>
+                                    <n-input-number v-model:value="signature.count" :min="1" :max="9" size="small"
+                                        style="width: 80px" @update:value="onSignatureCountChange" />
+                                    <n-button @click="removeSignature(index)" size="small" type="error" quaternary>
+                                        {{ $t('ttsScriptEditor.common.deleteBtn') }}
+                                    </n-button>
+                                </n-space>
+                            </div>
+                        </div>
+
+                        <!-- 添加签名卡按钮 -->
+                        <n-button @click="showSignatureSelector = true" size="small" type="primary" dashed>
+                            {{ $t('ttsScriptEditor.investigator.addSignatureCard') }}
+                        </n-button>
+                    </n-space>
+                </n-form-item>
+            </template>
+
             <!-- 预览GMNotes -->
             <n-form-item :label="$t('ttsScriptEditor.preview.label')">
                 <div class="gmnotes-preview">
@@ -229,6 +256,31 @@
             </template>
         </n-space>
     </n-card>
+
+    <!-- 签名卡选择器模态框 -->
+    <n-modal v-model:show="showSignatureSelector" style="width: 80%; max-width: 800px;" preset="card">
+        <template #header>
+            <div class="signature-selector-header">
+                <n-text>{{ $t('ttsScriptEditor.investigator.selectSignatureCards') }}</n-text>
+            </div>
+        </template>
+
+        <div class="signature-selector-content">
+            <CardFileBrowser
+                :visible="showSignatureSelector"
+                @update:visible="showSignatureSelector = $event"
+                @confirm="onSignatureCardsSelected"
+            />
+        </div>
+
+        <template #action>
+            <n-space>
+                <n-button @click="showSignatureSelector = false">
+                    {{ $t('ttsScriptEditor.common.cancel') }}
+                </n-button>
+            </n-space>
+        </template>
+    </n-modal>
 </template>
 
 <script setup lang="ts">
@@ -245,6 +297,8 @@ import {
     type PhaseButtonConfig,
     type PhaseButton
 } from '@/config/ttsScriptGenerator';
+import { WorkspaceService } from '@/api';
+import CardFileBrowser from './CardFileBrowser.vue';
 
 // --- 新增: i18n设置 ---
 const { t } = useI18n();
@@ -267,6 +321,7 @@ interface TtsScriptData {
         assetConfig: AssetConfig;
         locationConfig: LocationConfig;
         scriptConfig: ScriptConfig;
+        signatureConfig: Array<{ id: string; name: string; count: number }>;
     };
 }
 
@@ -349,6 +404,10 @@ const enablePhaseButtons = ref(false);
 const phaseButtonConfig = ref<PhaseButtonConfig>({
     buttons: [...defaultPhaseButtons]
 });
+
+// 签名卡配置
+const signatureConfig = ref<Array<{ id: string; name: string; count: number }>>([]);
+const showSignatureSelector = ref(false);
 
 // 职阶映射 (通常为内部数据，无需翻译)
 const classMapping: Record<string, string> = {
@@ -554,6 +613,20 @@ const generatedGMNotes = computed(() => {
                     agilityIcons: investigatorConfig.value.agilityIcons,
                     extraToken: investigatorConfig.value.extraToken
                 };
+
+                // 添加签名卡配置
+                if (signatureConfig.value.length > 0) {
+                    const signatures: Record<string, number>[] = [{}];
+                    for (const signature of signatureConfig.value) {
+                        // 如果同一张卡牌出现多次，累加数量
+                        if (signatures[0][signature.id]) {
+                            signatures[0][signature.id] += signature.count;
+                        } else {
+                            signatures[0][signature.id] = signature.count;
+                        }
+                    }
+                    gmNotesData.signatures = signatures;
+                }
                 break;
 
             case '支援卡':
@@ -684,7 +757,8 @@ const ttsScriptData = computed((): TtsScriptData => ({
         investigatorConfig: investigatorConfig.value,
         assetConfig: assetConfig.value,
         locationConfig: locationConfig.value,
-        scriptConfig: scriptConfig.value
+        scriptConfig: scriptConfig.value,
+        signatureConfig: signatureConfig.value
     }
 }));
 
@@ -833,6 +907,85 @@ const regenerateGMNotes = () => {
     message.success(t('ttsScriptEditor.messages.regenerateSuccess'));
 };
 
+// 签名卡相关方法
+// 签名卡选择回调
+const onSignatureCardsSelected = async (selectedItems: any[]) => {
+    console.log('📝 选中的签名卡:', selectedItems);
+
+    try {
+        // 处理选中的卡牌文件 - 每张卡牌都单独添加
+        for (const item of selectedItems) {
+            // 只有卡牌类型才处理
+            if (item.type === 'card') {
+                // 尝试从卡牌文件中读取ID，如果失败则使用文件名
+                let cardId = item.name; // 默认使用文件名
+                let cardName = item.name; // 默认使用文件名作为显示名称
+
+                try {
+                    // 读取卡牌文件内容以获取真实的ID
+                    const fileContent = await WorkspaceService.getFileContent(item.fullPath);
+                    const cardData = JSON.parse(fileContent);
+
+                    // 优先使用卡牌名称
+                    if (cardData.name) {
+                        cardName = cardData.name;
+                    }
+
+                    // 从TTS脚本的GMNotes中解析ID
+                    if (cardData.tts_script?.GMNotes) {
+                        try {
+                            const gmNotesData = JSON.parse(cardData.tts_script.GMNotes);
+                            if (gmNotesData.id) {
+                                cardId = gmNotesData.id;
+                                console.log('📖 从GMNotes解析卡牌ID成功:', { path: item.fullPath, id: cardId, name: cardName });
+                            }
+                        } catch (gmNotesError) {
+                            console.warn('解析GMNotes失败，尝试使用根级ID:', gmNotesError);
+                            // 如果GMNotes解析失败，尝试使用根级ID
+                            if (cardData.id) {
+                                cardId = cardData.id;
+                            }
+                        }
+                    } else if (cardData.id) {
+                        // 如果没有GMNotes，使用根级ID
+                        cardId = cardData.id;
+                    }
+
+                    console.log('📖 读取卡牌文件成功:', { path: item.fullPath, id: cardId, name: cardName });
+                } catch (error) {
+                    console.warn('无法读取卡牌文件内容，使用文件名:', error);
+                }
+
+                // 为每张选中的卡牌创建独立的条目
+                signatureConfig.value.push({
+                    id: cardId,
+                    name: cardName,
+                    count: 1
+                });
+            }
+        }
+
+        console.log('✅ 签名卡配置已更新:', signatureConfig.value);
+        showSignatureSelector.value = false;
+        onScriptConfigChange();
+        message.success(`已添加 ${selectedItems.filter(item => item.type === 'card').length} 张签名卡`);
+    } catch (error) {
+        console.error('❌ 处理签名卡时出错:', error);
+        message.error('处理签名卡时出错，请重试');
+    }
+};
+
+// 签名卡数量变化处理
+const onSignatureCountChange = () => {
+    onScriptConfigChange();
+};
+
+// 删除签名卡
+const removeSignature = (index: number) => {
+    signatureConfig.value.splice(index, 1);
+    onScriptConfigChange();
+};
+
 
 // --- 以下部分逻辑不变 ---
 
@@ -884,6 +1037,10 @@ const loadFromSavedConfig = (savedConfig: any) => {
     if (savedConfig?.phaseButtonConfig) {
         phaseButtonConfig.value = savedConfig.phaseButtonConfig;
         console.log('✅ 阶段按钮配置已加载:', phaseButtonConfig.value.buttons.length, '个按钮');
+    }
+    if (savedConfig?.signatureConfig) {
+        signatureConfig.value = [...savedConfig.signatureConfig];
+        console.log('✅ 签名卡配置已加载:', signatureConfig.value.length, '张签名卡');
     }
 };
 
@@ -1001,7 +1158,7 @@ if (shouldShowTtsScript.value) {
 </script>
 
 <style scoped>
-/* 样式部分保持不变 */
+/* 样式部分 */
 .tts-card {
     background: linear-gradient(135deg, rgba(74, 144, 226, 0.05) 0%, rgba(80, 200, 120, 0.05) 100%);
     border: 2px solid rgba(74, 144, 226, 0.2);
@@ -1083,6 +1240,35 @@ if (shouldShowTtsScript.value) {
 .color-option-display {
     display: flex;
     align-items: center;
+}
+
+/* 签名卡相关样式 */
+.signature-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.signature-item {
+    background: rgba(255, 255, 255, 0.7);
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.signature-item:hover {
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.signature-selector-header {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.signature-selector-content {
+    min-height: 400px;
 }
 
 @media (max-width: 768px) {

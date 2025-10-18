@@ -33,6 +33,9 @@ export default {
       colorPlaceholder: '选择颜色',
       addBtn: '➕ 添加按钮',
     },
+    signatureCardsLabel: '🃏 签名卡配置',
+    addSignatureCard: '➕ 添加签名卡',
+    selectSignatureCards: '选择签名卡',
   },
 
   // 支援卡/事件卡专用配置
@@ -76,6 +79,7 @@ export default {
   // 通用按钮
   common: {
     deleteBtn: '🗑️ 删除',
+    cancel: '取消',
   },
 
   // 下拉选项

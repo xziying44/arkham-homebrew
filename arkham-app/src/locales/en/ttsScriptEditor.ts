@@ -33,6 +33,9 @@ export default {
       colorPlaceholder: 'Select Color',
       addBtn: '➕ Add Button',
     },
+    signatureCardsLabel: '🃏 Signature Cards',
+    addSignatureCard: '➕ Add Signature Card',
+    selectSignatureCards: 'Select Signature Cards',
   },
 
   // Asset/Event Specific Config
@@ -76,6 +79,7 @@ export default {
   // Common Buttons
   common: {
     deleteBtn: '🗑️ Delete',
+    cancel: 'Cancel',
   },
 
   // Dropdown Options
