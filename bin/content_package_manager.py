@@ -132,22 +132,22 @@ class ContentPackageManager:
 
                     # 支持本地文件路径（file:///开头）
                     if not front_url or not back_url:
-                        self._add_log(f"跳过卡牌 {i+1}: 缺少图片URL（需要本地图片或云端图片）")
+                        self._add_log(f"跳过卡牌 {i + 1}: 缺少图片URL（需要本地图片或云端图片）")
                         continue
 
                     # 读取卡牌JSON信息
                     card_filename = card_info.get("filename", "")
                     if not card_filename:
-                        self._add_log(f"跳过卡牌 {i+1}: 缺少文件名")
+                        self._add_log(f"跳过卡牌 {i + 1}: 缺少文件名")
                         continue
 
                     card_data = self._read_card_json(card_filename)
                     if not card_data:
-                        self._add_log(f"跳过卡牌 {i+1}: 无法读取卡牌数据")
+                        self._add_log(f"跳过卡牌 {i + 1}: 无法读取卡牌数据")
                         continue
 
                     # 创建卡牌对象
-                    card_object = self._create_card_object(card_data, front_url, back_url, i+1)
+                    card_object = self._create_card_object(card_data, front_url, back_url, i + 1)
                     if card_object:
                         contained_objects.append(card_object)
 
@@ -156,7 +156,7 @@ class ContentPackageManager:
                         self._add_log(f"成功处理卡牌: {card_data.get('name', '未知卡牌')} ({image_type})")
 
                 except Exception as e:
-                    self._add_log(f"处理卡牌 {i+1} 时出错: {e}")
+                    self._add_log(f"处理卡牌 {i + 1} 时出错: {e}")
                     continue
 
             # 4. 将卡牌对象添加到盒子中
@@ -180,7 +180,7 @@ class ContentPackageManager:
             }
 
     def _create_card_object(self, card_data: Dict[str, Any], front_url: str, back_url: str,
-                          card_index: int) -> Optional[Dict[str, Any]]:
+                            card_index: int) -> Optional[Dict[str, Any]]:
         """
         创建卡牌对象
 
@@ -257,3 +257,17 @@ class ContentPackageManager:
         except Exception as e:
             self._add_log(f"创建卡牌对象失败: {e}")
             return None
+
+
+if __name__ == '__main__':
+    from bin.workspace_manager import WorkspaceManager
+
+    workspace_manager = WorkspaceManager(r'D:\汉化文件夹\测试工作空间v2')
+
+    content_package_manager = ContentPackageManager(
+        content_package_data=json.loads(workspace_manager.get_file_content("ContentPackage/Test Pack.pack")),
+        workspace_manager=workspace_manager,
+    )
+    content_package_manager.export_to_tts()
+
+
