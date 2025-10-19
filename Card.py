@@ -961,6 +961,8 @@ class Card:
 
         if isinstance(icon_name, Image.Image):
             im = icon_name
+            if im.mode != 'RGBA':
+                im = im.convert('RGBA')
         else:
             im = self.image_manager.get_image(f'{icon_name}')
 
@@ -1129,6 +1131,9 @@ class Card:
         center_text = ''
         encounter_text = ''
         right_text = ''
+        if footer_icon:
+            if footer_icon.mode != 'RGBA':
+                footer_icon = footer_icon.convert('RGBA')
         footer_icon_copy = footer_icon
         if illustrator and illustrator != '':
             left_text = f'{self.font_manager.get_font_text("插画")} ' + illustrator
