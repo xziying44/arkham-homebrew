@@ -522,9 +522,15 @@ const importJsonData = async () => {
         // 等待DOM更新
         await nextTick();
 
-        // 重新赋值
+        // 重新赋值 - 修复：确保deck_options等数组字段正确复制
         Object.keys(newData).forEach(key => {
-            currentCardData[key] = newData[key];
+            if (key === 'deck_options' && Array.isArray(newData[key])) {
+                // 对于数组类型，创建新的数组引用避免响应式问题
+                currentCardData[key] = [...newData[key]];
+                console.log('📚 导入deck_options数据:', currentCardData[key].length, '个选项');
+            } else {
+                currentCardData[key] = newData[key];
+            }
         });
 
         // 更新卡牌类型
@@ -1011,19 +1017,19 @@ const loadCardData = async () => {
 
         // 先清空卡牌类型，触发表单卸载
         currentCardType.value = '';
-        
+
         // 清空当前数据
         Object.keys(currentCardData).forEach(key => {
             delete currentCardData[key];
         });
-        
+
         // 等待DOM更新，确保表单完全卸载
         await nextTick();
 
         const content = await WorkspaceService.getFileContent(props.selectedFile.path);
         const cardData = JSON.parse(content || '{}');
-        
-        // 加载新数据
+
+        // 加载新数据 - 修复：确保deck_options等关键字段正确加载
         Object.assign(currentCardData, {
             type: '',
             name: '',
@@ -1033,10 +1039,27 @@ const loadCardData = async () => {
             language: 'zh', // 新增：默认语言
             ...cardData
         });
-        
+
+        // 修复：确保deck_options字段被正确处理
+        if (cardData.deck_options && Array.isArray(cardData.deck_options)) {
+            currentCardData.deck_options = [...cardData.deck_options];
+            console.log('📚 加载deck_options数据:', currentCardData.deck_options.length, '个选项');
+            // 额外确认：延迟触发再次加载，确保DeckOptionEditor能收到数据
+            setTimeout(() => {
+                console.log('📚 延迟确认deck_options数据已设置:', currentCardData.deck_options);
+            }, 50);
+        } else if (cardData.deck_options !== undefined) {
+            currentCardData.deck_options = cardData.deck_options;
+            console.log('📚 加载deck_options数据:', currentCardData.deck_options);
+        } else {
+            // 明确设置为空数组，确保DeckOptionEditor能正确处理
+            currentCardData.deck_options = [];
+            console.log('📚 设置deck_options为空数组');
+        }
+
         // 设置新的卡牌类型
         currentCardType.value = cardData.type || '';
-        
+
         // 等待TTS配置加载完成后再保存原始数据
         await nextTick();
         setTimeout(() => {
@@ -1339,6 +1362,7 @@ const resetForm = () => {
     const hiddenFields = ['id', 'created_at', 'version', 'language', 'deck_options'];
     const hiddenData = {};
     hiddenFields.forEach(field => {
+        // 修复：即使字段是undefined或空数组，也要保存字段本身，避免丢失结构
         if (currentCardData[field] !== undefined) {
             hiddenData[field] = currentCardData[field];
         }

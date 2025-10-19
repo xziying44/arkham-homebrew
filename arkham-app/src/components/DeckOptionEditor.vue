@@ -564,8 +564,10 @@ const loadFromCardData = () => {
             not: option.not || false,
             atleast: option.atleast || null
         }));
+        console.log('📚 成功加载deck_options，共', deckOptions.value.length, '个选项');
     } else {
         deckOptions.value = [];
+        console.log('📚 没有找到deck_options数据或数据为空');
     }
 
     editingIndex.value = -1;
@@ -573,22 +575,64 @@ const loadFromCardData = () => {
     generateJsonPreview();
 };
 
-// 监听卡牌数据变化 - 只在外部数据真正变化时更新
+// 监听卡牌数据变化 - 修复：改进防重复更新机制和添加文件切换检测
 let lastKnownDeckOptions = '';
+let lastUpdateTime = 0;
+let lastCardDataId = '';
 watch(() => props.cardData?.deck_options, (newOptions) => {
     if (!shouldShowEditor.value) {
         deckOptions.value = [];
         return;
     }
 
-    const newOptionsString = JSON.stringify(newOptions);
-    if (newOptionsString === lastKnownDeckOptions) {
-        return; // 数据没有变化，跳过
+    // 检测是否切换了不同的卡牌文件
+    const currentCardDataId = props.cardData?.id || props.cardData?.name || '';
+    const isDifferentCard = currentCardDataId !== lastCardDataId;
+    if (isDifferentCard) {
+        console.log('📚 检测到切换到不同卡牌，强制重新加载数据');
+        lastCardDataId = currentCardDataId;
+        lastKnownDeckOptions = ''; // 重置缓存
     }
 
+    const newOptionsString = JSON.stringify(newOptions);
+    const currentTime = Date.now();
+
+    // 修复：改进重复检测逻辑，如果是不同卡牌或数据真的变化了，则重新加载
+    if (!isDifferentCard && newOptionsString === lastKnownDeckOptions && (currentTime - lastUpdateTime) < 1000) {
+        console.log('📚 deck_options数据未变化，跳过更新');
+        return; // 数据没有变化且时间间隔很短，跳过
+    }
+
+    console.log('📚 检测到deck_options变化，更新数据:', {
+        isDifferentCard,
+        optionsCount: Array.isArray(newOptions) ? newOptions.length : 0,
+        newOptions
+    });
     lastKnownDeckOptions = newOptionsString;
+    lastUpdateTime = currentTime;
     loadFromCardData();
 }, { immediate: true, deep: true });
+
+// 添加额外的监听器来检测整个卡牌数据对象的变化（用于文件切换）
+let lastCardDataSnapshot = '';
+watch(() => props.cardData, (newCardData) => {
+    if (!shouldShowEditor.value) {
+        return;
+    }
+
+    const currentSnapshot = JSON.stringify({
+        id: newCardData?.id,
+        name: newCardData?.name,
+        deck_options: newCardData?.deck_options
+    });
+
+    if (currentSnapshot !== lastCardDataSnapshot) {
+        console.log('📚 检测到卡牌数据对象发生变化，强制刷新deck_options');
+        lastCardDataSnapshot = currentSnapshot;
+        lastKnownDeckOptions = ''; // 重置缓存，强制重新加载
+        loadFromCardData();
+    }
+}, { immediate: false, deep: true });
 
 // 监听至少条件启用状态
 watch(atLeastEnabled, (enabled) => {
