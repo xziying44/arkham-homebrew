@@ -163,6 +163,32 @@
                                 </div>
                             </div>
                             <div class="form-row">
+                                <!-- 卡牌数量 -->
+                                <div class="form-field layout-half">
+                                    <FormFieldComponent :field="{
+                                        key: 'quantity',
+                                        name: '卡牌数量',
+                                        type: 'number',
+                                        min: 1,
+                                        max: 999,
+                                        defaultValue: 1
+                                    }" :value="currentCardData.quantity || 1" :new-string-value="newStringValue"
+                                        @update:value="currentCardData.quantity = $event"
+                                        @update:new-string-value="newStringValue = $event" />
+                                </div>
+                                <!-- 卡牌版权信息 -->
+                                <div class="form-field layout-half">
+                                    <FormFieldComponent :field="{
+                                        key: 'footer_copyright',
+                                        name: '版权信息',
+                                        type: 'text',
+                                        placeholder: '例如：© 2024 Fantasy Flight Games'
+                                    }" :value="currentCardData.footer_copyright || ''" :new-string-value="newStringValue"
+                                        @update:value="currentCardData.footer_copyright = $event"
+                                        @update:new-string-value="newStringValue = $event" />
+                                </div>
+                            </div>
+                            <div class="form-row">
                                 <!-- 卡牌备注信息 -->
                                 <div class="form-field layout-full">
                                     <FormFieldComponent :field="{
@@ -924,8 +950,8 @@ const editStringArrayItem = (field: FormField, index: number, newValue: string) 
 const onCardTypeChange = (newType: string) => {
     const editingData = getEditingDataObject();
 
-    // 将 language 和 deck_options 添加到需要保留的字段中
-    const hiddenFields = ['id', 'created_at', 'version', 'type', 'name', 'language', 'deck_options'];
+    // 将 language、deck_options、quantity 和 footer_copyright 添加到需要保留的字段中
+    const hiddenFields = ['id', 'created_at', 'version', 'type', 'name', 'language', 'deck_options', 'quantity', 'footer_copyright'];
     const newData = {};
 
     hiddenFields.forEach(field => {
@@ -1358,8 +1384,8 @@ const exportCard = async () => {
 const resetForm = () => {
     clearDebounceTimer();
 
-    // 将 language 和 deck_options 添加到需要保留的字段中
-    const hiddenFields = ['id', 'created_at', 'version', 'language', 'deck_options'];
+    // 将 language、deck_options、quantity 和 footer_copyright 添加到需要保留的字段中
+    const hiddenFields = ['id', 'created_at', 'version', 'language', 'deck_options', 'quantity', 'footer_copyright'];
     const hiddenData = {};
     hiddenFields.forEach(field => {
         // 修复：即使字段是undefined或空数组，也要保存字段本身，避免丢失结构
@@ -1376,7 +1402,9 @@ const resetForm = () => {
         type: '',
         name: '',
         // 如果没有保存的语言设置，使用默认值
-        language: hiddenData.language || 'zh'
+        language: hiddenData.language || 'zh',
+        // 如果没有保存的数量设置，使用默认值1
+        quantity: hiddenData.quantity || 1
     });
 
     currentCardType.value = '';
