@@ -188,12 +188,27 @@
                       {{ card.filename }}
                     </div>
                     <div class="card-meta">
-                      <n-tag v-if="getCardStatus(card.filename).version !== '2.0'" type="error" size="tiny">
-                        不支持 (v{{ getCardStatus(card.filename).version }})
-                      </n-tag>
-                      <n-tag v-else type="success" size="tiny">
-                        v{{ getCardStatus(card.filename).version }}
-                      </n-tag>
+                      <n-space size="small">
+                        <n-tag v-if="getCardStatus(card.filename).version !== '2.0'" type="error" size="tiny">
+                          不支持 (v{{ getCardStatus(card.filename).version }})
+                        </n-tag>
+                        <n-tag v-else type="success" size="tiny">
+                          v{{ getCardStatus(card.filename).version }}
+                        </n-tag>
+                        <!-- 卡牌标签显示 -->
+                        <n-tag v-if="card.permanent" type="info" size="tiny">
+                          永久
+                        </n-tag>
+                        <n-tag v-if="card.exceptional" type="warning" size="tiny">
+                          卓越
+                        </n-tag>
+                        <n-tag v-if="card.myriad" type="success" size="tiny">
+                          无数
+                        </n-tag>
+                        <n-tag v-if="card.exile" type="error" size="tiny">
+                          可放逐
+                        </n-tag>
+                      </n-space>
                     </div>
                   </div>
                   <div class="card-actions">
@@ -203,17 +218,28 @@
                       </template>
                     </n-button>
                   </div>
-                  <!-- 上传此卡按钮 - 移到底部 -->
-                  <div class="card-upload-action">
-                    <n-button v-if="getCardStatus(card.filename).version === '2.0'" type="primary" size="small"
-                      @click="openUploadCardDialog(card)"
-                      :loading="isCardUploading && uploadingCard?.filename === card.filename">
-                      <template #icon>
-                        <n-icon :component="CloudUploadOutline" />
-                      </template>
-                      {{ hasCloudUrls(card) ? t('contentPackage.upload.button.reupload') :
-                        t('contentPackage.upload.button.uploadCard') }}
-                    </n-button>
+                  <!-- 卡牌操作按钮区域 - 移到底部 -->
+                  <div class="card-bottom-actions">
+                    <n-space vertical style="width: 100%;">
+                      <!-- 标签编辑按钮 -->
+                      <n-button type="info" size="small" @click="openEditTagsDialog(card)">
+                        <template #icon>
+                          <n-icon :component="CreateOutline" />
+                        </template>
+                        编辑标签
+                      </n-button>
+
+                      <!-- 上传按钮 -->
+                      <n-button v-if="getCardStatus(card.filename).version === '2.0'" type="primary" size="small"
+                        @click="openUploadCardDialog(card)"
+                        :loading="isCardUploading && uploadingCard?.filename === card.filename">
+                        <template #icon>
+                          <n-icon :component="CloudUploadOutline" />
+                        </template>
+                        {{ hasCloudUrls(card) ? t('contentPackage.upload.button.reupload') :
+                          t('contentPackage.upload.button.uploadCard') }}
+                      </n-button>
+                    </n-space>
                   </div>
                 </div>
               </div>
@@ -500,6 +526,84 @@
       </template>
     </n-modal>
 
+    <!-- 编辑标签对话框 -->
+    <n-modal v-model:show="showEditTagsDialog" preset="dialog" :title="`编辑卡牌标签 - ${editingCard?.filename || ''}`"
+      style="width: 500px;">
+      <div class="edit-tags-container">
+        <div class="tags-info">
+          <n-alert type="info" style="margin-bottom: 1rem;">
+            <template #icon>
+              <n-icon :component="InformationCircleOutline" />
+            </template>
+            为卡牌设置特殊属性标签，这些标签将在导出时保留
+          </n-alert>
+        </div>
+
+        <n-form ref="editTagsFormRef" :model="editTagsForm" label-placement="left" label-width="100px">
+          <n-form-item label="永久卡牌">
+            <n-switch v-model:value="editTagsForm.permanent" />
+            <template #feedback>
+              <n-text depth="3" style="font-size: 0.875rem;">
+                永久卡牌不会从游戏中移除
+              </n-text>
+            </template>
+          </n-form-item>
+
+          <n-form-item label="卓越卡牌">
+            <n-switch v-model:value="editTagsForm.exceptional" />
+            <template #feedback>
+              <n-text depth="3" style="font-size: 0.875rem;">
+                卓越卡牌通常有特殊效果和获取方式
+              </n-text>
+            </template>
+          </n-form-item>
+
+          <n-form-item label="无数卡牌">
+            <n-switch v-model:value="editTagsForm.myriad" />
+            <template #feedback>
+              <n-text depth="3" style="font-size: 0.875rem;">
+                无数卡牌可以在卡组中放入多张
+              </n-text>
+            </template>
+          </n-form-item>
+
+          <n-form-item label="可放逐">
+            <n-switch v-model:value="editTagsForm.exile" />
+            <template #feedback>
+              <n-text depth="3" style="font-size: 0.875rem;">
+                可放逐卡牌可以在特定条件下从游戏中移除
+              </n-text>
+            </template>
+          </n-form-item>
+        </n-form>
+
+        <!-- 当前标签预览 -->
+        <div class="current-tags-preview" v-if="hasAnyFormTags()">
+          <h5>当前标签预览</h5>
+          <n-space size="small">
+            <n-tag v-if="editTagsForm.permanent" type="info" size="small">
+              永久
+            </n-tag>
+            <n-tag v-if="editTagsForm.exceptional" type="warning" size="small">
+              卓越
+            </n-tag>
+            <n-tag v-if="editTagsForm.myriad" type="success" size="small">
+              无数
+            </n-tag>
+            <n-tag v-if="editTagsForm.exile" type="error" size="small">
+              可放逐
+            </n-tag>
+          </n-space>
+        </div>
+      </div>
+      <template #action>
+        <n-space>
+          <n-button @click="closeEditTagsDialog">取消</n-button>
+          <n-button type="primary" @click="saveTagsChanges">保存</n-button>
+        </n-space>
+      </template>
+    </n-modal>
+
     <!-- 批量上传配置对话框 -->
     <n-modal v-model:show="showBatchUploadConfigDialog" preset="dialog"
       :title="t('contentPackage.upload.title.configureBatchUpload')" style="width: 600px;">
@@ -539,7 +643,8 @@ import {
   TrashOutline,
   DocumentTextOutline,
   WarningOutline,
-  AddOutline
+  AddOutline,
+  InformationCircleOutline
 } from '@vicons/ionicons5';
 import type { ContentPackageFile, PackageType, ContentPackageCard } from '@/types/content-package';
 import { PACKAGE_TYPE_OPTIONS } from '@/types/content-package';
@@ -599,6 +704,17 @@ const batchUploadDialogRef = ref<any>(null);
 // 批量上传配置对话框状态
 const showBatchUploadConfigDialog = ref(false);
 const isBatchUploading = ref(false);
+
+// 标签编辑对话框状态
+const showEditTagsDialog = ref(false);
+const editingCard = ref<ContentPackageCard | null>(null);
+const editTagsFormRef = ref<any>(null);
+const editTagsForm = ref({
+  permanent: false,
+  exceptional: false,
+  myriad: false,
+  exile: false
+});
 
 // TTS导出状态
 const exportingToTts = ref(false);
@@ -979,6 +1095,17 @@ const hasLocalUrls = (card: ContentPackageCard): boolean => {
   return !!(card.front_url?.startsWith('file:///') || card.back_url?.startsWith('file:///'));
 };
 
+// 检查卡牌是否有任何标签
+const hasAnyTags = (card: ContentPackageCard): boolean => {
+  return !!(card.permanent || card.exceptional || card.myriad || card.exile);
+};
+
+// 检查表单是否有任何标签
+const hasAnyFormTags = (): boolean => {
+  return !!(editTagsForm.value.permanent || editTagsForm.value.exceptional ||
+           editTagsForm.value.myriad || editTagsForm.value.exile);
+};
+
 // 计算属性：检查是否可以导出到TTS
 const canExportToTts = computed(() => {
   return cardsWithAnyUrls.value.length > 0;
@@ -1164,6 +1291,53 @@ const handleBatchUpload = (updatedPackage: any) => {
   // 使用v2CardsWithoutCloudUrls的长度作为计数
   const uploadedCount = v2CardsWithoutCloudUrls.value.length;
   message.success(t('contentPackage.messages.batchUploadSuccess', { count: uploadedCount }));
+};
+
+// 打开标签编辑对话框
+const openEditTagsDialog = (card: ContentPackageCard) => {
+  editingCard.value = card;
+  editTagsForm.value = {
+    permanent: card.permanent || false,
+    exceptional: card.exceptional || false,
+    myriad: card.myriad || false,
+    exile: card.exile || false
+  };
+  showEditTagsDialog.value = true;
+};
+
+// 关闭标签编辑对话框
+const closeEditTagsDialog = () => {
+  showEditTagsDialog.value = false;
+  editingCard.value = null;
+  editTagsFormRef.value?.restoreValidation();
+};
+
+// 保存标签更改
+const saveTagsChanges = () => {
+  if (!editingCard.value) return;
+
+  // 更新包数据中的卡牌标签
+  const updatedPackage = { ...packageData.value };
+  const cardIndex = updatedPackage.cards?.findIndex(c => c.filename === editingCard.value!.filename);
+
+  if (cardIndex !== undefined && cardIndex >= 0) {
+    updatedPackage.cards![cardIndex] = {
+      ...updatedPackage.cards![cardIndex],
+      permanent: editTagsForm.value.permanent,
+      exceptional: editTagsForm.value.exceptional,
+      myriad: editTagsForm.value.myriad,
+      exile: editTagsForm.value.exile
+    };
+
+    // 更新包数据
+    emit('update:package', updatedPackage);
+
+    // 直接触发保存到文件
+    emit('save');
+
+    closeEditTagsDialog();
+    message.success('卡牌标签保存成功');
+  }
 };
 
 // 开始批量上传
@@ -1944,15 +2118,34 @@ watch(() => packageData.value, async (newPackage, oldPackage) => {
   opacity: 1;
 }
 
-.card-upload-action {
-  margin-top: 0.75rem;
+.card-bottom-actions {
+  margin-top: 0.5rem;
   display: flex;
   justify-content: center;
 }
 
-.card-upload-action .n-button,
-.card-upload-action .n-tag {
+.card-bottom-actions .n-space {
+  gap: 0.5rem !important;
+}
+
+.card-bottom-actions .n-button {
   width: 100%;
+  height: 28px;
+  padding: 0 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 400;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.card-bottom-actions .n-button:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* 为编辑按钮添加轻微的hover效果 */
+.card-bottom-actions .n-button--info-type:hover {
+  background-color: #3090ff;
+  border-color: #3090ff;
 }
 
 .export-panel {
@@ -2259,6 +2452,62 @@ watch(() => packageData.value, async (newPackage, oldPackage) => {
   padding: 0;
 }
 
+/* 卡牌元数据标签样式 */
+.card-meta .n-tag {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+}
+
+/* 标签编辑对话框样式 */
+.edit-tags-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.tags-info h5 {
+  margin: 0 0 0.5rem 0;
+  color: #2c3e50;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.current-tags-preview {
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.current-tags-preview h5 {
+  margin: 0 0 0.75rem 0;
+  color: #2c3e50;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+/* 改进卡牌操作按钮布局 */
+.card-actions {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  display: flex;
+  gap: 0.25rem;
+}
+
+.card-item:hover .card-actions {
+  opacity: 1;
+}
+
+.card-actions .n-button {
+  width: 24px;
+  height: 24px;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .editor-header {
@@ -2292,6 +2541,21 @@ watch(() => packageData.value, async (newPackage, oldPackage) => {
   .batch-card-preview {
     width: 100%;
     height: 120px;
+  }
+
+  .card-meta .n-tag {
+    font-size: 0.7rem;
+    padding: 0.1rem 0.25rem;
+  }
+
+  .card-bottom-actions .n-button {
+    height: 26px;
+    padding: 0 0.6rem;
+    font-size: 0.75rem;
+  }
+
+  .card-bottom-actions .n-space {
+    gap: 0.4rem !important;
   }
 }
 </style>
