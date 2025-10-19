@@ -397,15 +397,15 @@ watch(currentSide, () => {
 // 新增：语言选项
 const languageOptions = computed(() => [
     {
-        label: t('cardEditor.panel.chinese'),
+        label: "中文",
         value: 'zh'
     },
     {
-        label: t('cardEditor.panel.english'),
+        label: "English",
         value: 'en'
     },
     {
-        label: t('cardEditor.panel.polski'),
+        label: "Polski",
         value: 'pl'
     }
 ]);
