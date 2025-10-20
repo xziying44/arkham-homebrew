@@ -31,6 +31,7 @@ THUMBNAIL_REGIONS = {
 
 # 中文卡牌类型到英文类型的映射
 CARD_TYPE_MAP = {
+    "调查员": "investigator",
     "调查员卡": "investigator",
     "调查员卡背": "investigator_back",
     "调查员背面": "investigator_back",
