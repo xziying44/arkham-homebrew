@@ -452,7 +452,8 @@ class ContentPackageManager:
                 "packs": [{
                     "code": pack_code,
                     "name": meta_info.get("name", "Unknown"),
-                    "date_release": datetime.now().strftime('%Y-%m-%d')
+                    "date_release": datetime.now().strftime('%Y-%m-%d'),
+                    "icon_url": meta_info.get("icon_url", ""),
                 }]
             }
         }

@@ -148,6 +148,8 @@ const imgbbConfig = ref({
   imgbb_expiration: 0
 });
 
+const footer_icon = ref('')
+
 // 计算当前配置
 const currentConfig = computed(() => {
   return selectedHost.value === 'cloudinary' ? cloudinaryConfig.value : imgbbConfig.value;
@@ -199,6 +201,10 @@ const loadConfig = async () => {
       selectedHost.value = 'cloudinary';
     } else if (config.imgbb_api_key) {
       selectedHost.value = 'imgbb';
+    }
+
+    if (config.footer_icon_dir) {
+      footer_icon.value = config.footer_icon_dir
     }
   } catch (error) {
     console.error('加载配置失败:', error);
@@ -358,6 +364,19 @@ const uploadBanner = async () => {
     // 上传图片
     const imageUrl = await uploadSingleImage(savedFiles.front_url, 'banner');
     const imageBoxUrl = await uploadSingleImage(savedFiles.back_url, 'banner_box');
+    let footerIconUrl = null
+
+    // 上传遭遇组图标
+    try {
+      if (footer_icon.value !== '') {
+        footerIconUrl = await uploadSingleImage(footer_icon.value, 'footer_icon');
+
+      }
+    } catch (error) {
+      // 捕获并处理错误
+      console.error(error);
+    }
+
 
     uploadProgress.value = 80;
     uploadStatus.value = '更新内容包数据...';
@@ -368,7 +387,8 @@ const uploadBanner = async () => {
       meta: {
         ...props.config.meta,
         banner_url: imageUrl,
-        banner_box_url: imageBoxUrl
+        banner_box_url: imageBoxUrl,
+        icon_url: footerIconUrl
       }
     };
 
