@@ -113,6 +113,9 @@ class Card2ArkhamDBConverter:
         if card_type != "调查员":
             card_data = self._add_signature_restrictions(card_data)
 
+        flags = self._get_special_flags()
+        card_data = card_data | flags
+
         return self._validate_card_data(card_data)
 
     # ==================== 基础辅助方法 ====================
@@ -243,8 +246,10 @@ class Card2ArkhamDBConverter:
         """获取图片URL"""
         urls = {}
 
-        front_url = self.card_meta.get("front_url", "")
-        back_url = self.card_meta.get("back_url", "")
+        front_url = self.card_meta.get("original_front_url", self.card_meta.get("front_url", ""))
+        back_url = self.card_meta.get("original_back_url", self.card_meta.get("back_url", ""))
+        front_thumbnail_url = self.card_meta.get("front_thumbnail_url", "")
+        back_thumbnail_url = self.card_meta.get("back_thumbnail_url", "")
 
         # 只设置非空且不是默认卡背的URL
         if front_url and not self._is_default_card_back(front_url):
@@ -253,11 +258,20 @@ class Card2ArkhamDBConverter:
         if back_url and not self._is_default_card_back(back_url):
             urls["back_image_url"] = back_url
 
+        if front_thumbnail_url:
+            urls["thumbnail_url"] = front_thumbnail_url
+
+        if back_thumbnail_url:
+            urls["back_thumbnail_url"] = back_thumbnail_url
+
         return urls
 
     def _is_default_card_back(self, url: str) -> bool:
         """检查是否为默认卡背"""
-        return url.endswith("PlayerCardBack/") or url.endswith("EncounterCardBack/")
+        return url.endswith(
+            "https://steamusercontent-a.akamaihd.net/ugc/2342503777940352139/A2D42E7E5C43D045D72CE5CFC907E4F886C8C690/") or \
+            url.endswith(
+                "https://steamusercontent-a.akamaihd.net/ugc/2342503777940351785/F64D8EFB75A9E15446D24343DA0A6EEF5B3E43DB/")
 
     def _parse_skill_icons(self) -> Dict[str, int]:
         """解析技能图标"""

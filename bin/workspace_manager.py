@@ -877,6 +877,40 @@ class WorkspaceManager:
                         if not result[f'original_{side}_url']:
                             result[f'original_{side}_url'] = front_path
                 print(f"双面卡牌保存完成，共保存 {len(saved_files)} 个文件")
+            elif json_data.get('type', '') == '封面制作':
+                # 封面制作
+                front_card_json = {
+                    'type': '特殊图片',
+                    'picture_base64': json_data.get('picture_base64')
+                }
+                back_card_json = {
+                    'type': '特殊图片',
+                    'craft_type': '盒子模型图片',
+                    'picture_base64': json_data.get('picture_base64')
+                }
+                front_card = self.generate_card_image(front_card_json)
+                back_card = self.generate_card_image(back_card_json)
+                if front_card is None or front_card.image is None:
+                    print("生成卡图失败")
+                    return result
+                # 保存
+                final_filename = f"{filename}.{export_format.lower()}"
+                save_path = self._save_single_image(
+                    front_card.image, final_filename, parent_path, export_format, quality, False
+                )
+                if save_path:
+                    result['front_url'] = save_path
+                    saved_files.append(save_path)
+                if front_card is None or front_card.image is None:
+                    return result
+                final_filename = f"{filename}_box.{export_format.lower()}"
+                save_path = self._save_single_image(
+                    back_card.image, final_filename, parent_path, export_format, quality, False
+                )
+                if save_path:
+                    result['back_url'] = save_path
+                    saved_files.append(save_path)
+
             else:
                 # 单面卡牌处理
                 print("检测到单面卡牌，开始保存")

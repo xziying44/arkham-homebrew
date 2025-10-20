@@ -23,36 +23,18 @@
       <h4>Cloudinary 配置</h4>
       <n-form :model="cloudinaryConfig" label-placement="top">
         <n-form-item label="Cloud Name" required>
-          <n-input
-            v-model:value="cloudinaryConfig.cloud_name"
-            placeholder="your-cloud-name"
-            clearable
-          />
+          <n-input v-model:value="cloudinaryConfig.cloud_name" placeholder="your-cloud-name" clearable />
         </n-form-item>
         <n-form-item label="API Key" required>
-          <n-input
-            v-model:value="cloudinaryConfig.api_key"
-            placeholder="your-api-key"
-            type="password"
-            show-password-on="click"
-            clearable
-          />
+          <n-input v-model:value="cloudinaryConfig.api_key" placeholder="your-api-key" type="password"
+            show-password-on="click" clearable />
         </n-form-item>
         <n-form-item label="API Secret" required>
-          <n-input
-            v-model:value="cloudinaryConfig.api_secret"
-            placeholder="your-api-secret"
-            type="password"
-            show-password-on="click"
-            clearable
-          />
+          <n-input v-model:value="cloudinaryConfig.api_secret" placeholder="your-api-secret" type="password"
+            show-password-on="click" clearable />
         </n-form-item>
         <n-form-item label="文件夹">
-          <n-input
-            v-model:value="cloudinaryConfig.folder"
-            placeholder="文件夹名称（可选）"
-            clearable
-          />
+          <n-input v-model:value="cloudinaryConfig.folder" placeholder="文件夹名称（可选）" clearable />
         </n-form-item>
       </n-form>
     </div>
@@ -62,22 +44,12 @@
       <h4>ImgBB 配置</h4>
       <n-form :model="imgbbConfig" label-placement="top">
         <n-form-item label="API Key" required>
-          <n-input
-            v-model:value="imgbbConfig.imgbb_api_key"
-            placeholder="your-imgbb-api-key"
-            type="password"
-            show-password-on="click"
-            clearable
-          />
+          <n-input v-model:value="imgbbConfig.imgbb_api_key" placeholder="your-imgbb-api-key" type="password"
+            show-password-on="click" clearable />
         </n-form-item>
         <n-form-item label="过期时间（小时）">
-          <n-input-number
-            v-model:value="imgbbConfig.imgbb_expiration"
-            :min="0"
-            :max="30 * 24"
-            placeholder="0（永不过期）"
-            clearable
-          />
+          <n-input-number v-model:value="imgbbConfig.imgbb_expiration" :min="0" :max="30 * 24" placeholder="0（永不过期）"
+            clearable />
         </n-form-item>
       </n-form>
     </div>
@@ -91,20 +63,10 @@
       </n-radio-group>
       <div v-if="exportFormat === 'JPG'" class="quality-setting">
         <n-form-item label="图片质量">
-          <n-slider
-            v-model:value="exportQuality"
-            :min="1"
-            :max="100"
-            :marks="{ 1: '1%', 50: '50%', 95: '95%', 100: '100%' }"
-            :tooltip="false"
-          />
-          <n-input-number
-            v-model:value="exportQuality"
-            :min="1"
-            :max="100"
-            size="small"
-            style="width: 100px; margin-left: 12px;"
-          />
+          <n-slider v-model:value="exportQuality" :min="1" :max="100"
+            :marks="{ 1: '1%', 50: '50%', 95: '95%', 100: '100%' }" :tooltip="false" />
+          <n-input-number v-model:value="exportQuality" :min="1" :max="100" size="small"
+            style="width: 100px; margin-left: 12px;" />
         </n-form-item>
       </div>
     </div>
@@ -112,11 +74,8 @@
     <!-- 上传进度 -->
     <div v-if="isUploading" class="upload-section">
       <h4>上传进度</h4>
-      <n-progress
-        :percentage="uploadProgress"
-        :status="uploadProgress === 100 ? 'success' : 'default'"
-        :indicator-placement="'inside'"
-      />
+      <n-progress :percentage="uploadProgress" :status="uploadProgress === 100 ? 'success' : 'default'"
+        :indicator-placement="'inside'" />
       <div class="upload-status">
         <n-text depth="3">{{ uploadStatus }}</n-text>
       </div>
@@ -283,15 +242,15 @@ const validateConfig = (): boolean => {
     return true; // 本地模式不需要验证配置
   } else if (selectedHost.value === 'cloudinary') {
     return !!(cloudinaryConfig.value.cloud_name &&
-             cloudinaryConfig.value.api_key &&
-             cloudinaryConfig.value.api_secret);
+      cloudinaryConfig.value.api_key &&
+      cloudinaryConfig.value.api_secret);
   } else {
     return !!imgbbConfig.value.imgbb_api_key;
   }
 };
 
 // 导出图片到工作目录
-const exportImageToWorkspace = async (cardData: any, filename: string): Promise<string[]> => {
+const exportImageToWorkspace = async (cardData: any, filename: string): Promise<any> => {
   try {
     addLog(`开始导出图片: ${filename}`, 'info');
 
@@ -307,8 +266,9 @@ const exportImageToWorkspace = async (cardData: any, filename: string): Promise<
       rotateLandscape: true  // 内容包导出时自动旋转横向图片
     });
 
-    addLog(`图片导出成功: ${savedFiles.join(', ')}`, 'info');
-    return savedFiles;
+    addLog(`图片导出成功: ${savedFiles.saved_files.front_url}`, 'info');
+    addLog(`图片导出成功: ${savedFiles.saved_files.back_url}`, 'info');
+    return savedFiles.saved_files;
   } catch (error) {
     addLog(`图片导出失败: ${error.message}`, 'error');
     throw error;
@@ -385,8 +345,7 @@ const uploadBanner = async () => {
 
     // 创建临时卡牌数据用于生成图片
     const tempCardData = {
-      type: '内容包封面',
-      name: 'Banner',
+      type: '封面制作',
       picture_base64: props.config.banner_base64
     };
 
@@ -397,7 +356,8 @@ const uploadBanner = async () => {
     uploadStatus.value = '准备上传到云端...';
 
     // 上传图片
-    const imageUrl = await uploadSingleImage(savedFiles[0], 'banner');
+    const imageUrl = await uploadSingleImage(savedFiles.front_url, 'banner');
+    const imageBoxUrl = await uploadSingleImage(savedFiles.back_url, 'banner_box');
 
     uploadProgress.value = 80;
     uploadStatus.value = '更新内容包数据...';
@@ -407,7 +367,8 @@ const uploadBanner = async () => {
       ...props.config,
       meta: {
         ...props.config.meta,
-        banner_url: imageUrl
+        banner_url: imageUrl,
+        banner_box_url: imageBoxUrl
       }
     };
 
@@ -451,7 +412,6 @@ const uploadCard = async () => {
     const parsedCard = JSON.parse(cardData);
     uploadProgress.value = 40;
     uploadStatus.value = '准备导出图片...';
-    
     // 导出图片到工作目录 - 使用增强版API
     const result = await CardService.saveCardEnhanced(parsedCard, props.card.filename.replace('.card', ''), {
       parentPath: '.cards',
@@ -461,9 +421,23 @@ const uploadCard = async () => {
     });
     // 获取返回的文件路径对象
     const savedFiles = result.saved_files || {};
-    
+
     uploadProgress.value = 60;
     uploadStatus.value = '准备上传到云端...';
+    // 检查背面卡牌类型
+    const backCardType = parsedCard.back?.type || '';
+    const filename = props.card.filename.toLowerCase();
+    let useFixedBackUrl = false;
+    let fixedBackUrl = '';
+    if (backCardType === '玩家卡背' || filename.includes('player_cardback') || filename.includes('玩家卡背')) {
+      useFixedBackUrl = true;
+      fixedBackUrl = "https://steamusercontent-a.akamaihd.net/ugc/2342503777940352139/A2D42E7E5C43D045D72CE5CFC907E4F886C8C690/";
+      addLog(`检测到玩家卡背，使用预定义URL`, 'info');
+    } else if (backCardType === '遭遇卡背' || filename.includes('encounter_cardback') || filename.includes('遭遇卡背')) {
+      useFixedBackUrl = true;
+      fixedBackUrl = "https://steamusercontent-a.akamaihd.net/ugc/2342503777940351785/F64D8EFB75A9E15446D24343DA0A6EEF5B3E43DB/";
+      addLog(`检测到遭遇卡背，使用预定义URL`, 'info');
+    }
     // 收集需要上传的文件，并去重
     const filesToUpload = new Map(); // 使用Map去重，key为文件路径，value为在线文件名
     const cleanCardName = props.card.filename.replace(/.*[\/\\]/, '').replace('.card', '');
@@ -471,41 +445,50 @@ const uploadCard = async () => {
     if (savedFiles.front_url) {
       filesToUpload.set(savedFiles.front_url, `${cleanCardName}_front`);
     }
-    
+
     // 正面原始图片（如果与正面图片不同）
     if (savedFiles.original_front_url && savedFiles.original_front_url !== savedFiles.front_url) {
       filesToUpload.set(savedFiles.original_front_url, `${cleanCardName}_front_original`);
     }
-    
+
     // 正面缩略图
     if (savedFiles.front_thumbnail_url) {
       filesToUpload.set(savedFiles.front_thumbnail_url, `${cleanCardName}_front_thumbnail`);
     }
-    // 背面图片
-    if (savedFiles.back_url) {
-      filesToUpload.set(savedFiles.back_url, `${cleanCardName}_back`);
-    }
-    
-    // 背面原始图片（如果与背面图片不同）
-    if (savedFiles.original_back_url && savedFiles.original_back_url !== savedFiles.back_url) {
-      filesToUpload.set(savedFiles.original_back_url, `${cleanCardName}_back_original`);
-    }
-    
-    // 背面缩略图
-    if (savedFiles.back_thumbnail_url) {
-      filesToUpload.set(savedFiles.back_thumbnail_url, `${cleanCardName}_back_thumbnail`);
+    // 背面图片 - 只有非固定卡背才上传
+    if (!useFixedBackUrl) {
+      if (savedFiles.back_url) {
+        filesToUpload.set(savedFiles.back_url, `${cleanCardName}_back`);
+      }
+
+      // 背面原始图片（如果与背面图片不同）
+      if (savedFiles.original_back_url && savedFiles.original_back_url !== savedFiles.back_url) {
+        filesToUpload.set(savedFiles.original_back_url, `${cleanCardName}_back_original`);
+      }
+
+      // 背面缩略图
+      if (savedFiles.back_thumbnail_url) {
+        filesToUpload.set(savedFiles.back_thumbnail_url, `${cleanCardName}_back_thumbnail`);
+      }
     }
     // 上传所有文件
     const uploadedUrls: Record<string, string> = {};
+
+    // 如果使用固定卡背URL，直接设置
+    if (useFixedBackUrl) {
+      uploadedUrls.back_url = fixedBackUrl;
+      uploadedUrls.original_back_url = fixedBackUrl;
+      uploadedUrls.back_thumbnail_url = fixedBackUrl;
+    }
     let uploadedCount = 0;
     const totalFiles = filesToUpload.size;
     for (const [filePath, onlineName] of filesToUpload.entries()) {
       try {
         uploadedCount++;
         uploadStatus.value = `上传图片 ${uploadedCount}/${totalFiles}...`;
-        
+
         const url = await uploadSingleImage(filePath, onlineName);
-        
+
         // 根据在线文件名存储URL
         if (onlineName.includes('_front_original')) {
           uploadedUrls.original_front_url = url;
@@ -520,7 +503,7 @@ const uploadCard = async () => {
         } else if (onlineName.includes('_back')) {
           uploadedUrls.back_url = url;
         }
-        
+
         addLog(`图片上传成功: ${onlineName}`, 'info');
       } catch (error) {
         addLog(`图片上传失败: ${onlineName} - ${error.message}`, 'error');
@@ -604,6 +587,20 @@ const batchUploadConfig = async () => {
         });
         // 获取返回的文件路径对象
         const savedFiles = result.saved_files || {};
+        // 检查背面卡牌类型
+        const backCardType = parsedCard.back?.type || '';
+        const filename = card.filename.toLowerCase();
+        let useFixedBackUrl = false;
+        let fixedBackUrl = '';
+        if (backCardType === '玩家卡背' || filename.includes('player_cardback') || filename.includes('玩家卡背')) {
+          useFixedBackUrl = true;
+          fixedBackUrl = "https://steamusercontent-a.akamaihd.net/ugc/2342503777940352139/A2D42E7E5C43D045D72CE5CFC907E4F886C8C690/";
+          addLog(`${card.filename}: 检测到玩家卡背，使用预定义URL`, 'info');
+        } else if (backCardType === '遭遇卡背' || filename.includes('encounter_cardback') || filename.includes('遭遇卡背')) {
+          useFixedBackUrl = true;
+          fixedBackUrl = "https://steamusercontent-a.akamaihd.net/ugc/2342503777940351785/F64D8EFB75A9E15446D24343DA0A6EEF5B3E43DB/";
+          addLog(`${card.filename}: 检测到遭遇卡背，使用预定义URL`, 'info');
+        }
         // 收集需要上传的文件，并去重
         const filesToUpload = new Map();
         const cleanCardName = card.filename.replace(/.*[\/\\]/, '').replace('.card', '');
@@ -611,36 +608,45 @@ const batchUploadConfig = async () => {
         if (savedFiles.front_url) {
           filesToUpload.set(savedFiles.front_url, `${cleanCardName}_front`);
         }
-        
+
         // 正面原始图片（如果与正面图片不同）
         if (savedFiles.original_front_url && savedFiles.original_front_url !== savedFiles.front_url) {
           filesToUpload.set(savedFiles.original_front_url, `${cleanCardName}_front_original`);
         }
-        
+
         // 正面缩略图
         if (savedFiles.front_thumbnail_url) {
           filesToUpload.set(savedFiles.front_thumbnail_url, `${cleanCardName}_front_thumbnail`);
         }
-        // 背面图片
-        if (savedFiles.back_url) {
-          filesToUpload.set(savedFiles.back_url, `${cleanCardName}_back`);
-        }
-        
-        // 背面原始图片（如果与背面图片不同）
-        if (savedFiles.original_back_url && savedFiles.original_back_url !== savedFiles.back_url) {
-          filesToUpload.set(savedFiles.original_back_url, `${cleanCardName}_back_original`);
-        }
-        
-        // 背面缩略图
-        if (savedFiles.back_thumbnail_url) {
-          filesToUpload.set(savedFiles.back_thumbnail_url, `${cleanCardName}_back_thumbnail`);
+        // 背面图片 - 只有非固定卡背才上传
+        if (!useFixedBackUrl) {
+          if (savedFiles.back_url) {
+            filesToUpload.set(savedFiles.back_url, `${cleanCardName}_back`);
+          }
+
+          // 背面原始图片（如果与背面图片不同）
+          if (savedFiles.original_back_url && savedFiles.original_back_url !== savedFiles.back_url) {
+            filesToUpload.set(savedFiles.original_back_url, `${cleanCardName}_back_original`);
+          }
+
+          // 背面缩略图
+          if (savedFiles.back_thumbnail_url) {
+            filesToUpload.set(savedFiles.back_thumbnail_url, `${cleanCardName}_back_thumbnail`);
+          }
         }
         // 上传所有文件
         const uploadedUrls: Record<string, string> = {};
+
+        // 如果使用固定卡背URL，直接设置
+        if (useFixedBackUrl) {
+          uploadedUrls.back_url = fixedBackUrl;
+          uploadedUrls.original_back_url = fixedBackUrl;
+          uploadedUrls.back_thumbnail_url = fixedBackUrl;
+        }
         for (const [filePath, onlineName] of filesToUpload.entries()) {
           try {
             let url: string;
-            
+
             // 如果是本地模式，使用本地URL
             if (selectedHostType === 'local') {
               const workspacePath = await getWorkspaceAbsolutePath();

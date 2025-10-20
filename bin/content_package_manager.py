@@ -116,6 +116,10 @@ class ContentPackageManager:
             box_name = meta_info.get("name", "未命名内容包")
             box_description = meta_info.get("description", "")
 
+            # 设置盒子封面
+            if meta_info.get('banner_box_url', ''):
+                box_template["ObjectStates"][0]["CustomMesh"]["DiffuseURL"] = meta_info.get('banner_box_url', '')
+
             # 设置盒子昵称和描述
             box_template["ObjectStates"][0]["Nickname"] = box_name
             box_template["ObjectStates"][0]["Description"] = f"{box_description} - 由阿卡姆印牌姬生成"

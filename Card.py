@@ -99,6 +99,7 @@ class Card:
         if image:
             self.image = image
             self.width, self.height = image.size
+            self.card_type = "纯图片"
             return
         self.width = width
         self.height = height
@@ -1123,6 +1124,8 @@ class Card:
         :param footer_icon_font:
         :return:
         """
+        if self.card_type == "纯图片":
+            return
         if self.card_type in ['密谋卡', '场景卡', '调查员卡'] and self.is_back:
             return
         if self.card_type == '升级卡':
