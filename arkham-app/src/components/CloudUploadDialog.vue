@@ -2,53 +2,53 @@
   <div class="cloud-upload-dialog">
     <!-- 图床选择 -->
     <div class="upload-section">
-      <h4>选择图床服务</h4>
+      <h4>{{ $t('contentPackage.upload.dialog.selectImageHost') }}</h4>
       <n-radio-group v-model:value="selectedHost" size="medium">
         <n-radio-button value="cloudinary">Cloudinary</n-radio-button>
         <n-radio-button value="imgbb">ImgBB</n-radio-button>
-        <n-radio-button value="local">本地测试</n-radio-button>
+        <n-radio-button value="local">{{ $t('contentPackage.upload.dialog.localMode') }}</n-radio-button>
       </n-radio-group>
       <div v-if="selectedHost === 'local'" class="local-info">
         <n-alert type="info" size="small">
           <template #icon>
             <n-icon :component="InformationCircleOutline" />
           </template>
-          本地测试模式：只导出图片到本地，不上传到云端，使用 file:/// 格式URL
+          {{ $t('contentPackage.upload.dialog.localModeDescription') }}
         </n-alert>
       </div>
     </div>
 
     <!-- Cloudinary 配置 -->
     <div v-if="selectedHost === 'cloudinary'" class="upload-section">
-      <h4>Cloudinary 配置</h4>
+      <h4>{{ $t('contentPackage.upload.dialog.cloudinaryConfig') }}</h4>
       <n-form :model="cloudinaryConfig" label-placement="top">
-        <n-form-item label="Cloud Name" required>
+        <n-form-item :label="$t('contentPackage.upload.dialog.cloudName')" required>
           <n-input v-model:value="cloudinaryConfig.cloud_name" placeholder="your-cloud-name" clearable />
         </n-form-item>
-        <n-form-item label="API Key" required>
+        <n-form-item :label="$t('contentPackage.upload.dialog.apiKey')" required>
           <n-input v-model:value="cloudinaryConfig.api_key" placeholder="your-api-key" type="password"
             show-password-on="click" clearable />
         </n-form-item>
-        <n-form-item label="API Secret" required>
+        <n-form-item :label="$t('contentPackage.upload.dialog.apiSecret')" required>
           <n-input v-model:value="cloudinaryConfig.api_secret" placeholder="your-api-secret" type="password"
             show-password-on="click" clearable />
         </n-form-item>
-        <n-form-item label="文件夹">
-          <n-input v-model:value="cloudinaryConfig.folder" placeholder="文件夹名称（可选）" clearable />
+        <n-form-item :label="$t('contentPackage.upload.dialog.folder')">
+          <n-input v-model:value="cloudinaryConfig.folder" :placeholder="$t('contentPackage.upload.dialog.folderPlaceholder')" clearable />
         </n-form-item>
       </n-form>
     </div>
 
     <!-- ImgBB 配置 -->
     <div v-if="selectedHost === 'imgbb'" class="upload-section">
-      <h4>ImgBB 配置</h4>
+      <h4>{{ $t('contentPackage.upload.dialog.imgbbConfig') }}</h4>
       <n-form :model="imgbbConfig" label-placement="top">
-        <n-form-item label="API Key" required>
+        <n-form-item :label="$t('contentPackage.upload.dialog.apiKey')" required>
           <n-input v-model:value="imgbbConfig.imgbb_api_key" placeholder="your-imgbb-api-key" type="password"
             show-password-on="click" clearable />
         </n-form-item>
-        <n-form-item label="过期时间（小时）">
-          <n-input-number v-model:value="imgbbConfig.imgbb_expiration" :min="0" :max="30 * 24" placeholder="0（永不过期）"
+        <n-form-item :label="$t('contentPackage.upload.dialog.expirationHours')">
+          <n-input-number v-model:value="imgbbConfig.imgbb_expiration" :min="0" :max="30 * 24" :placeholder="$t('contentPackage.upload.dialog.expirationPlaceholder')"
             clearable />
         </n-form-item>
       </n-form>
@@ -56,13 +56,13 @@
 
     <!-- 导出格式选择 -->
     <div class="upload-section">
-      <h4>导出格式</h4>
+      <h4>{{ $t('contentPackage.upload.dialog.exportFormat') }}</h4>
       <n-radio-group v-model:value="exportFormat" size="medium">
         <n-radio-button value="JPG">JPG</n-radio-button>
         <n-radio-button value="PNG">PNG</n-radio-button>
       </n-radio-group>
       <div v-if="exportFormat === 'JPG'" class="quality-setting">
-        <n-form-item label="图片质量">
+        <n-form-item :label="$t('contentPackage.upload.dialog.imageQuality')">
           <n-slider v-model:value="exportQuality" :min="1" :max="100"
             :marks="{ 1: '1%', 50: '50%', 95: '95%', 100: '100%' }" :tooltip="false" />
           <n-input-number v-model:value="exportQuality" :min="1" :max="100" size="small"
@@ -73,7 +73,7 @@
 
     <!-- 上传进度 -->
     <div v-if="isUploading" class="upload-section">
-      <h4>上传进度</h4>
+      <h4>{{ $t('contentPackage.upload.dialog.uploadProgress') }}</h4>
       <n-progress :percentage="uploadProgress" :status="uploadProgress === 100 ? 'success' : 'default'"
         :indicator-placement="'inside'" />
       <div class="upload-status">
@@ -83,7 +83,7 @@
 
     <!-- 上传日志 -->
     <div v-if="uploadLogs.length > 0" class="upload-section">
-      <h4>上传日志</h4>
+      <h4>{{ $t('contentPackage.upload.dialog.uploadLogs') }}</h4>
       <div class="log-container">
         <n-scrollbar style="max-height: 200px;">
           <div v-for="(log, index) in uploadLogs" :key="index" class="log-item">
@@ -108,6 +108,7 @@ import { DirectoryService } from '@/api/directory-service';
 import { InformationCircleOutline } from '@vicons/ionicons5';
 import type { ImageHostType } from '@/api/types';
 import type { ContentPackageCard } from '@/types/content-package';
+import { useI18n } from 'vue-i18n';
 
 interface Props {
   isBanner?: boolean;
@@ -125,6 +126,12 @@ const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 
 const message = useMessage();
+const { t } = useI18n();
+
+// 本地化辅助函数
+const tMessage = (key: string, params?: Record<string, string | number>) => {
+  return params ? t(key, params) : t(key);
+};
 
 // 上传状态
 const selectedHost = ref<ImageHostType>('cloudinary');
@@ -208,7 +215,7 @@ const loadConfig = async () => {
     }
   } catch (error) {
     console.error('加载配置失败:', error);
-    addLog('加载配置失败: ' + error.message, 'error');
+    addLog(tMessage('contentPackage.upload.error.configLoadFailed', { message: error.message }), 'error');
   }
 };
 
@@ -217,7 +224,7 @@ const saveConfig = async () => {
   try {
     // 本地模式不需要保存配置
     if (selectedHost.value === 'local') {
-      addLog('本地测试模式，无需保存配置', 'info');
+      addLog(tMessage('contentPackage.upload.success.localModeNoSave'), 'info');
       return;
     }
 
@@ -234,10 +241,10 @@ const saveConfig = async () => {
     if (imgbbConfig.value.imgbb_expiration !== undefined) config.imgbb_expiration = imgbbConfig.value.imgbb_expiration;
 
     await ConfigService.saveConfig(config);
-    addLog('配置保存成功', 'info');
+    addLog(tMessage('contentPackage.upload.success.configSaveSuccess'), 'info');
   } catch (error) {
     console.error('保存配置失败:', error);
-    addLog('保存配置失败: ' + error.message, 'error');
+    addLog(tMessage('contentPackage.upload.error.configSaveFailed', { message: error.message }), 'error');
     throw error;
   }
 };
@@ -258,7 +265,7 @@ const validateConfig = (): boolean => {
 // 导出图片到工作目录
 const exportImageToWorkspace = async (cardData: any, filename: string): Promise<any> => {
   try {
-    addLog(`开始导出图片: ${filename}`, 'info');
+    addLog(tMessage('contentPackage.upload.dialog.imageExportStart', { filename }), 'info');
 
     // 创建ContentPackage目录
     const packageName = props.isBanner ? 'banner' : 'cards';
@@ -272,11 +279,11 @@ const exportImageToWorkspace = async (cardData: any, filename: string): Promise<
       rotateLandscape: true  // 内容包导出时自动旋转横向图片
     });
 
-    addLog(`图片导出成功: ${savedFiles.saved_files.front_url}`, 'info');
-    addLog(`图片导出成功: ${savedFiles.saved_files.back_url}`, 'info');
+    addLog(tMessage('contentPackage.upload.dialog.imageExportSuccess', { filename: 'front' }), 'info');
+    addLog(tMessage('contentPackage.upload.dialog.imageExportSuccess', { filename: 'back' }), 'info');
     return savedFiles.saved_files;
   } catch (error) {
-    addLog(`图片导出失败: ${error.message}`, 'error');
+    addLog(tMessage('contentPackage.upload.dialog.imageExportFailed', { filename, error: error.message }), 'error');
     throw error;
   }
 };
@@ -296,11 +303,11 @@ const uploadSingleImage = async (imagePath: string, onlineName: string): Promise
       const fileUrl = fullPath.includes(':')
         ? `file:///${fullPath.replace(/\\/g, '/')}`
         : `file://${fullPath}`;
-      addLog(`本地模式，使用本地URL: ${fileUrl}`, 'info');
+      addLog(tMessage('contentPackage.upload.dialog.localModeUrl', { url: fileUrl }), 'info');
       return fileUrl;
     }
 
-    addLog(`开始上传图片: ${imagePath}`, 'info');
+    addLog(tMessage('contentPackage.upload.dialog.imageUploadStart', { filename: imagePath }), 'info');
 
     const result = await ImageHostService.smartUpload(
       imagePath,
@@ -309,13 +316,13 @@ const uploadSingleImage = async (imagePath: string, onlineName: string): Promise
     );
 
     if (result.code === 0 && result.data?.url) {
-      addLog(`图片上传成功: ${result.data.url}`, 'info');
+      addLog(tMessage('contentPackage.upload.dialog.imageUploadSuccessUrl', { url: result.data.url }), 'info');
       return result.data.url;
     } else {
       throw new Error(result.msg || '上传失败');
     }
   } catch (error) {
-    addLog(`图片上传失败: ${error.message}`, 'error');
+    addLog(tMessage('contentPackage.upload.dialog.imageUploadFailed', { filename: imagePath, error: error.message }), 'error');
     throw error;
   }
 };
@@ -327,27 +334,27 @@ const uploadBanner = async () => {
   try {
     isUploading.value = true;
     uploadProgress.value = 0;
-    uploadStatus.value = '准备上传...';
+    uploadStatus.value = tMessage('contentPackage.upload.dialog.preparingUpload');
     uploadLogs.value = [];
 
     // 验证配置
     if (!validateConfig()) {
-      throw new Error('请完善图床配置信息');
+      throw new Error(tMessage('contentPackage.upload.error.configIncomplete'));
     }
 
     // 保存配置
     await saveConfig();
 
     uploadProgress.value = 20;
-    uploadStatus.value = '配置已保存';
+    uploadStatus.value = tMessage('contentPackage.upload.dialog.configSaved');
 
     // 检查是否有base64数据
     if (!props.config?.banner_base64) {
-      throw new Error('没有找到封面图片数据');
+      throw new Error(tMessage('contentPackage.upload.error.noBannerData'));
     }
 
     uploadProgress.value = 40;
-    uploadStatus.value = '准备导出图片...';
+    uploadStatus.value = tMessage('contentPackage.upload.dialog.preparingImages');
 
     // 创建临时卡牌数据用于生成图片
     const tempCardData = {
@@ -417,21 +424,21 @@ const uploadCard = async () => {
   try {
     isUploading.value = true;
     uploadProgress.value = 0;
-    uploadStatus.value = '准备上传...';
+    uploadStatus.value = tMessage('contentPackage.upload.dialog.preparingUpload');
     uploadLogs.value = [];
     // 验证配置
     if (!validateConfig()) {
-      throw new Error('请完善图床配置信息');
+      throw new Error(tMessage('contentPackage.upload.error.configIncomplete'));
     }
     // 保存配置
     await saveConfig();
     uploadProgress.value = 20;
-    uploadStatus.value = '配置已保存';
+    uploadStatus.value = tMessage('contentPackage.upload.dialog.configSaved');
     // 读取卡牌数据
     const cardData = await WorkspaceService.getFileContent(props.card.filename);
     const parsedCard = JSON.parse(cardData);
     uploadProgress.value = 40;
-    uploadStatus.value = '准备导出图片...';
+    uploadStatus.value = tMessage('contentPackage.upload.dialog.preparingImages');
     // 导出图片到工作目录 - 使用增强版API
     const result = await CardService.saveCardEnhanced(parsedCard, props.card.filename.replace('.card', ''), {
       parentPath: '.cards',
@@ -570,12 +577,12 @@ const batchUploadConfig = async () => {
     uploadLogs.value = [];
     // 验证配置
     if (!validateConfig()) {
-      throw new Error('请完善图床配置信息');
+      throw new Error(tMessage('contentPackage.upload.error.configIncomplete'));
     }
     // 保存配置
     await saveConfig();
     uploadProgress.value = 50;
-    uploadStatus.value = '配置已保存';
+    uploadStatus.value = tMessage('contentPackage.upload.dialog.configSaved');
     // 获取所有v2.0卡牌
     const v2Cards = props.config?.cards?.filter((card: ContentPackageCard) => {
       return true;

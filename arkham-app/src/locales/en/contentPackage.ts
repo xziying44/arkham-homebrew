@@ -129,36 +129,6 @@ export default {
     batchStarting: 'Starting batch upload...',
     batchUploading: 'Uploading: {filename} ({index}/{total})'
   },
-  upload: {
-    button: {
-      uploadToCloud: 'Upload to Cloud',
-      reuploadToCloud: 'Reupload to Cloud',
-      uploadCard: 'Upload Card',
-      reupload: 'Reupload'
-    },
-    title: {
-      uploadBannerToCloud: 'Upload Banner to Cloud',
-      uploadCardToCloud: 'Upload Card to Cloud',
-      batchUploadToCloud: 'Batch Upload Cards to Cloud',
-      configureBatchUpload: 'Configure Batch Upload'
-    },
-    status: {
-      uploadedToCloud: 'Uploaded to Cloud',
-      savedToLocal: 'Saved to Local'
-    },
-    info: {
-      willUploadAllV2Cards: 'Will configure image hosting and upload all v2.0 cards. Previously uploaded cards will be overwritten.',
-      v2CardCount: 'Total v2.0 Cards',
-      cloudUploaded: 'Cloud Uploaded',
-      v2CardList: 'v2.0 Card List',
-      uploadProgress: 'Upload Progress',
-      batchUploadCompleted: 'Batch upload completed: {success} successful, {failure} failed'
-    },
-    action: {
-      startConfiguration: 'Start Configuration ({count} cards)',
-      startUpload: 'Start Upload'
-    }
-  },
   cards: {
     empty: {
       title: 'No cards added yet',
@@ -182,6 +152,180 @@ export default {
     notImplemented: {
       title: 'Export feature in development',
       description: 'This feature will be implemented in future versions'
+    },
+    tts: {
+      title: 'Export to TTS Items',
+      description: 'Export the content package as a JSON file usable by TTS, containing all cards with generated images (supports both cloud and local images)',
+      packageName: 'Package Name',
+      cardCount: 'Card Count',
+      cardsWithImages: 'Cards with Images',
+      exportStatus: 'Export Status',
+      canExport: 'Can Export',
+      needImages: 'Need to Generate Images',
+      cardExportStatus: 'Card Export Status',
+      exportTTSItems: 'Export TTS Items',
+      exportLogs: 'Export Logs',
+      close: 'Close',
+      openFolder: 'Open Folder'
+    },
+    arkhamdb: {
+      title: 'Export to ArkhamDB Format',
+      description: 'Export the content package as an ArkhamDB format JSON file, suitable for arkham.build expansion pack creation',
+      packageCode: 'Package Code',
+      alwaysExportable: 'Can Export',
+      exportDescription: 'Export Description',
+      exportDetails: [
+        '• Exported JSON file contains ArkhamDB format data for all cards',
+        '• Can be directly used for expansion pack upload on arkham.build website',
+        '• Contains complete card attributes, tags and metadata information'
+      ],
+      exportArkhamDB: 'Export ArkhamDB Format',
+      exportLogs: 'ArkhamDB Export Logs',
+      close: 'Close',
+      openFolder: 'Open Folder',
+      success: {
+        ttsExportSuccess: 'TTS items exported successfully!',
+        arkhamdbExportSuccess: 'ArkhamDB format exported successfully!'
+      }
     }
+  },
+  tags: {
+    edit: {
+      title: 'Edit Card Tags - {filename}',
+      description: 'Set special attribute tags for cards, these tags will be retained during export',
+      permanent: {
+        label: 'Permanent Card',
+        description: 'Permanent cards will not be removed from the game'
+      },
+      exceptional: {
+        label: 'Exceptional Card',
+        description: 'Exceptional cards usually have special effects and acquisition methods'
+      },
+      myriad: {
+        label: 'Myriad Card',
+        description: 'Myriad cards can have multiple copies in a deck'
+      },
+      exile: {
+        label: 'Exile',
+        description: 'Exile cards can be removed from the game under specific conditions'
+      },
+      preview: 'Current Tags Preview',
+      save: 'Save',
+      cancel: 'Cancel'
+    }
+  },
+  upload: {
+    button: {
+      uploadToCloud: 'Upload to Cloud',
+      reuploadToCloud: 'Re-upload to Cloud',
+      uploadCard: 'Upload This Card',
+      reupload: 'Re-upload'
+    },
+    dialog: {
+      selectImageHost: 'Select Image Host Service',
+      localMode: 'Local Test',
+      localModeDescription: 'Local test mode: only export images to local, not upload to cloud, using file:/// format URLs',
+      cloudinaryConfig: 'Cloudinary Configuration',
+      cloudName: 'Cloud Name',
+      apiKey: 'API Key',
+      apiSecret: 'API Secret',
+      folder: 'Folder',
+      folderPlaceholder: 'Folder name (optional)',
+      imgbbConfig: 'ImgBB Configuration',
+      expirationHours: 'Expiration Time (hours)',
+      expirationPlaceholder: '0 (never expires)',
+      exportFormat: 'Export Format',
+      imageQuality: 'Image Quality',
+      uploadProgress: 'Upload Progress',
+      uploadLogs: 'Upload Logs',
+      preparingUpload: 'Preparing upload...',
+      configSaved: 'Configuration saved',
+      preparingImages: 'Preparing to export images...',
+      preparingCloudUpload: 'Preparing to upload to cloud...',
+      updatingData: 'Updating content package data...',
+      uploadComplete: 'Upload complete',
+      preparingBatchConfig: 'Preparing batch upload configuration...',
+      preparingBatchUpload: 'Preparing batch upload...',
+      batchUploadComplete: 'Batch upload complete',
+      imageUploadSuccess: 'Image uploaded successfully: {filename}',
+      imageUploadFailed: 'Image upload failed: {filename} - {error}',
+      bannerUploadComplete: 'Banner upload complete',
+      cardUploadComplete: 'Card upload complete',
+      batchUploadCompleteLog: 'Batch upload complete',
+      cardUploadSuccessLog: 'Card {filename} upload successful',
+      cardUploadFailedLog: 'Card {filename} upload failed: {error}',
+      imageExportStart: 'Starting to export image: {filename}',
+      imageExportSuccess: 'Image export successful: {filename}',
+      imageExportFailed: 'Image export failed: {filename}',
+      imageUploadStart: 'Starting to upload image: {filename}',
+      imageUploadSuccessUrl: 'Image upload successful: {url}',
+      localModeUrl: 'Local mode, using local URL: {url}',
+      completeConfigInfo: 'Complete image hosting configuration and upload all v2.0 cards. Previously uploaded cards will be overwritten.',
+      playerCardbackDetected: 'Detected player card back, using predefined URL',
+      encounterCardbackDetected: 'Detected encounter card back, using predefined URL',
+      uploadingImage: 'Uploading image {index}/{total}...'
+    },
+    error: {
+      configIncomplete: 'Please complete the image hosting configuration information',
+      noBannerData: 'No banner image data found',
+      uploadFailed: 'Upload failed: {message}',
+      packagePathInvalid: 'Content package path invalid',
+      noCardsToUpload: 'No cards to upload',
+      batchUploadFailed: 'Batch upload failed: {message}',
+      cannotGetWorkspacePath: 'Cannot get workspace path',
+      configLoadFailed: 'Configuration loading failed: {message}',
+      configSaveFailed: 'Configuration saving failed: {message}',
+      exportFailed: 'Export failed: {message}'
+    },
+    success: {
+      configSaveSuccess: 'Configuration saved successfully',
+      localModeNoSave: 'Local test mode, no need to save configuration'
+    },
+    status: {
+      cloud: 'Cloud',
+      local: 'Local',
+      noImage: 'No Image',
+      uploaded: 'Uploaded',
+      pending: 'Pending'
+    },
+    title: {
+      uploadBannerToCloud: 'Upload Banner to Cloud',
+      uploadCardToCloud: 'Upload Card to Cloud',
+      batchUploadToCloud: 'Batch Upload Cards to Cloud',
+      configureBatchUpload: 'Configure Batch Upload'
+    },
+    info: {
+      v2CardCount: 'Total v2.0 Cards',
+      cloudUploaded: 'Cloud Uploaded',
+      v2CardList: 'v2.0 Card List',
+      uploadProgress: 'Upload Progress',
+      batchUploadCompleted: 'Batch upload completed: {success} successful, {failure} failed'
+    },
+    action: {
+      startConfiguration: 'Start Configuration ({count} cards)',
+      startUpload: 'Start Upload'
+    }
+  },
+  common: {
+    editInfo: 'Edit Info',
+    save: 'Save',
+    unnamedPackage: 'Unnamed Package',
+    unknown: 'Unknown',
+    unknownAuthor: 'Unknown Author',
+    noDescription: 'No Description',
+    batchUpload: 'Batch Upload',
+    addCard: 'Add Card',
+    generationFailed: 'Generation Failed',
+    unsupported: 'Unsupported',
+    editTags: 'Edit Tags',
+    permanent: 'Permanent',
+    exceptional: 'Exceptional',
+    myriad: 'Myriad',
+    exile: 'Exile',
+    cancel: 'Cancel',
+    uploadToCloud: 'Upload to Cloud',
+    close: 'Close',
+    openFolder: 'Open Folder',
+    cardTagsSaved: 'Card tags saved successfully'
   }
 }

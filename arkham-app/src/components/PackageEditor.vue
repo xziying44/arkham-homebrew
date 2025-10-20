@@ -3,14 +3,14 @@
     <!-- 编辑器头部 -->
     <div class="editor-header">
       <div class="package-info">
-        <h3>{{ packageData.meta?.name || '未命名内容包' }}</h3>
+        <h3>{{ packageData.meta?.name || t('contentPackage.common.unnamedPackage') }}</h3>
         <div class="package-meta">
           <n-tag type="info" size="small">{{ t(`contentPackage.languages.${packageData.meta?.language || 'zh-cn'}`)
           }}</n-tag>
           <n-tag v-for="type in (packageData.meta?.types || [])" :key="type" type="default" size="small">
             {{ t(`contentPackage.packageTypes.${type}`) }}
           </n-tag>
-          <n-tag type="success" size="small">ID: {{ packageData.meta?.code || '未知' }}</n-tag>
+          <n-tag type="success" size="small">ID: {{ packageData.meta?.code || t('contentPackage.common.unknown') }}</n-tag>
         </div>
       </div>
       <div class="editor-actions">
@@ -18,13 +18,13 @@
           <template #icon>
             <n-icon :component="CreateOutline" />
           </template>
-          编辑信息
+          {{ t('contentPackage.common.editInfo') }}
         </n-button>
         <n-button type="primary" @click="handleSave" :loading="saving" size="small">
           <template #icon>
             <n-icon :component="SaveOutline" />
           </template>
-          保存
+          {{ t('contentPackage.common.save') }}
         </n-button>
       </div>
     </div>
@@ -135,13 +135,13 @@
                   <template #icon>
                     <n-icon :component="CloudUploadOutline" />
                   </template>
-                  批量上传 ({{ v2CardsWithCloudUrls.length }}/{{ v2Cards.length }})
+                  {{ t('contentPackage.common.batchUpload') }} ({{ v2CardsWithCloudUrls.length }}/{{ v2Cards.length }})
                 </n-button>
                 <n-button type="primary" @click="showAddCardDialog = true" size="small">
                   <template #icon>
                     <n-icon :component="AddOutline" />
                   </template>
-                  添加卡牌
+                  {{ t('contentPackage.common.addCard') }}
                 </n-button>
               </n-space>
             </div>
@@ -174,7 +174,7 @@
                     </div>
                     <div v-else-if="getCardStatus(card.filename).generationError" class="preview-error">
                       <n-icon :component="WarningOutline" />
-                      <span class="error-text">生成失败</span>
+                      <span class="error-text">{{ t('contentPackage.common.generationFailed') }}</span>
                     </div>
                     <div v-else-if="getCardStatus(card.filename).previewImage" class="preview-image">
                       <img :src="getCardStatus(card.filename).previewImage" :alt="card.filename" />
@@ -190,23 +190,23 @@
                     <div class="card-meta">
                       <n-space size="small">
                         <n-tag v-if="getCardStatus(card.filename).version !== '2.0'" type="error" size="tiny">
-                          不支持 (v{{ getCardStatus(card.filename).version }})
+                          {{ t('contentPackage.common.unsupported') }} (v{{ getCardStatus(card.filename).version }})
                         </n-tag>
                         <n-tag v-else type="success" size="tiny">
                           v{{ getCardStatus(card.filename).version }}
                         </n-tag>
                         <!-- 卡牌标签显示 -->
                         <n-tag v-if="card.permanent" type="info" size="tiny">
-                          永久
+                          {{ t('contentPackage.common.permanent') }}
                         </n-tag>
                         <n-tag v-if="card.exceptional" type="warning" size="tiny">
-                          卓越
+                          {{ t('contentPackage.common.exceptional') }}
                         </n-tag>
                         <n-tag v-if="card.myriad" type="success" size="tiny">
-                          无数
+                          {{ t('contentPackage.common.myriad') }}
                         </n-tag>
                         <n-tag v-if="card.exile" type="error" size="tiny">
-                          可放逐
+                          {{ t('contentPackage.common.exile') }}
                         </n-tag>
                       </n-space>
                     </div>
@@ -226,7 +226,7 @@
                         <template #icon>
                           <n-icon :component="CreateOutline" />
                         </template>
-                        编辑标签
+                        {{ t('contentPackage.common.editTags') }}
                       </n-button>
 
                       <!-- 上传按钮 -->
@@ -254,7 +254,7 @@
 
             <!-- TTS导出区域 -->
             <div class="export-content">
-              <n-card title="导出到TTS物品" :bordered="false">
+              <n-card :title="$t('contentPackage.export.tts.title')" :bordered="false">
                 <template #header-extra>
                   <n-tag type="info" size="small">Tabletop Simulator</n-tag>
                 </template>
@@ -264,29 +264,29 @@
                     <template #icon>
                       <n-icon :component="ConstructOutline" />
                     </template>
-                    将内容包导出为TTS可用的JSON文件，包含所有已生成图片的卡牌（支持云端图片和本地图片）
+                    {{ $t('contentPackage.export.tts.description') }}
                   </n-alert>
 
                   <n-descriptions :column="2" bordered style="margin-bottom: 1.5rem;">
-                    <n-descriptions-item label="内容包名称">
-                      <n-text strong>{{ packageData.meta?.name || '未知内容包' }}</n-text>
+                    <n-descriptions-item :label="$t('contentPackage.export.tts.packageName')">
+                      <n-text strong>{{ packageData.meta?.name || t('contentPackage.common.unnamedPackage') }}</n-text>
                     </n-descriptions-item>
-                    <n-descriptions-item label="卡牌数量">
+                    <n-descriptions-item :label="$t('contentPackage.export.tts.cardCount')">
                       <n-tag type="info" size="small">{{ packageData.cards?.length || 0 }} 张</n-tag>
                     </n-descriptions-item>
-                    <n-descriptions-item label="有图片的卡牌">
+                    <n-descriptions-item :label="$t('contentPackage.export.tts.cardsWithImages')">
                       <n-tag type="success" size="small">{{ cardsWithAnyUrls.length }} 张</n-tag>
                     </n-descriptions-item>
-                    <n-descriptions-item label="导出状态">
+                    <n-descriptions-item :label="$t('contentPackage.export.tts.exportStatus')">
                       <n-tag :type="canExportToTts ? 'success' : 'warning'" size="small">
-                        {{ canExportToTts ? '可导出' : '需要生成图片' }}
+                        {{ canExportToTts ? t('contentPackage.export.tts.canExport') : t('contentPackage.export.tts.needImages') }}
                       </n-tag>
                     </n-descriptions-item>
                   </n-descriptions>
 
                   <!-- 卡牌状态列表 -->
                   <div v-if="packageData.cards && packageData.cards.length > 0" class="tts-cards-status">
-                    <h5>卡牌导出状态</h5>
+                    <h5>{{ $t('contentPackage.export.tts.cardExportStatus') }}</h5>
                     <n-scrollbar style="max-height: 200px;">
                       <div class="tts-cards-list">
                         <div v-for="card in packageData.cards" :key="card.filename" class="tts-card-item">
@@ -310,14 +310,14 @@
                       <template #icon>
                         <n-icon :component="DownloadOutline" />
                       </template>
-                      导出TTS物品
+                      {{ t('contentPackage.export.tts.exportTTSItems') }}
                     </n-button>
                   </n-space>
                 </template>
               </n-card>
 
               <!-- ArkhamDB导出区域 -->
-              <n-card title="导出到ArkhamDB格式" :bordered="false" style="margin-top: 1.5rem;">
+              <n-card :title="$t('contentPackage.export.arkhamdb.title')" :bordered="false" style="margin-top: 1.5rem;">
                 <template #header-extra>
                   <n-tag type="success" size="small">arkham.build</n-tag>
                 </template>
@@ -327,32 +327,32 @@
                     <template #icon>
                       <n-icon :component="DownloadOutline" />
                     </template>
-                    将内容包导出为ArkhamDB格式的JSON文件，适用于arkham.build扩展包制作
+                    {{ $t('contentPackage.export.arkhamdb.description') }}
                   </n-alert>
 
                   <n-descriptions :column="2" bordered style="margin-bottom: 1.5rem;">
-                    <n-descriptions-item label="内容包名称">
-                      <n-text strong>{{ packageData.meta?.name || '未知内容包' }}</n-text>
+                    <n-descriptions-item :label="$t('contentPackage.export.arkhamdb.packageName')">
+                      <n-text strong>{{ packageData.meta?.name || t('contentPackage.common.unnamedPackage') }}</n-text>
                     </n-descriptions-item>
-                    <n-descriptions-item label="卡牌数量">
+                    <n-descriptions-item :label="$t('contentPackage.export.arkhamdb.cardCount')">
                       <n-tag type="info" size="small">{{ packageData.cards?.length || 0 }} 张</n-tag>
                     </n-descriptions-item>
-                    <n-descriptions-item label="内容包代码">
-                      <n-tag type="warning" size="small">{{ packageData.meta?.code || '未知' }}</n-tag>
+                    <n-descriptions-item :label="$t('contentPackage.export.arkhamdb.packageCode')">
+                      <n-tag type="warning" size="small">{{ packageData.meta?.code || t('contentPackage.common.unknown') }}</n-tag>
                     </n-descriptions-item>
-                    <n-descriptions-item label="导出状态">
+                    <n-descriptions-item :label="$t('contentPackage.export.arkhamdb.exportStatus')">
                       <n-tag type="success" size="small">
-                        可导出
+                        {{ t('contentPackage.export.arkhamdb.alwaysExportable') }}
                       </n-tag>
                     </n-descriptions-item>
                   </n-descriptions>
 
                   <div class="arkhamdb-description">
-                    <h5>导出说明</h5>
+                    <h5>{{ $t('contentPackage.export.arkhamdb.exportDescription') }}</h5>
                     <n-space vertical size="small">
-                      <n-text depth="3">• 导出的JSON文件包含所有卡牌的ArkhamDB格式数据</n-text>
-                      <n-text depth="3">• 可直接用于arkham.build网站的扩展包上传</n-text>
-                      <n-text depth="3">• 包含完整的卡牌属性、标签和元数据信息</n-text>
+                      <n-text depth="3" v-for="(detail, index) in $tm('contentPackage.export.arkhamdb.exportDetails')" :key="index">
+                        {{ $rt(detail) }}
+                      </n-text>
                     </n-space>
                   </div>
                 </div>
@@ -363,14 +363,14 @@
                       <template #icon>
                         <n-icon :component="DownloadOutline" />
                       </template>
-                      导出ArkhamDB格式
+                      {{ t('contentPackage.export.arkhamdb.exportArkhamDB') }}
                     </n-button>
                   </n-space>
                 </template>
               </n-card>
 
               <!-- 导出日志对话框 -->
-              <n-modal v-model:show="showExportLogsDialog" preset="dialog" title="导出日志" style="width: 800px;">
+              <n-modal v-model:show="showExportLogsDialog" preset="dialog" :title="$t('contentPackage.export.tts.exportLogs')" style="width: 800px;">
                 <div class="export-logs-content">
                   <n-scrollbar style="max-height: 400px;">
                     <div class="logs-container">
@@ -382,16 +382,16 @@
                 </div>
                 <template #action>
                   <n-space>
-                    <n-button @click="showExportLogsDialog = false">关闭</n-button>
+                    <n-button @click="showExportLogsDialog = false">{{ t('contentPackage.export.tts.close') }}</n-button>
                     <n-button v-if="exportResult?.tts_path" type="primary" @click="openTtsFileLocation">
-                      打开文件夹
+                      {{ t('contentPackage.export.tts.openFolder') }}
                     </n-button>
                   </n-space>
                 </template>
               </n-modal>
 
               <!-- ArkhamDB导出日志对话框 -->
-              <n-modal v-model:show="showArkhamdbExportLogsDialog" preset="dialog" title="ArkhamDB导出日志" style="width: 800px;">
+              <n-modal v-model:show="showArkhamdbExportLogsDialog" preset="dialog" :title="$t('contentPackage.export.arkhamdb.exportLogs')" style="width: 800px;">
                 <div class="export-logs-content">
                   <n-scrollbar style="max-height: 400px;">
                     <div class="logs-container">
@@ -403,9 +403,9 @@
                 </div>
                 <template #action>
                   <n-space>
-                    <n-button @click="showArkhamdbExportLogsDialog = false">关闭</n-button>
+                    <n-button @click="showArkhamdbExportLogsDialog = false">{{ t('contentPackage.export.arkhamdb.close') }}</n-button>
                     <n-button v-if="arkhamdbExportResult?.output_path" type="success" @click="openArkhamdbFileLocation">
-                      打开文件夹
+                      {{ t('contentPackage.export.arkhamdb.openFolder') }}
                     </n-button>
                   </n-space>
                 </template>
@@ -601,7 +601,7 @@
     </n-modal>
 
     <!-- 编辑标签对话框 -->
-    <n-modal v-model:show="showEditTagsDialog" preset="dialog" :title="`编辑卡牌标签 - ${editingCard?.filename || ''}`"
+    <n-modal v-model:show="showEditTagsDialog" preset="dialog" :title="t('contentPackage.tags.edit.title', { filename: editingCard?.filename || '' })"
       style="width: 500px;">
       <div class="edit-tags-container">
         <div class="tags-info">
@@ -609,43 +609,43 @@
             <template #icon>
               <n-icon :component="InformationCircleOutline" />
             </template>
-            为卡牌设置特殊属性标签，这些标签将在导出时保留
+            {{ t('contentPackage.tags.edit.description') }}
           </n-alert>
         </div>
 
         <n-form ref="editTagsFormRef" :model="editTagsForm" label-placement="left" label-width="100px">
-          <n-form-item label="永久卡牌">
+          <n-form-item :label="t('contentPackage.tags.edit.permanent.label')">
             <n-switch v-model:value="editTagsForm.permanent" />
             <template #feedback>
               <n-text depth="3" style="font-size: 0.875rem;">
-                永久卡牌不会从游戏中移除
+                {{ t('contentPackage.tags.edit.permanent.description') }}
               </n-text>
             </template>
           </n-form-item>
 
-          <n-form-item label="卓越卡牌">
+          <n-form-item :label="t('contentPackage.tags.edit.exceptional.label')">
             <n-switch v-model:value="editTagsForm.exceptional" />
             <template #feedback>
               <n-text depth="3" style="font-size: 0.875rem;">
-                卓越卡牌通常有特殊效果和获取方式
+                {{ t('contentPackage.tags.edit.exceptional.description') }}
               </n-text>
             </template>
           </n-form-item>
 
-          <n-form-item label="无数卡牌">
+          <n-form-item :label="t('contentPackage.tags.edit.myriad.label')">
             <n-switch v-model:value="editTagsForm.myriad" />
             <template #feedback>
               <n-text depth="3" style="font-size: 0.875rem;">
-                无数卡牌可以在卡组中放入多张
+                {{ t('contentPackage.tags.edit.myriad.description') }}
               </n-text>
             </template>
           </n-form-item>
 
-          <n-form-item label="可放逐">
+          <n-form-item :label="t('contentPackage.tags.edit.exile.label')">
             <n-switch v-model:value="editTagsForm.exile" />
             <template #feedback>
               <n-text depth="3" style="font-size: 0.875rem;">
-                可放逐卡牌可以在特定条件下从游戏中移除
+                {{ t('contentPackage.tags.edit.exile.description') }}
               </n-text>
             </template>
           </n-form-item>
@@ -653,27 +653,27 @@
 
         <!-- 当前标签预览 -->
         <div class="current-tags-preview" v-if="hasAnyFormTags()">
-          <h5>当前标签预览</h5>
+          <h5>{{ t('contentPackage.tags.edit.preview') }}</h5>
           <n-space size="small">
             <n-tag v-if="editTagsForm.permanent" type="info" size="small">
-              永久
+              {{ t('contentPackage.common.permanent') }}
             </n-tag>
             <n-tag v-if="editTagsForm.exceptional" type="warning" size="small">
-              卓越
+              {{ t('contentPackage.common.exceptional') }}
             </n-tag>
             <n-tag v-if="editTagsForm.myriad" type="success" size="small">
-              无数
+              {{ t('contentPackage.common.myriad') }}
             </n-tag>
             <n-tag v-if="editTagsForm.exile" type="error" size="small">
-              可放逐
+              {{ t('contentPackage.common.exile') }}
             </n-tag>
           </n-space>
         </div>
       </div>
       <template #action>
         <n-space>
-          <n-button @click="closeEditTagsDialog">取消</n-button>
-          <n-button type="primary" @click="saveTagsChanges">保存</n-button>
+          <n-button @click="closeEditTagsDialog">{{ t('contentPackage.tags.edit.cancel') }}</n-button>
+          <n-button type="primary" @click="saveTagsChanges">{{ t('contentPackage.tags.edit.save') }}</n-button>
         </n-space>
       </template>
     </n-modal>
@@ -1208,21 +1208,21 @@ const getCardExportStatus = (card: ContentPackageCard) => {
   if (hasCloudUrls(card)) {
     return {
       type: 'success' as const,
-      text: '云端',
+      text: t('contentPackage.upload.status.cloud'),
       icon: CloudOutline,
       color: '#18a058'
     };
   } else if (hasLocalUrls(card)) {
     return {
       type: 'info' as const,
-      text: '本地',
+      text: t('contentPackage.upload.status.local'),
       icon: FolderOutline,
       color: '#2080f0'
     };
   } else {
     return {
       type: 'warning' as const,
-      text: '无图片',
+      text: t('contentPackage.upload.status.noImage'),
       icon: WarningOutline,
       color: '#f0a020'
     };
@@ -1416,7 +1416,7 @@ const saveTagsChanges = () => {
     emit('save');
 
     closeEditTagsDialog();
-    message.success('卡牌标签保存成功');
+    message.success(t('contentPackage.common.cardTagsSaved'));
   }
 };
 
@@ -1728,12 +1728,12 @@ const processPreviewQueue = async () => {
 // TTS导出方法
 const exportToTts = async () => {
   if (!packageData.value?.path) {
-    message.error('内容包路径无效');
+    message.error(t('contentPackage.upload.error.packagePathInvalid'));
     return;
   }
 
   if (!canExportToTts.value) {
-    message.warning('没有已生成图片的卡牌，无法导出到TTS');
+    message.warning($t('contentPackage.export.tts.needImages'));
     return;
   }
 
@@ -1809,7 +1809,7 @@ const exportToTts = async () => {
 
     exportResult.value = result;
     showExportLogsDialog.value = true;
-    message.success('TTS物品导出成功！');
+    message.success(t('contentPackage.export.tts.success.ttsExportSuccess'));
 
   } catch (error: any) {
     console.error('导出TTS物品失败:', error);
@@ -1851,7 +1851,7 @@ const openTtsFileLocation = () => {
 // ArkhamDB导出方法
 const exportToArkhamdb = async () => {
   if (!packageData.value?.path) {
-    message.error('内容包路径无效');
+    message.error(t('contentPackage.upload.error.packagePathInvalid'));
     return;
   }
 
@@ -1898,7 +1898,7 @@ const exportToArkhamdb = async () => {
 
     arkhamdbExportResult.value = result;
     showArkhamdbExportLogsDialog.value = true;
-    message.success('ArkhamDB格式导出成功！');
+    message.success(t('contentPackage.export.arkhamdb.success.arkhamdbExportSuccess'));
 
   } catch (error: any) {
     console.error('导出ArkhamDB格式失败:', error);
