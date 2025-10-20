@@ -882,6 +882,30 @@ class CardCreator:
         card.set_number_value((232, 136), attack, 44)
         card.set_number_value((508, 136), evade, 44)
 
+    def build_investigators_card_back_test(self, card_back: dict) -> str:
+        """构建调查员卡背文本"""
+        test_text = ""
+        if 'size' in card_back and card_back['size'] > 0:
+            test_text += f"【{self.font_manager.get_font_text('牌库卡牌张数')}】" \
+                         f"{self.font_manager.get_font_text('：')}" \
+                         f"{card_back['size']}" \
+                         f"{self.font_manager.get_font_text('。')}\n"
+        if 'option' in card_back and card_back['option']:
+            option_text = '，'.join(card_back['option']) + '。' if \
+                isinstance(card_back['option'], list) else card_back['option']
+            test_text += f"【{self.font_manager.get_font_text('牌库构筑选项')}】" \
+                         f"{self.font_manager.get_font_text('：')}" \
+                         f"{option_text}\n"
+        if 'requirement' in card_back and card_back['requirement'] != '':
+            test_text += f"【{self.font_manager.get_font_text('牌库构筑需求')}】" \
+                         f"({self.font_manager.get_font_text('不计入卡牌张数')})" \
+                         f"{self.font_manager.get_font_text('：')}" \
+                         f"{card_back['requirement']}" \
+                         f"{self.font_manager.get_font_text('。')}\n"
+        if 'other' in card_back and card_back['other'] != '':
+            test_text += card_back['other'] + '\n'
+        return test_text
+
     def create_investigators_card_back(self, card_json: dict,
                                        picture_path: Union[str, Image.Image, None] = None) -> Card:
         """制作调查员卡背面"""

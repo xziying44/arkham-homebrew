@@ -1,0 +1,726 @@
+"""
+卡牌到ArkhamDB格式转换器
+专注于卡牌数据格式转换，不处理文件IO和路径操作
+"""
+
+import re
+from typing import Dict, Any, List, Optional
+
+
+class Card2ArkhamDBConverter:
+    """
+    将自定义卡牌数据转换为ArkhamDB格式的转换器
+    只负责数据转换，不涉及文件读写
+    """
+
+    # 中文职阶映射到英文代码
+    FACTION_CODE_MAP = {
+        "守护者": "guardian",
+        "探求者": "seeker",
+        "流浪者": "rogue",
+        "潜修者": "mystic",
+        "生存者": "survivor",
+        "中立": "neutral"
+    }
+
+    # 中文卡牌类型映射到英文代码
+    TYPE_CODE_MAP = {
+        "调查员": "investigator",
+        "支援卡": "asset",
+        "事件卡": "event",
+        "技能卡": "skill",
+        "诡计卡": "treachery",
+        "敌人卡": "enemy",
+        "地点卡": "location",
+        "故事卡": "story",
+        "场景卡": "act",
+        "密谋卡": "agenda",
+        "冒险参考卡": "scenario"
+    }
+
+    # 槽位中文映射到英文
+    SLOT_CODE_MAP = {
+        "盟友": "Ally",
+        "身体": "Body",
+        "饰品": "Accessory",
+        "手部": "Hand",
+        "双手": "Hand x2",
+        "法术": "Arcane",
+        "双法术": "Arcane x2",
+        "塔罗": "Tarot"
+    }
+
+    # 技能图标映射
+    SKILL_ICON_MAP = {
+        "意志": "willpower",
+        "智力": "intellect",
+        "战力": "combat",
+        "敏捷": "agility",
+        "狂野": "wild"
+    }
+
+    def __init__(self, card_data: Dict[str, Any], card_meta: Dict[str, Any], pack_code: str,
+                 workspace_manager, signature_to_investigator: Dict[str, str] = None) -> None:
+        """
+        初始化转换器
+        Args:
+            card_data: 卡牌原始数据（从.card文件读取）
+            card_meta: 卡牌元数据（从内容包的cards数组中获取，包含图片URL、数量等）
+            pack_code: 包代码
+            workspace_manager: 工作空间管理器
+            signature_to_investigator: 签名卡ID到调查员ID的映射字典
+        """
+        self.card_data = card_data
+        self.card_meta = card_meta
+        self.pack_code = pack_code
+        self.workspace_manager = workspace_manager
+        self.signature_to_investigator = signature_to_investigator or {}
+
+    def convert(self) -> Dict[str, Any]:
+        """
+        根据卡牌类型执行相应的转换
+
+        Returns:
+            ArkhamDB格式的卡牌数据
+
+        Raises:
+            ValueError: 不支持的卡牌类型
+        """
+        card_type = self.card_data.get("type", "")
+        lang_code = self.card_data.get("language", "zh")
+        self.workspace_manager.font_manager.set_lang(lang_code)
+
+        converter_map = {
+            "调查员": self._convert_investigator,
+            "支援卡": self._convert_asset,
+            "事件卡": self._convert_event,
+            "技能卡": self._convert_skill,
+            "敌人卡": self._convert_enemy,
+            "地点卡": self._convert_location,
+            "场景卡": self._convert_act_agenda,
+            "场景卡-大画": self._convert_act_agenda,
+            "密谋卡": self._convert_act_agenda,
+            "密谋卡-大画": self._convert_act_agenda,
+            "诡计卡": self._convert_treachery,
+        }
+
+        converter = converter_map.get(card_type)
+        if not converter:
+            raise ValueError(f"不支持的卡牌类型: {card_type}")
+
+        card_data = converter()
+        # 对所有非调查员卡检查是否需要添加restrictions
+        if card_type != "调查员":
+            card_data = self._add_signature_restrictions(card_data)
+
+        return self._validate_card_data(card_data)
+
+    # ==================== 基础辅助方法 ====================
+
+    def _get_gmnotes(self) -> Dict[str, Any]:
+        """获取TTS脚本中的GMNotes"""
+        tts_script = self.card_data.get("tts_script", {})
+        gm_notes = tts_script.get("GMNotes", "")
+        try:
+            import json
+            return json.loads(gm_notes)
+        except:
+            return {}
+
+    def _extract_code_from_gmnotes(self) -> str:
+        """从TTS脚本的GMNotes中提取卡牌ID"""
+        tts_script = self.card_data.get("tts_script", {})
+        gm_notes = tts_script.get("GMNotes", "")
+
+        if not gm_notes:
+            return ""
+
+        try:
+            import json
+            gm_data = json.loads(gm_notes)
+            return gm_data.get("id", "")
+        except:
+            id_match = re.search(r'"id"\s*:\s*"([^"]+)"', gm_notes)
+            return id_match.group(1) if id_match else ""
+
+    def _extract_position(self) -> int:
+        """从卡牌编号中提取位置数字"""
+        card_number = self.card_data.get("card_number", "")
+        if not card_number:
+            return 1
+
+        number_match = re.search(r'\d+', str(card_number))
+        return int(number_match.group()) if number_match else 1
+
+    def _get_quantity(self) -> int:
+        """获取卡牌数量"""
+        return self.card_meta.get("quantity", 1)
+
+    def _check_is_unique(self) -> bool:
+        """检查卡牌是否为独特卡"""
+        name = self.card_data.get("name", "")
+        return "🏅" in name or "<独特>" in name or self.card_meta.get("unique", False)
+
+    def _get_special_flags(self) -> Dict[str, bool]:
+        """获取特殊标记"""
+        return {
+            "is_unique": self._check_is_unique(),
+            "permanent": self.card_meta.get("permanent", False),
+            "exceptional": self.card_meta.get("exceptional", False),
+            "myriad": self.card_meta.get("myriad", False),
+            "exile": self.card_meta.get("exile", False)
+        }
+
+    def _convert_faction_codes(self) -> List[str]:
+        """转换职阶代码"""
+        class_name = self.card_data.get("class", "")
+
+        # 处理多职阶
+        if class_name == "多职阶":
+            subclass = self.card_data.get("subclass", [])
+            if isinstance(subclass, str):
+                subclass = [subclass]
+
+            faction_codes = [
+                self.FACTION_CODE_MAP.get(f, "neutral")
+                for f in subclass if f
+            ]
+            return faction_codes if faction_codes else ["neutral"]
+
+        # 处理弱点
+        if class_name == "弱点":
+            return ["neutral"]
+
+        # 处理普通职阶
+        return [self.FACTION_CODE_MAP.get(class_name, "neutral")]
+
+    def _convert_text_format(self, text: str) -> str:
+        """转换文本格式，将emoji转换为arkhamdb格式"""
+        if not text:
+            return ""
+
+        emoji_map = {
+            "🧠": "[willpower]",
+            "📚": "[intellect]",
+            "👊": "[combat]",
+            "🦶": "[agility]",
+            "❓": "[wild]",
+            "💀": "[skull]",
+            "👤": "[cultist]",
+            "📜": "[tablet]",
+            "👹": "[elder_thing]",
+            "🐙": "[auto_fail]",
+            "⭐": "[elder_sign]",
+            "⭕": "[reaction]",
+            "➡️": "[action]",
+            "⚡": "[free]",
+            "🌟": "[bless]",
+            "🌑": "[curse]",
+            "❄️": "[frost]",
+            '🛡️': '[guardian]',
+            '🔍': '[seeker]',
+            '🚶': '[rogue]',
+            '🧘': '[mystic]',
+            '🏕️': '[survivor]',
+        }
+
+        result = text
+        for emoji, code in emoji_map.items():
+            result = result.replace(emoji, code)
+
+        # 处理粗体标记
+        result = re.sub(r'【([^】]+)】', r'<b>\1</b>', result)
+
+        # 处理特性标记
+        result = re.sub(r'\{([^}]+)\}', r'[[\1]]', result)
+
+        # 处理调查员标记
+        result = re.sub(r'<调查员>', r'[per_investigator]', result)
+
+        return result
+
+    def _get_image_urls(self) -> Dict[str, str]:
+        """获取图片URL"""
+        urls = {}
+
+        front_url = self.card_meta.get("front_url", "")
+        back_url = self.card_meta.get("back_url", "")
+
+        # 只设置非空且不是默认卡背的URL
+        if front_url and not self._is_default_card_back(front_url):
+            urls["image_url"] = front_url
+
+        if back_url and not self._is_default_card_back(back_url):
+            urls["back_image_url"] = back_url
+
+        return urls
+
+    def _is_default_card_back(self, url: str) -> bool:
+        """检查是否为默认卡背"""
+        return url.endswith("PlayerCardBack/") or url.endswith("EncounterCardBack/")
+
+    def _parse_skill_icons(self) -> Dict[str, int]:
+        """解析技能图标"""
+        skill_icons = self.card_data.get("submit_icon", [])
+        skill_counts = {skill: 0 for skill in self.SKILL_ICON_MAP.values()}
+
+        for icon in skill_icons:
+            skill_key = self.SKILL_ICON_MAP.get(icon)
+            if skill_key:
+                skill_counts[skill_key] += 1
+
+        return {f"skill_{k}": v for k, v in skill_counts.items() if v > 0}
+
+    def _get_traits(self) -> Optional[str]:
+        """获取特性字符串"""
+        traits = self.card_data.get("traits", [])
+        return ". ".join(traits) + "." if traits else None
+
+    def _clean_name(self, name: str) -> str:
+        """清理卡牌名称，移除特殊标记"""
+        return name.replace("🏅", "").replace("<独特>", "").strip()
+
+    # ==================== 各类型卡牌转换方法 ====================
+
+    def _convert_investigator(self) -> Dict[str, Any]:
+        """转换调查员卡"""
+        flags = self._get_special_flags()
+        faction_codes = self._convert_faction_codes()
+
+        data = {
+            "code": self._extract_code_from_gmnotes(),
+            "position": self._extract_position(),
+            "quantity": 1,  # 调查员卡固定为1
+            "name": self._clean_name(self.card_data.get("name", "")),
+            "subname": self.card_data.get("subtitle", ""),
+            "type_code": "investigator",
+            "faction_code": faction_codes[0],
+            "skill_willpower": self.card_data.get("attribute", [0, 0, 0, 0])[0],
+            "skill_intellect": self.card_data.get("attribute", [0, 0, 0, 0])[1],
+            "skill_combat": self.card_data.get("attribute", [0, 0, 0, 0])[2],
+            "skill_agility": self.card_data.get("attribute", [0, 0, 0, 0])[3],
+            "health": self.card_data.get("health", 0),
+            "sanity": self.card_data.get("sanity", self.card_data.get("horror", 0)),
+            "text": self._convert_text_format(self.card_data.get("body", "")),
+            "flavor": self._convert_text_format(self.card_data.get("flavor", "")),
+            "deck_limit": 1,
+            "double_sided": True,
+            "is_unique": flags["is_unique"],
+            "illustrator": self.card_data.get("illustrator", ""),
+            "pack_code": self.pack_code
+        }
+
+        # 背面数据
+        card_size = 30
+        card_back = self.card_data.get("back", {})
+        if card_back and card_back.get('type', '') in ['调查员背面', '调查员卡背']:
+            back_data = self.card_data.get("back", {}).get("card_back", {})
+            data["back_name"] = self._clean_name(self.card_data.get("name", ""))
+            data["back_subname"] = self.card_data.get("subtitle", "")
+            data["back_text"] = self._convert_text_format(
+                self.workspace_manager.creator.build_investigators_card_back_test(back_data)
+            )
+            data["back_flavor"] = self._convert_text_format(back_data.get("story", ""))
+            card_size = back_data.get("size", card_size)
+
+        # 组牌选项
+        data["deck_options"] = self._convert_deck_options()
+        deck_requirements = f'size:{card_size}'
+        card_signatures = self._get_gmnotes().get('signatures', [])
+        if len(card_signatures) > 0:
+            card_signatures = card_signatures[0]
+            for sig_id in card_signatures.keys():
+                deck_requirements += f', card:{sig_id}'
+        deck_requirements += ', random:subtype:basicweakness'
+        data["deck_requirements"] = deck_requirements
+
+        # 图片
+        data.update(self._get_image_urls())
+
+        return data
+
+    def _add_signature_restrictions(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        为签名卡添加restrictions字段
+
+        Args:
+            data: 已转换的卡牌数据
+
+        Returns:
+            添加了restrictions的卡牌数据
+        """
+        card_id = data.get("code", "")
+
+        # 检查这张卡是否是某个调查员的签名卡
+        if card_id in self.signature_to_investigator:
+            investigator_id = self.signature_to_investigator[card_id]
+            data["restrictions"] = f"investigator:{investigator_id}"
+
+        return data
+
+    def _convert_deck_options(self) -> List[Dict[str, Any]]:
+        """转换组牌选项"""
+        deck_options = self.card_data.get("deck_options", [])
+        return deck_options
+
+    def _convert_asset(self) -> Dict[str, Any]:
+        """转换支援卡"""
+        flags = self._get_special_flags()
+        faction_codes = self._convert_faction_codes()
+
+        data = {
+            "code": self._extract_code_from_gmnotes(),
+            "position": self._extract_position(),
+            "quantity": self._get_quantity(),
+            "name": self._clean_name(self.card_data.get("name", "")),
+            "subname": self.card_data.get("subtitle", ""),
+            "type_code": "asset",
+            "faction_code": faction_codes[0],
+            "cost": self.card_data.get("cost", 0),
+            "text": self._convert_text_format(self.card_data.get("body", "")),
+            "flavor": self._convert_text_format(self.card_data.get("flavor", "")),
+            "deck_limit": 1 if flags["is_unique"] else 2,
+            "is_unique": flags["is_unique"],
+            "illustrator": self.card_data.get("illustrator", ""),
+            "pack_code": self.pack_code
+        }
+
+        # 技能图标
+        data.update(self._parse_skill_icons())
+
+        # 属性
+        if (health := self.card_data.get("health", -1)) != -1:
+            data["health"] = health
+        if (horror := self.card_data.get("horror", -1)) != -1:
+            data["sanity"] = horror
+
+        # 槽位
+        if slot := self._convert_slots():
+            data["slot"] = slot
+
+        # 特性
+        if traits := self._get_traits():
+            data["traits"] = traits
+
+        # 等级
+        if (level := self.card_data.get("level", -1)) >= 0:
+            data["xp"] = level
+
+        # 图片
+        data.update(self._get_image_urls())
+
+        return data
+
+    def _convert_slots(self) -> Optional[str]:
+        """转换槽位信息"""
+        slot = self.card_data.get("slots")
+        slot2 = self.card_data.get("slots2")
+
+        if not slot:
+            return None
+
+        slot_code = self.SLOT_CODE_MAP.get(slot, slot)
+
+        if slot2:
+            slot2_code = self.SLOT_CODE_MAP.get(slot2, slot2)
+            return f"{slot2_code}.{slot_code}"
+
+        return slot_code
+
+    def _convert_event(self) -> Dict[str, Any]:
+        """转换事件卡"""
+        flags = self._get_special_flags()
+        faction_codes = self._convert_faction_codes()
+
+        data = {
+            "code": self._extract_code_from_gmnotes(),
+            "position": self._extract_position(),
+            "quantity": self._get_quantity(),
+            "name": self._clean_name(self.card_data.get("name", "")),
+            "type_code": "event",
+            "faction_code": faction_codes[0],
+            "cost": self.card_data.get("cost", 0),
+            "text": self._convert_text_format(self.card_data.get("body", "")),
+            "flavor": self._convert_text_format(self.card_data.get("flavor", "")),
+            "deck_limit": 1 if flags["is_unique"] else 2,
+            "is_unique": flags["is_unique"],
+            "illustrator": self.card_data.get("illustrator", ""),
+            "pack_code": self.pack_code
+        }
+
+        # 技能图标
+        data.update(self._parse_skill_icons())
+
+        # 特性
+        if traits := self._get_traits():
+            data["traits"] = traits
+
+        # 等级
+        if (level := self.card_data.get("level", -1)) >= 0:
+            data["xp"] = level
+
+        # 图片
+        data.update(self._get_image_urls())
+
+        return data
+
+    def _convert_skill(self) -> Dict[str, Any]:
+        """转换技能卡"""
+        flags = self._get_special_flags()
+        faction_codes = self._convert_faction_codes()
+
+        data = {
+            "code": self._extract_code_from_gmnotes(),
+            "position": self._extract_position(),
+            "quantity": self._get_quantity(),
+            "name": self._clean_name(self.card_data.get("name", "")),
+            "type_code": "skill",
+            "faction_code": faction_codes[0],
+            "text": self._convert_text_format(self.card_data.get("body", "")),
+            "flavor": self._convert_text_format(self.card_data.get("flavor", "")),
+            "deck_limit": 1 if flags["is_unique"] else 2,
+            "is_unique": flags["is_unique"],
+            "illustrator": self.card_data.get("illustrator", ""),
+            "pack_code": self.pack_code
+        }
+
+        # 技能图标
+        data.update(self._parse_skill_icons())
+
+        # 特性
+        if traits := self._get_traits():
+            data["traits"] = traits
+
+        # 等级
+        if (level := self.card_data.get("level", -1)) >= 0:
+            data["xp"] = level
+
+        # 图片
+        data.update(self._get_image_urls())
+
+        return data
+
+    def _convert_enemy(self) -> Dict[str, Any]:
+        """转换敌人卡"""
+        flags = self._get_special_flags()
+
+        data = {
+            "code": self._extract_code_from_gmnotes(),
+            "position": self._extract_position(),
+            "quantity": self._get_quantity(),
+            "name": self._clean_name(self.card_data.get("name", "")),
+            "subname": self.card_data.get("subtitle", ""),
+            "type_code": "enemy",
+            "text": self._convert_text_format(self.card_data.get("body", "")),
+            "flavor": self._convert_text_format(self.card_data.get("flavor", "")),
+            "deck_limit": 1,
+            "is_unique": flags["is_unique"],
+            "illustrator": self.card_data.get("illustrator", ""),
+            "pack_code": self.pack_code
+        }
+
+        # 敌人属性
+        if fight := self._parse_enemy_stat(self.card_data.get("attack", "")):
+            data.update(fight)
+
+        if health := self._parse_enemy_stat(self.card_data.get("enemy_health", ""), "health"):
+            data.update(health)
+
+        if evade := self._parse_enemy_stat(self.card_data.get("evade", ""), "enemy_evade"):
+            data.update(evade)
+
+        # 伤害
+        if (damage := self.card_data.get("enemy_damage", 0)) > 0:
+            data["enemy_damage"] = damage
+
+        if (horror := self.card_data.get("enemy_damage_horror", 0)) > 0:
+            data["enemy_horror"] = horror
+
+        # 特性
+        if traits := self._get_traits():
+            data["traits"] = traits
+
+        # 图片
+        data.update(self._get_image_urls())
+
+        return data
+
+    def _parse_enemy_stat(self, value: str, key: str = "enemy_fight") -> Dict[str, Any]:
+        """解析敌人属性值（支持<调查员>标记）"""
+        if not value:
+            return {}
+
+        result = {}
+        match = re.search(r'(\d+)(?:<调查员>)?', value)
+        if match:
+            result[key] = int(match.group(1))
+            if "<调查员>" in value:
+                per_inv_key = key.replace("enemy_", "") + "_per_investigator"
+                result[per_inv_key] = True
+
+        return result
+
+    def _convert_location(self) -> Dict[str, Any]:
+        """转换地点卡"""
+        flags = self._get_special_flags()
+
+        data = {
+            "code": self._extract_code_from_gmnotes(),
+            "position": self._extract_position(),
+            "quantity": self._get_quantity(),
+            "name": self._clean_name(self.card_data.get("name", "")),
+            "subname": self.card_data.get("subtitle", ""),
+            "type_code": "location",
+            "text": self._convert_text_format(self.card_data.get("body", "")),
+            "flavor": self._convert_text_format(self.card_data.get("flavor", "")),
+            "deck_limit": 1,
+            "is_unique": flags["is_unique"],
+            "illustrator": self.card_data.get("illustrator", ""),
+            "pack_code": self.pack_code
+        }
+
+        # 地点属性
+        if shroud := self._parse_location_value(self.card_data.get("shroud", "")):
+            data["shroud"] = shroud
+
+        if clues := self._parse_location_value(self.card_data.get("clues", "")):
+            data["clues"] = clues
+            data["clues_fixed"] = True
+
+        # 特性
+        if traits := self._get_traits():
+            data["traits"] = traits
+
+        # 双面卡
+        if "back" in self.card_data:
+            data["double_sided"] = True
+            back = self.card_data["back"]
+            data["back_name"] = back.get("name", data["name"])
+            data["back_text"] = self._convert_text_format(back.get("body", ""))
+            data["back_flavor"] = self._convert_text_format(back.get("flavor", ""))
+
+        # 图片
+        data.update(self._get_image_urls())
+
+        return data
+
+    def _parse_location_value(self, value: str) -> Optional[int]:
+        """解析地点属性值（支持-和X）"""
+        if not value or value == "-":
+            return None
+        if value == "X":
+            return -2
+
+        match = re.search(r'(\d+)', value)
+        return int(match.group(1)) if match else None
+
+    def _convert_act_agenda(self) -> Dict[str, Any]:
+        """转换场景卡/密谋卡"""
+        card_type = self.card_data.get("type", "")
+        flags = self._get_special_flags()
+
+        is_act = "场景" in card_type
+        type_code = "act" if is_act else "agenda"
+
+        data = {
+            "code": self._extract_code_from_gmnotes(),
+            "position": self._extract_position(),
+            "quantity": self._get_quantity(),
+            "name": self._clean_name(self.card_data.get("name", "")),
+            "subname": self.card_data.get("subtitle", ""),
+            "type_code": type_code,
+            "text": self._convert_text_format(self.card_data.get("body", "")),
+            "flavor": self._convert_text_format(self.card_data.get("flavor", "")),
+            "deck_limit": 1,
+            "is_unique": flags["is_unique"],
+            "illustrator": self.card_data.get("illustrator", ""),
+            "pack_code": self.pack_code,
+            "double_sided": True,
+            "stage": 1
+        }
+
+        # 阈值
+        threshold = self.card_data.get("threshold", "")
+        if threshold:
+            if is_act:
+                if clues := self._parse_location_value(threshold):
+                    data["clues"] = clues
+            else:
+                if doom := self._parse_location_value(threshold):
+                    data["doom"] = doom
+
+        # 背面数据
+        if "back" in self.card_data:
+            back = self.card_data["back"]
+            data["back_name"] = back.get("name", data["name"])
+            data["back_text"] = self._convert_text_format(back.get("body", ""))
+            data["back_flavor"] = self._convert_text_format(back.get("flavor", ""))
+
+        # 图片
+        data.update(self._get_image_urls())
+
+        return data
+
+    def _convert_treachery(self) -> Dict[str, Any]:
+        """转换诡计卡"""
+        flags = self._get_special_flags()
+
+        data = {
+            "code": self._extract_code_from_gmnotes(),
+            "position": self._extract_position(),
+            "quantity": self._get_quantity(),
+            "name": self._clean_name(self.card_data.get("name", "")),
+            "type_code": "treachery",
+            "text": self._convert_text_format(self.card_data.get("body", "")),
+            "flavor": self._convert_text_format(self.card_data.get("flavor", "")),
+            "deck_limit": 1,
+            "is_unique": flags["is_unique"],
+            "illustrator": self.card_data.get("illustrator", ""),
+            "pack_code": self.pack_code
+        }
+
+        # 特性
+        if traits := self._get_traits():
+            data["traits"] = traits
+
+        # 弱点标记
+        if self.card_data.get("class") == "弱点":
+            if self.card_data.get("weakness_type") == '基础弱点':
+                data["subtype_code"] = "basicweakness"
+            else:
+                data["subtype_code"] = "weakness"
+
+        # 图片
+        data.update(self._get_image_urls())
+
+        return data
+
+    def _validate_card_data(self, card_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        验证卡牌数据的完整性，确保符合ArkhamDB格式要求
+
+        Args:
+            card_data: 待验证的卡牌数据
+
+        Returns:
+            验证后的卡牌数据
+        """
+        import uuid
+
+        # 必要字段及其默认值
+        required_defaults = {
+            "code": f"CARD{str(uuid.uuid4())[:8].upper()}",
+            "position": 1,
+            "quantity": 1,
+            "name": "Unknown Card",
+            "type_code": "skill",
+            "faction_code": "neutral",
+            "pack_code": self.pack_code,
+            "deck_limit": 2
+        }
+
+        for field, default in required_defaults.items():
+            if field not in card_data or not card_data[field]:
+                card_data[field] = default
+
+        return card_data
