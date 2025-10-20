@@ -113,7 +113,7 @@ export class CardService {
                 }
             );
 
-            return response.data.data?.saved_files || [];
+            return response.data.data || [];
         } catch (error) {
             if (error instanceof ApiError) {
                 throw error;

@@ -25,6 +25,10 @@ export interface ContentPackageCard {
   version?: string;    // 卡牌版本号（读取自卡牌文件）
   front_url?: string;  // 卡牌正面图片URL（本地file://或远程http://）
   back_url?: string;   // 卡牌背面图片URL（本地file://或远程http://）
+  original_front_url?: string;
+  original_back_url?: string;
+  front_thumbnail_url?: string;
+  back_thumbnail_url?: string;
   permanent?: boolean; // 永久卡牌
   exceptional?: boolean; // 卓越卡牌
   myriad?: boolean;    // 无数卡牌

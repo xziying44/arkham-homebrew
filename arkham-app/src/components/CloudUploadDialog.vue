@@ -433,104 +433,123 @@ const uploadBanner = async () => {
 // 上传卡牌
 const uploadCard = async () => {
   if (!props.card) return;
-
   try {
     isUploading.value = true;
     uploadProgress.value = 0;
     uploadStatus.value = '准备上传...';
     uploadLogs.value = [];
-
     // 验证配置
     if (!validateConfig()) {
       throw new Error('请完善图床配置信息');
     }
-
     // 保存配置
     await saveConfig();
-
     uploadProgress.value = 20;
     uploadStatus.value = '配置已保存';
-
     // 读取卡牌数据
     const cardData = await WorkspaceService.getFileContent(props.card.filename);
     const parsedCard = JSON.parse(cardData);
-
     uploadProgress.value = 40;
     uploadStatus.value = '准备导出图片...';
-
-    // 导出图片到工作目录
-    const savedFiles = await exportImageToWorkspace(parsedCard, props.card.filename.replace('.card', ''));
-
+    
+    // 导出图片到工作目录 - 使用增强版API
+    const result = await CardService.saveCardEnhanced(parsedCard, props.card.filename.replace('.card', ''), {
+      parentPath: '.cards',
+      format: exportFormat.value,
+      quality: exportQuality.value,
+      rotateLandscape: true
+    });
+    // 获取返回的文件路径对象
+    const savedFiles = result.saved_files || {};
+    
     uploadProgress.value = 60;
     uploadStatus.value = '准备上传到云端...';
-
-    // 上传图片
-    const uploadedUrls: { front?: string; back?: string } = {};
-
-    if (savedFiles.length > 0) {
-      // 清理文件名，移除路径分隔符和特殊字符
-      const cleanCardName = props.card.filename.replace(/.*[\/\\]/, '').replace('.card', '');
-      const frontOnlineName = `${cleanCardName}_front`;
-
-      uploadedUrls.front = await uploadSingleImage(savedFiles[0], frontOnlineName);
+    // 收集需要上传的文件，并去重
+    const filesToUpload = new Map(); // 使用Map去重，key为文件路径，value为在线文件名
+    const cleanCardName = props.card.filename.replace(/.*[\/\\]/, '').replace('.card', '');
+    // 正面图片
+    if (savedFiles.front_url) {
+      filesToUpload.set(savedFiles.front_url, `${cleanCardName}_front`);
     }
-
-    if (savedFiles.length > 1) {
-      // 检查背面卡牌类型，如果是卡背则使用预定义URL
-      const backCardType = parsedCard.back?.type || '';
-      addLog(`卡牌类型: ${parsedCard.type}`, 'info');
-      addLog(`背面卡牌类型: ${backCardType}`, 'info');
-
-      if (backCardType === '玩家卡背') {
-        uploadedUrls.back = "https://steamusercontent-a.akamaihd.net/ugc/2342503777940352139/A2D42E7E5C43D045D72CE5CFC907E4F886C8C690/";
-        addLog(`玩家卡背使用预定义URL`, 'info');
-      } else if (backCardType === '遭遇卡背') {
-        uploadedUrls.back = "https://steamusercontent-a.akamaihd.net/ugc/2342503777940351785/F64D8EFB75A9E15446D24343DA0A6EEF5B3E43DB/";
-        addLog(`遭遇卡背使用预定义URL`, 'info');
-      } else {
-        // 检查是否是通过文件名识别的卡背
-        const filename = props.card.filename.toLowerCase();
-        if (filename.includes('player_cardback') || filename.includes('玩家卡背')) {
-          uploadedUrls.back = "https://steamusercontent-a.akamaihd.net/ugc/2342503777940352139/A2D42E7E5C43D045D72CE5CFC907E4F886C8C690/";
-          addLog(`文件名识别为玩家卡背，使用预定义URL`, 'info');
-        } else if (filename.includes('encounter_cardback') || filename.includes('遭遇卡背')) {
-          uploadedUrls.back = "https://steamusercontent-a.akamaihd.net/ugc/2342503777940351785/F64D8EFB75A9E15446D24343DA0A6EEF5B3E43DB/";
-          addLog(`文件名识别为遭遇卡背，使用预定义URL`, 'info');
-        } else {
-          // 正常上传
-          const cleanCardName = props.card.filename.replace(/.*[\/\\]/, '').replace('.card', '');
-          const backOnlineName = `${cleanCardName}_back`;
-
-          uploadedUrls.back = await uploadSingleImage(savedFiles[1], backOnlineName);
+    
+    // 正面原始图片（如果与正面图片不同）
+    if (savedFiles.original_front_url && savedFiles.original_front_url !== savedFiles.front_url) {
+      filesToUpload.set(savedFiles.original_front_url, `${cleanCardName}_front_original`);
+    }
+    
+    // 正面缩略图
+    if (savedFiles.front_thumbnail_url) {
+      filesToUpload.set(savedFiles.front_thumbnail_url, `${cleanCardName}_front_thumbnail`);
+    }
+    // 背面图片
+    if (savedFiles.back_url) {
+      filesToUpload.set(savedFiles.back_url, `${cleanCardName}_back`);
+    }
+    
+    // 背面原始图片（如果与背面图片不同）
+    if (savedFiles.original_back_url && savedFiles.original_back_url !== savedFiles.back_url) {
+      filesToUpload.set(savedFiles.original_back_url, `${cleanCardName}_back_original`);
+    }
+    
+    // 背面缩略图
+    if (savedFiles.back_thumbnail_url) {
+      filesToUpload.set(savedFiles.back_thumbnail_url, `${cleanCardName}_back_thumbnail`);
+    }
+    // 上传所有文件
+    const uploadedUrls: Record<string, string> = {};
+    let uploadedCount = 0;
+    const totalFiles = filesToUpload.size;
+    for (const [filePath, onlineName] of filesToUpload.entries()) {
+      try {
+        uploadedCount++;
+        uploadStatus.value = `上传图片 ${uploadedCount}/${totalFiles}...`;
+        
+        const url = await uploadSingleImage(filePath, onlineName);
+        
+        // 根据在线文件名存储URL
+        if (onlineName.includes('_front_original')) {
+          uploadedUrls.original_front_url = url;
+        } else if (onlineName.includes('_front_thumbnail')) {
+          uploadedUrls.front_thumbnail_url = url;
+        } else if (onlineName.includes('_front')) {
+          uploadedUrls.front_url = url;
+        } else if (onlineName.includes('_back_original')) {
+          uploadedUrls.original_back_url = url;
+        } else if (onlineName.includes('_back_thumbnail')) {
+          uploadedUrls.back_thumbnail_url = url;
+        } else if (onlineName.includes('_back')) {
+          uploadedUrls.back_url = url;
         }
+        
+        addLog(`图片上传成功: ${onlineName}`, 'info');
+      } catch (error) {
+        addLog(`图片上传失败: ${onlineName} - ${error.message}`, 'error');
       }
     }
-
     uploadProgress.value = 80;
     uploadStatus.value = '更新内容包数据...';
-
     // 更新卡牌的云端URL
     const updatedPackage = { ...props.config };
     const cardIndex = updatedPackage.cards?.findIndex(c => c.filename === props.card?.filename);
     if (cardIndex !== undefined && cardIndex >= 0) {
       updatedPackage.cards![cardIndex] = {
         ...updatedPackage.cards![cardIndex],
-        front_url: uploadedUrls.front,
-        back_url: uploadedUrls.back
+        front_url: uploadedUrls.front_url,
+        back_url: uploadedUrls.back_url,
+        original_front_url: uploadedUrls.original_front_url,
+        original_back_url: uploadedUrls.original_back_url,
+        front_thumbnail_url: uploadedUrls.front_thumbnail_url,
+        back_thumbnail_url: uploadedUrls.back_thumbnail_url
       };
     }
-
     emit('confirm', updatedPackage);
     addLog('卡牌上传完成', 'info');
-
     uploadProgress.value = 100;
     uploadStatus.value = '上传成功';
-
     // 延迟关闭对话框
     setTimeout(() => {
       emit('cancel');
     }, 1000);
-
   } catch (error) {
     console.error('上传卡牌失败:', error);
     message.error(`上传失败: ${error.message}`);
@@ -538,41 +557,31 @@ const uploadCard = async () => {
     isUploading.value = false;
   }
 };
-
 // 批量上传配置
 const batchUploadConfig = async () => {
   if (!props.isBatchUpload) return;
-
   try {
     isUploading.value = true;
     uploadProgress.value = 0;
     uploadStatus.value = '准备批量上传配置...';
     uploadLogs.value = [];
-
     // 验证配置
     if (!validateConfig()) {
       throw new Error('请完善图床配置信息');
     }
-
     // 保存配置
     await saveConfig();
-
     uploadProgress.value = 50;
     uploadStatus.value = '配置已保存';
-
     // 获取所有v2.0卡牌
     const v2Cards = props.config?.cards?.filter((card: ContentPackageCard) => {
-      // 这里简化处理，假设所有卡牌都是v2.0
       return true;
     }) || [];
-
     uploadProgress.value = 80;
     uploadStatus.value = '准备批量上传...';
-
     // 执行批量上传
     const updatedPackage = {
       ...props.config,
-      // 确保包含必要的字段
       name: props.config?.name || '',
       path: props.config?.path || '',
       banner_base64: props.config?.banner_base64 || '',
@@ -580,137 +589,127 @@ const batchUploadConfig = async () => {
       cards: props.config?.cards || []
     };
     const selectedHostType = selectedHost.value;
-
     for (let i = 0; i < v2Cards.length; i++) {
       const card = v2Cards[i];
-
       try {
         // 读取卡牌数据
         const cardData = await WorkspaceService.getFileContent(card.filename);
         const parsedCard = JSON.parse(cardData);
-
-        // 导出图片到工作目录
-        const savedFiles = await CardService.saveCardEnhanced(parsedCard, card.filename.replace('.card', ''), {
+        // 导出图片到工作目录 - 使用增强版API
+        const result = await CardService.saveCardEnhanced(parsedCard, card.filename.replace('.card', ''), {
           parentPath: '.cards',
           format: exportFormat.value,
           quality: exportQuality.value,
-          rotateLandscape: true  // 内容包导出时自动旋转横向图片
+          rotateLandscape: true
         });
-
-        // 上传图片
-        const uploadedUrls: { front?: string; back?: string } = {};
-
-        if (savedFiles.length > 0) {
-          const cleanCardName = card.filename.replace(/.*[\/\\]/, '').replace('.card', '');
-          const frontOnlineName = `${cleanCardName}_front`;
-
-          // 如果是本地模式，使用本地URL
-          if (selectedHostType === 'local') {
-            // 获取工作空间绝对路径
-            const workspacePath = await getWorkspaceAbsolutePath();
-            const fullPath = savedFiles[0].startsWith('/') || savedFiles[0].includes(':')
-              ? savedFiles[0]
-              : `${workspacePath}/${savedFiles[0]}`;
-            const fileUrl = fullPath.includes(':')
-              ? `file:///${fullPath.replace(/\\/g, '/')}`
-              : `file://${fullPath}`;
-            uploadedUrls.front = fileUrl;
-            addLog(`本地模式，正面使用本地URL: ${fileUrl}`, 'info');
-          } else {
-            const result = await ImageHostService.smartUpload(
-              savedFiles[0],
-              selectedHostType,
-              frontOnlineName
-            );
-            if (result.code === 0 && result.data?.url) {
-              uploadedUrls.front = result.data.url;
-            }
-          }
+        // 获取返回的文件路径对象
+        const savedFiles = result.saved_files || {};
+        // 收集需要上传的文件，并去重
+        const filesToUpload = new Map();
+        const cleanCardName = card.filename.replace(/.*[\/\\]/, '').replace('.card', '');
+        // 正面图片
+        if (savedFiles.front_url) {
+          filesToUpload.set(savedFiles.front_url, `${cleanCardName}_front`);
         }
-
-        if (savedFiles.length > 1) {
-          // 检查背面卡牌类型，如果是卡背则使用预定义URL
-          const backCardType = parsedCard.back?.type || '';
-          addLog(`卡牌类型: ${parsedCard.type}`, 'info');
-          addLog(`背面卡牌类型: ${backCardType}`, 'info');
-
-          if (backCardType === '玩家卡背') {
-            uploadedUrls.back = "https://steamusercontent-a.akamaihd.net/ugc/2342503777940352139/A2D42E7E5C43D045D72CE5CFC907E4F886C8C690/";
-            addLog(`玩家卡背使用预定义URL`, 'info');
-          } else if (backCardType === '遭遇卡背') {
-            uploadedUrls.back = "https://steamusercontent-a.akamaihd.net/ugc/2342503777940351785/F64D8EFB75A9E15446D24343DA0A6EEF5B3E43DB/";
-            addLog(`遭遇卡背使用预定义URL`, 'info');
-          } else {
-            // 检查是否是通过文件名识别的卡背
-            const filename = card.filename.toLowerCase();
-            if (filename.includes('player_cardback') || filename.includes('玩家卡背')) {
-              uploadedUrls.back = "https://steamusercontent-a.akamaihd.net/ugc/2342503777940352139/A2D42E7E5C43D045D72CE5CFC907E4F886C8C690/";
-              addLog(`文件名识别为玩家卡背，使用预定义URL`, 'info');
-            } else if (filename.includes('encounter_cardback') || filename.includes('遭遇卡背')) {
-              uploadedUrls.back = "https://steamusercontent-a.akamaihd.net/ugc/2342503777940351785/F64D8EFB75A9E15446D24343DA0A6EEF5B3E43DB/";
-              addLog(`文件名识别为遭遇卡背，使用预定义URL`, 'info');
+        
+        // 正面原始图片（如果与正面图片不同）
+        if (savedFiles.original_front_url && savedFiles.original_front_url !== savedFiles.front_url) {
+          filesToUpload.set(savedFiles.original_front_url, `${cleanCardName}_front_original`);
+        }
+        
+        // 正面缩略图
+        if (savedFiles.front_thumbnail_url) {
+          filesToUpload.set(savedFiles.front_thumbnail_url, `${cleanCardName}_front_thumbnail`);
+        }
+        // 背面图片
+        if (savedFiles.back_url) {
+          filesToUpload.set(savedFiles.back_url, `${cleanCardName}_back`);
+        }
+        
+        // 背面原始图片（如果与背面图片不同）
+        if (savedFiles.original_back_url && savedFiles.original_back_url !== savedFiles.back_url) {
+          filesToUpload.set(savedFiles.original_back_url, `${cleanCardName}_back_original`);
+        }
+        
+        // 背面缩略图
+        if (savedFiles.back_thumbnail_url) {
+          filesToUpload.set(savedFiles.back_thumbnail_url, `${cleanCardName}_back_thumbnail`);
+        }
+        // 上传所有文件
+        const uploadedUrls: Record<string, string> = {};
+        for (const [filePath, onlineName] of filesToUpload.entries()) {
+          try {
+            let url: string;
+            
+            // 如果是本地模式，使用本地URL
+            if (selectedHostType === 'local') {
+              const workspacePath = await getWorkspaceAbsolutePath();
+              const fullPath = filePath.startsWith('/') || filePath.includes(':')
+                ? filePath
+                : `${workspacePath}/${filePath}`;
+              url = fullPath.includes(':')
+                ? `file:///${fullPath.replace(/\\/g, '/')}`
+                : `file://${fullPath}`;
+              addLog(`本地模式，使用本地URL: ${url}`, 'info');
             } else {
-              // 如果是本地模式，使用本地URL
-              if (selectedHostType === 'local') {
-                // 获取工作空间绝对路径
-                const workspacePath = await getWorkspaceAbsolutePath();
-                const fullPath = savedFiles[1].startsWith('/') || savedFiles[1].includes(':')
-                  ? savedFiles[1]
-                  : `${workspacePath}/${savedFiles[1]}`;
-                const fileUrl = fullPath.includes(':')
-                  ? `file:///${fullPath.replace(/\\/g, '/')}`
-                  : `file://${fullPath}`;
-                uploadedUrls.back = fileUrl;
-                addLog(`本地模式，背面使用本地URL: ${fileUrl}`, 'info');
+              const uploadResult = await ImageHostService.smartUpload(
+                filePath,
+                selectedHostType,
+                onlineName
+              );
+              if (uploadResult.code === 0 && uploadResult.data?.url) {
+                url = uploadResult.data.url;
               } else {
-                // 正常上传
-                const cleanCardName = card.filename.replace(/.*[\/\\]/, '').replace('.card', '');
-                const backOnlineName = `${cleanCardName}_back`;
-
-                const result = await ImageHostService.smartUpload(
-                  savedFiles[1],
-                  selectedHostType,
-                  backOnlineName
-                );
-                if (result.code === 0 && result.data?.url) {
-                  uploadedUrls.back = result.data.url;
-                }
+                throw new Error(uploadResult.msg || '上传失败');
               }
             }
+            // 根据在线文件名存储URL
+            if (onlineName.includes('_front_original')) {
+              uploadedUrls.original_front_url = url;
+            } else if (onlineName.includes('_front_thumbnail')) {
+              uploadedUrls.front_thumbnail_url = url;
+            } else if (onlineName.includes('_front')) {
+              uploadedUrls.front_url = url;
+            } else if (onlineName.includes('_back_original')) {
+              uploadedUrls.original_back_url = url;
+            } else if (onlineName.includes('_back_thumbnail')) {
+              uploadedUrls.back_thumbnail_url = url;
+            } else if (onlineName.includes('_back')) {
+              uploadedUrls.back_url = url;
+            }
+            addLog(`图片上传成功: ${onlineName}`, 'info');
+          } catch (error) {
+            addLog(`图片上传失败: ${onlineName} - ${error.message}`, 'error');
           }
         }
-
         // 更新卡牌的云端URL
         const cardIndex = updatedPackage.cards?.findIndex(c => c.filename === card.filename);
         if (cardIndex !== undefined && cardIndex >= 0) {
           updatedPackage.cards![cardIndex] = {
             ...updatedPackage.cards![cardIndex],
-            front_url: uploadedUrls.front,
-            back_url: uploadedUrls.back
+            front_url: uploadedUrls.front_url,
+            back_url: uploadedUrls.back_url,
+            original_front_url: uploadedUrls.original_front_url,
+            original_back_url: uploadedUrls.original_back_url,
+            front_thumbnail_url: uploadedUrls.front_thumbnail_url,
+            back_thumbnail_url: uploadedUrls.back_thumbnail_url
           };
         }
-
         addLog(`卡牌 ${card.filename} 上传成功`, 'info');
-
       } catch (error) {
         addLog(`卡牌 ${card.filename} 上传失败: ${error.message}`, 'error');
       }
-
       // 短暂延迟避免过于频繁的请求
       await new Promise(resolve => setTimeout(resolve, 300));
     }
-
     uploadProgress.value = 100;
     uploadStatus.value = '批量上传完成';
-
     emit('confirm', updatedPackage);
     addLog('批量上传完成', 'info');
-
     // 延迟关闭对话框
     setTimeout(() => {
       emit('cancel');
     }, 1000);
-
   } catch (error) {
     console.error('批量上传失败:', error);
     message.error(`批量上传失败: ${error.message}`);
