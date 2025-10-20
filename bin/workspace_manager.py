@@ -797,7 +797,7 @@ class WorkspaceManager:
 
     def save_card_image_enhanced(self, json_data: Dict[str, Any], filename: str,
                                  parent_path: Optional[str] = None, export_format: str = 'JPG',
-                                 quality: int = 95, rotate_landscape: bool = False) -> List[str]:
+                                 quality: int = 95, rotate_landscape: bool = False) -> Dict[str, Any]:
         """
         保存卡图到文件（增强版：支持双面卡牌、格式选择、质量设置和横向图片旋转）
 
@@ -813,6 +813,15 @@ class WorkspaceManager:
             List[str]: 保存成功的文件路径列表（相对路径），失败时返回空列表
         """
         saved_files = []
+        result: dict[str, list[Any] | str | None] = {
+            'saved_files': saved_files,
+            'front_url': None,
+            'back_url': None,
+            'original_front_url': None,
+            'original_back_url': None,
+            'front_thumbnail_url': None,
+            'back_thumbnail_url': None
+        }
 
         try:
             # 检查版本号判断是否为双面卡牌
@@ -825,29 +834,48 @@ class WorkspaceManager:
 
                 if double_sided_result is None:
                     print("生成双面卡图失败")
-                    return saved_files
+                    return result
 
-                front_card = double_sided_result.get('front')
-                back_card = double_sided_result.get('back')
-
-                # 保存正面图片
-                if front_card and front_card.image:
-                    front_filename = f"{filename}_front.{export_format.lower()}"
+                for side in ['front', 'back']:
+                    item_card = double_sided_result.get(side)
+                    if not (item_card and item_card.image):
+                        # 如果图片不存在则跳过
+                        continue
+                    side_filename = f"{filename}_{side}.{export_format.lower()}"
+                    if rotate_landscape:
+                        # 启动横向图片处理
+                        width, height = item_card.image.size
+                        if width > height:
+                            # 横向保留一份源文件
+                            original_side_filename = f"{filename}_{side}_original.{export_format.lower()}"
+                            front_path = self._save_single_image(
+                                item_card.image, original_side_filename, parent_path, export_format, quality, False
+                            )
+                            if front_path:
+                                saved_files.append(front_path)
+                                result[f'original_{side}_url'] = front_path
+                        # 生成缩略图
+                        json_data_side = json_data
+                        if side == 'back':
+                            json_data_side = json_data.get('back', {})
+                        card_thumbnail = self._generate_thumbnail(json_data_side, item_card.image)
+                        side_thumbnail_filename = f"{filename}_{side}_thumbnail.jpg"
+                        front_path = self._save_single_image(
+                            card_thumbnail.image, side_thumbnail_filename, parent_path, 'JPG', 60, False
+                        )
+                        if front_path:
+                            saved_files.append(front_path)
+                            result[f'{side}_thumbnail_url'] = front_path
+                        pass
+                    # 正常处理
                     front_path = self._save_single_image(
-                        front_card.image, front_filename, parent_path, export_format, quality, rotate_landscape
+                        item_card.image, side_filename, parent_path, export_format, quality, rotate_landscape
                     )
                     if front_path:
                         saved_files.append(front_path)
-
-                # 保存背面图片（如果存在）
-                if back_card and back_card.image:
-                    back_filename = f"{filename}_back.{export_format.lower()}"
-                    back_path = self._save_single_image(
-                        back_card.image, back_filename, parent_path, export_format, quality, rotate_landscape
-                    )
-                    if back_path:
-                        saved_files.append(back_path)
-
+                        result[f'{side}_url'] = front_path
+                        if not result[f'original_{side}_url']:
+                            result[f'original_{side}_url'] = front_path
                 print(f"双面卡牌保存完成，共保存 {len(saved_files)} 个文件")
             else:
                 # 单面卡牌处理
@@ -856,7 +884,7 @@ class WorkspaceManager:
 
                 if card is None or card.image is None:
                     print("生成卡图失败")
-                    return saved_files
+                    return result
 
                 # 保存单面图片
                 final_filename = f"{filename}.{export_format.lower()}"
@@ -868,12 +896,12 @@ class WorkspaceManager:
 
                 print("单面卡牌保存完成")
 
-            return saved_files
+            return result
 
         except Exception as e:
             print(f"保存卡图失败: {e}")
             traceback.print_exc()
-            return saved_files
+            return result
 
     def _save_single_image(self, image: Image.Image, filename: str, parent_path: Optional[str],
                            export_format: str, quality: int, rotate_landscape: bool = False) -> Optional[str]:
@@ -927,6 +955,31 @@ class WorkspaceManager:
 
         except Exception as e:
             print(f"保存图片失败: {e}")
+            return None
+
+    def _generate_thumbnail(self, json_data: Dict[str, Any], image: Image.Image) -> Card:
+        """
+        生成卡牌缩略图（通过调用卡牌生成API）
+        Args:
+            json_data: 卡牌数据的JSON字典
+            image: PIL图片对象（用于备用方案）
+        Returns:
+            str: 缩略图文件相对路径，失败时返回None
+        """
+        try:
+            # 创建缩略图JSON数据
+            thumbnail_json = {
+                "type": "特殊图片",
+                "craft_type": "缩略图",
+                "thumbnail_type": json_data.get('type', '未知')
+            }
+            # 调用卡牌生成API生成缩略图
+            print(f"正在生成缩略图: {thumbnail_json['thumbnail_type']}")
+            thumbnail_card = self.creator.create_card(thumbnail_json, image)
+            return thumbnail_card
+        except Exception as e:
+            print(f"生成缩略图失败: {e}")
+            traceback.print_exc()
             return None
 
     @staticmethod
