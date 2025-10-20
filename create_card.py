@@ -8,6 +8,44 @@ from PIL import Image, ImageEnhance
 
 from Card import Card, FontManager, ImageManager
 
+# 缩略图裁剪区域定义（从 images.ts 转换而来）
+THUMBNAIL_REGIONS = {
+    "investigator": {"x": 3, "y": 47, "width": 220, "height": 220},
+    "investigator_back": {"x": 2, "y": 1, "width": 151, "height": 151},
+    "asset": {"x": 64, "y": 50, "width": 174, "height": 174},
+    "event": {"x": 65, "y": 26, "width": 174, "height": 174},
+    "skill": {"x": 49, "y": 43, "width": 217, "height": 217},
+    "enemy": {"x": 78, "y": 266, "width": 143, "height": 143},
+    "enemy_swap": {"x": 74, "y": 2, "width": 152, "height": 152},
+    "location": {"x": 85, "y": 55, "width": 132, "height": 132},
+    "enemy_location": {"x": 77, "y": 204, "width": 166, "height": 166},
+    "treachery": {"x": 67, "y": 2, "width": 166, "height": 166},
+    "scenario": {"x": 9, "y": 7, "width": 283, "height": 283},
+    "story": {"x": 7, "y": 3, "width": 288, "height": 288},
+    "key": {"x": 70, "y": 41, "width": 162, "height": 162},
+    "act": {"x": 258, "y": 67, "width": 164, "height": 164},
+    "agenda": {"x": 0, "y": 67, "width": 164, "height": 164},
+    "agenda_back": {"x": 3, "y": 12, "width": 64, "height": 64},
+    "full": {"x": 128, "y": 1, "width": 164, "height": 164},
+}
+
+# 中文卡牌类型到英文类型的映射
+CARD_TYPE_MAP = {
+    "调查员卡": "investigator",
+    "调查员卡背": "investigator_back",
+    "调查员背面": "investigator_back",
+    "支援卡": "asset",
+    "事件卡": "event",
+    "技能卡": "skill",
+    "敌人卡": "enemy",
+    "地点卡": "location",
+    "诡计卡": "treachery",
+    "冒险参考卡": "scenario",
+    "故事卡": "story",
+    "场景卡": "act",
+    "密谋卡": "agenda",
+}
+
 
 class CardCreator:
     """卡牌创建器类"""
@@ -1532,6 +1570,104 @@ class CardCreator:
         self.font_manager.silence = False
         return card_object
 
+    def _extract_thumbnail(self, image: Image.Image, card_type: str) -> Image.Image:
+        """
+        从卡牌图片中提取缩略图
+
+        Args:
+            image: PIL Image对象
+            card_type: 卡牌类型（支持中文或英文）
+
+        Returns:
+            Image.Image: 提取的缩略图
+        """
+        MAJOR_AXIS = 420
+        MINOR_AXIS = 300
+
+        w, h = image.size
+
+        # 确定基准尺寸
+        base_h = MINOR_AXIS if w > h else MAJOR_AXIS
+        base_w = MAJOR_AXIS if w > h else MINOR_AXIS
+
+        # 转换为英文类型名
+        card_type_en = CARD_TYPE_MAP.get(card_type, card_type.lower())
+
+        # 获取裁剪区域
+        if card_type_en not in THUMBNAIL_REGIONS:
+            # 如果没有匹配的类型，返回整个图片的缩放版本
+            print(f"未找到卡牌类型 {card_type} ({card_type_en}) 的缩略图区域配置，使用默认缩放")
+            return image.copy()
+
+        region = THUMBNAIL_REGIONS[card_type_en]
+
+        # 计算实际裁剪坐标
+        left = round(region["x"] * (w / base_w))
+        top = round(region["y"] * (h / base_h))
+        width = round(region["width"] * (w / base_w))
+        height = round(region["height"] * (h / base_h))
+
+        # 检查并调整超出边界的情况
+        if top + height > h:
+            diff = top + height - h
+            print(f"高度不足，减少提取区域 {diff}px")
+            height -= diff
+            width -= diff
+
+        if left + width > w:
+            diff = left + width - w
+            print(f"宽度不足，减少提取区域 {diff}px")
+            width -= diff
+            height -= diff
+
+        # 确保尺寸为正数
+        if width <= 0 or height <= 0:
+            print(f"计算的裁剪区域无效，使用整个图片")
+            return image.copy()
+
+        # 裁剪图片
+        cropped = image.crop((left, top, left + width, top + height))
+
+        return cropped
+
+    def create_special_pictures(self, card_json: dict, picture_path: Union[str, Image.Image, None] = None) -> Card:
+        """制作特殊图片"""
+        craft_type = card_json.get('craft_type')
+        dp = self._open_picture(card_json, picture_path)
+
+        if dp is None:
+            raise ValueError("未提供图片")
+
+        if craft_type == '盒子模型图片':
+            box_cover = self.image_manager.get_image('box-cover')
+            card = Card(0, 0, image=box_cover)
+            card.paste_image(
+                dp,
+                (420, 420, 780, 782),
+                'cover'
+            )
+            return card
+
+        elif craft_type == '缩略图':
+            # 获取卡牌类型参数，默认为'支援卡'
+            thumbnail_card_type = card_json.get('thumbnail_type', '支援卡')
+
+            # 提取缩略图
+            thumbnail = self._extract_thumbnail(dp, thumbnail_card_type)
+
+            # 可选：调整缩略图大小
+            max_size = card_json.get('thumbnail_size', 300)  # 默认最大尺寸300px
+            if max_size > 0 and max(thumbnail.size) > max_size:
+                thumbnail.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+
+            card = Card(0, 0, image=thumbnail)
+            return card
+
+        else:
+            # 其他类型直接返回原图
+            card = Card(0, 0, image=dp)
+            return card
+
     def create_card(self, card_json: dict, picture_path: Union[str, Image.Image, None] = None) -> Card:
         """
         入口函数 - 根据卡牌类型创建对应的卡牌
@@ -1595,6 +1731,8 @@ class CardCreator:
                 else:
                     card_json['type'] = '密谋卡'
                 return self.create_act_back_card(card_json, picture_path)
+            elif card_type == '特殊图片':
+                return self.create_special_pictures(card_json, picture_path)
             else:
                 if 'class' not in card_json:
                     card_json['class'] = '中立'
@@ -1608,25 +1746,10 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "场景卡",
-        "name": "仪式开始",
-        "id": "",
-        "created_at": "",
-        "version": "1.0",
-        "language": "zh",
-        "serial_number": "1a",
-        "threshold": "5",
-        "stage": 1,
-        "body": "⚡调查员共同花费1🕵️个线索：在本密谋上放置1个毁灭标记(本效果能导致本密谋推进)。每位调查员抽取1张卡牌。(团队每轮仅限一次。)",
-        "flavor": "风暴中漆黑的乌云在头顶盘旋。在风暴中央，肆虐着一道邪恶能量形成的旋涡。仪式开始了。次元门也许会出现在修道院的上方，亦或是下方。你必须赶在哈斯塔的手下之前决定前进的方向，并抵达次元门。",
-        "encounter_group": "black_stars_rise",
-        "illustrator": "Michał Miłkowski",
-        "card_number": "278",
-        "footer_copyright": "© 2017 FFG",
-        "footer_icon_font": "<font name=\"packicon_carcosa\"></font>",
-        "encounter_group_number": "6/30",
-        "image_mode": 1,
-        "mirror": True
+        "type": "特殊图片",
+        "craft_type": "缩略图",
+        "thumbnail_type": "调查员卡背",
+        "picture_path": r"D:\汉化文件夹\测试工作空间v2\.cards\0ab2eb50-d864-4b1f-a6b6-25de760bc482.png"
     }
 
     # 创建字体和图片管理器
