@@ -171,8 +171,11 @@ export default {
     arkhamdb: {
       title: 'Export to ArkhamDB Format',
       description: 'Export the content package as an ArkhamDB format JSON file, suitable for arkham.build expansion pack creation',
+      packageName: 'Package Name',
+      cardCount: 'Card Count',
       packageCode: 'Package Code',
       alwaysExportable: 'Can Export',
+      exportStatus: 'Export Status',
       exportDescription: 'Export Description',
       exportDetails: [
         '• Exported JSON file contains ArkhamDB format data for all cards',

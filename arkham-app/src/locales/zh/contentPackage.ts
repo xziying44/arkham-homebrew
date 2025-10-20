@@ -171,8 +171,11 @@ export default {
     arkhamdb: {
       title: '导出到ArkhamDB格式',
       description: '将内容包导出为ArkhamDB格式的JSON文件，适用于arkham.build扩展包制作',
+      packageName: '内容包名称',
+      cardCount: '卡牌数量',
       packageCode: '内容包代码',
       alwaysExportable: '可导出',
+      exportStatus: '导出状态',
       exportDescription: '导出说明',
       exportDetails: [
         '• 导出的JSON文件包含所有卡牌的ArkhamDB格式数据',
