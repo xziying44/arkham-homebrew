@@ -316,6 +316,59 @@
                 </template>
               </n-card>
 
+              <!-- ArkhamDB导出区域 -->
+              <n-card title="导出到ArkhamDB格式" :bordered="false" style="margin-top: 1.5rem;">
+                <template #header-extra>
+                  <n-tag type="success" size="small">arkham.build</n-tag>
+                </template>
+
+                <div class="arkhamdb-export-info">
+                  <n-alert type="success" style="margin-bottom: 1rem;">
+                    <template #icon>
+                      <n-icon :component="DownloadOutline" />
+                    </template>
+                    将内容包导出为ArkhamDB格式的JSON文件，适用于arkham.build扩展包制作
+                  </n-alert>
+
+                  <n-descriptions :column="2" bordered style="margin-bottom: 1.5rem;">
+                    <n-descriptions-item label="内容包名称">
+                      <n-text strong>{{ packageData.meta?.name || '未知内容包' }}</n-text>
+                    </n-descriptions-item>
+                    <n-descriptions-item label="卡牌数量">
+                      <n-tag type="info" size="small">{{ packageData.cards?.length || 0 }} 张</n-tag>
+                    </n-descriptions-item>
+                    <n-descriptions-item label="内容包代码">
+                      <n-tag type="warning" size="small">{{ packageData.meta?.code || '未知' }}</n-tag>
+                    </n-descriptions-item>
+                    <n-descriptions-item label="导出状态">
+                      <n-tag type="success" size="small">
+                        可导出
+                      </n-tag>
+                    </n-descriptions-item>
+                  </n-descriptions>
+
+                  <div class="arkhamdb-description">
+                    <h5>导出说明</h5>
+                    <n-space vertical size="small">
+                      <n-text depth="3">• 导出的JSON文件包含所有卡牌的ArkhamDB格式数据</n-text>
+                      <n-text depth="3">• 可直接用于arkham.build网站的扩展包上传</n-text>
+                      <n-text depth="3">• 包含完整的卡牌属性、标签和元数据信息</n-text>
+                    </n-space>
+                  </div>
+                </div>
+
+                <template #action>
+                  <n-space>
+                    <n-button type="success" @click="exportToArkhamdb" :loading="exportingToArkhamdb">
+                      <template #icon>
+                        <n-icon :component="DownloadOutline" />
+                      </template>
+                      导出ArkhamDB格式
+                    </n-button>
+                  </n-space>
+                </template>
+              </n-card>
+
               <!-- 导出日志对话框 -->
               <n-modal v-model:show="showExportLogsDialog" preset="dialog" title="导出日志" style="width: 800px;">
                 <div class="export-logs-content">
@@ -331,6 +384,27 @@
                   <n-space>
                     <n-button @click="showExportLogsDialog = false">关闭</n-button>
                     <n-button v-if="exportResult?.tts_path" type="primary" @click="openTtsFileLocation">
+                      打开文件夹
+                    </n-button>
+                  </n-space>
+                </template>
+              </n-modal>
+
+              <!-- ArkhamDB导出日志对话框 -->
+              <n-modal v-model:show="showArkhamdbExportLogsDialog" preset="dialog" title="ArkhamDB导出日志" style="width: 800px;">
+                <div class="export-logs-content">
+                  <n-scrollbar style="max-height: 400px;">
+                    <div class="logs-container">
+                      <div v-for="(log, index) in arkhamdbExportLogs" :key="index" :class="['log-item', getLogItemClass(log)]">
+                        <n-text>{{ log }}</n-text>
+                      </div>
+                    </div>
+                  </n-scrollbar>
+                </div>
+                <template #action>
+                  <n-space>
+                    <n-button @click="showArkhamdbExportLogsDialog = false">关闭</n-button>
+                    <n-button v-if="arkhamdbExportResult?.output_path" type="success" @click="openArkhamdbFileLocation">
                       打开文件夹
                     </n-button>
                   </n-space>
@@ -721,6 +795,12 @@ const exportingToTts = ref(false);
 const showExportLogsDialog = ref(false);
 const exportLogs = ref<string[]>([]);
 const exportResult = ref<any>(null);
+
+// ArkhamDB导出状态
+const exportingToArkhamdb = ref(false);
+const showArkhamdbExportLogsDialog = ref(false);
+const arkhamdbExportLogs = ref<string[]>([]);
+const arkhamdbExportResult = ref<any>(null);
 
 // 卡牌预览生成队列
 const previewGenerationQueue = ref<string[]>([]);
@@ -1768,6 +1848,93 @@ const openTtsFileLocation = () => {
   }
 };
 
+// ArkhamDB导出方法
+const exportToArkhamdb = async () => {
+  if (!packageData.value?.path) {
+    message.error('内容包路径无效');
+    return;
+  }
+
+  exportingToArkhamdb.value = true;
+  arkhamdbExportLogs.value = [];
+
+  try {
+    // 添加开始日志
+    arkhamdbExportLogs.value.push('🚀 开始导出到ArkhamDB格式...');
+    arkhamdbExportLogs.value.push(`📦 内容包: ${packageData.value?.meta?.name || '未知内容包'}`);
+    arkhamdbExportLogs.value.push(`📊 总卡牌数: ${packageData.value?.cards?.length || 0} 张`);
+    arkhamdbExportLogs.value.push('⏳ 正在处理卡牌数据...');
+
+    const result = await ContentPackageService.exportToArkhamdb(packageData.value.path);
+
+    // 添加成功日志
+    arkhamdbExportLogs.value.push('✅ ArkhamDB格式导出成功！');
+
+    // 确保result有logs属性
+    if (result && Array.isArray(result.logs)) {
+      // 过滤掉重复的开始日志，避免重复显示
+      const backendLogs = result.logs.filter(log =>
+        !log.includes('开始导出ArkhamDB') &&
+        !log.includes('内容包') &&
+        !log.includes('总卡牌数')
+      );
+
+      if (backendLogs.length > 0) {
+        arkhamdbExportLogs.value.push(...backendLogs);
+      }
+    } else {
+      arkhamdbExportLogs.value.push('📝 导出完成，但未收到详细处理日志');
+    }
+
+    // 添加文件保存信息
+    if (result.output_path) {
+      arkhamdbExportLogs.value.push(`📂 ArkhamDB文件已保存到: ${result.output_path}`);
+    }
+
+    // 添加完成提示
+    arkhamdbExportLogs.value.push('');
+    arkhamdbExportLogs.value.push('🎉 导出完成！您可以将此文件用于arkham.build扩展包。');
+    arkhamdbExportLogs.value.push('💡 提示：请检查导出的JSON文件格式是否符合arkham.build要求。');
+
+    arkhamdbExportResult.value = result;
+    showArkhamdbExportLogsDialog.value = true;
+    message.success('ArkhamDB格式导出成功！');
+
+  } catch (error: any) {
+    console.error('导出ArkhamDB格式失败:', error);
+
+    // 添加错误信息
+    arkhamdbExportLogs.value.push('❌ 导出失败！');
+
+    if (error.code === 14005) {
+      arkhamdbExportLogs.value.push(`💡 错误原因: ${error.message}`);
+      arkhamdbExportLogs.value.push('💡 建议请检查内容包数据完整性');
+    } else {
+      arkhamdbExportLogs.value.push(`💡 错误原因: ${error.message || '未知错误'}`);
+      arkhamdbExportLogs.value.push('💡 建议请检查网络连接或重试导出');
+    }
+
+    showArkhamdbExportLogsDialog.value = true;
+    message.error('ArkhamDB格式导出失败，请查看日志了解详情');
+  } finally {
+    exportingToArkhamdb.value = false;
+  }
+};
+
+// 打开ArkhamDB文件位置
+const openArkhamdbFileLocation = () => {
+  if (arkhamdbExportResult.value?.output_path) {
+    // 提取目录路径
+    const dirPath = arkhamdbExportResult.value.output_path.substring(0, arkhamdbExportResult.value.output_path.lastIndexOf('/'));
+    if (dirPath) {
+      WorkspaceService.openDirectory(dirPath).catch(error => {
+        console.error('打开目录失败:', error);
+        message.error('无法打开文件夹');
+      });
+    }
+  }
+};
+
 // 监听内容包变化，自动刷新版本信息
 watch(() => packageData.value, async (newPackage, oldPackage) => {
   if (newPackage && (!oldPackage || newPackage.path !== oldPackage.path || JSON.stringify(newPackage?.cards) !== JSON.stringify(oldPackage?.cards))) {
@@ -2321,6 +2488,20 @@ watch(() => packageData.value, async (newPackage, oldPackage) => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+/* ArkhamDB导出样式 */
+.arkhamdb-export-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.arkhamdb-description h5 {
+  margin: 0 0 0.75rem 0;
+  color: #2c3e50;
+  font-size: 1rem;
+  font-weight: 600;
 }
 
 .tts-cards-status {

@@ -1862,3 +1862,56 @@ class WorkspaceManager:
                 "logs": [error_msg],
                 "error": str(e)
             }
+
+    def export_content_package_to_arkhamdb(self, package_relative_path: str, output_path: str = None) -> Dict[str, Any]:
+        """
+        导出内容包到ArkhamDB格式
+
+        Args:
+            package_relative_path: 内容包文件的相对路径
+            output_path: 可选的输出文件路径
+
+        Returns:
+            dict: 包含成功状态、数据和日志信息的字典
+        """
+        try:
+            # 确保路径在工作空间内
+            if not self._is_path_in_workspace(package_relative_path):
+                return {
+                    "success": False,
+                    "logs": [f"内容包路径不在工作空间内: {package_relative_path}"],
+                    "error": "路径安全检查失败"
+                }
+
+            # 读取内容包文件
+            package_path = self._get_absolute_path(package_relative_path)
+            if not os.path.exists(package_path):
+                return {
+                    "success": False,
+                    "logs": [f"内容包文件不存在: {package_relative_path}"],
+                    "error": "文件不存在"
+                }
+
+            with open(package_path, 'r', encoding='utf-8') as f:
+                content_package_data = json.load(f)
+
+            # 创建内容包管理器并导出
+            manager = ContentPackageManager(content_package_data, self)
+            result = manager.export_to_arkhamdb(output_path)
+
+            if not result.get("success"):
+                return result
+
+            # 添加额外的成功日志
+            result["logs"].append("ArkhamDB格式导出完成")
+
+            return result
+
+        except Exception as e:
+            error_msg = f"导出内容包到ArkhamDB失败: {e}"
+            print(error_msg)
+            return {
+                "success": False,
+                "logs": [error_msg],
+                "error": str(e)
+            }

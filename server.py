@@ -1296,6 +1296,48 @@ def export_content_package_to_tts():
         )), 500
 
 
+@app.route('/api/content-package/export-arkhamdb', methods=['POST'])
+@handle_api_error
+def export_content_package_to_arkhamdb():
+    """导出内容包到ArkhamDB格式"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    data = request.get_json()
+    if not data or 'package_path' not in data:
+        return jsonify(create_response(
+            code=14003,
+            msg="请提供内容包文件路径"
+        )), 400
+
+    package_path = data['package_path']
+    output_path = data.get('output_path')  # 可选的输出路径
+
+    logger_manager.info(f"导出内容包到ArkhamDB: {package_path}")
+
+    # 调用工作空间的导出方法
+    result = current_workspace.export_content_package_to_arkhamdb(package_path, output_path)
+
+    if result.get("success"):
+        logger_manager.info(f"内容包导出ArkhamDB成功: {package_path}")
+        return jsonify(create_response(
+            msg="内容包导出ArkhamDB格式成功",
+            data={
+                "arkhamdb_data": result.get("arkhamdb_data"),
+                "output_path": result.get("output_path"),
+                "logs": result.get("logs", [])
+            }
+        ))
+    else:
+        logger_manager.error(f"内容包导出ArkhamDB失败: {result.get('error', 'Unknown error')}")
+        return jsonify(create_response(
+            code=14004,
+            msg=result.get("error", "内容包导出ArkhamDB格式失败"),
+            data={"logs": result.get("logs", [])}
+        )), 500
+
+
 # ================= 卡牌导出相关接口 =================
 
 @app.route('/api/export-card', methods=['POST'])
