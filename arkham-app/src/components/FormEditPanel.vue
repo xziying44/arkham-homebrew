@@ -242,6 +242,7 @@ const emit = defineEmits<{
     'toggle-file-tree': [];
     'toggle-image-preview': [];
     'update-preview-image': [image: string | { front: string; back?: string }];
+    'update-preview-side': [side: 'front' | 'back'];
     'refresh-file-tree': [];
 }>();
 
@@ -625,6 +626,9 @@ watch(currentSide, () => {
     const editingData = currentSide.value === 'back' && currentCardData.back ? currentCardData.back : currentCardData;
     currentCardType.value = editingData.type || '';
     console.log(`🔄 切换到${currentSide.value}面，当前类型:`, currentCardType.value);
+
+    // 通知图片预览组件切换显示面
+    emit('update-preview-side', currentSide.value);
 
     // 双面卡牌切换时，如果数据有效则触发预览更新
     if (isDoubleSided.value && editingData.name && editingData.type) {
@@ -1161,6 +1165,17 @@ watch(() => currentCardData, () => {
 // 组件挂载时添加键盘事件监听器
 onMounted(() => {
     document.addEventListener('keydown', handleKeydown);
+});
+
+// 从外部设置当前编辑的面（用于图片预览同步）
+const setSideFromExternal = (side: 'front' | 'back') => {
+    currentSide.value = side;
+    console.log(`🔄 从外部设置编辑器面为: ${side}`);
+};
+
+// 导出方法供父组件调用
+defineExpose({
+    setSideFromExternal
 });
 
 // 组件卸载时移除键盘事件监听器和清理定时器

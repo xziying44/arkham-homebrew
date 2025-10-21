@@ -20,6 +20,7 @@
 
     <!-- 中间JSON表单编辑区 -->
     <FormEditPanel
+      ref="formEditPanelRef"
       :show-file-tree="showFileTree && shouldShowFileTree"
       :show-image-preview="showImagePreview && shouldShowImagePreview"
       :selected-file="selectedFile"
@@ -27,6 +28,7 @@
       @toggle-file-tree="toggleFileTree"
       @toggle-image-preview="toggleImagePreview"
       @update-preview-image="updatePreviewImage"
+      @update-preview-side="updatePreviewSide"
       @refresh-file-tree="refreshFileTree"
     />
 
@@ -44,8 +46,10 @@
       :width="imageWidth"
       :current-image="currentImage"
       :image-key="typeof selectedFile?.path === 'string' ? selectedFile.path : null"
+      :current-side="currentPreviewSide"
       :is-mobile="isMobile"
       @toggle="toggleImagePreview"
+      @update-side="updatePreviewSideFromImage"
       ref="imagePreviewRef"
     />
 
@@ -96,7 +100,9 @@
           :width="'100%'"
           :current-image="currentImage"
           :image-key="typeof selectedFile?.path === 'string' ? selectedFile.path : null"
+          :current-side="currentPreviewSide"
           :is-mobile="true"
+          @update-side="updatePreviewSideFromImage"
           ref="mobileImagePreviewRef"
         />
       </div>
@@ -163,7 +169,9 @@ const selectedFile = ref<TreeOption | null>(null);
 
 // 图片预览
 const currentImage = ref('');
+const currentPreviewSide = ref<'front' | 'back'>('front');
 const imagePreviewRef = ref();
+const formEditPanelRef = ref();
 const fileTreeRef = ref();
 const mobileFileTreeRef = ref();
 const mobileImagePreviewRef = ref();
@@ -292,6 +300,22 @@ const updatePreviewImage = (imageBase64: string) => {
   // 因为子组件现在会根据 imageKey 的变化自动处理
   // const previewRef = shouldShowImagePreview.value ? imagePreviewRef : mobileImagePreviewRef;
   // previewRef.value?.fitToContainer();
+};
+
+// 处理编辑器端的面切换
+const updatePreviewSide = (side: 'front' | 'back') => {
+  currentPreviewSide.value = side;
+  console.log(`📝 编辑器切换到${side}面，通知图片预览同步切换`);
+};
+
+// 处理图片预览端的面切换
+const updatePreviewSideFromImage = (side: 'front' | 'back') => {
+  currentPreviewSide.value = side;
+  // 需要通知FormEditPanel切换
+  if (formEditPanelRef.value && formEditPanelRef.value.setSideFromExternal) {
+    formEditPanelRef.value.setSideFromExternal(side);
+    console.log(`🖼️ 图片预览切换到${side}面，通知编辑器同步切换`);
+  }
 };
 
 const refreshFileTree = () => {

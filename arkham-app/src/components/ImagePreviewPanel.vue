@@ -15,13 +15,13 @@
         <n-button-group size="small">
           <n-button
             :type="currentDisplaySide === 'front' ? 'primary' : 'default'"
-            @click="currentDisplaySide = 'front'"
+            @click="switchSide('front')"
           >
             {{ $t('workspaceMain.imagePreview.frontSide') }}
           </n-button>
           <n-button
             :type="currentDisplaySide === 'back' ? 'primary' : 'default'"
-            @click="currentDisplaySide = 'back'"
+            @click="switchSide('back')"
           >
             {{ $t('workspaceMain.imagePreview.backSide') }}
           </n-button>
@@ -81,12 +81,15 @@ interface Props {
   currentImage: string | { front: string; back?: string };
   // 新增：用于识别图片是否为新文件的唯一标识
   imageKey: string | null;
+  // 新增：当前要显示的面
+  currentSide: 'front' | 'back';
 }
 
 const props = defineProps<Props>();
 
 const emit = defineEmits<{
   'toggle': [];
+  'update-side': [side: 'front' | 'back'];
 }>();
 
 const message = useMessage();
@@ -94,6 +97,23 @@ const { t } = useI18n();
 
 // 双面卡牌状态
 const currentDisplaySide = ref<'front' | 'back'>('front');
+
+// 监听外部传入的currentSide变化
+watch(() => props.currentSide, (newSide) => {
+    if (newSide !== currentDisplaySide.value) {
+        currentDisplaySide.value = newSide;
+        console.log(`🖼️ 图片预览响应外部面切换: ${newSide}`);
+    }
+});
+
+// 切换面方法
+const switchSide = (side: 'front' | 'back') => {
+    if (side !== currentDisplaySide.value) {
+        currentDisplaySide.value = side;
+        emit('update-side', side);
+        console.log(`🖼️ 图片预览主动切换到${side}面，通知编辑器同步`);
+    }
+};
 
 // 判断是否为双面卡牌
 const isDoubleSided = computed(() => {
