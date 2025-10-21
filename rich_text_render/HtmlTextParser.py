@@ -1,6 +1,7 @@
 import re
 from enum import Enum
 from typing import List, Dict
+import unicodedata
 
 
 class TextType(Enum):
@@ -40,6 +41,11 @@ class RichTextParser:
         # 有效的HTML标签 - 新增par标签
         self.valid_tags = ['b', 'i', 'u', 'p', 'font', 'flavor', 'em', 'br', 'hr', 'par', 'flex', 'trait']
 
+        # 英文单词模式 - 改进版本，支持更多特殊字符
+        self.english_word_pattern = r'\b[\w\'\-]+\b'
+        # 特殊字符模式：匹配重音字符、撇号、连字符等
+        self.special_chars_pattern = r'[^\w\s]'  # 非字母数字和空白字符
+
     def parse_attributes(self, attr_string: str) -> Dict[str, str]:
         """解析标签属性"""
         attributes = {}
@@ -58,22 +64,65 @@ class RichTextParser:
         return attributes
 
     def classify_character(self, char: str) -> TextType:
-        """分类字符类型"""
+        """分类字符类型 - 改进版本，支持更多Unicode字符"""
         if char == '\n':
             return None  # \n将被特殊处理为br标签
         elif char.isspace():
             return TextType.SPACE
-        elif char.isalpha() and ord(char) < 128:  # 英文字母
+        elif self.is_english_character(char):
             return TextType.ENGLISH
         elif char.isdigit():
             return TextType.NUMBER
-        elif char in '.,!?;:()[]{}""\'`~@#$%^&*-_+=|\\/<>':
+        elif char in '.,!?;:()[]{}""\'`~@#$%^&*_+=|\\/<>':
             return TextType.PUNCTUATION
         else:
             return TextType.OTHER
 
+    def is_english_character(self, char: str) -> bool:
+        """判断是否为英文字符（包括带重音的字符）"""
+        if len(char) != 1:
+            return False
+
+        # 基本拉丁字母
+        if 'a' <= char <= 'z' or 'A' <= char <= 'Z':
+            return True
+
+        # 扩展拉丁字母（包含重音符号）
+        if ord(char) >= 192 and ord(char) <= 255:
+            return True
+
+        # 检查Unicode类别
+        try:
+            category = unicodedata.category(char)
+            # 字母类别：Ll, Lm, Lo, Lt, Lu
+            if category.startswith('L'):
+                # 对于非基本拉丁字母，检查是否包含在常见英语特殊字符中
+                return char in "ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ"
+        except:
+            pass
+
+        return False
+
+    def is_valid_english_word(self, word: str) -> bool:
+        """检查是否是有效的英文单词"""
+        if not word:
+            return False
+
+        # 必须包含至少一个字母
+        if not any(self.is_english_character(c) for c in word):
+            return False
+
+        # 检查单词格式（可以包含字母、数字、撇号、连字符）
+        pattern = r'^[a-zA-ZÀ-ÿ][\w\'\-]*[a-zA-ZÀ-ÿ]$|^[a-zA-ZÀ-ÿ]$'
+        return bool(re.match(pattern, word, re.UNICODE))
+
+    def extract_english_words(self, text: str) -> List[str]:
+        """从文本中提取所有英文单词"""
+        words = re.findall(self.english_word_pattern, text, re.UNICODE)
+        return [word for word in words if self.is_valid_english_word(word)]
+
     def split_text_by_type(self, text: str) -> List[ParsedItem]:
-        """按字符类型分割文本，并处理换行符和连字符"""
+        """按字符类型分割文本，并处理换行符和连字符 - 改进版本"""
         if not text:
             return []
 
@@ -115,9 +164,18 @@ class RichTextParser:
             if char == '-' and 0 < i < len(text) - 1:
                 prev_char = text[i - 1]
                 next_char = text[i + 1]
-                if (prev_char.isalpha() and ord(prev_char) < 128 and
-                        next_char.isalpha() and ord(next_char) < 128):
+                if (self.is_english_character(prev_char) and
+                        self.is_english_character(next_char)):
                     # 连字符被视为英文单词的一部分
+                    char_type = TextType.ENGLISH
+
+            # 特殊处理撇号：如果撇号在单词内部，将其视为英文单词的一部分
+            if char == "'" and 0 < i < len(text) - 1:
+                prev_char = text[i - 1]
+                next_char = text[i + 1]
+                if (self.is_english_character(prev_char) and
+                        self.is_english_character(next_char)):
+                    # 撇号被视为英文单词的一部分（如 don't, it's）
                     char_type = TextType.ENGLISH
 
             if current_type is None:
@@ -277,20 +335,13 @@ class RichTextParser:
 
 # 测试代码
 def test_parser():
+    # 测试包含特殊字符的英文单词
     test_text = (
-        "这是第一段文本内容。<par>这是第二段文本内容。<par>"
-        "这是一个复杂的中英文<测试>混排测试文本。Here we have <b>English words</b> mixed with 中文文字，"
-        "以及各种标点符号：逗号，句号。问号？感叹号！分号；冒号：引号\"测试\"和括号（内容）。<par>"
-        "<font size=\"+4\" color=\"blue\">This is a very long English sentence</font>，"
-        "而是应该在单词边界处换行。同时，标点符号也不应该出现在行尾，"
-        "比如这个长句子后面的逗号，应该和前面的内容一起换行。<par>"
-        "让我们测试一些更复杂的情况：<i>supercalifragilisticexpialidocious</i> 这是一个超长的英文单词。"
-        "还有一些数字和符号：12345、67890、email@example.com、www.website.com等。"
-        "\n这里有一个手动换行。\n<par>"
-        "最后，让我们看看程序如何处理各种边界情况和特殊字符：©®™€£¥等。<par>"
-        "You begin the game with 4 copies of Herta Puppet in play. When any amount of damage would be placed on you, "
-        "place those damage on Herta Puppet (Online) instead.\n【Forced】 – When Herta Puppet (Online) is dealt damage: "
-        "You take 1 direct horror."
+        "aëroplane location's café naïve résumé coöperate façade "
+        "It's a well-known fact that piñatas are fun at fiestas. "
+        "<b>Herta's special ability</b> works with coördination. "
+        "The naïve coöperation between teams was impressive. "
+        "Let's test email addresses: user@example.com and phone numbers: +1-555-1234.哈哈你好"
     )
 
     parser = RichTextParser()
@@ -301,11 +352,27 @@ def test_parser():
     for i, item in enumerate(parsed_result):
         print(f"{i + 1:2d}. {item}")
 
-    # 演示新的用法
+    # 提取英文单词测试
     print("\n" + "=" * 50)
-    print("使用 .tag 调用示例：")
-    for i, item in enumerate(parsed_result[:15]):  # 显示前15个
-        print(f"项目 {i + 1}: 标签={item.tag}, 类型={item.type.value}, 内容={repr(item.content)}")
+    print("提取的英文单词：")
+    english_words = parser.extract_english_words(test_text)
+    for word in english_words:
+        print(f"  {word}")
+
+    # 验证单词识别
+    test_words = ["aëroplane", "location's", "café", "naïve", "résumé",
+                  "coöperate", "façade", "It's", "well-known", "piñatas"]
+
+    print("\n单词验证结果：")
+    for word in test_words:
+        is_valid = parser.is_valid_english_word(word)
+        print(f"  {word}: {'有效' if is_valid else '无效'}")
+
+    # 显示所有英文文本项
+    english_items = [item for item in parsed_result if item.type == TextType.ENGLISH]
+    print(f"\n找到 {len(english_items)} 个英文文本项：")
+    for item in english_items:
+        print(f"  {item.content}")
 
 
 # 额外的工具函数，更新为使用ParsedItem
@@ -339,25 +406,3 @@ def get_paragraph_tags(parsed_result: List[ParsedItem]) -> List[ParsedItem]:
 
 if __name__ == "__main__":
     test_parser()
-
-    print("\n" + "=" * 50)
-    print("额外测试：")
-
-    # 测试换行符和段落标签处理
-    test_newline_and_par = "第一行\n第二行<par>第一段<par>第二段\n\n第三行"
-    parser = RichTextParser()
-    result = parser.parse(test_newline_and_par)
-
-    print("换行符和段落标签测试结果：")
-    for i, item in enumerate(result):
-        print(f"{i + 1}. {item}")
-
-    # 演示工具函数和新的属性访问方式
-    print("\n所有英文单词：", get_all_english_words(result))
-    print("所有数字：", get_all_numbers(result))
-    print("所有段落标签：", get_paragraph_tags(result))
-
-    # 新的用法示例
-    print("\n使用点语法访问属性：")
-    for item in result[:8]:
-        print(f"标签: {item.tag}, 类型: {item.type.value}, 属性: {item.attributes}, 内容: {repr(item.content)}")
