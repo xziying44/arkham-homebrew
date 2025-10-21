@@ -65,7 +65,7 @@
       "forced": "<b>强制</b> - ",
       "haunted": "<b>闹鬼</b> - ",
       "objective": "<b>目标</b> - ",
-      "patrol": "<b>巡逻</b> - ",
+      "patrol": "巡逻",
       "revelation": "<b>显现</b> - "
     }
   },
@@ -135,7 +135,7 @@
       "forced": "<b>Forced</b> – ",
       "haunted": "<b>Haunted</b> – ",
       "objective": "<b>Objective</b> – ",
-      "patrol": "<b>Patrol</b> – ",
+      "patrol": "Patrol",
       "revelation": "<b>Revelation</b> – "
     }
   },
@@ -200,13 +200,13 @@
       "agenda": "Tajemnica ",
       "act": "Akt ",
       "Illus": "Ilus.",
-      "prey": "<b>Ofiara</b> – ",
-      "spawn": "<b>Pojawienie się</b> – ",
+      "prey": "<b>Polowanie</b> – ",
+      "spawn": "<b>Rozstawienie</b> – ",
       "forced": "<b>Wymuszony</b> – ",
       "haunted": "<b>Nawiedzona</b> – ",
       "objective": "<b>Cel</b> – ",
-      "patrol": "<b>Patrol</b> – ",
-      "revelation": "<b>Objawienie</b> – "
+      "patrol": "Wędrujący",
+      "revelation": "<b>Odkrycie</b> – "
     }
   }
 ]
