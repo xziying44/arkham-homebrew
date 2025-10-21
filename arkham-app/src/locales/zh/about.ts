@@ -18,7 +18,7 @@ export default {
     opensource: {
       title: '🔓 开源信息',
       name: 'GitHub 仓库',
-      description: '本项目基于开源协议发布，欢迎贡献代码和提出建议',
+      description: '本项目基于开源协议发布，欢迎贡献代码和提出建议。如果您喜欢这个软件，请在GitHub上给我们一个⭐支持一下！',
       copyLink: '📋 复制链接'
     },
     features: {
@@ -39,6 +39,10 @@ export default {
         storage: {
           title: '本地存储',
           description: '数据安全，支持导入导出'
+        },
+        arkham: {
+          title: 'arkham.build导出',
+          description: '支持导出到arkham.build拓展包'
         }
       }
     },
@@ -50,7 +54,7 @@ export default {
     },
     thanks: {
       title: '🙏 特别感谢',
-      description: '感谢所有阿卡姆精神病院fan-made部社区贡献内容的朋友们，以及为本项目提供建议和反馈的用户。如果您在使用过程中遇到问题或有改进建议，欢迎通过邮箱联系我们。'
+      description: '感谢所有阿卡姆精神病院fan-made部社区贡献内容的朋友们，以及为本项目提供建议和反馈的用户。特别感谢：爆破专家苦力怕（卡牌UI制作）、Chr1Z（SCED数据格式支持）、felice（arkham.build数据格式支持）。如果您在使用过程中遇到问题或有改进建议，欢迎通过邮箱联系我们。'
     },
     footer: {
       thanks: '感谢您使用阿卡姆印牌姬'

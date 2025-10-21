@@ -75,6 +75,11 @@
               <h4>{{ $t('about.sections.features.items.storage.title') }}</h4>
               <p>{{ $t('about.sections.features.items.storage.description') }}</p>
             </div>
+            <div class="feature-item">
+              <div class="feature-icon">🚀</div>
+              <h4>{{ $t('about.sections.features.items.arkham.title') }}</h4>
+              <p>{{ $t('about.sections.features.items.arkham.description') }}</p>
+            </div>
           </div>
         </div>
 

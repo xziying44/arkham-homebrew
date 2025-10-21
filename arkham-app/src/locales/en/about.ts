@@ -18,7 +18,7 @@ export default {
     opensource: {
       title: '🔓 Open Source Information',
       name: 'GitHub Repository',
-      description: 'This project is released under open source license. Contributions and suggestions are welcome',
+      description: 'This project is released under open source license. Contributions and suggestions are welcome. If you like this software, please give us a ⭐ on GitHub!',
       copyLink: '📋 Copy Link'
     },
     features: {
@@ -39,6 +39,10 @@ export default {
         storage: {
           title: 'Local Storage',
           description: 'Data security, support import/export'
+        },
+        arkham: {
+          title: 'arkham.build Export',
+          description: 'Support exporting to arkham.build expansion packs'
         }
       }
     },
@@ -50,7 +54,7 @@ export default {
     },
     thanks: {
       title: '🙏 Special Thanks',
-      description: 'Thanks to all friends who contributed content to the Arkham Horror fan-made community, and users who provided suggestions and feedback for this project. If you encounter problems or have suggestions for improvement, please feel free to contact us via email.'
+      description: 'Thanks to all friends who contributed content to the Arkham Horror fan-made community, and users who provided suggestions and feedback for this project. Special thanks to: 爆破专家苦力怕 (Card UI Design), Chr1Z (SCED Data Format Support), felice (arkham.build Data Format Support). If you encounter problems or have suggestions for improvement, please feel free to contact us via email.'
     },
     footer: {
       thanks: 'Thank you for using Arkham Card Maker'
