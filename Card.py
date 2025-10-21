@@ -1184,7 +1184,10 @@ class Card:
             offset_x = 580
             end_x = 28
             pos_left = (offset_x, card_height - 28)
-            pos_center = (offset_x + card_width // 2, card_height - 28)
+            if encounter_text:
+                pos_center = (offset_x + card_width // 2, card_height - 28)
+            else:
+                pos_center = (offset_x + card_width // 2 + 45, card_height - 28)
             pos_icon = (offset_x + card_width - 110 + end_x, card_height - 34)
             pos_right = (offset_x + card_width - 80 + end_x, card_height - 28)
             pos_right_encounter_group_number = (offset_x + card_width - 160 + end_x, card_height - 28)
