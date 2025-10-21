@@ -73,7 +73,7 @@ class RichTextParser:
             return TextType.OTHER
 
     def split_text_by_type(self, text: str) -> List[ParsedItem]:
-        """按字符类型分割文本，并处理换行符"""
+        """按字符类型分割文本，并处理换行符和连字符"""
         if not text:
             return []
 
@@ -110,6 +110,15 @@ class RichTextParser:
                 continue
 
             char_type = self.classify_character(char)
+
+            # 特殊处理连字符：如果连字符前后都是英文字母，将其视为英文单词的一部分
+            if char == '-' and 0 < i < len(text) - 1:
+                prev_char = text[i - 1]
+                next_char = text[i + 1]
+                if (prev_char.isalpha() and ord(prev_char) < 128 and
+                        next_char.isalpha() and ord(next_char) < 128):
+                    # 连字符被视为英文单词的一部分
+                    char_type = TextType.ENGLISH
 
             if current_type is None:
                 current_type = char_type

@@ -431,22 +431,39 @@ class VirtualTextBox:
         return self.push(obj)
 
     def push(self, obj: DrawObject) -> bool:
-        if not self._can_fit_vertically(obj.height): return False
+        if not self._can_fit_vertically(obj.height):
+            return False
+
         self.current_line_height = max(self.current_line_height, obj.height)
+
         if not self._can_fit_in_current_line(obj.width):
             dangling_objects = self._pop_dangling_punctuation_from_line_end()
-            if not self._can_fit_next_line(obj.height): return False
-            if not self._move_to_next_line(obj.height): return False
+            if not self._can_fit_next_line(obj.height):
+                return False
+            if not self._move_to_next_line(obj.height):
+                return False
             new_line_height = obj.height
             for d_obj in dangling_objects:
                 new_line_height = max(new_line_height, d_obj.height)
             self.current_line_height = max(self.current_line_height, new_line_height)
             for d_obj in dangling_objects:
-                if not self.push(d_obj): return False
+                if not self.push(d_obj):
+                    return False
+
+        # 检查是否是行首的空格（TextObject且内容为空格且光标在行首）
+        if isinstance(obj, TextObject) and self.cursor_x == self.current_line_left:
+            # 如果是纯空格文本，直接跳过不渲染
+            if obj.text.strip() == '':
+                return True
+
         if isinstance(obj,
                       TextObject) and obj.text in self.cannot_be_line_start and self.cursor_x == self.current_line_left:
-            if self._handle_line_start_punctuation(obj): return True
-        if not self._can_fit_vertically(obj.height): return False
+            if self._handle_line_start_punctuation(obj):
+                return True
+
+        if not self._can_fit_vertically(obj.height):
+            return False
+
         render_item = RenderItem(obj, self.cursor_x + obj.offset_x, self.cursor_y + obj.offset_y)
         self.render_list.append(render_item)
         self.cursor_x += obj.width
