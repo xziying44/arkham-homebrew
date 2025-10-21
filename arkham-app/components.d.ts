@@ -9,6 +9,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     CardFileBrowser: typeof import('./src/components/CardFileBrowser.vue')['default']
+    CardSideEditor: typeof import('./src/components/CardSideEditor.vue')['default']
     CloudUploadDialog: typeof import('./src/components/CloudUploadDialog.vue')['default']
     DeckEditor: typeof import('./src/components/DeckEditor.vue')['default']
     DeckOptionEditor: typeof import('./src/components/DeckOptionEditor.vue')['default']

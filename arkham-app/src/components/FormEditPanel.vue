@@ -65,155 +65,52 @@
             <!-- 卡牌编辑器内容 -->
             <n-scrollbar v-else>
                 <div class="form-wrapper">
-                    <!-- 卡牌类型选择 -->
-                    <n-card :title="$t('cardEditor.panel.cardType')" size="small" class="form-card">
-                        <!-- 双面卡牌标签页切换 -->
-                        <div v-if="isDoubleSided" class="card-side-selector">
-                            <n-radio-group v-model:value="currentSide" size="medium" style="margin-bottom: 16px;">
-                                <n-radio-button value="front">{{ $t('cardEditor.panel.frontSide') }}</n-radio-button>
-                                <n-radio-button value="back">{{ $t('cardEditor.panel.backSide') }}</n-radio-button>
-                            </n-radio-group>
-                        </div>
+                    <!-- 双面卡牌标签页切换 -->
+                    <div v-if="isDoubleSided" class="card-side-selector">
+                        <n-radio-group v-model:value="currentSide" size="medium">
+                            <n-radio-button value="front">{{ $t('cardEditor.panel.frontSide') }}</n-radio-button>
+                            <n-radio-button value="back">{{ $t('cardEditor.panel.backSide') }}</n-radio-button>
+                        </n-radio-group>
+                    </div>
 
-                        <div class="form-row">
-                            <!-- 语言选择 - 左列 -->
-                            <div class="form-field layout-half">
-                                <n-form-item :label="$t('cardEditor.panel.language')">
-                                    <n-select v-model:value="currentLanguage" :options="languageOptions"
-                                        :placeholder="$t('cardEditor.panel.selectLanguage')" />
-                                </n-form-item>
-                            </div>
+                    <!-- 单面卡牌或当前选中面的编辑器 -->
+                    <div v-if="!isDoubleSided || currentSide === 'front'">
+                        <CardSideEditor
+                            side="front"
+                            :card-data="currentCardData"
+                            :card-type-configs="cardTypeConfigs"
+                            :card-type-options="cardTypeOptions"
+                            :language-options="languageOptions"
+                            @update-card-data="updateCardSideData"
+                            @update-card-type="updateCardSideType"
+                            @trigger-preview="triggerDebouncedPreviewUpdate" />
+                    </div>
 
-                            <!-- 卡牌类型选择 - 右列 -->
-                            <div class="form-field layout-half">
-                                <n-form-item :label="$t('cardEditor.panel.selectCardType')">
-                                    <n-select v-model:value="currentSideType" :options="cardTypeOptions"
-                                        :placeholder="$t('cardEditor.panel.selectCardType')"
-                                        @update:value="onCardTypeChange" />
-                                </n-form-item>
-                            </div>
-                        </div>
-                    </n-card>
+                    <!-- 背面编辑器（仅在双面卡牌且选择背面时显示） -->
+                    <div v-if="isDoubleSided && currentSide === 'back'">
+                        <CardSideEditor
+                            side="back"
+                            :card-data="currentCardData.back || {}"
+                            :card-type-configs="cardTypeConfigs"
+                            :card-type-options="cardTypeOptions"
+                            :language-options="languageOptions"
+                            @update-card-data="updateCardSideData"
+                            @update-card-type="updateCardSideType"
+                            @trigger-preview="triggerDebouncedPreviewUpdate" />
+                    </div>
 
-                    <!-- 动态表单 -->
-                    <n-card v-if="currentCardType && currentFormConfig" :title="$t('cardEditor.panel.cardProperties')"
-                        size="small" class="form-card">
-                        <n-form ref="dynamicFormRef" :model="currentCardData" label-placement="top" size="small">
-                            <div v-for="(row, rowIndex) in formFieldRows" :key="rowIndex" class="form-row">
-                                <div v-for="field in row"
-                                    :key="field.key + (field.index !== undefined ? `_${field.index}` : '')"
-                                    class="form-field" :class="getFieldLayoutClass(field.layout)">
-                                    <FormFieldComponent :field="field" :value="getFieldValue(field)"
-                                        :new-string-value="newStringValue" @update:value="setFieldValue(field, $event)"
-                                        @update:new-string-value="newStringValue = $event"
-                                        @add-multi-select-item="addMultiSelectItem(field, $event)"
-                                        @remove-multi-select-item="removeMultiSelectItem(field, $event)"
-                                        @add-string-array-item="addStringArrayItem(field)"
-                                        @remove-string-array-item="removeStringArrayItem(field, $event)"
-                                        @move-string-array-item-up="moveStringArrayItemUp(field, $event)"
-                                        @move-string-array-item-down="moveStringArrayItemDown(field, $event)"
-                                        @edit-string-array-item="(index, newValue) => editStringArrayItem(field, index, newValue)"
-                                        @remove-image="removeImage(field)" />
-                                </div>
-                            </div>
-                        </n-form>
-                    </n-card>
+                    <!-- 共享组件区域 -->
+                    <div class="shared-components" v-if="hasAnyValidCardData">
+                        <!-- TTS脚本编辑器 -->
+                        <TtsScriptEditor :card-data="currentCardData" :card-type="currentCardType"
+                            :is-double-sided="isDoubleSided" :current-side="currentSide"
+                            @update-tts-script="updateTtsScript" />
 
-                    <!-- 【新增】插画布局编辑器 -->
-                    <IllustrationLayoutEditor v-if="currentCardData.picture_base64"
-                        :image-src="currentCardData.picture_base64" :layout="currentCardData.picture_layout"
-                        :card_type="currentCardData.type"
-                        @update:layout="updateIllustrationLayout" />
-
-                    <!-- 卡牌信息 -->
-                    <n-card v-if="currentCardType" :title="$t('cardEditor.panel.cardInfo')" size="small"
-                        class="form-card">
-                        <n-form :model="currentCardData" label-placement="top" size="small">
-                            <div class="form-row">
-                                <!-- 插画作者 -->
-                                <div class="form-field layout-third">
-                                    <FormFieldComponent :field="{
-                                        key: 'illustrator',
-                                        name: $t('cardEditor.panel.illustrator'),
-                                        type: 'text'
-                                    }" :value="currentCardData.illustrator || ''" :new-string-value="newStringValue"
-                                        @update:value="currentCardData.illustrator = $event"
-                                        @update:new-string-value="newStringValue = $event" />
-                                </div>
-                                <!-- 遭遇组序号 -->
-                                <div class="form-field layout-third">
-                                    <FormFieldComponent :field="{
-                                        key: 'encounter_group_number',
-                                        name: $t('cardEditor.panel.encounterGroupNumber'),
-                                        type: 'text'
-                                    }" :value="currentCardData.encounter_group_number || ''"
-                                        :new-string-value="newStringValue"
-                                        @update:value="currentCardData.encounter_group_number = $event"
-                                        @update:new-string-value="newStringValue = $event" />
-                                </div>
-                                <!-- 卡牌序号 -->
-                                <div class="form-field layout-third">
-                                    <FormFieldComponent :field="{
-                                        key: 'card_number',
-                                        name: $t('cardEditor.panel.cardNumber'),
-                                        type: 'text'
-                                    }" :value="currentCardData.card_number || ''" :new-string-value="newStringValue"
-                                        @update:value="currentCardData.card_number = $event"
-                                        @update:new-string-value="newStringValue = $event" />
-                                </div>
-                            </div>
-                            <div class="form-row">
-                                <!-- 卡牌数量 -->
-                                <div class="form-field layout-half">
-                                    <FormFieldComponent :field="{
-                                        key: 'quantity',
-                                        name: '卡牌数量',
-                                        type: 'number',
-                                        min: 1,
-                                        max: 999,
-                                        defaultValue: 1
-                                    }" :value="currentCardData.quantity || 1" :new-string-value="newStringValue"
-                                        @update:value="currentCardData.quantity = $event"
-                                        @update:new-string-value="newStringValue = $event" />
-                                </div>
-                                <!-- 卡牌版权信息 -->
-                                <div class="form-field layout-half">
-                                    <FormFieldComponent :field="{
-                                        key: 'footer_copyright',
-                                        name: '版权信息',
-                                        type: 'text',
-                                        placeholder: '例如：© 2024 Fantasy Flight Games'
-                                    }" :value="currentCardData.footer_copyright || ''" :new-string-value="newStringValue"
-                                        @update:value="currentCardData.footer_copyright = $event"
-                                        @update:new-string-value="newStringValue = $event" />
-                                </div>
-                            </div>
-                            <div class="form-row">
-                                <!-- 卡牌备注信息 -->
-                                <div class="form-field layout-full">
-                                    <FormFieldComponent :field="{
-                                        key: 'remark',
-                                        name: $t('cardEditor.panel.cardRemarks'),
-                                        type: 'textarea',
-                                        rows: 2,
-                                        maxlength: 200
-                                    }" :value="currentCardData.requirements || ''" :new-string-value="newStringValue"
-                                        @update:value="currentCardData.requirements = $event"
-                                        @update:new-string-value="newStringValue = $event" />
-                                </div>
-                            </div>
-                        </n-form>
-                    </n-card>
-
-                    <!-- TTS脚本编辑器 -->
-                    <TtsScriptEditor v-if="currentCardType" :card-data="currentCardData" :card-type="currentCardType"
-                        :is-double-sided="isDoubleSided" :current-side="currentSide"
-                        @update-tts-script="updateTtsScript" />
-
-                    <!-- 牌库选项编辑器 -->
-                    <DeckOptionEditor :card-data="currentCardData" :card-type="currentSideType"
-                        :is-double-sided="isDoubleSided" :current-side="currentSide"
-                        @update-deck-options="updateDeckOptions" />
+                        <!-- 牌库选项编辑器 -->
+                        <DeckOptionEditor :card-data="currentCardData" :card-type="currentSideType"
+                            :is-double-sided="isDoubleSided" :current-side="currentSide"
+                            @update-deck-options="updateDeckOptions" />
+                    </div>
 
                     <!-- 操作按钮 -->
                     <div class="form-actions">
@@ -322,12 +219,12 @@ import type { TreeOption } from 'naive-ui';
 // 【新增】导入新的组件
 import IllustrationLayoutEditor from './IllustrationLayoutEditor.vue';
 import DeckOptionEditor from './DeckOptionEditor.vue';
+import CardSideEditor from './CardSideEditor.vue';
 
 // 导入中文和英文配置
-import { cardTypeConfigs as cardTypeConfigsZh, cardTypeOptions as cardTypeOptionsZh, cardBackConfigs as cardBackConfigsZh, type FormField, type CardTypeConfig, type ShowCondition } from '@/config/cardTypeConfigs';
+import { cardTypeConfigs as cardTypeConfigsZh, cardTypeOptions as cardTypeOptionsZh, cardBackConfigs as cardBackConfigsZh, type CardTypeConfig } from '@/config/cardTypeConfigs';
 import { cardTypeConfigs as cardTypeConfigsEn, cardTypeOptions as cardTypeOptionsEn, cardBackConfigs as cardBackConfigsEn } from '@/config/cardTypeConfigsEn';
 
-import FormFieldComponent from './FormField.vue';
 import { WorkspaceService, CardService, ConfigService } from '@/api';
 import type { CardData } from '@/api/types';
 import TtsScriptEditor from './TtsScriptEditor.vue';
@@ -376,49 +273,47 @@ const currentCardData = reactive({
 const currentSide = ref<'front' | 'back'>('front');
 const isDoubleSided = computed(() => currentCardData.version === '2.0');
 
-// 获取当前编辑的数据对象
-const getEditingDataObject = () => {
-    if (currentSide.value === 'back') {
-        if (!currentCardData.back) {
-            currentCardData.back = {
-                type: '',
-                language: 'zh'
-            };
-        }
-        return currentCardData.back;
-    }
-    return currentCardData;
-};
 
 // 当前面的语言
 const currentLanguage = computed({
-    get: () => getEditingDataObject().language || 'zh',
+    get: () => {
+        if (currentSide.value === 'back' && currentCardData.back) {
+            return currentCardData.back.language || 'zh';
+        }
+        return currentCardData.language || 'zh';
+    },
     set: (value) => {
-        getEditingDataObject().language = value;
+        if (currentSide.value === 'back') {
+            if (!currentCardData.back) {
+                currentCardData.back = {};
+            }
+            currentCardData.back.language = value;
+        } else {
+            currentCardData.language = value;
+        }
     }
 });
 
 // 当前面的类型
 const currentSideType = computed({
-    get: () => getEditingDataObject().type || '',
+    get: () => {
+        if (currentSide.value === 'back' && currentCardData.back) {
+            return currentCardData.back.type || '';
+        }
+        return currentCardData.type || '';
+    },
     set: (value) => {
-        getEditingDataObject().type = value;
+        if (currentSide.value === 'back') {
+            if (!currentCardData.back) {
+                currentCardData.back = {};
+            }
+            currentCardData.back.type = value;
+        } else {
+            currentCardData.type = value;
+        }
     }
 });
 
-// 监听 currentSide 变化，更新 currentCardType
-watch(currentSide, () => {
-    const editingData = getEditingDataObject();
-    currentCardType.value = editingData.type || '';
-
-    // 双面卡牌切换时，如果数据有效则触发预览更新
-    if (isDoubleSided.value && editingData.name && editingData.type) {
-        console.log('🔄 双面卡牌切换面，触发预览更新:', currentSide.value);
-        setTimeout(() => {
-            autoGeneratePreview();
-        }, 100);
-    }
-}, { immediate: false });
 
 // 新增：语言选项
 const languageOptions = computed(() => [
@@ -446,7 +341,6 @@ const originalFileInfo = ref<{ path: string; label: string } | null>(null);
 const pendingSwitchFile = ref<TreeOption | null>(null);
 
 const currentCardType = ref('');
-const newStringValue = ref('');
 const showJsonModal = ref(false);
 const showImportJsonModal = ref(false);
 const showSaveConfirmDialog = ref(false);
@@ -463,9 +357,52 @@ const debounceTimer = ref<number | null>(null);
 const isUserEditing = ref(false);
 const lastDataSnapshot = ref<string>('');
 
+// 【新增】处理面数据更新的函数
+const updateCardSideData = (side: string, fieldKey: string, value: any) => {
+    if (side === 'back') {
+        if (!currentCardData.back) {
+            currentCardData.back = {};
+        }
+        currentCardData.back[fieldKey] = value;
+    } else {
+        currentCardData[fieldKey] = value;
+    }
+    // 触发防抖预览更新
+    triggerDebouncedPreviewUpdate();
+};
+
+// 【新增】处理面类型更新的函数
+const updateCardSideType = (side: string, newType: string) => {
+    if (side === 'back') {
+        if (!currentCardData.back) {
+            currentCardData.back = {};
+        }
+        currentCardData.back.type = newType;
+        // 更新当前编辑面的类型
+        if (currentSide.value === 'back') {
+            currentCardType.value = newType;
+        }
+    } else {
+        currentCardData.type = newType;
+        // 更新当前编辑面的类型
+        if (currentSide.value === 'front') {
+            currentCardType.value = newType;
+        }
+    }
+    // 触发防抖预览更新
+    triggerDebouncedPreviewUpdate();
+};
+
 // 【新增】处理插画布局更新的函数
 const updateIllustrationLayout = (newLayout) => {
-    currentCardData.picture_layout = newLayout;
+    if (currentSide.value === 'back') {
+        if (!currentCardData.back) {
+            currentCardData.back = {};
+        }
+        currentCardData.back.picture_layout = newLayout;
+    } else {
+        currentCardData.picture_layout = newLayout;
+    }
     // 触发防抖预览更新，以便实时看到布局变化效果
     triggerDebouncedPreviewUpdate();
 };
@@ -666,9 +603,37 @@ const hasValidCardData = computed(() => {
         currentCardData.type && currentCardData.type.trim() !== '';
 });
 
+// 检查是否有任何有效的卡牌数据（用于共享组件显示）
+const hasAnyValidCardData = computed(() => {
+    const hasValidFront = currentCardData.name && currentCardData.name.trim() !== '' &&
+        currentCardData.type && currentCardData.type.trim() !== '';
+
+    const hasValidBack = isDoubleSided.value &&
+        currentCardData.back &&
+        currentCardData.back.name && currentCardData.back.name.trim() !== '' &&
+        currentCardData.back.type && currentCardData.back.type.trim() !== '';
+
+    return hasValidFront || hasValidBack;
+});
+
 const currentFormConfig = computed((): CardTypeConfig | null => {
     return currentCardType.value ? cardTypeConfigs.value[currentCardType.value] : null;
 });
+
+// 更新currentCardType计算属性
+watch(currentSide, () => {
+    const editingData = currentSide.value === 'back' && currentCardData.back ? currentCardData.back : currentCardData;
+    currentCardType.value = editingData.type || '';
+    console.log(`🔄 切换到${currentSide.value}面，当前类型:`, currentCardType.value);
+
+    // 双面卡牌切换时，如果数据有效则触发预览更新
+    if (isDoubleSided.value && editingData.name && editingData.type) {
+        console.log('🔄 双面卡牌切换面，触发预览更新:', currentSide.value);
+        setTimeout(() => {
+            autoGeneratePreview();
+        }, 100);
+    }
+}, { immediate: false });
 
 // 更新TTS脚本数据
 const updateTtsScript = (ttsData: { GMNotes: string; LuaScript: string; config?: any }) => {
@@ -724,276 +689,6 @@ const handleKeydown = async (event: KeyboardEvent) => {
     }
 };
 
-// 检查显示条件
-const checkShowCondition = (condition: ShowCondition): boolean => {
-    const fieldValue = getFieldValue({ key: condition.field } as FormField);
-    const targetValue = condition.value;
-    const operator = condition.operator || 'equals';
-
-    switch (operator) {
-        case 'equals':
-            return fieldValue === targetValue;
-        case 'not-equals':
-            return fieldValue !== targetValue;
-        case 'includes':
-            return Array.isArray(fieldValue) ? fieldValue.includes(targetValue) : false;
-        case 'not-includes':
-            return Array.isArray(fieldValue) ? !fieldValue.includes(targetValue) : true;
-        default:
-            return fieldValue === targetValue;
-    }
-};
-
-// 过滤显示的字段
-const visibleFields = computed(() => {
-    if (!currentFormConfig.value) return [];
-
-    return currentFormConfig.value.fields.filter(field => {
-        if (!field.showCondition) return true;
-        return checkShowCondition(field.showCondition);
-    });
-});
-
-// 布局系统 - 基于可见字段
-const formFieldRows = computed(() => {
-    const fields = visibleFields.value;
-    const rows = [];
-    let currentRow = [];
-    let currentRowWidth = 0;
-
-    const layoutWeights = {
-        'full': 1,
-        'half': 0.5,
-        'third': 1 / 3,
-        'quarter': 0.25
-    };
-
-    for (const field of fields) {
-        const layout = field.layout || 'full';
-        const weight = layoutWeights[layout];
-
-        if (layout === 'full' || currentRowWidth + weight > 1) {
-            if (currentRow.length > 0) {
-                rows.push(currentRow);
-                currentRow = [];
-                currentRowWidth = 0;
-            }
-        }
-
-        currentRow.push(field);
-        currentRowWidth += weight;
-
-        if (layout === 'full' || currentRowWidth >= 1) {
-            rows.push(currentRow);
-            currentRow = [];
-            currentRowWidth = 0;
-        }
-    }
-
-    if (currentRow.length > 0) {
-        rows.push(currentRow);
-    }
-
-    return rows;
-});
-
-const getFieldLayoutClass = (layout: string = 'full') => {
-    const classMap = {
-        'half': 'layout-half',
-        'third': 'layout-third',
-        'quarter': 'layout-quarter',
-        'full': 'layout-full'
-    };
-    return classMap[layout] || 'layout-full';
-};
-
-// 获取字段路径（支持数组索引）
-const getFieldPath = (field: FormField): string => {
-    if (field.index !== undefined) {
-        return `${field.key}[${field.index}]`;
-    }
-    return field.key;
-};
-
-// 表单操作方法
-const getFieldValue = (field: FormField) => {
-    const targetData = getEditingDataObject();
-    if (field.index !== undefined) {
-        const array = getDeepValue(targetData, field.key);
-        return Array.isArray(array) ? array[field.index] : undefined;
-    }
-    return getDeepValue(targetData, field.key);
-};
-
-const getDeepValue = (obj: any, path: string) => {
-    const keys = path.split('.');
-    let value = obj;
-    for (const key of keys) {
-        if (value && typeof value === 'object' && key in value) {
-            value = value[key];
-        } else {
-            return undefined;
-        }
-    }
-    return value;
-};
-
-const setFieldValue = (field: FormField, value: any) => {
-    const targetData = getEditingDataObject();
-    if (field.index !== undefined) {
-        setArrayValue(field.key, field.index, value, targetData);
-    } else {
-        setDeepValue(targetData, field.key, value);
-    }
-
-    // 触发防抖预览更新
-    triggerDebouncedPreviewUpdate();
-};
-
-const setDeepValue = (obj: any, path: string, value: any) => {
-    const keys = path.split('.');
-    let target = obj;
-
-    for (let i = 0; i < keys.length - 1; i++) {
-        const key = keys[i];
-        if (!target[key] || typeof target[key] !== 'object') {
-            target[key] = {};
-        }
-        target = target[key];
-    }
-
-    const finalKey = keys[keys.length - 1];
-    target[finalKey] = value;
-};
-
-const setArrayValue = (arrayPath: string, index: number, value: any, targetData: any = null) => {
-    const data = targetData || currentCardData;
-    let array = getDeepValue(data, arrayPath);
-    if (!Array.isArray(array)) {
-        array = [];
-        setDeepValue(data, arrayPath, array);
-    }
-
-    // 确保数组长度足够
-    while (array.length <= index) {
-        array.push(undefined);
-    }
-
-    array[index] = value;
-};
-
-const addMultiSelectItem = (field: FormField, value: string) => {
-    if (!value) return;
-    let currentArray = getFieldValue(field);
-    if (!Array.isArray(currentArray)) {
-        currentArray = [];
-    }
-    currentArray.push(value);
-    setFieldValue(field, currentArray);
-};
-
-const removeMultiSelectItem = (field: FormField, index: number) => {
-    const currentArray = getFieldValue(field);
-    if (Array.isArray(currentArray)) {
-        currentArray.splice(index, 1);
-        setFieldValue(field, currentArray);
-    }
-};
-
-const addStringArrayItem = (field: FormField) => {
-    if (!newStringValue.value.trim()) return;
-    let currentArray = getFieldValue(field);
-    if (!Array.isArray(currentArray)) {
-        currentArray = [];
-    }
-    currentArray.push(newStringValue.value.trim());
-    setFieldValue(field, currentArray);
-    newStringValue.value = '';
-};
-
-const removeStringArrayItem = (field: FormField, index: number) => {
-    const currentArray = getFieldValue(field);
-    if (Array.isArray(currentArray)) {
-        currentArray.splice(index, 1);
-        setFieldValue(field, currentArray);
-    }
-};
-
-const moveStringArrayItemUp = (field: FormField, index: number) => {
-    if (index <= 0) return;
-    const currentArray = getFieldValue(field);
-    if (Array.isArray(currentArray)) {
-        const item = currentArray[index];
-        currentArray.splice(index, 1);
-        currentArray.splice(index - 1, 0, item);
-        setFieldValue(field, currentArray);
-    }
-};
-
-const moveStringArrayItemDown = (field: FormField, index: number) => {
-    const currentArray = getFieldValue(field);
-    if (!Array.isArray(currentArray) || index >= currentArray.length - 1) return;
-    const item = currentArray[index];
-    currentArray.splice(index, 1);
-    currentArray.splice(index + 1, 0, item);
-    setFieldValue(field, currentArray);
-};
-
-const editStringArrayItem = (field: FormField, index: number, newValue: string) => {
-    const currentArray = getFieldValue(field);
-    if (Array.isArray(currentArray) && index >= 0 && index < currentArray.length) {
-        currentArray[index] = newValue;
-        setFieldValue(field, currentArray);
-    }
-};
-
-const onCardTypeChange = (newType: string) => {
-    const editingData = getEditingDataObject();
-
-    // 将 language、deck_options、quantity 和 footer_copyright 添加到需要保留的字段中
-    const hiddenFields = ['id', 'created_at', 'version', 'type', 'name', 'language', 'deck_options', 'quantity', 'footer_copyright'];
-    const newData = {};
-
-    hiddenFields.forEach(field => {
-        if (editingData[field] !== undefined) {
-            newData[field] = editingData[field];
-        }
-    });
-
-    // 保存 back 字段（如果在编辑正面且存在 back）
-    if (currentSide.value === 'front' && currentCardData.back) {
-        newData['back'] = currentCardData.back;
-    }
-
-    Object.keys(editingData).forEach(key => {
-        if (hiddenFields.includes(key)) {
-            return;
-        }
-        // 如果在编辑正面，保留 back 字段
-        if (currentSide.value === 'front' && key === 'back') {
-            return;
-        }
-        delete editingData[key];
-    });
-
-    Object.assign(editingData, newData);
-
-    // 更新 currentCardType
-    currentCardType.value = newType;
-
-    // 应用默认值
-    const config = cardTypeConfigs.value[newType];
-    if (config) {
-        config.fields.forEach(field => {
-            if (field.defaultValue !== undefined) {
-                setDeepValue(editingData, field.key, field.defaultValue);
-            }
-        });
-    }
-
-    // 触发防抖预览更新
-    triggerDebouncedPreviewUpdate();
-};
 
 // 保存原始数据状态
 const saveOriginalData = () => {
@@ -1083,13 +778,28 @@ const loadCardData = async () => {
             console.log('📚 设置deck_options为空数组');
         }
 
-        // 设置新的卡牌类型
-        currentCardType.value = cardData.type || '';
-
-        // 等待TTS配置加载完成后再保存原始数据
+        // 等待DOM更新，确保响应式数据已设置
         await nextTick();
+
+        // 设置新的卡牌类型 - 确保在数据加载后设置
+        currentCardType.value = cardData.type || '';
+        console.log('📋 加载卡牌类型设置:', currentCardType.value, '原始数据:', cardData.type);
+
+        // 如果是双面卡牌，确保背面数据结构完整
+        if (cardData.version === '2.0' && cardData.back) {
+            if (!cardData.back.language) {
+                cardData.back.language = cardData.language || 'zh';
+            }
+            console.log('🔄 双面卡牌背面数据初始化完成:', cardData.back);
+        }
+
+        // 再次等待确保类型设置完成
+        await nextTick();
+
+        // 保存原始数据状态
         setTimeout(() => {
             saveOriginalData();
+            console.log('💾 原始数据已保存，当前卡牌类型:', currentCardType.value);
             // 加载完成后自动生成预览
             autoGeneratePreview();
         }, 100);
@@ -1384,27 +1094,30 @@ const exportCard = async () => {
 const resetForm = () => {
     clearDebounceTimer();
 
-    // 将 language、deck_options、quantity 和 footer_copyright 添加到需要保留的字段中
-    const hiddenFields = ['id', 'created_at', 'version', 'language', 'deck_options', 'quantity', 'footer_copyright'];
+    // 保留共享数据和根级字段
+    const hiddenFields = ['id', 'created_at', 'version', 'language', 'deck_options', 'quantity', 'footer_copyright', 'tts_script'];
     const hiddenData = {};
     hiddenFields.forEach(field => {
-        // 修复：即使字段是undefined或空数组，也要保存字段本身，避免丢失结构
         if (currentCardData[field] !== undefined) {
             hiddenData[field] = currentCardData[field];
         }
     });
 
+    // 保留背面的基础结构
+    const backData = currentCardData.back ? { language: currentCardData.back.language || 'zh' } : undefined;
+
+    // 清空当前数据
     Object.keys(currentCardData).forEach(key => {
         delete currentCardData[key];
     });
 
+    // 重新赋值，保留共享数据
     Object.assign(currentCardData, hiddenData, {
         type: '',
         name: '',
-        // 如果没有保存的语言设置，使用默认值
         language: hiddenData.language || 'zh',
-        // 如果没有保存的数量设置，使用默认值1
-        quantity: hiddenData.quantity || 1
+        quantity: hiddenData.quantity || 1,
+        back: backData
     });
 
     currentCardType.value = '';
@@ -1444,10 +1157,6 @@ watch(() => currentCardData, () => {
     }
 }, { deep: true });
 
-// 在 script 中添加删除图片的方法
-const removeImage = (field: FormField) => {
-    setFieldValue(field, '');
-};
 
 // 组件挂载时添加键盘事件监听器
 onMounted(() => {
@@ -1614,54 +1323,26 @@ onUnmounted(() => {
     margin-top: 12px;
 }
 
-.form-row {
-    display: flex;
-    gap: 16px;
-    margin-bottom: 16px;
-    align-items: flex-start;
-}
-
-.form-field {
-    flex: 1;
-    min-width: 0;
-}
-
-.layout-full {
-    flex: 1;
-}
-
-.layout-half {
-    flex: 0 0 calc(50% - 8px);
-}
-
-.layout-third {
-    flex: 0 0 calc(33.333% - 11px);
-}
-
-.layout-quarter {
-    flex: 0 0 calc(25% - 12px);
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-    .form-row {
-        flex-direction: column;
-    }
-
-    .layout-full,
-    .layout-half,
-    .layout-third,
-    .layout-quarter {
-        flex: 1;
-    }
-}
 
 /* 双面卡牌切换器样式 */
 .card-side-selector {
     display: flex;
     justify-content: center;
-    padding-bottom: 16px;
+    padding: 16px 0;
     border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+/* 共享组件区域样式 */
+.shared-components {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 2px solid rgba(102, 126, 234, 0.2);
+    background: rgba(102, 126, 234, 0.03);
+    border-radius: 12px;
+    padding: 24px;
 }
 
 .card-side-selector :deep(.n-radio-group) {
