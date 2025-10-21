@@ -7,6 +7,8 @@ export default {
   option: '选项',
   editing: '编辑中',
   edit: '编辑',
+  save: '保存',
+  cancel: '取消',
   delete: '删除',
 
   // 选项配置
@@ -71,7 +73,9 @@ export default {
   // 消息提示
   messages: {
     optionAdded: '牌库选项已添加',
+    optionSaved: '牌库选项已保存',
     optionDeleted: '牌库选项已删除',
+    editCancelled: '编辑已取消',
     copySuccess: 'JSON已复制到剪贴板',
     copyError: '复制失败，请手动复制',
     refreshSuccess: '预览已刷新'

@@ -7,6 +7,8 @@ export default {
   option: 'Option',
   editing: 'Editing',
   edit: 'Edit',
+  save: 'Save',
+  cancel: 'Cancel',
   delete: 'Delete',
 
   // Option configuration
@@ -71,7 +73,9 @@ export default {
   // Messages
   messages: {
     optionAdded: 'Deck option added',
+    optionSaved: 'Deck option saved',
     optionDeleted: 'Deck option deleted',
+    editCancelled: 'Edit cancelled',
     copySuccess: 'JSON copied to clipboard',
     copyError: 'Copy failed, please copy manually',
     refreshSuccess: 'Preview refreshed'

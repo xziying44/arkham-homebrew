@@ -25,8 +25,14 @@
                                 <n-tag v-if="option.id" size="tiny" type="info">{{ option.id }}</n-tag>
                             </div>
                             <div class="option-actions">
-                                <n-button size="tiny" @click="editOption(index)" :type="editingIndex === index ? 'primary' : 'default'">
-                                    {{ editingIndex === index ? $t('deckOptionEditor.editing') : $t('deckOptionEditor.edit') }}
+                                <n-button v-if="editingIndex === index" size="tiny" type="success" @click="saveOption(index)">
+                                    {{ $t('deckOptionEditor.save') }}
+                                </n-button>
+                                <n-button v-else size="tiny" @click="editOption(index)" type="default">
+                                    {{ $t('deckOptionEditor.edit') }}
+                                </n-button>
+                                <n-button v-if="editingIndex === index" size="tiny" @click="cancelEdit(index)">
+                                    {{ $t('deckOptionEditor.cancel') }}
                                 </n-button>
                                 <n-button size="tiny" type="error" @click="removeOption(index)" quaternary>
                                     {{ $t('deckOptionEditor.delete') }}
@@ -65,7 +71,7 @@
                         </div>
 
                         <!-- 折叠式选项编辑器 -->
-                        <div v-else class="option-editor">
+                        <div v-else class="option-editor" :key="`editing-${index}`">
                             <n-form :model="option" label-placement="left" label-width="80" size="small">
                                 <!-- ID设置 -->
                                 <n-form-item :label="$t('deckOptionEditor.optionId')">
@@ -73,7 +79,7 @@
                                 </n-form-item>
 
                                 <!-- 可折叠的配置模块 -->
-                                <n-collapse v-model:value="expandedSections" accordion>
+                                <n-collapse v-model:value="expandedSections" accordion :key="`collapse-${index}`">
                                     <!-- 基础过滤条件 -->
                                     <n-collapse-item :title="$t('deckOptionEditor.basicFilters')" name="basicFilters">
                                         <div class="collapse-content">
@@ -341,6 +347,8 @@ const shouldShowEditor = computed(() => {
 const deckOptions = ref<DeckOption[]>([]);
 const editingIndex = ref<number>(-1);
 const atLeastEnabled = ref(false);
+const editingBackup = ref<DeckOption | null>(null);
+const isSavingFromEditor = ref(false); // 添加标志防止保存时触发重新加载
 
 // 折叠面板状态
 const expandedSections = ref<string[]>([]);
@@ -424,22 +432,70 @@ const addDeckOption = () => {
 
 // 编辑选项
 const editOption = (index: number) => {
-    editingIndex.value = editingIndex.value === index ? -1 : index;
-
     if (editingIndex.value === index) {
-        const option = deckOptions.value[index];
-        atLeastEnabled.value = !!option.atleast;
+        // 如果点击的是正在编辑的选项，不做任何操作
+        return;
+    }
+
+    // 如果之前有其他选项在编辑状态，先保存它
+    if (editingIndex.value >= 0 && editingIndex.value !== index) {
+        saveOption(editingIndex.value);
+    }
+
+    // 开始编辑新选项
+    editingIndex.value = index;
+    const option = deckOptions.value[index];
+
+    // 创建当前选项的深拷贝作为备份
+    editingBackup.value = JSON.parse(JSON.stringify(option));
+    atLeastEnabled.value = !!option.atleast;
+};
+
+// 保存选项
+const saveOption = (index: number) => {
+    if (index >= 0 && index < deckOptions.value.length) {
+        editingIndex.value = -1;
+        editingBackup.value = null;
+
+        // 设置保存标志，防止保存时触发重新加载
+        isSavingFromEditor.value = true;
+
+        // 保存时触发自动保存和预览更新
+        generateJsonPreview();
+        autoSaveOptions();
+
+        // 重置保存标志
+        setTimeout(() => {
+            isSavingFromEditor.value = false;
+        }, 200);
+
+        message.success(t('deckOptionEditor.messages.optionSaved'));
+    }
+};
+
+// 取消编辑
+const cancelEdit = (index: number) => {
+    if (index >= 0 && index < deckOptions.value.length && editingBackup.value) {
+        // 恢复备份数据
+        deckOptions.value[index] = JSON.parse(JSON.stringify(editingBackup.value));
+        editingIndex.value = -1;
+        editingBackup.value = null;
+        message.info(t('deckOptionEditor.messages.editCancelled'));
     }
 };
 
 // 删除选项
 const removeOption = (index: number) => {
-    deckOptions.value.splice(index, 1);
+    // 如果删除的是正在编辑的选项，先清除编辑状态
     if (editingIndex.value === index) {
         editingIndex.value = -1;
+        editingBackup.value = null;
     } else if (editingIndex.value > index) {
         editingIndex.value--;
     }
+
+    deckOptions.value.splice(index, 1);
+
     // 自动保存
     autoSaveOptions();
 };
@@ -592,10 +648,22 @@ watch(() => props.cardData?.deck_options, (newOptions) => {
         console.log('📚 检测到切换到不同卡牌，强制重新加载数据');
         lastCardDataId = currentCardDataId;
         lastKnownDeckOptions = ''; // 重置缓存
+        // 切换卡牌时强制重新加载，即使正在编辑也要退出编辑模式
+        loadFromCardData();
+        return;
     }
 
     const newOptionsString = JSON.stringify(newOptions);
     const currentTime = Date.now();
+
+    // 修复：如果正在编辑状态或正在保存，且数据是当前编辑的数据（由自己触发的更新），则跳过重新加载
+    if (editingIndex.value >= 0 || isSavingFromEditor.value) {
+        // 正在编辑时或正在保存时，跳过所有外部数据更新，避免干扰编辑
+        console.log('📚 正在编辑中或正在保存，跳过外部数据更新');
+        lastKnownDeckOptions = newOptionsString;
+        lastUpdateTime = currentTime;
+        return;
+    }
 
     // 修复：改进重复检测逻辑，如果是不同卡牌或数据真的变化了，则重新加载
     if (!isDifferentCard && newOptionsString === lastKnownDeckOptions && (currentTime - lastUpdateTime) < 1000) {
@@ -603,7 +671,7 @@ watch(() => props.cardData?.deck_options, (newOptions) => {
         return; // 数据没有变化且时间间隔很短，跳过
     }
 
-    console.log('📚 检测到deck_options变化，更新数据:', {
+    console.log('📚 检测到外部deck_options变化，更新数据:', {
         isDifferentCard,
         optionsCount: Array.isArray(newOptions) ? newOptions.length : 0,
         newOptions
@@ -620,6 +688,15 @@ watch(() => props.cardData, (newCardData) => {
         return;
     }
 
+    // 如果正在编辑或正在保存，跳过数据变化监听（除非是卡牌切换）
+    if (editingIndex.value >= 0 || isSavingFromEditor.value) {
+        const currentCardDataId = newCardData?.id || newCardData?.name || '';
+        if (currentCardDataId === lastCardDataId) {
+            console.log('📚 正在编辑中或正在保存，跳过卡牌数据变化监听');
+            return;
+        }
+    }
+
     const currentSnapshot = JSON.stringify({
         id: newCardData?.id,
         name: newCardData?.name,
@@ -630,6 +707,8 @@ watch(() => props.cardData, (newCardData) => {
         console.log('📚 检测到卡牌数据对象发生变化，强制刷新deck_options');
         lastCardDataSnapshot = currentSnapshot;
         lastKnownDeckOptions = ''; // 重置缓存，强制重新加载
+        // 更新卡牌ID记录
+        lastCardDataId = newCardData?.id || newCardData?.name || '';
         loadFromCardData();
     }
 }, { immediate: false, deep: true });
@@ -647,12 +726,14 @@ watch(atLeastEnabled, (enabled) => {
     } else if (!enabled && editingIndex.value >= 0) {
         delete deckOptions.value[editingIndex.value].atleast;
     }
-    // 更新JSON预览和自动保存
-    generateJsonPreview();
-    autoSaveOptions();
+    // 更新JSON预览和自动保存 - 仅在非编辑状态下执行
+    if (editingIndex.value === -1) {
+        generateJsonPreview();
+        autoSaveOptions();
+    }
 });
 
-// 监听选项数据变化，自动更新JSON预览和保存 - 添加防抖
+// 监听选项数据变化，自动更新JSON预览和保存 - 添加防抖和编辑状态检测
 let updateTimer: number | null = null;
 watch(deckOptions, () => {
     // 清除之前的定时器
@@ -662,8 +743,14 @@ watch(deckOptions, () => {
 
     // 延迟执行，避免频繁触发
     updateTimer = window.setTimeout(() => {
-        generateJsonPreview();
-        autoSaveOptions();
+        // 仅在非编辑状态下执行自动保存和预览更新
+        if (editingIndex.value === -1) {
+            generateJsonPreview();
+            autoSaveOptions();
+        } else {
+            // 编辑状态下只更新JSON预览，不触发自动保存
+            generateJsonPreview();
+        }
         updateTimer = null;
     }, 100);
 }, { deep: true });
