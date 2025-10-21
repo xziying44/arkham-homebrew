@@ -122,7 +122,7 @@ class RichTextParser:
         return [word for word in words if self.is_valid_english_word(word)]
 
     def split_text_by_type(self, text: str) -> List[ParsedItem]:
-        """按字符类型分割文本，并处理换行符和连字符 - 改进版本"""
+        """按字符类型分割文本，并处理换行符、连字符和数字范围 - 改进版本"""
         if not text:
             return []
 
@@ -160,13 +160,23 @@ class RichTextParser:
 
             char_type = self.classify_character(char)
 
-            # 特殊处理连字符：如果连字符前后都是英文字母，将其视为英文单词的一部分
+            # 特殊处理连字符：如果连字符前后都是数字，将其视为数字范围的一部分
             if char == '-' and 0 < i < len(text) - 1:
                 prev_char = text[i - 1]
                 next_char = text[i + 1]
-                if (self.is_english_character(prev_char) and
-                        self.is_english_character(next_char)):
-                    # 连字符被视为英文单词的一部分
+
+                # 数字范围检测：前后都是数字
+                if (prev_char.isdigit() and next_char.isdigit() and
+                        current_type == TextType.NUMBER):
+                    # 连字符被视为数字范围的一部分
+                    char_type = TextType.NUMBER
+                    current_text += char
+                    i += 1
+                    continue
+
+                # 英文单词内部的连字符
+                elif (self.is_english_character(prev_char) and
+                      self.is_english_character(next_char)):
                     char_type = TextType.ENGLISH
 
             # 特殊处理撇号：如果撇号在单词内部，将其视为英文单词的一部分
@@ -175,7 +185,6 @@ class RichTextParser:
                 next_char = text[i + 1]
                 if (self.is_english_character(prev_char) and
                         self.is_english_character(next_char)):
-                    # 撇号被视为英文单词的一部分（如 don't, it's）
                     char_type = TextType.ENGLISH
 
             if current_type is None:
