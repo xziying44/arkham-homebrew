@@ -6,6 +6,8 @@
 import re
 from typing import Dict, Any, List, Optional
 
+from card_cdapter import CardAdapter
+
 
 class Card2ArkhamDBConverter:
     """
@@ -70,7 +72,8 @@ class Card2ArkhamDBConverter:
             workspace_manager: 工作空间管理器
             signature_to_investigator: 签名卡ID到调查员ID的映射字典
         """
-        self.card_data = card_data
+        adapter = CardAdapter(card_data, workspace_manager.font_manager)
+        self.card_data = adapter.convert()
         self.card_meta = card_meta
         self.pack_code = pack_code
         self.workspace_manager = workspace_manager

@@ -236,11 +236,6 @@ class RichTextRenderer:
             (r'{([^}]*)}', r'<trait>\1</trait>'),
             (r'<t>(.*?)</t>', r'<trait>\1</trait>'),
             (r'<relish>(.*)</relish>', r'<flavor>\1</flavor>'),
-            (r'<强制>', r'<b>强制</b> -'),
-            (r'<显现>', r'<b>显现</b> -'),
-            (r'<攻击>', r'<b>攻击</b>'),
-            (r'<躲避>', r'<b>躲避</b>'),
-            (r'<谈判>', r'<b>躲避</b>'),  # As per original code, Parley maps to Evade
             # 2. Icon Rules (Emoji | CN Tag | SE Tag | Other Alias) -> Font Icon
             # Faction Icons
             (r'🛡️|<守护者>|<守卫者>|<gua>', font_tpl.format(char='e')),

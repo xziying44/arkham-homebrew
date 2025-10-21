@@ -46,6 +46,14 @@ class LanguageTexts:
     agenda: str = "密谋"
     act: str = "场景"
     Illus: str = "Illus."
+    # 卡牌关键词
+    prey: str = "猎物"
+    spawn: str = "生成"
+    forced: str = "强制"
+    haunted: str = "闹鬼"
+    objective: str = "目标"
+    patrol: str = "巡逻"
+    revelation: str = "显现"
 
 
 @dataclass

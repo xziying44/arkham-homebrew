@@ -7,6 +7,7 @@ from typing import Union, Optional
 from PIL import Image, ImageEnhance
 
 from Card import Card, FontManager, ImageManager
+from card_cdapter import CardAdapter
 
 # 缩略图裁剪区域定义（从 images.ts 转换而来）
 THUMBNAIL_REGIONS = {
@@ -1680,6 +1681,9 @@ class CardCreator:
         Returns:
             Card: 创建的卡牌对象
         """
+        # 标签适配器
+        adapter = CardAdapter(card_json, self.font_manager)
+        card_json = adapter.convert()
         # 预处理
         card_json = self._preprocessing_json(card_json)
 

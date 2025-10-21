@@ -59,7 +59,14 @@
       "not_count": "不计入卡牌张数",
       "agenda": "密谋",
       "act": "场景",
-      "Illus": "Illus."
+      "Illus": "Illus.",
+      "prey": "<b>猎物</b> - ",
+      "spawn": "<b>生成</b> - ",
+      "forced": "<b>强制</b> - ",
+      "haunted": "<b>闹鬼</b> - ",
+      "objective": "<b>目标</b> - ",
+      "patrol": "<b>巡逻</b> - ",
+      "revelation": "<b>显现</b> - "
     }
   },
   {
@@ -122,7 +129,14 @@
       "not_count": "do not count toward deck size",
       "agenda": "Agenda ",
       "act": "Act ",
-      "Illus": "Illus."
+      "Illus": "Illus.",
+      "prey": "<b>Prey</b> – ",
+      "spawn": "<b>Spawn</b> – ",
+      "forced": "<b>Forced</b> – ",
+      "haunted": "<b>Haunted</b> – ",
+      "objective": "<b>Objective</b> – ",
+      "patrol": "<b>Patrol</b> – ",
+      "revelation": "<b>Revelation</b> – "
     }
   },
   {
@@ -185,7 +199,14 @@
       "not_count": "nie wliczane do wielkości talii",
       "agenda": "Tajemnica ",
       "act": "Akt ",
-      "Illus": "Ilus."
+      "Illus": "Ilus.",
+      "prey": "<b>Ofiara</b> – ",
+      "spawn": "<b>Pojawienie się</b> – ",
+      "forced": "<b>Wymuszony</b> – ",
+      "haunted": "<b>Nawiedzona</b> – ",
+      "objective": "<b>Cel</b> – ",
+      "patrol": "<b>Patrol</b> – ",
+      "revelation": "<b>Objawienie</b> – "
     }
   }
 ]
