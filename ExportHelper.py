@@ -494,7 +494,7 @@ if __name__ == "__main__":
     system_defaults = {
         "format": "PNG",
         "size": ExportSize.POKER_SIZE.value,  # "63.5mm × 88.9mm (2.5″ × 3.5″)"
-        "dpi": 300,
+        "dpi": 500,
         "bleed": 3,
         "bleed_mode": "拉伸",
         "bleed_model": "镜像出血",  # LaMa模型出血 镜像出血

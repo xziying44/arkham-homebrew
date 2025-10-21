@@ -813,7 +813,7 @@ class RichTextRenderer:
             if alignment == TextAlignment.CENTER:
                 # 中心对齐：position是文本中心点
                 start_x = x - total_width // 2
-                start_y = y - max_height // 2
+                start_y = y - (options.font_size * 0.8) // 2
             elif alignment == TextAlignment.LEFT:
                 # 左对齐：position是左上角
                 start_x = x
