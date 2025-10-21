@@ -74,7 +74,7 @@ IS_ANDROID = 'ANDROID_ARGUMENT' in os.environ
 
 # 解析命令行参数
 if not IS_ANDROID:
-    parser = argparse.ArgumentParser(description="阿卡姆印牌姬-V2.8.4 启动器")
+    parser = argparse.ArgumentParser(description="阿卡姆印牌姬-启动器")
     parser.add_argument(
         '-d', '--debug',
         action='store_true',
@@ -124,7 +124,7 @@ if __name__ == '__main__':
         import webview
 
         window = webview.create_window(
-            "阿卡姆印牌姬-V2.9-beta-5",
+            "阿卡姆印牌姬-V2.9-beta-6",
             app,
             width=1500,
             height=800,

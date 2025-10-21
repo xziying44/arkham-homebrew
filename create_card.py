@@ -133,6 +133,8 @@ class CardCreator:
         if dp and abs(dp.size[0] - card.width) < 3 and abs(dp.size[1] - card.height) < 3:
             image_mode = 1
 
+        print('image_mode', image_mode)
+
         if image_mode == 1:
             # 全覆盖模式
             if card_type in ['调查员卡', '调查员卡背'] and dp.size[0] < dp.size[1]:
@@ -1751,10 +1753,46 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "特殊图片",
-        "craft_type": "缩略图",
-        "thumbnail_type": "调查员卡背",
-        "picture_path": r"D:\汉化文件夹\测试工作空间v2\.cards\0ab2eb50-d864-4b1f-a6b6-25de760bc482.png"
+        "type": "调查员",
+        "name": "🏅Roland Bank ",
+        "id": "",
+        "created_at": "",
+        "version": "2.0",
+        "language": "en",
+        "back": {
+            "name": "🏅Roland Banks",
+            "subtitle": "The Fed",
+            "class": "守护者",
+            "card_back": {
+                "other": "",
+                "story": "Roland had always taken comfort in procedure and rules. As an agent in the Bureau, he was relieved to have guidelines to follow in any given situation. But lately, his Federal Agent's Handbook had been entirely unhelpful given the cases he'd been assigned. Try as he might, Roland could find no mention of what to do when confronted with strange creatures, gates through time and space, or magic spells. If he hadn't seen it with his own eyes, he would never have believed it... and there's no way his superiors would understand. Roland knew he would have to handle this one himself.",
+                "size": 30,
+                "option": " Guardian cards (🛡️) level 0-5, Seeker cards (🔍) level 0-2, Neutral cards level 0-5.",
+                "requirement": " Roland's .38 Special, Cover Up, 1 random basic weakness."
+            },
+            "type": "调查员背面",
+            "image_mode": 1,
+            "subtype": "平行"
+        },
+        "subtitle": "The Fed",
+        "class": "守护者",
+        "attribute": [
+            3,
+            3,
+            4,
+            2
+        ],
+        "health": 9,
+        "horror": 5,
+        "traits": [
+            "Agency",
+            "Detective"
+        ],
+        "body": "⭕After you defeat an enemy: Discover 1 clue at your location. (Limit once per round.)\n⭐ effect: +1 for each clue on your location.",
+        "flavor": "Everything by the book: every \"i\" dotted, every \"t\" crossed. It has worked, until now.",
+        "quantity": 1,
+        "subtype": "平行",
+        "picture_path": r"C:\Users\xziyi\Downloads\F678E9805AE4F422E6B3587420BF835D.png"
     }
 
     # 创建字体和图片管理器
@@ -1765,10 +1803,7 @@ if __name__ == '__main__':
     # 创建卡牌创建器
     creator = CardCreator(
         font_manager=fm,
-        image_manager=im,
-        image_mode=1,
-        transparent_encounter=False,
-        transparent_background=False
+        image_manager=im
     )
 
     # 创建卡牌 - 支持PIL图片对象
@@ -1779,7 +1814,7 @@ if __name__ == '__main__':
     profiler = cProfile.Profile()
     profiler.enable()
 
-    fm.set_lang('zh')
+    fm.set_lang('en')
     card = creator.create_card(json_data, picture_path=json_data.get('picture_path', None))
 
     profiler.disable()
