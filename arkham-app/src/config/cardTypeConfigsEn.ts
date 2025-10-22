@@ -1678,10 +1678,6 @@ export const cardBackConfigs: Record<string, CardTypeConfig> = {
 };
 
 export const cardTypeOptions = [
-  // System preset card back options
-  { label: '--- System Presets ---', value: '__divider__', disabled: true },
-  { label: cardBackConfigs['玩家卡背'].field_type_display, value: '玩家卡背' },
-  { label: cardBackConfigs['遭遇卡背'].field_type_display, value: '遭遇卡背' },
   { label: '--- Player Cards ---', value: '__divider_player__', disabled: true },
   // Player card types
   ...Object.keys(cardTypeConfigs)
@@ -1697,7 +1693,11 @@ export const cardTypeOptions = [
     .map(key => ({
       label: cardTypeConfigs[key].field_type_display || cardTypeConfigs[key].field_type_en || key,
       value: key
-    }))
+    })),
+  // System preset card back options
+  { label: '--- System Presets ---', value: '__divider__', disabled: true },
+  { label: cardBackConfigs['玩家卡背'].field_type_display, value: '玩家卡背' },
+  { label: cardBackConfigs['遭遇卡背'].field_type_display, value: '遭遇卡背' },
 ];
 
 // Get default back type configuration for card types

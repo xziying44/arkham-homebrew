@@ -1649,10 +1649,6 @@ export const cardBackConfigs: Record<string, CardTypeConfig> = {
 };
 
 export const cardTypeOptions = [
-  // 系统预设卡背选项
-  { label: '--- 系统预设 ---', value: '__divider__', disabled: true },
-  { label: cardBackConfigs['玩家卡背'].field_type_display, value: '玩家卡背' },
-  { label: cardBackConfigs['遭遇卡背'].field_type_display, value: '遭遇卡背' },
   { label: '--- 玩家卡 ---', value: '__divider_player__', disabled: true },
   // 玩家卡类型
   ...Object.keys(cardTypeConfigs)
@@ -1668,7 +1664,11 @@ export const cardTypeOptions = [
     .map(key => ({
       label: cardTypeConfigs[key].field_type_display || key,
       value: key
-    }))
+    })),
+  // 系统预设卡背选项
+  { label: '--- 系统预设 ---', value: '__divider__', disabled: true },
+  { label: cardBackConfigs['玩家卡背'].field_type_display, value: '玩家卡背' },
+  { label: cardBackConfigs['遭遇卡背'].field_type_display, value: '遭遇卡背' },
 ];
 
 // 获取卡牌类型对应的默认背面配置
