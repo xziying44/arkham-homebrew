@@ -231,36 +231,32 @@ const handleStyle = computed(() => {
     };
 });
 
-// 模拟后端渲染逻辑的变换样式
+// 修复imageTransformStyle计算
 const imageTransformStyle = computed(() => {
-    // 后端逻辑：先缩放(scale)，再裁剪(crop)，然后镜像翻转(flip)，最后旋转(rotation)，偏移(offset)
-    // 前端需要同样的顺序：translate() rotate() scaleY/scaleX() scale()
-    // 但由于CSS transform的执行顺序是从右到左，所以要写成相反顺序
     const visualOffsetX = internalLayout.offset.x * internalScaleRatio.value;
     const visualOffsetY = internalLayout.offset.y * internalScaleRatio.value;
-
-    // 构建变换字符串
     let transforms = [];
-
-    // 1. 基础缩放
-    transforms.push(`scale(${actualDisplayScale.value})`);
-
-    // 2. 镜像翻转
-    if (internalLayout.flip_horizontal) {
-        transforms.push('scaleX(-1)');
-    }
-    if (internalLayout.flip_vertical) {
-        transforms.push('scaleY(-1)');
-    }
-
-    // 3. 旋转
+    // ⚠️ 关键修改：调整顺序，让offset最后应用（写在最前面）
+    // CSS transform从右到左执行，所以要反向写
+    
+    // 5. 偏移（最后执行，对应后端最后的offset）
+    transforms.push(`translate(${visualOffsetX}px, ${visualOffsetY}px)`);
+    
+    // 4. 旋转
     if (internalLayout.rotation !== 0) {
         transforms.push(`rotate(${internalLayout.rotation}deg)`);
     }
-
-    // 4. 偏移（最右边，最后应用）
-    transforms.push(`translate(${visualOffsetX}px, ${visualOffsetY}px)`);
-
+    
+    // 3. 镜像翻转
+    if (internalLayout.flip_vertical) {
+        transforms.push('scaleY(-1)');
+    }
+    if (internalLayout.flip_horizontal) {
+        transforms.push('scaleX(-1)');
+    }
+    
+    // 1. 基础缩放（最先执行，对应后端的scale）
+    transforms.push(`scale(${actualDisplayScale.value})`);
     return {
         transform: transforms.join(' '),
         cursor: isDragging.value ? 'grabbing' : 'grab',
@@ -330,38 +326,14 @@ const startDrag = (e: MouseEvent) => {
 
 const onDrag = (e: MouseEvent) => {
     if (!isDragging.value) return;
+    
+    // 计算鼠标移动的像素距离
     const dx = e.clientX - dragStart.x;
     const dy = e.clientY - dragStart.y;
-
-    // 计算考虑变换后的偏移量
-    let adjustedDx = dx;
-    let adjustedDy = dy;
-
-    // 考虑镜像翻转对拖拽方向的影响
-    if (internalLayout.flip_horizontal) {
-        adjustedDx = -dx;
-    }
-    if (internalLayout.flip_vertical) {
-        adjustedDy = -dy;
-    }
-
-    // 考虑旋转对拖拽方向的影响
-    if (internalLayout.rotation !== 0) {
-        const rotationRad = (internalLayout.rotation * Math.PI) / 180;
-        const cos = Math.cos(-rotationRad); // 使用负角度来抵消旋转影响
-        const sin = Math.sin(-rotationRad);
-
-        const originalDx = adjustedDx;
-        const originalDy = adjustedDy;
-
-        adjustedDx = originalDx * cos - originalDy * sin;
-        adjustedDy = originalDx * sin + originalDy * cos;
-    }
-
-    // 偏移量转换：前端拖拽的像素需要转换为后端的offset值
-    // 由于后端的offset是在缩放后直接应用的，所以需要除以内部比例
-    internalLayout.offset.x = dragStartOffset.x + adjustedDx / internalScaleRatio.value;
-    internalLayout.offset.y = dragStartOffset.y + adjustedDy / internalScaleRatio.value;
+    // ⚠️ 关键修改：直接映射到画布坐标系，不需要考虑旋转和翻转
+    // 因为offset现在是在旋转和翻转之后应用的
+    internalLayout.offset.x = dragStartOffset.x + dx / internalScaleRatio.value;
+    internalLayout.offset.y = dragStartOffset.y + dy / internalScaleRatio.value;
 };
 
 const stopDrag = () => {
