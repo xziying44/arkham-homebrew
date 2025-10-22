@@ -357,6 +357,9 @@ class Card:
         """
         if self.font_manager.silence and not underline:
             return
+        if self.font_manager.lang != 'zh' and font_name == '副标题字体':
+            font_size = font_size - 3
+            position = (position[0], position[1] - 1)
         lang_font = self.font_manager.get_lang_font(font_name)
         self.last_render_list.extend(self.rich_renderer.draw_line(
             text=text,
