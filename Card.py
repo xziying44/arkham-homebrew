@@ -424,6 +424,8 @@ class Card:
         )
         # 获取图片的主体范围
         bbox = line_height_img.getbbox()
+        if not bbox:
+            bbox = (0, 0, 1, 1)
         # 裁剪 图片
         line_height_img = line_height_img.crop((0, 0, width, bbox[3]))
         return line_height_img
@@ -436,7 +438,7 @@ class Card:
                 img = self.create_left_text_mark(
                     width=450,
                     text=scenario_card[token_type],
-                    font_name="simfang",
+                    font_name=self.font_manager.get_lang_font("正文字体").name,
                     font_size=32,
                     font_color=(0, 0, 0)
                 )
@@ -452,7 +454,7 @@ class Card:
             self.draw_centered_text(
                 (self.width // 2, 807),
                 text=resource_name,
-                font_name="汉仪小隶书简",
+                font_name=self.font_manager.get_lang_font("标题字体").name,
                 font_size=36,
                 font_color=(0, 0, 0)
             )

@@ -1550,7 +1550,9 @@ class CardCreator:
         else:
             # 写副标题
             if 'subtitle' in data and data['subtitle'] != '':
-                card.draw_centered_text((369, 270), data['subtitle'], "副标题字体", 22, (0, 0, 0))
+                card.draw_centered_text((369, 265), data['subtitle'], "副标题字体",
+                                        26 if self.font_manager.lang == 'zh' else 30
+                                        , (0, 0, 0))
 
             # 画正文
             scenario_card = data.get('scenario_card', {})

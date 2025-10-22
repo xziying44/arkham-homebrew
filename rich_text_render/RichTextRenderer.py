@@ -946,7 +946,7 @@ class RichTextRenderer:
                     fill=options.font_color,
                     width=1
                 )
-                x_offset = 18
+                x_offset = x_offset + 6
                 self.draw.line(
                     (underline_x + x_offset, start_y, underline_x + x_offset, start_y + total_height),
                     fill=options.font_color,
@@ -955,13 +955,16 @@ class RichTextRenderer:
             else:
                 # 水平模式的下划线
                 underline_y = start_y + max_height + 2
-                y_offset = 12
+                if self.font_manager.lang == 'zh':
+                    y_offset = 12
+                else:
+                    y_offset = 0
                 self.draw.line(
                     (start_x, underline_y + y_offset, start_x + total_width, underline_y + y_offset),
                     fill=options.font_color,
                     width=1
                 )
-                y_offset = 18
+                y_offset = y_offset + 6
                 self.draw.line(
                     (start_x, underline_y + y_offset, start_x + total_width, underline_y + y_offset),
                     fill=options.font_color,
