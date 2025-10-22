@@ -45,6 +45,7 @@ class LanguageTexts:
     not_count: str = "不计入卡牌张数"
     agenda: str = "密谋"
     act: str = "场景"
+    victory: str = "胜利<X>。"
     Illus: str = "Illus."
     # 卡牌关键词
     prey: str = "猎物"
@@ -349,6 +350,8 @@ class FontManager:
             text_key = 'agenda'
         elif text_key == '场景':
             text_key = 'act'
+        elif text_key == '胜利点':
+            text_key = 'victory'
         elif text_key == '插画':
             text_key = 'Illus'
         return getattr(config.texts, text_key, text_key)
