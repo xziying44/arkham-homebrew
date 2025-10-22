@@ -1291,12 +1291,15 @@ class Card:
         """
         if victory_value is None:
             return
+        if self.font_manager.lang != 'zh':
+            position = (position[0] - 10, position[1])
 
         # 根据victory值的类型决定显示方式
         if isinstance(victory_value, int):
             # 如果是整数，格式化为"胜利X。"
             text = self.font_manager.get_font_text('胜利点')
             text = text.replace('<X>', str(victory_value))
+            text = text.replace('<br>', '\n')
         elif isinstance(victory_value, str):
             # 如果是字符串，直接使用原文
             text = victory_value
