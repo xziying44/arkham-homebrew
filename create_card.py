@@ -1456,7 +1456,7 @@ class CardCreator:
             card.copy_circle_to_image(dp, (643, 92, 42), (643, 99, 42))
 
         card.draw_centered_text((313, 90), data['name'], "标题字体", 48, (0, 0, 0))
-        card.draw_centered_text((370, 1008), '剧情', "卡牌类型字体", 30, (0, 0, 0))
+        card.draw_centered_text((370, 1012), self.font_manager.get_font_text('剧情'), "卡牌类型字体", 30, (0, 0, 0))
 
         body = self._tidy_body_flavor(data['body'], data['flavor'], flavor_type=1, align='left', quote=True)
         card.draw_text(body, vertices=[(50, 207), (685, 207), (685, 960), (50, 960)],

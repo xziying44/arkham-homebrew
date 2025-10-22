@@ -35,6 +35,7 @@ class LanguageTexts:
     location: str = "地点"
     event: str = "事件"
     asset: str = "支援"
+    story: str = "剧情"
     treachery: str = "诡计"
     enemy: str = "敌人"
     weakness: str = "弱点"
@@ -355,6 +356,8 @@ class FontManager:
             text_key = 'victory'
         elif text_key == '升级项':
             text_key = 'upgrades'
+        elif text_key == '剧情':
+            text_key = 'story'
         elif text_key == '插画':
             text_key = 'Illus'
         return getattr(config.texts, text_key, text_key)
