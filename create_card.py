@@ -724,6 +724,12 @@ class CardCreator:
             draw_virtual_box=False
         )
 
+        # 写卡牌类型
+        font_size = 22
+        if self.font_manager.lang == 'pl':
+            font_size = 19
+        card.draw_centered_text((368, 1013), self.font_manager.get_font_text("升级项"), "卡牌类型字体", font_size, (0, 0, 0))
+
         return card
 
     def create_weakness_back(self, card_json: dict, picture_path: Union[str, Image.Image, None] = None) -> Card:
@@ -1755,7 +1761,7 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "敌人卡",
+        "type": "升级卡",
         "name": "<uni>Terror of the Stars",
         "id": "",
         "created_at": "",
@@ -1819,7 +1825,7 @@ if __name__ == '__main__':
     profiler = cProfile.Profile()
     profiler.enable()
 
-    fm.set_lang('en')
+    fm.set_lang('pl')
     card = creator.create_card(json_data, picture_path=json_data.get('picture_path', None))
 
     profiler.disable()
