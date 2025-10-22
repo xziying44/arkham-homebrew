@@ -86,6 +86,8 @@ const bodyTip = `输入格式：
 
 const nameTip = `支持添加独特标记：🏅 或 <独特>`
 
+const victoryTip = `胜利点和胜利点文本只能填写一个，胜利点文本优先级大于胜利点。`
+
 export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   '支援卡': {
     field_type_display: '📦 支援卡',
@@ -176,7 +178,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
           { label: '💪 生存者', value: '生存者' }
         ]
       },
-            {
+      {
         key: 'weakness_type',
         showCondition: {
           field: 'class',
@@ -311,7 +313,14 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'victory',
         name: '🏆 胜利点',
         type: 'number',
-        layout: 'full'
+        layout: 'half'
+      },
+      {
+        key: 'victory_text',
+        name: '🏆 胜利点文本',
+        type: 'text',
+        layout: 'half',
+        helpText: victoryTip
       },
       {
         key: 'encounter_group',
@@ -415,7 +424,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
           { label: '💪 生存者', value: '生存者' }
         ]
       },
-            {
+      {
         key: 'weakness_type',
         showCondition: {
           field: 'class',
@@ -492,7 +501,14 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'victory',
         name: '🏆 胜利点',
         type: 'number',
-        layout: 'full'
+        layout: 'half'
+      },
+      {
+        key: 'victory_text',
+        name: '🏆 胜利点文本',
+        type: 'text',
+        layout: 'half',
+        helpText: victoryTip
       },
       {
         key: 'picture_base64',
@@ -529,7 +545,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
           { label: '⚪ 中立', value: '中立' }
         ]
       },
-            {
+      {
         key: 'weakness_type',
         showCondition: {
           field: 'class',
@@ -593,7 +609,14 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'victory',
         name: '🏆 胜利点',
         type: 'number',
-        layout: 'full'
+        layout: 'half'
+      },
+      {
+        key: 'victory_text',
+        name: '🏆 胜利点文本',
+        type: 'text',
+        layout: 'half',
+        helpText: victoryTip
       },
       {
         key: 'picture_base64',
@@ -857,7 +880,14 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'victory',
         name: '🏆 胜利点',
         type: 'number',
-        layout: 'full'
+        layout: 'half'
+      },
+      {
+        key: 'victory_text',
+        name: '🏆 胜利点文本',
+        type: 'text',
+        layout: 'half',
+        helpText: victoryTip
       },
       {
         key: 'encounter_group',
@@ -927,7 +957,14 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'victory',
         name: '🏆 胜利点',
         type: 'number',
-        layout: 'full'
+        layout: 'half'
+      },
+      {
+        key: 'victory_text',
+        name: '🏆 胜利点文本',
+        type: 'text',
+        layout: 'half',
+        helpText: victoryTip
       },
       {
         key: 'encounter_group',
@@ -1051,7 +1088,14 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'victory',
         name: '🏆 胜利点',
         type: 'number',
-        layout: 'full'
+        layout: 'half'
+      },
+      {
+        key: 'victory_text',
+        name: '🏆 胜利点文本',
+        type: 'text',
+        layout: 'half',
+        helpText: victoryTip
       },
       {
         key: 'encounter_group',
@@ -1176,7 +1220,14 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'victory',
         name: '🏆 胜利点',
         type: 'number',
-        layout: 'full'
+        layout: 'half'
+      },
+      {
+        key: 'victory_text',
+        name: '🏆 胜利点文本',
+        type: 'text',
+        layout: 'half',
+        helpText: victoryTip
       },
       {
         key: 'encounter_group',
@@ -1254,7 +1305,18 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         },
         name: '🏆 胜利点',
         type: 'number',
-        layout: 'full'
+        layout: 'half'
+      },
+      {
+        key: 'victory_text',
+        showCondition: {
+          field: 'is_back',
+          value: true
+        },
+        name: '🏆 胜利点文本',
+        type: 'text',
+        layout: 'half',
+        helpText: victoryTip
       },
       {
         key: 'encounter_group',
@@ -1375,7 +1437,18 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         },
         name: '🏆 胜利点',
         type: 'number',
-        layout: 'full'
+        layout: 'half'
+      },
+      {
+        key: 'victory_text',
+        showCondition: {
+          field: 'is_back',
+          value: true
+        },
+        name: '🏆 胜利点文本',
+        type: 'text',
+        layout: 'half',
+        helpText: victoryTip
       },
       {
         key: 'encounter_group',
@@ -1505,7 +1578,18 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         },
         name: '🏆 胜利点',
         type: 'number',
-        layout: 'full'
+        layout: 'half'
+      },
+      {
+        key: 'victory_text',
+        showCondition: {
+          field: 'is_back',
+          value: true
+        },
+        name: '🏆 胜利点文本',
+        type: 'text',
+        layout: 'half',
+        helpText: victoryTip
       },
       {
         key: 'encounter_group',

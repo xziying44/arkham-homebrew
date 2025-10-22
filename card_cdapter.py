@@ -103,11 +103,13 @@ class CardAdapter:
         Returns:
             转化后的JSON字典
         """
-        converted_data = deepcopy(self.original_data)
+        converted_data = self.original_data
 
         # 对配置的每个字段进行转化
         for field_path in self.FIELDS_TO_CONVERT:
             self._convert_field(converted_data, field_path)
+        if converted_data.get('victory_text', ''):
+            converted_data['victory'] = converted_data['victory_text']
 
         return converted_data
 

@@ -86,6 +86,8 @@ Support direct use of emoji or corresponding tag format
 
 const nameTip = `Support unique marker: 🏅 or <独特>`;
 
+const victoryTip = `Only one of Victory Points or Victory Text can be filled in. Victory Text takes precedence over Victory Points.`
+
 export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   '支援卡': {
     field_type_en: 'Asset Card',
@@ -312,7 +314,14 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'victory',
         name: '🏆 Victory Points',
         type: 'number',
-        layout: 'full'
+        layout: 'half'
+      },
+      {
+        key: 'victory_text',
+        name: '🏆 Victory Text',
+        type: 'text',
+        layout: 'half',
+        helpText: victoryTip
       },
       {
         key: 'encounter_group',
@@ -494,7 +503,14 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'victory',
         name: '🏆 Victory Points',
         type: 'number',
-        layout: 'full'
+        layout: 'half'
+      },
+      {
+        key: 'victory_text',
+        name: '🏆 Victory Text',
+        type: 'text',
+        layout: 'half',
+        helpText: victoryTip
       },
       {
         key: 'picture_base64',
@@ -596,7 +612,14 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'victory',
         name: '🏆 Victory Points',
         type: 'number',
-        layout: 'full'
+        layout: 'half'
+      },
+      {
+        key: 'victory_text',
+        name: '🏆 Victory Text',
+        type: 'text',
+        layout: 'half',
+        helpText: victoryTip
       },
       {
         key: 'picture_base64',
@@ -864,7 +887,14 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'victory',
         name: '🏆 Victory Points',
         type: 'number',
-        layout: 'full'
+        layout: 'half'
+      },
+      {
+        key: 'victory_text',
+        name: '🏆 Victory Text',
+        type: 'text',
+        layout: 'half',
+        helpText: victoryTip
       },
       {
         key: 'encounter_group',
@@ -935,7 +965,14 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'victory',
         name: '🏆 Victory Points',
         type: 'number',
-        layout: 'full'
+        layout: 'half'
+      },
+      {
+        key: 'victory_text',
+        name: '🏆 Victory Text',
+        type: 'text',
+        layout: 'half',
+        helpText: victoryTip
       },
       {
         key: 'encounter_group',
@@ -1060,7 +1097,14 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'victory',
         name: '🏆 Victory Points',
         type: 'number',
-        layout: 'full'
+        layout: 'half'
+      },
+      {
+        key: 'victory_text',
+        name: '🏆 Victory Text',
+        type: 'text',
+        layout: 'half',
+        helpText: victoryTip
       },
       {
         key: 'encounter_group',
@@ -1186,7 +1230,14 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         key: 'victory',
         name: '🏆 Victory Points',
         type: 'number',
-        layout: 'full'
+        layout: 'half'
+      },
+      {
+        key: 'victory_text',
+        name: '🏆 Victory Text',
+        type: 'text',
+        layout: 'half',
+        helpText: victoryTip
       },
       {
         key: 'encounter_group',
@@ -1269,7 +1320,18 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         },
         name: '🏆 Victory Points',
         type: 'number',
-        layout: 'full'
+        layout: 'half'
+      },
+      {
+        key: 'victory_text',
+        showCondition: {
+          field: 'is_back',
+          value: true
+        },
+        name: '🏆 Victory Text',
+        type: 'text',
+        layout: 'half',
+        helpText: victoryTip
       },
       {
         key: 'encounter_group',
@@ -1396,7 +1458,18 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         },
         name: '🏆 Victory Points',
         type: 'number',
-        layout: 'full'
+        layout: 'half'
+      },
+      {
+        key: 'victory_text',
+        showCondition: {
+          field: 'is_back',
+          value: true
+        },
+        name: '🏆 Victory Text',
+        type: 'text',
+        layout: 'half',
+        helpText: victoryTip
       },
       {
         key: 'encounter_group',
@@ -1528,7 +1601,18 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         },
         name: '🏆 Victory Points',
         type: 'number',
-        layout: 'full'
+        layout: 'half'
+      },
+      {
+        key: 'victory_text',
+        showCondition: {
+          field: 'is_back',
+          value: true
+        },
+        name: '🏆 Victory Text',
+        type: 'text',
+        layout: 'half',
+        helpText: victoryTip
       },
       {
         key: 'encounter_group',
