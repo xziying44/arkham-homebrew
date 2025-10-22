@@ -94,7 +94,7 @@
                     <div class="form-field layout-half">
                         <FormFieldComponent :field="{
                             key: 'quantity',
-                            name: '卡牌数量',
+                            name: $t('cardEditor.panel.cardQuantity'),
                             type: 'number',
                             min: 1,
                             max: 999,
@@ -107,7 +107,7 @@
                     <div class="form-field layout-half">
                         <FormFieldComponent :field="{
                             key: 'footer_copyright',
-                            name: '版权信息',
+                            name: $t('cardEditor.panel.copyright'),
                             type: 'text',
                             placeholder: '例如：© 2024 Fantasy Flight Games'
                         }" :value="sideCardData.footer_copyright || ''" :new-string-value="newStringValue"

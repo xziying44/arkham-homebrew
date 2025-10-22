@@ -77,7 +77,9 @@ export default {
     illustrator: '🎨 Illustrator',
     encounterGroupNumber: '📋 Encounter Group Number',
     cardNumber: '📋 Card Number',
-    cardRemarks: '📝 Card Remarks',
+    cardRemarks: '📝 Card Notes',
+    cardQuantity: 'Card Quantity',
+    copyright: 'Copyright',
 
     // Action buttons
     saveCard: 'Save Card',
@@ -139,5 +141,29 @@ export default {
     aiReturnedError: 'AI returned error',
     missingRequiredFields: 'Missing required fields',
     jsonParseError: 'JSON parse error'
+  },
+
+  // IllustrationLayoutEditor component
+  illustrationLayout: {
+    title: 'Illustration Layout Settings',
+    layoutMode: 'Layout Mode',
+    autoCenter: 'Auto Center',
+    custom: 'Custom',
+    zoomHint: 'Hold Alt + Scroll to zoom',
+    offset: 'Offset',
+    xAxis: 'X Axis',
+    yAxis: 'Y Axis',
+    crop: 'Crop (px) - Original {width}x{height}',
+    top: 'Top',
+    bottom: 'Bottom',
+    left: 'Left',
+    right: 'Right',
+    scale: 'Scale',
+    ratio: 'Ratio',
+    rotation: 'Rotation',
+    angle: 'Angle',
+    flip: 'Flip',
+    horizontal: 'Horizontal',
+    vertical: 'Vertical'
   }
 }

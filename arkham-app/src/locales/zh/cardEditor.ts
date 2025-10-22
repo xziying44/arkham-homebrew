@@ -78,6 +78,8 @@ export default {
     encounterGroupNumber: '📋 遭遇组序号',
     cardNumber: '📋 卡牌序号',
     cardRemarks: '📝 卡牌备注信息',
+    cardQuantity: '卡牌数量',
+    copyright: '版权信息',
 
     // 操作按钮
     saveCard: '保存卡牌',
@@ -139,5 +141,29 @@ export default {
     aiReturnedError: 'AI返回错误',
     missingRequiredFields: '缺少必要字段',
     jsonParseError: 'JSON解析错误'
+  },
+
+  // IllustrationLayoutEditor component
+  illustrationLayout: {
+    title: '插画布局设置',
+    layoutMode: '布局模式',
+    autoCenter: '自动居中',
+    custom: '自定义',
+    zoomHint: '按住 Alt + 滚动以缩放',
+    offset: '偏移 (Offset)',
+    xAxis: 'X 轴',
+    yAxis: 'Y 轴',
+    crop: '裁剪 (px) - 原图 {width}x{height}',
+    top: '上',
+    bottom: '下',
+    left: '左',
+    right: '右',
+    scale: '缩放 (Scale)',
+    ratio: '比例',
+    rotation: '旋转 (Rotation)',
+    angle: '角度',
+    flip: '镜像翻转 (Flip)',
+    horizontal: '水平',
+    vertical: '垂直'
   }
 }

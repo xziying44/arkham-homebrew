@@ -1,11 +1,11 @@
 <template>
-    <n-card title="插画布局设置" size="small" class="form-card illustration-editor-card">
+    <n-card :title="t('cardEditor.illustrationLayout.title')" size="small" class="form-card illustration-editor-card">
         <n-form label-placement="top" size="small">
             <!-- 布局模式选择 -->
-            <n-form-item label="布局模式">
+            <n-form-item :label="t('cardEditor.illustrationLayout.layoutMode')">
                 <n-radio-group v-model:value="internalLayout.mode" @update:value="emitUpdate">
-                    <n-radio-button value="auto">自动居中</n-radio-button>
-                    <n-radio-button value="custom">自定义</n-radio-button>
+                    <n-radio-button value="auto">{{ t('cardEditor.illustrationLayout.autoCenter') }}</n-radio-button>
+                    <n-radio-button value="custom">{{ t('cardEditor.illustrationLayout.custom') }}</n-radio-button>
                 </n-radio-group>
             </n-form-item>
 
@@ -25,7 +25,7 @@
                 <div class="visual-editor-container" ref="editorContainerRef" @wheel="handleWheel">
                     <!-- 缩放提示 (已更新为 Alt) -->
                     <div class="zoom-hint">
-                        按住 <n-tag size="small" :bordered="false">Alt</n-tag> + 滚动以缩放
+                        {{ t('cardEditor.illustrationLayout.zoomHint') }}
                     </div>
 
                     <div class="visual-editor">
@@ -57,16 +57,16 @@
                     <!-- 第一行：偏移 和 裁剪 - 左右布局 -->
                     <div class="inputs-row-split">
                         <div class="split-column">
-                            <n-card size="small" title="偏移 (Offset)">
+                            <n-card size="small" :title="t('cardEditor.illustrationLayout.offset')">
                                 <div class="input-field-group">
                                     <div class="input-field">
-                                        <span class="input-label">X 轴</span>
+                                        <span class="input-label">{{ t('cardEditor.illustrationLayout.xAxis') }}</span>
                                         <n-input-number :show-button="false" v-model:value="internalLayout.offset.x"
                                             :step="10" @update:value="emitUpdate" :disabled="!isImageLoaded"
                                             style="flex-grow: 1;" />
                                     </div>
                                     <div class="input-field">
-                                        <span class="input-label">Y 轴</span>
+                                        <span class="input-label">{{ t('cardEditor.illustrationLayout.yAxis') }}</span>
                                         <n-input-number :show-button="false" v-model:value="internalLayout.offset.y"
                                             :step="10" @update:value="emitUpdate" :disabled="!isImageLoaded"
                                             style="flex-grow: 1;" />
@@ -77,28 +77,28 @@
 
                         <div class="split-column">
                             <n-card size="small"
-                                :title="`裁剪 (px) - 原图 ${imageNaturalSize.width}x${imageNaturalSize.height}`">
+                                :title="t('cardEditor.illustrationLayout.crop', { width: imageNaturalSize.width, height: imageNaturalSize.height })">
                                 <div class="crop-inputs">
                                     <div class="input-field">
-                                        <span class="input-label">上</span>
+                                        <span class="input-label">{{ t('cardEditor.illustrationLayout.top') }}</span>
                                         <n-input-number :show-button="false" v-model:value="internalLayout.crop.top"
                                             :min="0" :max="imageNaturalSize.height - internalLayout.crop.bottom - 1"
                                             :step="1" @update:value="emitUpdate" :disabled="!isImageLoaded" />
                                     </div>
                                     <div class="input-field">
-                                        <span class="input-label">下</span>
+                                        <span class="input-label">{{ t('cardEditor.illustrationLayout.bottom') }}</span>
                                         <n-input-number :show-button="false" v-model:value="internalLayout.crop.bottom"
                                             :min="0" :max="imageNaturalSize.height - internalLayout.crop.top - 1"
                                             :step="1" @update:value="emitUpdate" :disabled="!isImageLoaded" />
                                     </div>
                                     <div class="input-field">
-                                        <span class="input-label">左</span>
+                                        <span class="input-label">{{ t('cardEditor.illustrationLayout.left') }}</span>
                                         <n-input-number :show-button="false" v-model:value="internalLayout.crop.left"
                                             :min="0" :max="imageNaturalSize.width - internalLayout.crop.right - 1"
                                             :step="1" @update:value="emitUpdate" :disabled="!isImageLoaded" />
                                     </div>
                                     <div class="input-field">
-                                        <span class="input-label">右</span>
+                                        <span class="input-label">{{ t('cardEditor.illustrationLayout.right') }}</span>
                                         <n-input-number :show-button="false" v-model:value="internalLayout.crop.right"
                                             :min="0" :max="imageNaturalSize.width - internalLayout.crop.left - 1"
                                             :step="1" @update:value="emitUpdate" :disabled="!isImageLoaded" />
@@ -110,9 +110,9 @@
 
                     <!-- 第二行：缩放 - 独占一行 -->
                     <div class="inputs-row-full">
-                        <n-card size="small" title="缩放 (Scale)">
+                        <n-card size="small" :title="t('cardEditor.illustrationLayout.scale')">
                             <div class="input-field scale-field">
-                                <span class="input-label">比例</span>
+                                <span class="input-label">{{ t('cardEditor.illustrationLayout.ratio') }}</span>
                                 <n-slider v-model:value="internalLayout.scale" :min="0.1" :max="5" :step="0.01"
                                     @update:value="emitUpdate" :disabled="!isImageLoaded" style="flex-grow: 1;" />
                                 <n-input-number :show-button="false" v-model:value="internalLayout.scale" :min="0.1"
@@ -124,10 +124,10 @@
 
                     <!-- 第三行：旋转 - 独占一行 -->
                     <div class="inputs-row-full">
-                        <n-card size="small" title="旋转 (Rotation)">
+                        <n-card size="small" :title="t('cardEditor.illustrationLayout.rotation')">
                             <div class="rotation-container">
                                 <div class="input-field">
-                                    <span class="input-label">角度</span>
+                                    <span class="input-label">{{ t('cardEditor.illustrationLayout.angle') }}</span>
                                     <n-slider v-model:value="internalLayout.rotation" :min="-180" :max="180" :step="1"
                                         @update:value="emitUpdate" :disabled="!isImageLoaded" style="flex-grow: 1;" />
                                     <n-input-number :show-button="false" v-model:value="internalLayout.rotation"
@@ -152,15 +152,15 @@
 
                     <!-- 第四行：镜像翻转 - 紧凑布局 -->
                     <div class="inputs-row-full">
-                        <n-card size="small" title="镜像翻转 (Flip)">
+                        <n-card size="small" :title="t('cardEditor.illustrationLayout.flip')">
                             <div class="flip-controls-compact">
                                 <div class="flip-button-compact">
-                                    <span class="input-label-compact">水平</span>
+                                    <span class="input-label-compact">{{ t('cardEditor.illustrationLayout.horizontal') }}</span>
                                     <n-switch v-model:value="internalLayout.flip_horizontal" @update:value="emitUpdate"
                                         :disabled="!isImageLoaded" size="small" />
                                 </div>
                                 <div class="flip-button-compact">
-                                    <span class="input-label-compact">垂直</span>
+                                    <span class="input-label-compact">{{ t('cardEditor.illustrationLayout.vertical') }}</span>
                                     <n-switch v-model:value="internalLayout.flip_vertical" @update:value="emitUpdate"
                                         :disabled="!isImageLoaded" size="small" />
                                 </div>
@@ -175,6 +175,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, watch, computed, onUnmounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 // 接口定义
 interface PictureLayout {
@@ -198,6 +199,7 @@ const defaultLayout: PictureLayout = {
     flip_vertical: false,
 };
 
+const { t } = useI18n();
 const props = defineProps<{ imageSrc: string; layout?: Partial<PictureLayout>; card_type?: string }>();
 const emit = defineEmits<{ 'update:layout': [layout: PictureLayout]; }>();
 
