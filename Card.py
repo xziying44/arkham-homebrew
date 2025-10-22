@@ -360,6 +360,8 @@ class Card:
         if self.font_manager.lang != 'zh' and font_name == '副标题字体':
             font_size = font_size - 3
             position = (position[0], position[1] - 1)
+        if font_color == (0, 0, 0):
+            font_color = (35, 31, 32)
         lang_font = self.font_manager.get_lang_font(font_name)
         self.last_render_list.extend(self.rich_renderer.draw_line(
             text=text,
@@ -393,6 +395,8 @@ class Card:
         """
         if self.font_manager.silence:
             return
+        if font_color == (0, 0, 0):
+            font_color = (35, 31, 32)
         lang_font = self.font_manager.get_lang_font(font_name)
         self.last_render_list.extend(self.rich_renderer.draw_line(
             text=text,
@@ -548,6 +552,8 @@ class Card:
         elif self.card_type in ['密谋卡', '场景卡'] and not self.is_back:
             text = re.sub(r'<relish>(.*?)</relish>', r'<flavor align="left" padding="0"  flex="false">\1</flavor>',
                           text)
+        if color == (0, 0, 0):
+            color = (35, 31, 32)
         lang_font = self.font_manager.get_lang_font(default_font_name)
         self.last_render_list.extend(self.rich_renderer.draw_complex_text(
             text,
