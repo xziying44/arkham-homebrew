@@ -38,13 +38,14 @@
                                 @load="onImageLoad" />
 
                             <div v-if="isImageLoaded" class="crop-box" :style="cropBoxStyle">
-                                <div class="handle top" :style="handleStyle"
+                                <!-- ⚠️ 修改：使用动态计算的光标样式 -->
+                                <div class="handle top" :style="getHandleStyle('top')"
                                     @mousedown.stop.prevent="startResize('top')"></div>
-                                <div class="handle bottom" :style="handleStyle"
+                                <div class="handle bottom" :style="getHandleStyle('bottom')"
                                     @mousedown.stop.prevent="startResize('bottom')"></div>
-                                <div class="handle left" :style="handleStyle"
+                                <div class="handle left" :style="getHandleStyle('left')"
                                     @mousedown.stop.prevent="startResize('left')"></div>
-                                <div class="handle right" :style="handleStyle"
+                                <div class="handle right" :style="getHandleStyle('right')"
                                     @mousedown.stop.prevent="startResize('right')"></div>
                             </div>
                         </div>
@@ -130,16 +131,19 @@
                                     <n-slider v-model:value="internalLayout.rotation" :min="-180" :max="180" :step="1"
                                         @update:value="emitUpdate" :disabled="!isImageLoaded" style="flex-grow: 1;" />
                                     <n-input-number :show-button="false" v-model:value="internalLayout.rotation"
-                                        :min="-180" :max="180" :step="1" size="small"
-                                        @update:value="emitUpdate" :disabled="!isImageLoaded"
-                                        style="min-width: 80px;" />
+                                        :min="-180" :max="180" :step="1" size="small" @update:value="emitUpdate"
+                                        :disabled="!isImageLoaded" style="min-width: 80px;" />
                                 </div>
                                 <div class="rotation-preset-buttons">
                                     <n-button-group size="small">
-                                        <n-button @click="internalLayout.rotation = 0; emitUpdate()" :disabled="!isImageLoaded">0°</n-button>
-                                        <n-button @click="internalLayout.rotation = 90; emitUpdate()" :disabled="!isImageLoaded">90°</n-button>
-                                        <n-button @click="internalLayout.rotation = 180; emitUpdate()" :disabled="!isImageLoaded">180°</n-button>
-                                        <n-button @click="internalLayout.rotation = -90; emitUpdate()" :disabled="!isImageLoaded">-90°</n-button>
+                                        <n-button @click="internalLayout.rotation = 0; emitUpdate()"
+                                            :disabled="!isImageLoaded">0°</n-button>
+                                        <n-button @click="internalLayout.rotation = 90; emitUpdate()"
+                                            :disabled="!isImageLoaded">90°</n-button>
+                                        <n-button @click="internalLayout.rotation = 180; emitUpdate()"
+                                            :disabled="!isImageLoaded">180°</n-button>
+                                        <n-button @click="internalLayout.rotation = -90; emitUpdate()"
+                                            :disabled="!isImageLoaded">-90°</n-button>
                                     </n-button-group>
                                 </div>
                             </div>
@@ -222,14 +226,72 @@ const isImageLoaded = computed(() => imageNaturalSize.value.width > 0 && imageNa
 // 计算实际显示的缩放比例
 const actualDisplayScale = computed(() => internalLayout.scale * internalScaleRatio.value);
 
-// 手柄样式：使用反向缩放保持固定像素大小
-const handleStyle = computed(() => {
+// ⚠️ 新增：根据旋转角度计算光标方向
+const getCursorForHandle = (handle: string): string => {
+    // 归一化旋转角度到 [0, 360)
+    let angle = internalLayout.rotation % 360;
+    if (angle < 0) angle += 360;
+
+    // 考虑翻转的影响
+    const flipH = internalLayout.flip_horizontal;
+    const flipV = internalLayout.flip_vertical;
+
+    // 计算有效旋转角度（考虑翻转）
+    // 水平+垂直翻转 = 180度旋转
+    if (flipH && flipV) {
+        angle = (angle + 180) % 360;
+    }
+
+    // 根据手柄和旋转角度确定光标类型
+    const handleAngles = {
+        'top': 0,      // 向上
+        'right': 90,   // 向右
+        'bottom': 180, // 向下
+        'left': 270    // 向左
+    };
+
+    // 计算手柄的实际方向
+    let effectiveAngle = (handleAngles[handle] + angle) % 360;
+
+    // 单独考虑翻转的影响
+    if (flipH && !flipV) {
+        // 水平翻转：left ↔ right
+        if (handle === 'left' || handle === 'right') {
+            effectiveAngle = (effectiveAngle + 180) % 360;
+        }
+    } else if (!flipH && flipV) {
+        // 垂直翻转：top ↔ bottom
+        if (handle === 'top' || handle === 'bottom') {
+            effectiveAngle = (effectiveAngle + 180) % 360;
+        }
+    }
+
+    // 根据有效角度返回对应的光标
+    // 将角度映射到8个方向
+    const cursors = [
+        'ns-resize',    // 0°   - 向上/下
+        'nesw-resize',  // 45°  - 东北/西南
+        'ew-resize',    // 90°  - 向左/右
+        'nwse-resize',  // 135° - 西北/东南
+        'ns-resize',    // 180° - 向上/下
+        'nesw-resize',  // 225° - 东北/西南
+        'ew-resize',    // 270° - 向左/右
+        'nwse-resize',  // 315° - 西北/东南
+    ];
+
+    // 将角度映射到最近的45度倍数
+    const index = Math.round(effectiveAngle / 45) % 8;
+    return cursors[index];
+};
+// ⚠️ 修改：合并原有的handleStyle计算和新的光标计算
+const getHandleStyle = (handle: string) => {
     const inverseScale = 1 / actualDisplayScale.value;
     return {
         transform: `scale(${inverseScale})`,
-        transformOrigin: 'center'
+        transformOrigin: 'center',
+        cursor: getCursorForHandle(handle) // 动态光标
     };
-});
+};
 
 // 修复imageTransformStyle计算
 const imageTransformStyle = computed(() => {
@@ -238,15 +300,15 @@ const imageTransformStyle = computed(() => {
     let transforms = [];
     // ⚠️ 关键修改：调整顺序，让offset最后应用（写在最前面）
     // CSS transform从右到左执行，所以要反向写
-    
+
     // 5. 偏移（最后执行，对应后端最后的offset）
     transforms.push(`translate(${visualOffsetX}px, ${visualOffsetY}px)`);
-    
+
     // 4. 旋转
     if (internalLayout.rotation !== 0) {
         transforms.push(`rotate(${internalLayout.rotation}deg)`);
     }
-    
+
     // 3. 镜像翻转
     if (internalLayout.flip_vertical) {
         transforms.push('scaleY(-1)');
@@ -254,7 +316,7 @@ const imageTransformStyle = computed(() => {
     if (internalLayout.flip_horizontal) {
         transforms.push('scaleX(-1)');
     }
-    
+
     // 1. 基础缩放（最先执行，对应后端的scale）
     transforms.push(`scale(${actualDisplayScale.value})`);
     return {
@@ -326,7 +388,7 @@ const startDrag = (e: MouseEvent) => {
 
 const onDrag = (e: MouseEvent) => {
     if (!isDragging.value) return;
-    
+
     // 计算鼠标移动的像素距离
     const dx = e.clientX - dragStart.x;
     const dy = e.clientY - dragStart.y;
@@ -357,23 +419,56 @@ const startResize = (handle: string) => {
 
 const onResize = (e: MouseEvent) => {
     if (!isResizing.value) return;
-    // 使用实际显示的比例进行计算
-    const dx = (e.clientX - resizeStart.x) / actualDisplayScale.value;
-    const dy = (e.clientY - resizeStart.y) / actualDisplayScale.value;
-    const currentCrop = { ...resizeStartCrop };
-    const { width, height } = imageNaturalSize.value;
 
-    switch (resizeHandle.value) {
-        case 'top': currentCrop.top += dy; break;
-        case 'bottom': currentCrop.bottom -= dy; break;
-        case 'left': currentCrop.left += dx; break;
-        case 'right': currentCrop.right -= dx; break;
+    // 1. 计算鼠标在屏幕上的移动距离（考虑缩放）
+    let dx = (e.clientX - resizeStart.x) / actualDisplayScale.value;
+    let dy = (e.clientY - resizeStart.y) / actualDisplayScale.value;
+
+    // 2. 应用旋转的逆变换
+    // 将屏幕坐标系的移动转换到图片原始坐标系
+    if (internalLayout.rotation !== 0) {
+        const rotationRad = (-internalLayout.rotation * Math.PI) / 180; // 负角度做逆变换
+        const cos = Math.cos(rotationRad);
+        const sin = Math.sin(rotationRad);
+
+        const originalDx = dx;
+        const originalDy = dy;
+
+        dx = originalDx * cos - originalDy * sin;
+        dy = originalDx * sin + originalDy * cos;
     }
 
+    // 3. 应用翻转的影响
+    if (internalLayout.flip_horizontal) {
+        dx = -dx;
+    }
+    if (internalLayout.flip_vertical) {
+        dy = -dy;
+    }
+
+    // 4. 应用裁剪调整
+    const currentCrop = { ...resizeStartCrop };
+    const { width, height } = imageNaturalSize.value;
+    switch (resizeHandle.value) {
+        case 'top':
+            currentCrop.top += dy;
+            break;
+        case 'bottom':
+            currentCrop.bottom -= dy;
+            break;
+        case 'left':
+            currentCrop.left += dx;
+            break;
+        case 'right':
+            currentCrop.right -= dx;
+            break;
+    }
+    // 5. 边界限制
     currentCrop.top = Math.max(0, Math.min(currentCrop.top, height - currentCrop.bottom - 1));
     currentCrop.bottom = Math.max(0, Math.min(currentCrop.bottom, height - currentCrop.top - 1));
     currentCrop.left = Math.max(0, Math.min(currentCrop.left, width - currentCrop.right - 1));
     currentCrop.right = Math.max(0, Math.min(currentCrop.right, width - currentCrop.left - 1));
+
     Object.assign(internalLayout.crop, currentCrop);
 };
 
@@ -490,7 +585,6 @@ onUnmounted(() => { stopDrag(); stopResize(); });
     width: 24px;
     left: 50%;
     transform-origin: center;
-    cursor: ns-resize;
 }
 
 .handle.left,
@@ -499,7 +593,6 @@ onUnmounted(() => { stopDrag(); stopResize(); });
     height: 24px;
     top: 50%;
     transform-origin: center;
-    cursor: ew-resize;
 }
 
 .handle.top {
