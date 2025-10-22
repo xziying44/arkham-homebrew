@@ -591,15 +591,12 @@ class CardCreator:
             self._paste_background_image(card, picture_path, data, dp)
 
             # 贴牌框
+            ui_name = data["type"]
             if 'subtitle' in data and data['subtitle'] != '':
-                card.paste_image(
-                    self.image_manager.get_image(
-                        f'{data["type"]}-副标题{"-虚拟" if card_json.get("virtual", False) else ""}'),
-                    (0, 0))
-            else:
-                card.paste_image(
-                    self.image_manager.get_image(f'{data["type"]}{"-虚拟" if card_json.get("virtual", False) else ""}'),
-                    (0, 0), 'contain')
+                ui_name += '-副标题'
+            if not data.get('encounter_group', ''):
+                ui_name += '-无遭遇'
+            card.paste_image(self.image_manager.get_image(ui_name), (0, 0))
 
         # 贴遭遇组
         if self.transparent_encounter and dp:
@@ -1759,25 +1756,39 @@ class CardCreator:
 if __name__ == '__main__':
     json_data = {
         "type": "敌人卡",
-        "name": "Arm Injury",
+        "name": "<uni>Terror of the Stars",
         "id": "",
         "created_at": "",
         "version": "2.0",
         "language": "en",
+        "back": {
+            "type": "",
+            "language": "en"
+        },
         "deck_options": [],
-        "class": "弱点",
-        "card_number": "130",
-        "illustrator": "Robert Laskey",
+        "class": "",
+        "subtitle": "Bringer of Ice and Death",
+        "attack": "4",
+        "enemy_health": "3",
+        "evade": "3",
+        "enemy_damage": 2,
+        "enemy_damage_horror": 2,
         "traits": [
-            "Injury"
+            "Monster",
+            "Eidolon",
+            "Elite"
         ],
-        "body": "<rev>Put Arm Injury into play in your threat area.\nArm Injury can be healed as if it were a single point of damage on you <i>(if it is healed, discard it)</i>.\n<for>After you take a fight or activate action: You cannot take any of those types of actions for the remainder of the turn.\n",
-        "encounter_group": "AHLCG-BasicWeakness",
+        "body": "Hunter. Massive.\nTerror of the Stars gets +3<per> health.\nWhile Terror of the Stars is ready, investigators cannot resign at its location or discover clues at its location.",
+        "victory": 1,
+        "encounter_group": "",
+        "encounter_group_number": "5/5",
+        "card_number": "22",
+        "illustrator": "Apterus",
         "picture_layout": {
             "mode": "custom",
             "offset": {
                 "x": 0,
-                "y": 219
+                "y": -229
             },
             "scale": 1,
             "crop": {
@@ -1786,10 +1797,6 @@ if __name__ == '__main__':
                 "bottom": 0,
                 "left": 0
             }
-        },
-        "back": {
-            "type": "玩家卡背",
-            "language": "en"
         }
     }
 
