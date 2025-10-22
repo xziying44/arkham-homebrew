@@ -1650,30 +1650,6 @@ export const cardBackConfigs: Record<string, CardTypeConfig> = {
     field_type_display: '🎯 Encounter Card Back',
     card_category: 'encounter',
     fields: []
-  },
-  '调查员背面': {
-    field_type_en: 'Investigator Back',
-    field_type_display: '🔄 Investigator Back',
-    card_category: 'player',
-    fields: []
-  },
-  '密谋卡': {
-    field_type_en: 'Agenda Card',
-    field_type_display: '🌙 Agenda Card',
-    card_category: 'encounter',
-    fields: []
-  },
-  '场景卡': {
-    field_type_en: 'Act Card',
-    field_type_display: '🎬 Act Card',
-    card_category: 'encounter',
-    fields: []
-  },
-  '冒险参考卡': {
-    field_type_en: 'Scenario Reference Card',
-    field_type_display: '📋 Scenario Reference Card',
-    card_category: 'encounter',
-    fields: []
   }
 };
 

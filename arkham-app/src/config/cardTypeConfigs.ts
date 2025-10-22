@@ -1625,26 +1625,6 @@ export const cardBackConfigs: Record<string, CardTypeConfig> = {
     field_type_display: '🎯 遭遇卡背',
     card_category: 'encounter',
     fields: []
-  },
-  '调查员背面': {
-    field_type_display: '🔄 调查员背面',
-    card_category: 'player',
-    fields: []
-  },
-  '密谋卡': {
-    field_type_display: '🌙 密谋卡',
-    card_category: 'encounter',
-    fields: []
-  },
-  '场景卡': {
-    field_type_display: '🎬 场景卡',
-    card_category: 'encounter',
-    fields: []
-  },
-  '冒险参考卡': {
-    field_type_display: '📋 冒险参考卡',
-    card_category: 'encounter',
-    fields: []
   }
 };
 
