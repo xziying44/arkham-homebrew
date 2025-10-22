@@ -1773,7 +1773,7 @@ if __name__ == '__main__':
             "Eidolon",
             "Elite"
         ],
-        "body": "<upg><upg><upg>【测试】。测试\{普通}\[文本]。",
+        "body": "<反应> When a card you",
         "victory": 1,
         "encounter_group": "",
         "encounter_group_number": "5/5",
@@ -1814,7 +1814,7 @@ if __name__ == '__main__':
     profiler = cProfile.Profile()
     profiler.enable()
 
-    fm.set_lang('zh')
+    fm.set_lang('en')
     card = creator.create_card(json_data, picture_path=json_data.get('picture_path', None))
 
     profiler.disable()
