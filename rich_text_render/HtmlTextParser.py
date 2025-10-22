@@ -14,6 +14,7 @@ class TextType(Enum):
     HTML_START = "html_start"  # HTML开始标签
     HTML_END = "html_end"  # HTML结束标签
     HTML_SELF_CLOSE = "html_self_close"  # HTML自闭合标签
+    ENGLISH_BLOCK = "english_block"  # 英文块（简单解析模式）
 
 
 class ParsedItem:
@@ -45,6 +46,9 @@ class RichTextParser:
         self.english_word_pattern = r'\b[\w\'\-]+\b'
         # 特殊字符模式：匹配重音字符、撇号、连字符等
         self.special_chars_pattern = r'[^\w\s]'  # 非字母数字和空白字符
+
+        # &nbsp;占位符
+        self.nbsp_placeholder = '\x00'
 
     def parse_attributes(self, attr_string: str) -> Dict[str, str]:
         """解析标签属性"""
@@ -120,6 +124,80 @@ class RichTextParser:
         """从文本中提取所有英文单词"""
         words = re.findall(self.english_word_pattern, text, re.UNICODE)
         return [word for word in words if self.is_valid_english_word(word)]
+
+    def simple_split_text(self, text: str) -> List[ParsedItem]:
+        """简单模式的文本分割（用于非zh语言）
+
+        只分为英文块和空格块，支持&nbsp;作为连接符
+        """
+        if not text:
+            return []
+
+        result = []
+
+        # 处理换行符
+        if '\n' in text:
+            parts = text.split('\n')
+            for i, part in enumerate(parts):
+                if i > 0:
+                    # 在每个换行处添加br标签
+                    result.append(ParsedItem(
+                        tag='br',
+                        type_=TextType.HTML_SELF_CLOSE,
+                        attributes={},
+                        content=''
+                    ))
+                if part:
+                    result.extend(self.simple_split_text(part))
+            return result
+
+        # 第一步：将&nbsp;替换为占位符
+        text_with_placeholder = text.replace('&nbsp;', self.nbsp_placeholder)
+
+        # 第二步：按空格分割
+        i = 0
+        current_block = ""
+
+        while i < len(text_with_placeholder):
+            char = text_with_placeholder[i]
+
+            if char.isspace():
+                # 遇到空格，保存当前块
+                if current_block:
+                    # 将占位符还原为空格
+                    content = current_block.replace(self.nbsp_placeholder, ' ')
+                    result.append(ParsedItem(
+                        tag='text',
+                        type_=TextType.ENGLISH_BLOCK,
+                        attributes={},
+                        content=content
+                    ))
+                    current_block = ""
+
+                # 添加空格块
+                result.append(ParsedItem(
+                    tag='text',
+                    type_=TextType.SPACE,
+                    attributes={},
+                    content=' '
+                ))
+            else:
+                # 非空格字符，累积到当前块
+                current_block += char
+
+            i += 1
+
+        # 保存最后的块
+        if current_block:
+            content = current_block.replace(self.nbsp_placeholder, ' ')
+            result.append(ParsedItem(
+                tag='text',
+                type_=TextType.ENGLISH_BLOCK,
+                attributes={},
+                content=content
+            ))
+
+        return result
 
     def split_text_by_type(self, text: str) -> List[ParsedItem]:
         """按字符类型分割文本，并处理换行符、连字符和数字范围 - 改进版本"""
@@ -246,8 +324,18 @@ class RichTextParser:
 
         return -1  # 没找到匹配的闭合标签
 
-    def parse(self, html_text: str) -> List[ParsedItem]:
-        """解析富文本"""
+    def parse(self, html_text: str, lang: str = 'zh') -> List[ParsedItem]:
+        """解析富文本
+
+        Args:
+            html_text: 要解析的HTML文本
+            lang: 语言模式，默认'zh'。
+                  'zh': 使用完整解析（按字符类型分割）
+                  其他值: 使用简单解析（只分英文块和空格块）
+
+        Returns:
+            解析结果列表
+        """
         result = []
         i = 0
 
@@ -259,7 +347,11 @@ class RichTextParser:
                 # 获取标签前的文本
                 text_before = html_text[i:i + tag_match.start()]
                 if text_before:
-                    text_items = self.split_text_by_type(text_before)
+                    # 根据lang参数选择解析方式
+                    if lang == 'zh':
+                        text_items = self.split_text_by_type(text_before)
+                    else:
+                        text_items = self.simple_split_text(text_before)
                     result.extend(text_items)
 
                 # 解析标签
@@ -302,9 +394,9 @@ class RichTextParser:
                                 content=''
                             ))
 
-                            # 递归解析标签内容
+                            # 递归解析标签内容，传递lang参数
                             if tag_content:
-                                inner_parsed = self.parse(tag_content)
+                                inner_parsed = self.parse(tag_content, lang=lang)
                                 result.extend(inner_parsed)
 
                             # 添加结束标签
@@ -323,19 +415,28 @@ class RichTextParser:
                                 i = len(html_text)
                         else:
                             # 没找到匹配的闭合标签，当作普通文本处理
-                            text_items = self.split_text_by_type(full_match)
+                            if lang == 'zh':
+                                text_items = self.split_text_by_type(full_match)
+                            else:
+                                text_items = self.simple_split_text(full_match)
                             result.extend(text_items)
                             i += tag_match.start() + len(full_match)
                 else:
                     # 无效标签或闭合标签，当作文本处理
-                    text_items = self.split_text_by_type(full_match)
+                    if lang == 'zh':
+                        text_items = self.split_text_by_type(full_match)
+                    else:
+                        text_items = self.simple_split_text(full_match)
                     result.extend(text_items)
                     i += tag_match.start() + len(full_match)
             else:
                 # 没有更多标签，处理剩余文本
                 remaining_text = html_text[i:]
                 if remaining_text:
-                    text_items = self.split_text_by_type(remaining_text)
+                    if lang == 'zh':
+                        text_items = self.split_text_by_type(remaining_text)
+                    else:
+                        text_items = self.simple_split_text(remaining_text)
                     result.extend(text_items)
                 break
 
@@ -344,8 +445,14 @@ class RichTextParser:
 
 # 测试代码
 def test_parser():
+    parser = RichTextParser()
+
+    print("=" * 100)
+    print("测试1: 中文模式 (lang='zh')")
+    print("=" * 100)
+
     # 测试包含特殊字符的英文单词
-    test_text = (
+    test_text_zh = (
         "aëroplane location's café naïve résumé coöperate façade "
         "It's a well-known fact that piñatas are fun at fiestas. "
         "<b>Herta's special ability</b> works with coördination. "
@@ -353,35 +460,50 @@ def test_parser():
         "Let's test email addresses: user@example.com and phone numbers: +1-555-1234.哈哈你好"
     )
 
-    parser = RichTextParser()
-    parsed_result = parser.parse(test_text)
-
+    parsed_result = parser.parse(test_text_zh, lang='zh')
     print("解析结果：")
-    print("=" * 100)
     for i, item in enumerate(parsed_result):
         print(f"{i + 1:2d}. {item}")
 
-    # 提取英文单词测试
-    print("\n" + "=" * 50)
-    print("提取的英文单词：")
-    english_words = parser.extract_english_words(test_text)
-    for word in english_words:
-        print(f"  {word}")
+    print("\n" + "=" * 100)
+    print("测试2: 英文简单模式 (lang='en')")
+    print("=" * 100)
 
-    # 验证单词识别
-    test_words = ["aëroplane", "location's", "café", "naïve", "résumé",
-                  "coöperate", "façade", "It's", "well-known", "piñatas"]
+    test_text_en = "i am a <b>good</b> student. Hello world!"
+    parsed_result_en = parser.parse(test_text_en, lang='en')
+    print("解析结果：")
+    for i, item in enumerate(parsed_result_en):
+        print(f"{i + 1:2d}. {item}")
 
-    print("\n单词验证结果：")
-    for word in test_words:
-        is_valid = parser.is_valid_english_word(word)
-        print(f"  {word}: {'有效' if is_valid else '无效'}")
+    print("\n" + "=" * 100)
+    print("测试3: &nbsp;连接符测试")
+    print("=" * 100)
 
-    # 显示所有英文文本项
-    english_items = [item for item in parsed_result if item.type == TextType.ENGLISH]
-    print(f"\n找到 {len(english_items)} 个英文文本项：")
-    for item in english_items:
-        print(f"  {item.content}")
+    test_text_nbsp = "i&nbsp;am a student"
+    parsed_result_nbsp = parser.parse(test_text_nbsp, lang='en')
+    print("解析结果：")
+    for i, item in enumerate(parsed_result_nbsp):
+        print(f"{i + 1:2d}. {item}")
+
+    print("\n" + "=" * 100)
+    print("测试4: 复杂&nbsp;测试")
+    print("=" * 100)
+
+    test_text_complex = "Hello&nbsp;World i am <b>good&nbsp;student</b> test"
+    parsed_result_complex = parser.parse(test_text_complex, lang='en')
+    print("解析结果：")
+    for i, item in enumerate(parsed_result_complex):
+        print(f"{i + 1:2d}. {item}")
+
+    print("\n" + "=" * 100)
+    print("测试5: 换行符测试")
+    print("=" * 100)
+
+    test_text_newline = "Hello World<br>i am student"
+    parsed_result_newline = parser.parse(test_text_newline, lang='en')
+    print("解析结果：")
+    for i, item in enumerate(parsed_result_newline):
+        print(f"{i + 1:2d}. {item}")
 
 
 # 额外的工具函数，更新为使用ParsedItem
@@ -411,6 +533,12 @@ def get_all_html_tags(parsed_result: List[ParsedItem]) -> List[ParsedItem]:
 def get_paragraph_tags(parsed_result: List[ParsedItem]) -> List[ParsedItem]:
     """获取所有段落标签"""
     return [item for item in parsed_result if item.tag == 'par']
+
+
+def get_all_english_blocks(parsed_result: List[ParsedItem]) -> List[str]:
+    """获取所有英文块（简单模式）"""
+    english_blocks = filter_by_type(parsed_result, TextType.ENGLISH_BLOCK)
+    return [item.content for item in english_blocks]
 
 
 if __name__ == "__main__":

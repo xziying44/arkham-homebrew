@@ -445,7 +445,7 @@ class RichTextRenderer:
         辅助函数，测试给定的字体大小是否能容纳全部文本。
         """
 
-        parsed_items = self.rich_text_parser.parse(text)
+        parsed_items = self.rich_text_parser.parse(text, self.font_manager.lang)
 
         # 使用构造函数中传入的行距倍率来计算行高
         if size_to_test < 27 and self.line_spacing_multiplier > 1.05:
