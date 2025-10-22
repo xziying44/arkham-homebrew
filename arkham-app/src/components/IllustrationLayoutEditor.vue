@@ -120,6 +120,49 @@
                             </div>
                         </n-card>
                     </div>
+
+                    <!-- 第三行：旋转 - 独占一行 -->
+                    <div class="inputs-row-full">
+                        <n-card size="small" title="旋转 (Rotation)">
+                            <div class="rotation-container">
+                                <div class="input-field">
+                                    <span class="input-label">角度</span>
+                                    <n-slider v-model:value="internalLayout.rotation" :min="-180" :max="180" :step="1"
+                                        @update:value="emitUpdate" :disabled="!isImageLoaded" style="flex-grow: 1;" />
+                                    <n-input-number :show-button="false" v-model:value="internalLayout.rotation"
+                                        :min="-180" :max="180" :step="1" size="small"
+                                        @update:value="emitUpdate" :disabled="!isImageLoaded"
+                                        style="min-width: 80px;" />
+                                </div>
+                                <div class="rotation-preset-buttons">
+                                    <n-button-group size="small">
+                                        <n-button @click="internalLayout.rotation = 0; emitUpdate()" :disabled="!isImageLoaded">0°</n-button>
+                                        <n-button @click="internalLayout.rotation = 90; emitUpdate()" :disabled="!isImageLoaded">90°</n-button>
+                                        <n-button @click="internalLayout.rotation = 180; emitUpdate()" :disabled="!isImageLoaded">180°</n-button>
+                                        <n-button @click="internalLayout.rotation = -90; emitUpdate()" :disabled="!isImageLoaded">-90°</n-button>
+                                    </n-button-group>
+                                </div>
+                            </div>
+                        </n-card>
+                    </div>
+
+                    <!-- 第四行：镜像翻转 - 紧凑布局 -->
+                    <div class="inputs-row-full">
+                        <n-card size="small" title="镜像翻转 (Flip)">
+                            <div class="flip-controls-compact">
+                                <div class="flip-button-compact">
+                                    <span class="input-label-compact">水平</span>
+                                    <n-switch v-model:value="internalLayout.flip_horizontal" @update:value="emitUpdate"
+                                        :disabled="!isImageLoaded" size="small" />
+                                </div>
+                                <div class="flip-button-compact">
+                                    <span class="input-label-compact">垂直</span>
+                                    <n-switch v-model:value="internalLayout.flip_vertical" @update:value="emitUpdate"
+                                        :disabled="!isImageLoaded" size="small" />
+                                </div>
+                            </div>
+                        </n-card>
+                    </div>
                 </div>
             </div>
         </n-form>
@@ -135,6 +178,9 @@ interface PictureLayout {
     offset: { x: number; y: number };
     scale: number;
     crop: { top: number; right: number; bottom: number; left: number }; // PIXELS
+    rotation: number; // 旋转角度（度数）
+    flip_horizontal: boolean; // 水平镜像翻转
+    flip_vertical: boolean; // 垂直镜像翻转
 }
 
 // 默认值
@@ -143,6 +189,9 @@ const defaultLayout: PictureLayout = {
     offset: { x: 0, y: 0 },
     scale: 1,
     crop: { top: 0, right: 0, bottom: 0, left: 0 },
+    rotation: 0,
+    flip_horizontal: false,
+    flip_vertical: false,
 };
 
 const props = defineProps<{ imageSrc: string; layout?: Partial<PictureLayout>; card_type?: string }>();
@@ -153,7 +202,7 @@ const internalLayout = reactive<PictureLayout>({ ...defaultLayout });
 const imageNaturalSize = ref({ width: 0, height: 0 });
 const editorContainerRef = ref<HTMLElement | null>(null);
 const imageRef = ref<HTMLImageElement | null>(null);
-const internalScaleRatio = ref(0.6); // 内部比例，默认0.3
+const internalScaleRatio = ref(0.5); // 内部比例，默认0.3
 if (props.card_type === '调查员' || props.card_type === '场景卡-大画' || props.card_type === '密谋卡-大画') {
     internalScaleRatio.value = 0.35
 }
@@ -184,15 +233,36 @@ const handleStyle = computed(() => {
 
 // 模拟后端渲染逻辑的变换样式
 const imageTransformStyle = computed(() => {
-    // 后端逻辑：先缩放(scale)，再偏移(offset)
-    // 前端需要同样的顺序：scale() translate()
-    // 但由于CSS transform的执行顺序是从右到左，所以要写成: translate() scale()
-    // 偏移量在缩放后应用，所以需要除以实际缩放比例来补偿视觉效果
+    // 后端逻辑：先缩放(scale)，再裁剪(crop)，然后镜像翻转(flip)，最后旋转(rotation)，偏移(offset)
+    // 前端需要同样的顺序：translate() rotate() scaleY/scaleX() scale()
+    // 但由于CSS transform的执行顺序是从右到左，所以要写成相反顺序
     const visualOffsetX = internalLayout.offset.x * internalScaleRatio.value;
     const visualOffsetY = internalLayout.offset.y * internalScaleRatio.value;
 
+    // 构建变换字符串
+    let transforms = [];
+
+    // 1. 基础缩放
+    transforms.push(`scale(${actualDisplayScale.value})`);
+
+    // 2. 镜像翻转
+    if (internalLayout.flip_horizontal) {
+        transforms.push('scaleX(-1)');
+    }
+    if (internalLayout.flip_vertical) {
+        transforms.push('scaleY(-1)');
+    }
+
+    // 3. 旋转
+    if (internalLayout.rotation !== 0) {
+        transforms.push(`rotate(${internalLayout.rotation}deg)`);
+    }
+
+    // 4. 偏移（最右边，最后应用）
+    transforms.push(`translate(${visualOffsetX}px, ${visualOffsetY}px)`);
+
     return {
-        transform: `translate(${visualOffsetX}px, ${visualOffsetY}px) scale(${actualDisplayScale.value})`,
+        transform: transforms.join(' '),
         cursor: isDragging.value ? 'grabbing' : 'grab',
     };
 });
@@ -206,7 +276,15 @@ const cropBoxStyle = computed(() => ({
 
 // 监听与更新
 watch(() => props.layout, (newLayout) => {
-    const mergedLayout = { ...defaultLayout, ...newLayout, offset: { ...defaultLayout.offset, ...newLayout?.offset }, crop: { ...defaultLayout.crop, ...newLayout?.crop } };
+    const mergedLayout = {
+        ...defaultLayout,
+        ...newLayout,
+        offset: { ...defaultLayout.offset, ...newLayout?.offset },
+        crop: { ...defaultLayout.crop, ...newLayout?.crop },
+        rotation: newLayout?.rotation ?? 0,
+        flip_horizontal: newLayout?.flip_horizontal ?? false,
+        flip_vertical: newLayout?.flip_vertical ?? false
+    };
     Object.assign(internalLayout, mergedLayout);
 }, { immediate: true, deep: true });
 
@@ -255,10 +333,35 @@ const onDrag = (e: MouseEvent) => {
     const dx = e.clientX - dragStart.x;
     const dy = e.clientY - dragStart.y;
 
+    // 计算考虑变换后的偏移量
+    let adjustedDx = dx;
+    let adjustedDy = dy;
+
+    // 考虑镜像翻转对拖拽方向的影响
+    if (internalLayout.flip_horizontal) {
+        adjustedDx = -dx;
+    }
+    if (internalLayout.flip_vertical) {
+        adjustedDy = -dy;
+    }
+
+    // 考虑旋转对拖拽方向的影响
+    if (internalLayout.rotation !== 0) {
+        const rotationRad = (internalLayout.rotation * Math.PI) / 180;
+        const cos = Math.cos(-rotationRad); // 使用负角度来抵消旋转影响
+        const sin = Math.sin(-rotationRad);
+
+        const originalDx = adjustedDx;
+        const originalDy = adjustedDy;
+
+        adjustedDx = originalDx * cos - originalDy * sin;
+        adjustedDy = originalDx * sin + originalDy * cos;
+    }
+
     // 偏移量转换：前端拖拽的像素需要转换为后端的offset值
     // 由于后端的offset是在缩放后直接应用的，所以需要除以内部比例
-    internalLayout.offset.x = dragStartOffset.x + dx / internalScaleRatio.value;
-    internalLayout.offset.y = dragStartOffset.y + dy / internalScaleRatio.value;
+    internalLayout.offset.x = dragStartOffset.x + adjustedDx / internalScaleRatio.value;
+    internalLayout.offset.y = dragStartOffset.y + adjustedDy / internalScaleRatio.value;
 };
 
 const stopDrag = () => {
@@ -539,5 +642,38 @@ onUnmounted(() => { stopDrag(); stopResize(); });
     .inputs-row-split {
         grid-template-columns: 1fr;
     }
+}
+
+/* 旋转和镜像翻转控件样式 */
+.rotation-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.rotation-preset-buttons {
+    display: flex;
+    justify-content: center;
+}
+
+.flip-controls-compact {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 40px;
+    padding: 8px 0;
+}
+
+.flip-button-compact {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.input-label-compact {
+    font-size: 13px;
+    color: #555;
+    font-weight: 500;
+    min-width: 40px;
 }
 </style>

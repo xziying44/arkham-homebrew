@@ -244,7 +244,7 @@ class Card:
 
     def paste_image_with_transform(self, img, region, transform_params):
         """
-        在指定区域粘贴图片，支持缩放、裁剪和相对region中心点的偏移
+        在指定区域粘贴图片，支持缩放、裁剪、旋转、镜像翻转和相对region中心点的偏移
 
         :param img: 要粘贴的图片
         :param region: 目标区域坐标和尺寸 (x, y, width, height)
@@ -253,6 +253,9 @@ class Card:
             - offset: 偏移量 {'x': float, 'y': float}
             - scale: 缩放比例 (float)
             - crop: 裁剪参数 {'top': int, 'right': int, 'bottom': int, 'left': int}
+            - rotation: 旋转角度 (float，度数)
+            - flip_horizontal: 水平镜像翻转 (bool)
+            - flip_vertical: 垂直镜像翻转 (bool)
         """
         try:
             # 解析区域参数
@@ -276,9 +279,6 @@ class Card:
                 new_height = int(processed_img.height * scale)
                 processed_img = processed_img.resize((new_width, new_height), Image.LANCZOS)
 
-            # 记录当时长度和宽度
-            original_width, original_height = processed_img.width, processed_img.height
-
             # 2. 应用裁剪
             crop_params = transform_params.get('crop', {})
             if any(crop_params.values()):
@@ -288,16 +288,39 @@ class Card:
                 bottom = processed_img.height - crop_params.get('bottom', 0) * scale
                 processed_img = processed_img.crop((left, top, right, bottom))
 
-            # 3. 计算偏移后的粘贴位置（相对于region中心点）
+            # 3. 应用镜像翻转
+            flip_horizontal = transform_params.get('flip_horizontal', False)
+            flip_vertical = transform_params.get('flip_vertical', False)
+            if flip_horizontal and flip_vertical:
+                processed_img = processed_img.transpose(Image.Transpose.ROTATE_180)
+            elif flip_horizontal:
+                processed_img = processed_img.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+            elif flip_vertical:
+                processed_img = processed_img.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
+
+            # 4. 应用旋转
+            rotation = -transform_params.get('rotation', 0)
+            if rotation != 0:
+                # 确保图片是RGBA模式以支持透明背景
+                if processed_img.mode != 'RGBA':
+                    processed_img = processed_img.convert('RGBA')
+
+                # 旋转图片，扩展画布以容纳旋转后的图片
+                processed_img = processed_img.rotate(rotation, expand=True, fillcolor=(0, 0, 0, 0))
+
+            # 记录当前图片的尺寸
+            current_width, current_height = processed_img.width, processed_img.height
+
+            # 5. 计算偏移后的粘贴位置（相对于region中心点）
             offset = transform_params.get('offset', {'x': 0, 'y': 0})
             offset_x = offset.get('x', 0)
             offset_y = offset.get('y', 0)
 
             # 计算最终的粘贴位置（图片中心对齐到偏移后的region中心）
-            paste_x = int(region_center_x + offset_x - original_width / 2)
-            paste_y = int(region_center_y + offset_y - original_height / 2)
+            paste_x = int(region_center_x + offset_x - current_width / 2)
+            paste_y = int(region_center_y + offset_y - current_height / 2)
 
-            # 4. 粘贴图片
+            # 6. 粘贴图片
             if processed_img.mode == 'RGBA':
                 self.image.paste(processed_img, (paste_x, paste_y), processed_img)
             else:
