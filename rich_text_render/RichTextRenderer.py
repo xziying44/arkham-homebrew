@@ -636,6 +636,8 @@ class RichTextRenderer:
                 x, y = render_item.x, render_item.y
                 offset_y = 0
                 offset_x = 0
+                if obj.font_name == 'arkham-icons' and self.font_manager.lang != 'zh':
+                    offset_y += -2
                 if obj.font_name == '江城斜宋体':
                     offset_y = -9
 
