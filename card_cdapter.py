@@ -48,6 +48,8 @@ class CardAdapter:
 
         # Additional common tags
         (r'<t>(.*?)</t>', r'{\1}'),
+        (r'{{(.*?)}}', r'【\1】'),
+        (r'(?<!\\)\{([^}]*)\}', r'<trait>\1</trait>')
     ]
 
     # 需要转化的字段路径配置
@@ -83,7 +85,11 @@ class CardAdapter:
             (r"<rev>|<显现>", font_manager.get_font_text('revelation')),
             (r"<fullname>|<名称>", fullname),
         ]
-
+        if font_manager.lang == 'zh':
+            self.conversion_rules.append(
+                (r'<upg>|<升级>', r'<font name="ArnoPro-Regular" offset="3" addsize="8">☐</font>'))
+        else:
+            self.conversion_rules.append((r'<upg>|<升级>', r'<font name="ArnoPro-Regular">☐</font>'))
         # 编译正则表达式以提高性能
         self._compiled_rules = [
             (re.compile(pattern, re.IGNORECASE), replacement)
@@ -104,6 +110,22 @@ class CardAdapter:
             转化后的JSON字典
         """
         converted_data = self.original_data
+
+        body_text = converted_data.get('body', '')
+        if body_text:
+            def replace_bracketed_content(match):
+                content = match.group(1)
+                tag_name = 'flavor'
+                if converted_data.get('type', '') in ['密谋卡', '场景卡'] and converted_data.get('is_back', False):
+                    tag_name += ' align="left" flex="false" quote="true" padding="20"'
+                elif converted_data.get('type', '') in ['密谋卡-大画', '场景卡-大画']:
+                    tag_name += ' align="left" flex="false" padding="0"'
+                elif converted_data.get('type', '') in ['故事卡']:
+                    tag_name += ' align="left" flex="false" quote="true" padding="20"'
+                return f'<{tag_name}>{content}</flavor>'
+
+            body_text = re.sub(r'(?<!\\)\[([^]]+)]', replace_bracketed_content, body_text, flags=re.DOTALL)
+            converted_data['body'] = body_text
 
         # 对配置的每个字段进行转化
         for field_path in self.FIELDS_TO_CONVERT:
@@ -161,6 +183,8 @@ class CardAdapter:
         result = text
         for pattern, replacement in self._compiled_rules:
             result = pattern.sub(replacement, result)
+        result = result.replace('\{', '{')
+        result = result.replace('\[', '[')
         return result
 
     @classmethod

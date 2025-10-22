@@ -233,7 +233,6 @@ class RichTextRenderer:
         preprocessing_rules = [
             # 1. Formatting and Keyword Rules (Non-icon)
             (r'【([^】]*)】', r'<b>\1</b>'),  # Bold text within 【】
-            (r'{([^}]*)}', r'<trait>\1</trait>'),
             (r'<t>(.*?)</t>', r'<trait>\1</trait>'),
             (r'<relish>(.*)</relish>', r'<flavor>\1</flavor>'),
             # 2. Icon Rules (Emoji | CN Tag | SE Tag | Other Alias) -> Font Icon
@@ -479,6 +478,9 @@ class RichTextRenderer:
         html_tag_stack = HtmlTagStack('body')
         simfang_font = font_cache.get_font('simfang', size_to_test)
 
+        # 字体偏移量
+        font_offset_y = 0
+        font_addsize = 0
         for item in parsed_items:
             success = True
             if item.tag == "text":
@@ -493,7 +495,7 @@ class RichTextRenderer:
                             text_width = int(text_width * 0.95)
                         else:
                             text_width, text_height = self._get_text_box(char, font)
-                        offset_y = 0
+                        offset_y = 0 + font_offset_y
                         offset_x = 0
                         if font_name == '方正舒体':
                             offset_y = -2
@@ -504,7 +506,7 @@ class RichTextRenderer:
                             text_width = int(text_width * 0.5)
                             offset_x = -int(text_width * 0.5)
                         success = virtual_text_box.push(
-                            TextObject(char, font, font_name, font.size, text_height, text_width,
+                            TextObject(char, font, font_name, font.size + font_addsize, text_height, text_width,
                                        base_options.font_color, offset_x=offset_x, offset_y=offset_y)
                         )
                 else:
@@ -522,8 +524,10 @@ class RichTextRenderer:
                 success = virtual_text_box.new_paragraph()
             elif item.tag == "font":
                 font_name = item.attributes.get('name', base_options.font_name)
+                font_offset_y = int(item.attributes.get('offset', '0'))
+                font_addsize = int(item.attributes.get('addsize', '0'))
                 font_name = self.font_manager.get_lang_font(font_name).name
-                font_stack.push(font_cache.get_font(font_name, size_to_test), font_name)
+                font_stack.push(font_cache.get_font(font_name, size_to_test + font_addsize), font_name)
             elif item.tag == "b":
                 font_stack.push(font_cache.get_font(self.default_fonts.bold, size_to_test), self.default_fonts.bold)
             elif item.tag == "i":
@@ -552,7 +556,11 @@ class RichTextRenderer:
                 if item.attributes.get('align', 'center') == 'center':
                     virtual_text_box.set_line_center()
             elif item.tag.startswith('/'):
-                if item.tag in ["/font", "/b", "/i", '/trait']:
+                if item.tag == "/font":
+                    font_offset_y = 0
+                    font_addsize = 0
+                    font_stack.pop()
+                elif item.tag in ["/b", "/i", '/trait']:
                     font_stack.pop()
                 elif item.tag == "/flavor":
                     html_tag_stack.pop()

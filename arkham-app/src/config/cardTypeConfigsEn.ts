@@ -44,10 +44,12 @@ Support: numbers, number<调查员>, special symbols (-/X/?).
 `;
 
 const bodyTip = `Input format:
-【】for bold text, e.g.: 【Investigation】
-{} for traits, e.g.: {Ally}
-[] for flavor text, e.g.: [This is flavor text...]
- □ generates a TTS checkbox script for custom cards.
+● 【】 or {{}} for bold text, e.g.: 【Investigation】, {{Investigation}}
+● {} for traits, e.g.: {Ally}
+● [] for flavor text, e.g.: [This is flavor text...]
+You can use more advanced flavor tags to customize functionality:
+ <flavor align="left" flex="false" padding="0" quote="false">xxx</flavor>
+●The <upg> tag will automatically generate a TTS checkbox script when used in custom cards.
 
 Available icon tags:
 🏅 <*> unique
@@ -79,7 +81,7 @@ Available icon tags:
 Special tags:
 <br> line break
 <hr> horizontal line
-<b></b> paragraph
+<p></p> paragraph
 
 Support direct use of emoji or corresponding tag format
 `;

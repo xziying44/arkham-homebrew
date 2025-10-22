@@ -304,22 +304,10 @@ class CardCreator:
         if card_json.get('type', '') == '定制卡':
             card_json['type'] = '升级卡'
 
-        def replace_bracketed_content(match):
-            content = match.group(1)
-            tag_name = 'flavor'
-            if card_json.get('type', '') in ['密谋卡', '场景卡'] and card_json.get('is_back', False):
-                tag_name += ' align="left" flex="false" quote="true" padding="20"'
-            elif card_json.get('type', '') in ['密谋卡-大画', '场景卡-大画']:
-                tag_name += ' align="left" flex="false" padding="0"'
-            elif card_json.get('type', '') in ['故事卡']:
-                tag_name += ' align="left" flex="false" quote="true" padding="20"'
-            return f'<{tag_name}>{content}</flavor>'
-
         if 'level' in card_json and card_json['level'] == '无':
             card_json['level'] = -1
         if card_json['body'] != '':
             text = card_json['body']
-            text = re.sub(r'\[([^]]+)]', replace_bracketed_content, text, flags=re.DOTALL)
             text = text.replace('】。', '】<font name="加粗字体">\uff61</font>')
             text = text.replace('。】', '】<font name="加粗字体">\uff61</font>')
             text = re.sub(r'(?<!\n)<hr>', r'\n<hr>', text)
@@ -728,7 +716,8 @@ class CardCreator:
         font_size = 22
         if self.font_manager.lang == 'pl':
             font_size = 19
-        card.draw_centered_text((368, 1013), self.font_manager.get_font_text("升级项"), "卡牌类型字体", font_size, (0, 0, 0))
+        card.draw_centered_text((368, 1013), self.font_manager.get_font_text("升级项"), "卡牌类型字体", font_size,
+                                (0, 0, 0))
 
         return card
 
@@ -1784,7 +1773,7 @@ if __name__ == '__main__':
             "Eidolon",
             "Elite"
         ],
-        "body": "Hunter. Massive.\nTerror of the Stars gets +3<per> health.\nWhile Terror of the Stars is ready, investigators cannot resign at its location or discover clues at its location.",
+        "body": "<upg><upg><upg>【测试】。测试\{普通}\[文本]。",
         "victory": 1,
         "encounter_group": "",
         "encounter_group_number": "5/5",
@@ -1825,7 +1814,7 @@ if __name__ == '__main__':
     profiler = cProfile.Profile()
     profiler.enable()
 
-    fm.set_lang('pl')
+    fm.set_lang('zh')
     card = creator.create_card(json_data, picture_path=json_data.get('picture_path', None))
 
     profiler.disable()
