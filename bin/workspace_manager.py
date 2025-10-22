@@ -1019,9 +1019,6 @@ class WorkspaceManager:
     @staticmethod
     def _get_global_config_path() -> str:
         """获取全局配置文件路径"""
-        if hasattr(sys, '_MEIPASS'):
-            # PyInstaller 打包后的临时目录
-            return os.path.join(sys._MEIPASS, "global_config.json")
         return os.path.join(os.path.abspath("."), "global_config.json")
 
     def _get_default_global_config(self) -> Dict[str, Any]:
