@@ -178,6 +178,21 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         ]
       },
       {
+        key: 'weakness_type',
+        showCondition: {
+          field: 'class',
+          value: '弱点'
+        },
+        name: '🏷️ Weakness Type',
+        type: 'select',
+        layout: 'full',
+        defaultValue: '弱点',
+        options: [
+          { label: '💀 Weakness', value: '弱点' },
+          { label: '📋 Basic Weakness', value: '基础弱点' }
+        ]
+      },
+      {
         key: 'health',
         name: '❤️ Health',
         type: 'select',
@@ -403,6 +418,21 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         ]
       },
       {
+        key: 'weakness_type',
+        showCondition: {
+          field: 'class',
+          value: '弱点'
+        },
+        name: '🏷️ Weakness Type',
+        type: 'select',
+        layout: 'full',
+        defaultValue: '弱点',
+        options: [
+          { label: '💀 Weakness', value: '弱点' },
+          { label: '📋 Basic Weakness', value: '基础弱点' }
+        ]
+      },
+      {
         key: 'level',
         name: '⭐ Card Level',
         type: 'select',
@@ -500,6 +530,21 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
           { label: '💪 Survivor', value: '生存者' },
           { label: '💀 Weakness', value: '弱点' },
           { label: '⚪ Neutral', value: '中立' }
+        ]
+      },
+      {
+        key: 'weakness_type',
+        showCondition: {
+          field: 'class',
+          value: '弱点'
+        },
+        name: '🏷️ Weakness Type',
+        type: 'select',
+        layout: 'full',
+        defaultValue: '弱点',
+        options: [
+          { label: '💀 Weakness', value: '弱点' },
+          { label: '📋 Basic Weakness', value: '基础弱点' }
         ]
       },
       {
@@ -853,6 +898,21 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         ]
       },
       {
+        key: 'weakness_type',
+        showCondition: {
+          field: 'class',
+          value: '弱点'
+        },
+        name: '🏷️ Weakness Type',
+        type: 'select',
+        layout: 'full',
+        defaultValue: '弱点',
+        options: [
+          { label: '💀 Weakness', value: '弱点' },
+          { label: '📋 Basic Weakness', value: '基础弱点' }
+        ]
+      },
+      {
         key: 'traits',
         name: '🏷️ Traits',
         type: 'string-array',
@@ -919,6 +979,21 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         options: [
           { label: '🔮 Encounter', value: "" },
           { label: '💀 Weakness', value: '弱点' },
+        ]
+      },
+      {
+        key: 'weakness_type',
+        showCondition: {
+          field: 'class',
+          value: '弱点'
+        },
+        name: '🏷️ Weakness Type',
+        type: 'select',
+        layout: 'full',
+        defaultValue: '弱点',
+        options: [
+          { label: '💀 Weakness', value: '弱点' },
+          { label: '📋 Basic Weakness', value: '基础弱点' }
         ]
       },
       {

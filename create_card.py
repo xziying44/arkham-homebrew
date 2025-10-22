@@ -776,9 +776,9 @@ class CardCreator:
             self._paste_background_image(card, None, data, dp)
 
         card.paste_image(self.image_manager.get_image(f'{data["class"]}-{data["type"]}'), (0, 0), 'contain')
-        card.draw_centered_text((76, 130), self.font_manager.get_font_text("事件"), "卡牌类型字体", 22, (0, 0, 0))
+        card.draw_centered_text((76, 133), self.font_manager.get_font_text("事件"), "卡牌类型字体", 22, (0, 0, 0))
         card.draw_centered_text((370, 618), data['name'], "标题字体", 48, (0, 0, 0))
-        card.draw_centered_text((370, 668), self.font_manager.get_font_text(data['weakness_type']), "卡牌类型字体", 28,
+        card.draw_centered_text((370, 672), self.font_manager.get_font_text(data['weakness_type']), "副标题字体", 28,
                                 (0, 0, 0))
         card.draw_centered_text((370, 705), self._integrate_traits_text(data.get('traits', [])), "特性字体", 32,
                                 (0, 0, 0))
@@ -804,13 +804,13 @@ class CardCreator:
         else:
             card.paste_image(self.image_manager.get_image(f'{data["class"]}-{data["type"]}'), (0, 0), 'contain')
 
-        card.draw_centered_text((76, 130), self.font_manager.get_font_text("支援"), "卡牌类型字体", 22, (0, 0, 0))
+        card.draw_centered_text((76, 131), self.font_manager.get_font_text("支援"), "卡牌类型字体", 22, (0, 0, 0))
         card.draw_centered_text((370, 48), data['name'], "标题字体", 48, (0, 0, 0))
 
         if 'subtitle' in data and data['subtitle'] != '':
             card.draw_centered_text((370, 103), data['subtitle'], "副标题字体", 31, (0, 0, 0))
 
-        card.draw_centered_text((370, 605), self.font_manager.get_font_text(data['weakness_type']), "卡牌类型字体", 28,
+        card.draw_centered_text((370, 609), self.font_manager.get_font_text(data['weakness_type']), "卡牌类型字体", 28,
                                 (0, 0, 0))
         card.draw_centered_text((370, 645), self._integrate_traits_text(data.get('traits', [])), "特性字体", 32,
                                 (0, 0, 0))
@@ -840,13 +840,13 @@ class CardCreator:
         else:
             card.paste_image(self.image_manager.get_image(f'{data["class"]}-{data["type"]}'), (0, 0), 'contain')
 
-        card.draw_centered_text((76, 132), self.font_manager.get_font_text("技能"), "卡牌类型字体", 22, (0, 0, 0))
+        card.draw_centered_text((76, 130), self.font_manager.get_font_text("技能"), "卡牌类型字体", 22, (0, 0, 0))
         card.draw_left_text((140, 34), data['name'], "标题字体", 48, (0, 0, 0))
 
         if 'subtitle' in data and data['subtitle'] != '':
             card.draw_centered_text((378, 106), data['subtitle'], "副标题字体", 32, (0, 0, 0))
 
-        card.draw_centered_text((368, 705), self.font_manager.get_font_text(data['weakness_type']), "卡牌类型字体", 28,
+        card.draw_centered_text((368, 700), self.font_manager.get_font_text(data['weakness_type']), "副标题字体", 28,
                                 (0, 0, 0))
         card.draw_centered_text((368, 742), self._integrate_traits_text(data.get('traits', [])), "特性字体", 30,
                                 (0, 0, 0))
@@ -873,7 +873,9 @@ class CardCreator:
         card.paste_image(self.image_manager.get_image(f'{data["class"]}-{data["type"]}'), (0, 0), 'contain')
         card.draw_centered_text((370, 576), self.font_manager.get_font_text("诡计"), "卡牌类型字体", 24, (0, 0, 0))
         card.draw_centered_text((370, 625), data['name'], "标题字体", 48, (0, 0, 0))
-        card.draw_centered_text((370, 678), data['weakness_type'], "标题字体", 28, (0, 0, 0))
+        card.draw_centered_text((370, 678),
+                                self.font_manager.get_font_text(data['weakness_type']),
+                                "副标题字体", 28, (0, 0, 0))
         card.draw_centered_text((370, 715), self._integrate_traits_text(data.get('traits', [])), "特性字体", 32,
                                 (0, 0, 0))
 
@@ -892,9 +894,10 @@ class CardCreator:
 
         if data['weakness_type'] == '基础弱点':
             card.draw_centered_text((367, 572), '0', "arkham-icons", 50, (0, 0, 0))
-        card.draw_centered_text((370, 620), self.font_manager.get_font_text("敌人"), "卡牌类型字体", 24, (0, 0, 0))
+        card.draw_centered_text((370, 618), self.font_manager.get_font_text("敌人"), "卡牌类型字体", 24, (0, 0, 0))
         card.draw_centered_text((370, 28), data['name'], "标题字体", 48, (0, 0, 0))
-        card.draw_centered_text((370, 78), data['weakness_type'], "标题字体", 32, (0, 0, 0))
+        card.draw_centered_text((370, 79), self.font_manager.get_font_text(data['weakness_type'])
+                                , "副标题字体", 28, (0, 0, 0))
         card.draw_centered_text((370, 218), self._integrate_traits_text(data.get('traits', [])), "特性字体", 32,
                                 (0, 0, 0))
 
@@ -1755,46 +1758,39 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "调查员",
-        "name": "🏅Roland Bank ",
+        "type": "敌人卡",
+        "name": "Arm Injury",
         "id": "",
         "created_at": "",
         "version": "2.0",
         "language": "en",
-        "back": {
-            "name": "🏅Roland Banks",
-            "subtitle": "The Fed",
-            "class": "守护者",
-            "card_back": {
-                "other": "",
-                "story": "Roland had always taken comfort in procedure and rules. As an agent in the Bureau, he was relieved to have guidelines to follow in any given situation. But lately, his Federal Agent's Handbook had been entirely unhelpful given the cases he'd been assigned. Try as he might, Roland could find no mention of what to do when confronted with strange creatures, gates through time and space, or magic spells. If he hadn't seen it with his own eyes, he would never have believed it... and there's no way his superiors would understand. Roland knew he would have to handle this one himself.",
-                "size": 30,
-                "option": " Guardian cards (🛡️) level 0-5, Seeker cards (🔍) level 0-2, Neutral cards level 0-5.",
-                "requirement": " Roland's .38 Special, Cover Up, 1 random basic weakness."
-            },
-            "type": "调查员背面",
-            "image_mode": 1,
-            "subtype": "平行"
-        },
-        "subtitle": "The Fed",
-        "class": "守护者",
-        "attribute": [
-            3,
-            3,
-            4,
-            2
-        ],
-        "health": 9,
-        "horror": 5,
+        "deck_options": [],
+        "class": "弱点",
+        "card_number": "130",
+        "illustrator": "Robert Laskey",
         "traits": [
-            "Agency",
-            "Detective"
+            "Injury"
         ],
-        "body": "⭕After you defeat an enemy: Discover 1 clue at your location. (Limit once per round.)\n⭐ effect: +1 for each clue on your location.",
-        "flavor": "Everything by the book: every \"i\" dotted, every \"t\" crossed. It has worked, until now.",
-        "quantity": 1,
-        "subtype": "平行",
-        "picture_path": r"C:\Users\xziyi\Downloads\F678E9805AE4F422E6B3587420BF835D.png"
+        "body": "<rev>Put Arm Injury into play in your threat area.\nArm Injury can be healed as if it were a single point of damage on you <i>(if it is healed, discard it)</i>.\n<for>After you take a fight or activate action: You cannot take any of those types of actions for the remainder of the turn.\n",
+        "encounter_group": "AHLCG-BasicWeakness",
+        "picture_layout": {
+            "mode": "custom",
+            "offset": {
+                "x": 0,
+                "y": 219
+            },
+            "scale": 1,
+            "crop": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+            }
+        },
+        "back": {
+            "type": "玩家卡背",
+            "language": "en"
+        }
     }
 
     # 创建字体和图片管理器
