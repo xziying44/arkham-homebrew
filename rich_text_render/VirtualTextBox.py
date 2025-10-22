@@ -290,8 +290,11 @@ class VirtualTextBox:
 
         # 如果辅助线功能已激活，为即将离开的行记录线段
         if self._guide_lines_active:
+            # 修改：辅助线高度应该包括基础行高和额外间距
+            base_line_height = max(self.current_line_height, self.default_line_spacing)
+            total_line_height = base_line_height + extra_spacing
             self._add_guide_segment_for_line(
-                self.cursor_y, self.current_line_left, self.current_line_height
+                self.cursor_y, self.current_line_left, total_line_height
             )
 
         base_y_jump = max(self.current_line_height, self.default_line_spacing)

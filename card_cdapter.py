@@ -49,13 +49,15 @@ class CardAdapter:
         # Additional common tags
         (r'<t>(.*?)</t>', r'{\1}'),
         (r'{{(.*?)}}', r'【\1】'),
-        (r'(?<!\\)\{([^}]*)\}', r'<trait>\1</trait>')
+        (r'(?<!\\)\{([^}]*)\}', r'<trait>\1</trait>'),
+        (r'\n<par>\n', '<par>')
     ]
 
     # 需要转化的字段路径配置
     FIELDS_TO_CONVERT: List[str] = [
         "name",  # 顶层字段
         "body",  # 顶层字段
+        "flavor",  # 顶层字段
         "card_back.other",  # 嵌套字段
         "card_back.option",  # 嵌套字段
     ]
