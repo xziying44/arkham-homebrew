@@ -1299,10 +1299,10 @@ class Card:
             # 如果是整数，格式化为"胜利X。"
             text = self.font_manager.get_font_text('胜利点')
             text = text.replace('<X>', str(victory_value))
-            text = text.replace('<br>', '\n')
         elif isinstance(victory_value, str):
             # 如果是字符串，直接使用原文
             text = victory_value
+            text = text.replace('<br>', '\n')
         else:
             # 其他类型，转换为字符串处理
             text = str(victory_value)
