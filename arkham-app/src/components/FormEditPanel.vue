@@ -222,8 +222,8 @@ import DeckOptionEditor from './DeckOptionEditor.vue';
 import CardSideEditor from './CardSideEditor.vue';
 
 // 导入中文和英文配置
-import { cardTypeConfigs as cardTypeConfigsZh, cardTypeOptions as cardTypeOptionsZh, cardBackConfigs as cardBackConfigsZh, type CardTypeConfig } from '@/config/cardTypeConfigs';
-import { cardTypeConfigs as cardTypeConfigsEn, cardTypeOptions as cardTypeOptionsEn, cardBackConfigs as cardBackConfigsEn } from '@/config/cardTypeConfigsEn';
+import { cardTypeConfigs as cardTypeConfigsZh, cardTypeOptions as cardTypeOptionsZh, cardBackConfigs as cardBackConfigsZh, type CardTypeConfig, getDefaultBackType as getDefaultBackTypeZh } from '@/config/cardTypeConfigs';
+import { cardTypeConfigs as cardTypeConfigsEn, cardTypeOptions as cardTypeOptionsEn, cardBackConfigs as cardBackConfigsEn, getDefaultBackType as getDefaultBackTypeEn } from '@/config/cardTypeConfigsEn';
 
 import { WorkspaceService, CardService, ConfigService } from '@/api';
 import type { CardData } from '@/api/types';
@@ -332,6 +332,12 @@ const languageOptions = computed(() => [
     }
 ]);
 
+// 获取当前语言对应的默认背面配置函数
+const getDefaultBackType = (frontType: string): { type: string; is_back?: boolean } | null => {
+    const getDefaultBackTypeFunc = locale.value === 'en' ? getDefaultBackTypeEn : getDefaultBackTypeZh;
+    return getDefaultBackTypeFunc(frontType);
+};
+
 // 原始数据状态 - 用于检测修改
 const originalCardData = ref<string>('');
 
@@ -388,6 +394,28 @@ const updateCardSideType = (side: string, newType: string) => {
         // 更新当前编辑面的类型
         if (currentSide.value === 'front') {
             currentCardType.value = newType;
+        }
+
+        // 【新增】当正面类型变更时，如果背面为空则自动设置默认背面
+        if (isDoubleSided.value && (!currentCardData.back || !currentCardData.back.type || currentCardData.back.type.trim() === '')) {
+            // 确保back对象存在
+            if (!currentCardData.back) {
+                currentCardData.back = {};
+            }
+
+            const defaultBackConfig = getDefaultBackType(newType);
+            if (defaultBackConfig) {
+                currentCardData.back.type = defaultBackConfig.type;
+                // 如果需要设置is_back字段
+                if (defaultBackConfig.is_back !== undefined) {
+                    currentCardData.back.is_back = defaultBackConfig.is_back;
+                }
+                // 如果需要设置is_back字段
+                if (defaultBackConfig.location_type !== undefined) {
+                    currentCardData.back.location_type = defaultBackConfig.location_type;
+                }
+                console.log(`🔄 自动设置背面类型: ${defaultBackConfig.type}, is_back: ${defaultBackConfig.is_back}`);
+            }
         }
     }
     // 触发防抖预览更新
@@ -600,8 +628,7 @@ const hasUnsavedChanges = computed(() => {
 
 // 检查是否有有效的卡牌数据
 const hasValidCardData = computed(() => {
-    return currentCardData.name && currentCardData.name.trim() !== '' &&
-        currentCardData.type && currentCardData.type.trim() !== '';
+    return currentCardData.type && currentCardData.type.trim() !== '';
 });
 
 // 检查是否有任何有效的卡牌数据（用于共享组件显示）
@@ -790,10 +817,29 @@ const loadCardData = async () => {
         console.log('📋 加载卡牌类型设置:', currentCardType.value, '原始数据:', cardData.type);
 
         // 如果是双面卡牌，确保背面数据结构完整
-        if (cardData.version === '2.0' && cardData.back) {
+        if (cardData.version === '2.0') {
+            // 确保back对象存在
+            if (!cardData.back) {
+                cardData.back = {};
+            }
+
             if (!cardData.back.language) {
                 cardData.back.language = cardData.language || 'zh';
             }
+
+            // 【新增】如果背面类型为空，则自动设置默认背面类型
+            if (!cardData.back.type || cardData.back.type.trim() === '') {
+                const defaultBackConfig = getDefaultBackType(cardData.type || '');
+                if (defaultBackConfig) {
+                    cardData.back.type = defaultBackConfig.type;
+                    // 如果需要设置is_back字段
+                    if (defaultBackConfig.is_back !== undefined) {
+                        cardData.back.is_back = defaultBackConfig.is_back;
+                    }
+                    console.log(`🔄 加载时自动设置背面类型: ${defaultBackConfig.type}, is_back: ${defaultBackConfig.is_back}`);
+                }
+            }
+
             console.log('🔄 双面卡牌背面数据初始化完成:', cardData.back);
         }
 

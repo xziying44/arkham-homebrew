@@ -1648,6 +1648,30 @@ export const cardBackConfigs: Record<string, CardTypeConfig> = {
     field_type_display: '🎯 Encounter Card Back',
     card_category: 'encounter',
     fields: []
+  },
+  '调查员背面': {
+    field_type_en: 'Investigator Back',
+    field_type_display: '🔄 Investigator Back',
+    card_category: 'player',
+    fields: []
+  },
+  '密谋卡': {
+    field_type_en: 'Agenda Card',
+    field_type_display: '🌙 Agenda Card',
+    card_category: 'encounter',
+    fields: []
+  },
+  '场景卡': {
+    field_type_en: 'Act Card',
+    field_type_display: '🎬 Act Card',
+    card_category: 'encounter',
+    fields: []
+  },
+  '冒险参考卡': {
+    field_type_en: 'Scenario Reference Card',
+    field_type_display: '📋 Scenario Reference Card',
+    card_category: 'encounter',
+    fields: []
   }
 };
 
@@ -1673,3 +1697,39 @@ export const cardTypeOptions = [
       value: key
     }))
 ];
+
+// Get default back type configuration for card types
+export const getDefaultBackType = (frontType: string): { type: string; is_back?: boolean } | null => {
+  const playerCardTypes = ['支援卡', '事件卡', '技能卡', '定制卡'];
+  const encounterCardTypes = ['故事卡', '诡计卡', '敌人卡'];
+
+  if (playerCardTypes.includes(frontType)) {
+    return { type: '玩家卡背' };
+  }
+
+  if (encounterCardTypes.includes(frontType)) {
+    return { type: '遭遇卡背' };
+  }
+
+  if (frontType === '调查员') {
+    return { type: '调查员背面' };
+  }
+
+  if (frontType === '地点卡') {
+    return { type: '地点卡', location_type: '未揭示' };
+  }
+
+  if (frontType === '密谋卡') {
+    return { type: '密谋卡', is_back: true };
+  }
+
+  if (frontType === '场景卡') {
+    return { type: '场景卡', is_back: true };
+  }
+
+  if (frontType === '冒险参考卡') {
+    return { type: '冒险参考卡' };
+  }
+
+  return null;
+};
