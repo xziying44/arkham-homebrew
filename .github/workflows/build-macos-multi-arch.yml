@@ -1,0 +1,215 @@
+name: Build macOS App (Multi-Architecture)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-macos:
+    strategy:
+      matrix:
+        include:
+          # Apple Silicon (ARM64) - M1/M2/M3 芯片
+          - runner: macos-latest
+            arch: arm64
+            arch_name: "Apple Silicon"
+
+          # Intel (x86_64) - 旧款 Mac
+          - runner: macos-13
+            arch: x86_64
+            arch_name: "Intel"
+
+    runs-on: ${{ matrix.runner }}
+
+    name: Build for ${{ matrix.arch_name }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Display build info
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🔨 Build Information"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Runner: ${{ matrix.runner }}"
+          echo "Target Architecture: ${{ matrix.arch_name }} (${{ matrix.arch }})"
+          echo "System Architecture: $(uname -m)"
+          echo "macOS Version: $(sw_vers -productVersion)"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+      - name: Verify icon file
+        run: |
+          if [ -f "favicon.icns" ]; then
+            echo "✅ Icon file found"
+            ls -lh favicon.icns
+          else
+            echo "❌ favicon.icns not found!"
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Verify Python architecture
+        run: |
+          echo "Python Architecture:"
+          python3 -c "import platform; print(f'  Machine: {platform.machine()}')"
+          python3 -c "import platform; print(f'  Processor: {platform.processor()}')"
+          python3 -c "import struct; print(f'  Bits: {struct.calcsize(\"P\") * 8}-bit')"
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/pip
+          key: ${{ runner.os }}-${{ matrix.arch }}-pip-${{ hashFiles('requirements-macos.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.arch }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install -r requirements-macos.txt
+
+      - name: Verify critical packages
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📦 Installed Packages"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          python -c "import flask; print(f'Flask: {flask.__version__}')"
+          python -c "import webview; print(f'PyWebView: {webview.__version__}')"
+          python -c "import PIL; print(f'Pillow: {PIL.__version__}')"
+          python -c "import numpy; print(f'NumPy: {numpy.__version__}')"
+          python -c "import requests; print(f'Requests: {requests.__version__}')"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+      - name: Build with PyInstaller
+        run: |
+          echo "🔨 Starting build for ${{ matrix.arch_name }}..."
+          pyinstaller app-macos.spec --clean --noconfirm
+
+      - name: Verify build
+        run: |
+          if [ -d "dist/Arkham Card Maker.app" ]; then
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "✅ Build Successful"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "App Size: $(du -sh 'dist/Arkham Card Maker.app' | cut -f1)"
+            echo "Architecture: ${{ matrix.arch }}"
+            echo ""
+            # 验证二进制架构
+            echo "Binary Architecture:"
+            file "dist/Arkham Card Maker.app/Contents/MacOS/Arkham Card Maker"
+            lipo -info "dist/Arkham Card Maker.app/Contents/MacOS/Arkham Card Maker" || true
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          else
+            echo "❌ Build failed"
+            exit 1
+          fi
+
+      - name: Install create-dmg
+        run: |
+          brew install create-dmg
+
+      - name: Create DMG
+        run: |
+          DMG_NAME="Arkham-Card-Maker-${{ matrix.arch }}.dmg"
+          echo "📀 Creating DMG: $DMG_NAME"
+          
+          create-dmg \
+            --volname "Arkham Card Maker" \
+            --volicon "favicon.icns" \
+            --window-pos 200 120 \
+            --window-size 800 400 \
+            --icon-size 100 \
+            --icon "Arkham Card Maker.app" 200 190 \
+            --hide-extension "Arkham Card Maker.app" \
+            --app-drop-link 600 185 \
+            --no-internet-enable \
+            "$DMG_NAME" \
+            "dist/Arkham Card Maker.app"
+          
+          echo "✅ DMG created successfully"
+
+      - name: Verify DMG
+        run: |
+          DMG_FILE="Arkham-Card-Maker-${{ matrix.arch }}.dmg"
+          if [ -f "$DMG_FILE" ]; then
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "📦 DMG Information"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "File: $DMG_FILE"
+            echo "Size: $(du -sh '$DMG_FILE' | cut -f1)"
+            echo "Architecture: ${{ matrix.arch }}"
+            echo "For: ${{ matrix.arch_name }}"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          else
+            echo "❌ DMG not found!"
+            exit 1
+          fi
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: Arkham-Card-Maker-${{ matrix.arch }}
+          path: Arkham-Card-Maker-${{ matrix.arch }}.dmg
+          retention-days: 30
+          if-no-files-found: error
+
+  # 创建构建摘要
+  build-summary:
+    needs: build-macos
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create Build Summary
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          # 🎉 macOS 构建完成
+          
+          ## 📥 下载安装包
+          
+          两个版本已成功构建，请根据你的 Mac 芯片类型选择对应的 DMG 文件：
+          
+          ### 🍎 Apple Silicon (ARM64)
+          **适用于：** M1、M2、M3 芯片的 Mac（2020 年底及以后）
+          
+          **下载：** `Arkham-Card-Maker-arm64`
+          
+          ---
+          
+          ### 💻 Intel (x86_64)
+          **适用于：** Intel 处理器的 Mac（2020 年及之前）
+          
+          **下载：** `Arkham-Card-Maker-x86_64`
+          
+          ---
+          
+          ## ❓ 如何确定我的 Mac 芯片类型？
+          
+          1. 点击左上角  **Apple 菜单**
+          2. 选择 **关于本机**
+          3. 查看 **芯片** 或 **处理器** 一栏：
+             - 显示 "Apple M1/M2/M3" → 下载 **ARM64** 版本
+             - 显示 "Intel Core" → 下载 **x86_64** 版本
+          
+          ## 📦 安装方法
+          
+          1. 下载对应架构的 DMG 文件
+          2. 双击打开 DMG
+          3. 将 **Arkham Card Maker.app** 拖拽到 **Applications** 文件夹
+          4. 首次运行时，右键点击应用 → 选择 **打开**（绕过未签名警告）
+          
+          ---
+          
+          *构建时间: $(date -u '+%Y-%m-%d %H:%M:%S UTC')*
+          EOF

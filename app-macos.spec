@@ -1,27 +1,58 @@
 # -*- mode: python ; coding: utf-8 -*-
 import sys
-from PyInstaller.utils.hooks import collect_data_files
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 block_cipher = None
 
+# 收集所有子模块
+flask_submodules = collect_submodules('flask')
+jinja2_submodules = collect_submodules('jinja2')
+werkzeug_submodules = collect_submodules('werkzeug')
+webview_submodules = collect_submodules('webview')
+
 # 收集隐藏导入
 hidden_imports = [
-    'Flask',
-    'pywebview',
-    'Jinja2',
+    # Flask 相关
+    'flask',
+    'flask.json',
+    'flask.json.provider',
+    'jinja2',
+    'jinja2.ext',
     'werkzeug',
-    'requests',
-    'httpx',
-    'PIL',
-    'numpy',
-    'cloudinary',
-    'psutil',
+    'werkzeug.security',
+    'werkzeug.routing',
+    'click',
+    'itsdangerous',
+    'markupsafe',
+    # PyWebView 相关
+    'webview',
+    'webview.window',
+    'webview.menu',
     'webview.platforms.cocoa',
+    # macOS 特定
     'objc',
     'Foundation',
     'AppKit',
     'WebKit',
-]
+    'Cocoa',
+    # 其他依赖
+    'requests',
+    'httpx',
+    'httpcore',
+    'h11',
+    'certifi',
+    'urllib3',
+    'PIL',
+    'PIL._imaging',
+    'PIL.Image',
+    'PIL.ImageDraw',
+    'PIL.ImageFont',
+    'numpy',
+    'psutil',
+    'cloudinary',
+    'pydantic',
+    'pydantic_core',
+] + flask_submodules + jinja2_submodules + werkzeug_submodules + webview_submodules
 
 # 数据文件
 datas = [
@@ -33,8 +64,10 @@ datas = [
     ('templates', 'templates'),
 ]
 
-# 收集 pywebview 相关数据
+# 收集包的数据文件
 datas += collect_data_files('webview')
+datas += collect_data_files('certifi')
+datas += collect_data_files('cloudinary')
 
 a = Analysis(
     ['app.py'],
@@ -52,6 +85,8 @@ a = Analysis(
         'pandas',
         'pytest',
         'setuptools',
+        'wheel',
+        'pip',
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
@@ -74,7 +109,7 @@ exe = EXE(
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
-    target_arch='universal2',  # 支持 Intel 和 Apple Silicon
+    target_arch=None,  # 改为 None，自动检测当前架构
     codesign_identity=None,
     entitlements_file='entitlements.plist',
 )
