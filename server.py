@@ -32,6 +32,9 @@ quick_start = QuickStart()
 current_workspace: WorkspaceManager = None
 github_image_host = None
 
+# ArkhamDB导入管理器
+arkham_builder = {}
+
 # 记录服务启动
 logger_manager.info("=" * 60)
 logger_manager.info("阿卡姆印牌姬")
@@ -1335,6 +1338,200 @@ def export_content_package_to_arkhamdb():
             code=14004,
             msg=result.get("error", "内容包导出ArkhamDB格式失败"),
             data={"logs": result.get("logs", [])}
+        )), 500
+
+
+# ================= ArkhamDB导入相关接口 =================
+
+@app.route('/api/arkhamdb/import', methods=['POST'])
+@handle_api_error
+def import_arkhamdb():
+    """导入ArkhamDB内容包"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    data = request.get_json()
+    if not data or 'content_pack' not in data:
+        return jsonify(create_response(
+            code=15001,
+            msg="请提供ArkhamDB内容包数据"
+        )), 400
+
+    content_pack = data['content_pack']
+
+    logger_manager.info("开始导入ArkhamDB内容包")
+
+    work_dir = current_workspace.workspace_path
+
+    try:
+        # 导入ArkhamCardBuilder
+        from ArkhamCardBuilder import ArkhamCardBuilder
+
+        # 创建构建器实例
+        builder = ArkhamCardBuilder(content_pack, work_dir)
+
+        # 保存构建器实例以供后续获取日志
+        arkham_builder['build'] = builder
+
+        # 处理内容包
+        saved_count, cards, is_valid, errors = builder.process_content_pack()
+
+        if not is_valid:
+            logger_manager.error(f"ArkhamDB内容包验证失败: {errors}")
+            return jsonify(create_response(
+                code=15002,
+                msg=f"内容包验证失败: {'; '.join(errors)}",
+                data={
+                    "errors": errors,
+                    "validation_failed": True
+                }
+            )), 400
+
+        logger_manager.info(f"ArkhamDB内容包导入成功: 保存{saved_count}张卡牌工作空间目录。")
+
+        return jsonify(create_response(
+            msg="ArkhamDB内容包导入成功",
+            data={
+                "saved_count": saved_count,
+                "total_cards": len(cards),
+                "work_dir_name": '',
+                "work_dir": '',
+                "language": builder.language,
+                "sample_cards": [
+                    {
+                        "name": card.get('name', 'Unknown'),
+                        "type": card.get('type', 'Unknown'),
+                        "code": card.get('code', ''),
+                        "position": card.get('position', 0)
+                    }
+                    for card in cards[:5]  # 显示前5张卡牌作为示例
+                ] if cards else []
+            }
+        ))
+
+    except ImportError as e:
+        logger_manager.error(f"导入ArkhamCardBuilder模块失败: {str(e)}")
+        return jsonify(create_response(
+            code=15003,
+            msg=f"导入模块失败: {str(e)}"
+        )), 500
+    except Exception as e:
+        logger_manager.exception("导入ArkhamDB内容包时发生未知错误")
+        return jsonify(create_response(
+            code=15004,
+            msg=f"导入失败: {type(e).__name__}: {str(e)}"
+        )), 500
+
+
+@app.route('/api/arkhamdb/logs', methods=['GET'])
+@handle_api_error
+def get_arkhamdb_logs():
+    """获取ArkhamDB导入的日志信息"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    if not arkham_builder.get('build'):
+        return jsonify(create_response(
+            code=15005,
+            msg="当前工作区没有ArkhamDB导入记录"
+        )), 404
+
+    try:
+        builder = arkham_builder.get('build')
+        logs = builder.get_logs()
+
+        logger_manager.debug("获取ArkhamDB导入日志")
+
+        return jsonify(create_response(
+            msg="获取日志成功",
+            data={
+                "logs": logs,
+                "log_length": len(logs) if logs else 0,
+                "has_logs": bool(logs and logs.strip())
+            }
+        ))
+
+    except Exception as e:
+        logger_manager.exception("获取ArkhamDB日志时发生错误")
+        return jsonify(create_response(
+            code=15006,
+            msg=f"获取日志失败: {type(e).__name__}: {str(e)}"
+        )), 500
+
+
+@app.route('/api/arkhamdb/validate', methods=['POST'])
+@handle_api_error
+def validate_arkhamdb():
+    """验证ArkhamDB内容包结构（不进行实际导入）"""
+    data = request.get_json()
+    if not data or 'content_pack' not in data:
+        return jsonify(create_response(
+            code=15007,
+            msg="请提供ArkhamDB内容包数据"
+        )), 400
+
+    content_pack = data['content_pack']
+
+    logger_manager.info("开始验证ArkhamDB内容包结构")
+
+    try:
+        # 导入ArkhamCardBuilder
+        from ArkhamCardBuilder import ArkhamCardBuilder
+
+        # 创建临时构建器实例（仅用于验证）
+        temp_builder = ArkhamCardBuilder(content_pack, os.path.join(os.getcwd(), 'temp_validation'))
+
+        # 验证内容包结构
+        is_valid, errors = temp_builder.validate_content_pack_structure()
+
+        if is_valid:
+            # 统计信息
+            cards = content_pack.get('data', {}).get('cards', [])
+            packs = content_pack.get('data', {}).get('packs', [])
+            meta = content_pack.get('meta', {})
+
+            logger_manager.info(f"ArkhamDB内容包验证成功: {len(cards)}张卡牌, {len(packs)}个包")
+
+            return jsonify(create_response(
+                msg="内容包验证通过",
+                data={
+                    "is_valid": True,
+                    "errors": [],
+                    "statistics": {
+                        "cards_count": len(cards),
+                        "packs_count": len(packs),
+                        "language": meta.get('language', 'en'),
+                        "name": meta.get('name', 'Unknown'),
+                        "version": meta.get('version', 'Unknown')
+                    }
+                }
+            ))
+        else:
+            logger_manager.warning(f"ArkhamDB内容包验证失败: {errors}")
+
+            return jsonify(create_response(
+                code=15008,
+                msg=f"内容包验证失败: {'; '.join(errors)}",
+                data={
+                    "is_valid": False,
+                    "errors": errors,
+                    "statistics": None
+                }
+            )), 400
+
+    except ImportError as e:
+        logger_manager.error(f"导入ArkhamCardBuilder模块失败: {str(e)}")
+        return jsonify(create_response(
+            code=15009,
+            msg=f"导入模块失败: {str(e)}"
+        )), 500
+    except Exception as e:
+        logger_manager.exception("验证ArkhamDB内容包时发生未知错误")
+        return jsonify(create_response(
+            code=15010,
+            msg=f"验证失败: {type(e).__name__}: {str(e)}"
         )), 500
 
 

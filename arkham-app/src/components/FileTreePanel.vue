@@ -398,11 +398,109 @@
       </n-card>
     </n-modal>
 
+    <!-- ArkhamDB导入警告对话框 -->
+    <n-modal v-model:show="showArkhamDBImportDialog">
+      <n-card style="width: 500px" :title="$t('arkhamdbImport.title')" :bordered="false" size="huge"
+        role="dialog" aria-modal="true">
+        <n-space vertical size="large">
+          <n-alert type="warning" :title="$t('arkhamdbImport.actions.import')">
+            <template #icon>
+              <n-icon :component="WarningOutline" />
+            </template>
+            {{ $t('arkhamdbImport.importWarning') }}
+          </n-alert>
+
+          <n-space vertical size="small">
+            <n-text depth="3">{{ $t('arkhamdbImport.fileInfo.name') }}: {{ arkhamdbImportTarget?.label }}</n-text>
+            <n-text depth="3">{{ $t('arkhamdbImport.targetDirectory.title') }}: {{ fileTreeData[0]?.label }}</n-text>
+          </n-space>
+
+          <n-space vertical size="small">
+            <n-text strong>{{ $t('arkhamdbImport.importConfirm.title') }}</n-text>
+            <n-text depth="2">{{ $t('arkhamdbImport.importConfirm.warning1') }}</n-text>
+            <n-text depth="2">{{ $t('arkhamdbImport.importConfirm.warning2') }}</n-text>
+            <n-text depth="2">{{ $t('arkhamdbImport.importConfirm.warning3') }}</n-text>
+          </n-space>
+        </n-space>
+
+        <template #footer>
+          <n-space justify="end">
+            <n-button @click="showArkhamDBImportDialog = false">{{ $t('arkhamdbImport.actions.cancel') }}</n-button>
+            <n-button type="warning" @click="confirmArkhamDBImport">{{ $t('arkhamdbImport.actions.import') }}</n-button>
+          </n-space>
+        </template>
+      </n-card>
+    </n-modal>
+
+    <!-- ArkhamDB导入进度对话框 -->
+    <n-modal v-model:show="showArkhamDBProgressDialog" :mask-closable="false">
+      <n-card style="width: 700px" :title="$t('arkhamdbImport.importResult.title')" :bordered="false" size="huge"
+        role="dialog" aria-modal="true">
+        <n-space vertical size="large">
+          <!-- 导入状态 -->
+          <n-space vertical size="small">
+            <n-text v-if="arkhamdbImporting" style="font-weight: 600;">
+              {{ $t('arkhamdbImport.importing') }}
+            </n-text>
+            <n-text v-else-if="arkhamdbImportCompleted" type="success" style="font-weight: 600;">
+              {{ $t('arkhamdbImport.importCompleted') }}
+            </n-text>
+          </n-space>
+
+          <!-- 导入结果信息 -->
+          <div v-if="arkhamdbImportResult" class="import-result-info">
+            <n-space vertical size="small">
+              <n-text>{{ $t('arkhamdbImport.importResult.success', { count: arkhamdbImportResult.saved_count }) }}</n-text>
+              <n-text>{{ $t('arkhamdbImport.importResult.totalCards') }}: {{ arkhamdbImportResult.total_cards }}</n-text>
+              <n-text>{{ $t('arkhamdbImport.importResult.language') }}: {{ arkhamdbImportResult.language }}</n-text>
+              <n-text>{{ $t('arkhamdbImport.importResult.targetDirectory') }}: {{ arkhamdbImportResult.work_dir }}</n-text>
+            </n-space>
+
+            <!-- 示例卡牌已隐藏，用户可以直接在文件树中查看导入的卡牌 -->
+          </div>
+
+          <!-- 导入日志 -->
+          <div class="import-logs">
+            <n-space justify="space-between" align="center">
+              <n-text depth="3" style="font-weight: 600;">{{ $t('arkhamdbImport.importResult.logs') }}</n-text>
+              <n-button size="tiny" @click="refreshImportLogs">
+                <template #icon>
+                  <n-icon :component="RefreshOutline" />
+                </template>
+                {{ $t('arkhamdbImport.actions.refresh') }}
+              </n-button>
+            </n-space>
+            <n-scrollbar ref="arkhamdbLogScrollbar" style="max-height: 300px; margin-top: 8px;">
+              <div class="log-content" ref="arkhamdbLogContent">
+                <div v-if="arkhamdbImportLogs.length === 0" class="log-item">
+                  <n-text depth="3">{{ $t('arkhamdbImport.noLogs') }}</n-text>
+                </div>
+                <div v-for="(log, index) in arkhamdbImportLogs" :key="index" class="log-item">
+                  <n-text style="font-size: 12px; font-family: monospace; white-space: pre-wrap;">{{ log }}</n-text>
+                </div>
+              </div>
+            </n-scrollbar>
+          </div>
+        </n-space>
+
+        <template #footer>
+          <n-space justify="end">
+            <n-button v-if="arkhamdbImporting" type="error" @click="stopArkhamDBImport">
+              {{ $t('arkhamdbImport.stopImport') }}
+            </n-button>
+            <n-button v-else type="primary" @click="closeArkhamDBImportDialog">
+              {{ $t('arkhamdbImport.close') }}
+            </n-button>
+          </n-space>
+        </template>
+      </n-card>
+    </n-modal>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, h, onMounted, computed, nextTick } from 'vue';
+import { ref, h, onMounted, computed, nextTick, onUnmounted } from 'vue';
 import { NIcon, useMessage, NText, NTag } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import type { TreeOption, FormInst, FormRules } from 'naive-ui';
@@ -424,8 +522,8 @@ import {
 } from '@vicons/ionicons5';
 
 // 导入API服务
-import { WorkspaceService, ApiError, CardService, TtsExportService } from '@/api';
-import type { CardData, ExportCardParams } from '@/api/types';
+import { WorkspaceService, ApiError, CardService, TtsExportService, ArkhamDBService } from '@/api';
+import type { CardData, ExportCardParams, ArkhamDBContentPack } from '@/api/types';
 
 interface Props {
   width: number;
@@ -564,6 +662,17 @@ const showCreateFolderDialog = ref(false);
 const showCreateCardDialog = ref(false);
 const showRenameDialog = ref(false);
 const showDeleteDialog = ref(false);
+const showArkhamDBImportDialog = ref(false);
+const showArkhamDBProgressDialog = ref(false);
+
+// ArkhamDB导入相关状态
+const arkhamdbImporting = ref(false);
+const arkhamdbImportCompleted = ref(false);
+const arkhamdbImportLogs = ref<string[]>([]);
+const arkhamdbImportTarget = ref<TreeOption | null>(null);
+const arkhamdbImportContent = ref<ArkhamDBContentPack | null>(null);
+const arkhamdbImportResult = ref<any>(null);
+const logRefreshInterval = ref<NodeJS.Timeout | null>(null);
 
 // 表单数据
 const createFolderForm = ref({ name: '' });
@@ -577,6 +686,10 @@ const renameForm = ref({
 const createFolderFormRef = ref<FormInst | null>(null);
 const createCardFormRef = ref<FormInst | null>(null);
 const renameFormRef = ref<FormInst | null>(null);
+
+// ArkhamDB日志滚动条引用
+const arkhamdbLogScrollbar = ref<any>(null);
+const arkhamdbLogContent = ref<HTMLElement | null>(null);
 
 // 是否显示扩展名字段（文件夹不显示）
 const showExtensionField = computed(() => {
@@ -670,6 +783,7 @@ const contextMenuOptions = computed(() => {
   const isDirectory = contextMenuTarget.value.type === 'directory';
   const isCard = contextMenuTarget.value.type === 'card';
   const isFile = !isWorkspace && !isDirectory;
+  const isConfigFile = isFile && ['json', 'pack'].includes((contextMenuTarget.value.label as string).split('.').pop()?.toLowerCase() || '');
 
   const options = [];
 
@@ -727,6 +841,15 @@ const contextMenuOptions = computed(() => {
     });
   }
 
+  // 为JSON文件添加ArkhamDB导入选项
+  if (isConfigFile) {
+    options.push({
+      label: t('arkhamdbImport.title'),
+      key: 'arkhamdb-import',
+      icon: () => h(NIcon, { component: DocumentOutline })
+    });
+  }
+
   // 非工作空间节点可以重命名和删除
   if (!isWorkspace) {
     if (options.length > 0) {
@@ -774,7 +897,7 @@ const getFileType = (fileName: string): string => {
 
   if (extension === 'card') return 'card';
   if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(extension)) return 'image';
-  if (['json', 'yml', 'yaml', 'toml'].includes(extension)) return 'config';
+  if (['json', 'yml', 'yaml', 'toml', 'pack'].includes(extension)) return 'config';
   if (['csv', 'tsv', 'dat'].includes(extension)) return 'data';
   if (['css', 'scss', 'sass', 'less'].includes(extension)) return 'style';
   if (['txt', 'md', 'markdown'].includes(extension)) return 'text';
@@ -1014,6 +1137,9 @@ const handleContextMenuSelect = (key: string) => {
       break;
     case 'delete':
       showDeleteDialog.value = true;
+      break;
+    case 'arkhamdb-import':
+      startArkhamDBImportProcess();
       break;
   }
 };
@@ -1715,10 +1841,187 @@ const generateUniqueFileName = (originalName: string, parentPath?: string): stri
   return newName;
 };
 
+// ArkhamDB导入相关功能
+// 开始ArkhamDB导入流程
+const startArkhamDBImportProcess = async () => {
+  if (!contextMenuTarget.value) return;
+
+  try {
+    arkhamdbImportTarget.value = contextMenuTarget.value;
+
+    // 读取JSON文件内容
+    const filePath = contextMenuTarget.value.path as string;
+    const content = await WorkspaceService.getFileContent(filePath);
+
+    // 解析内容包数据
+    let contentPack: ArkhamDBContentPack;
+    try {
+      contentPack = JSON.parse(content || '{}') as ArkhamDBContentPack;
+    } catch (error) {
+      message.error('文件格式错误，无法解析为有效的JSON');
+      return;
+    }
+
+    arkhamdbImportContent.value = contentPack;
+
+    // 显示警告对话框
+    showArkhamDBImportDialog.value = true;
+
+  } catch (error) {
+    console.error('读取文件失败:', error);
+    message.error('读取文件失败，请检查文件是否可访问');
+  }
+};
+
+// 确认ArkhamDB导入
+const confirmArkhamDBImport = async () => {
+  if (!arkhamdbImportContent.value || !arkhamdbImportTarget.value) {
+    return;
+  }
+
+  try {
+    // 关闭警告对话框，显示进度对话框
+    showArkhamDBImportDialog.value = false;
+    showArkhamDBProgressDialog.value = true;
+
+    // 重置状态
+    arkhamdbImporting.value = true;
+    arkhamdbImportCompleted.value = false;
+    arkhamdbImportLogs.value = [];
+    arkhamdbImportResult.value = null;
+
+    // 立即开始定时刷新日志（在导入过程中）
+    startLogRefresh();
+
+    // 调用API导入内容包
+    const result = await ArkhamDBService.importContentPack({
+      content_pack: arkhamdbImportContent.value,
+      parent_path: '' // 导入到工作空间根目录
+    });
+
+    if (result.data) {
+      arkhamdbImportResult.value = result.data;
+      arkhamdbImportCompleted.value = true;
+      arkhamdbImporting.value = false;
+
+      // 导入完成后停止定时刷新，避免不必要的API请求
+      if (logRefreshInterval.value) {
+        clearInterval(logRefreshInterval.value);
+        logRefreshInterval.value = null;
+      }
+
+      // 刷新文件树
+      setTimeout(() => {
+        emit('refresh-file-tree');
+      }, 1000);
+
+      message.success('ArkhamDB内容包导入成功！');
+    }
+
+  } catch (error) {
+    console.error('ArkhamDB导入失败:', error);
+    arkhamdbImporting.value = false;
+
+    // 导入失败时也要停止定时刷新，避免不必要的API请求
+    if (logRefreshInterval.value) {
+      clearInterval(logRefreshInterval.value);
+      logRefreshInterval.value = null;
+    }
+
+    // 显示错误信息
+    if (error instanceof ApiError) {
+      message.error(`导入失败: ${error.message}`);
+      // 将错误信息添加到日志
+      arkhamdbImportLogs.value.push(`[错误] ${error.message}`);
+    } else {
+      message.error('导入过程中发生未知错误');
+      arkhamdbImportLogs.value.push('[错误] 导入过程中发生未知错误');
+    }
+  }
+};
+
+// 开始定时刷新日志
+const startLogRefresh = () => {
+  if (logRefreshInterval.value) {
+    clearInterval(logRefreshInterval.value);
+  }
+
+  logRefreshInterval.value = setInterval(async () => {
+    try {
+      await refreshImportLogs();
+    } catch (error) {
+      console.error('刷新日志失败:', error);
+    }
+  }, 1000); // 每秒刷新一次
+};
+
+// 刷新导入日志
+const refreshImportLogs = async () => {
+  try {
+    const logsResult = await ArkhamDBService.getImportLogs();
+    if (logsResult.data && logsResult.data.logs) {
+      // 将日志字符串按行分割
+      const logLines = logsResult.data.logs.split('\n').filter(line => line.trim());
+      arkhamdbImportLogs.value = logLines;
+
+      // 只有在导入进行中时才自动滚动到最新日志
+      // 导入完成后允许用户手动拖动查看历史日志
+      if (arkhamdbImporting.value) {
+        await nextTick();
+        if (arkhamdbLogScrollbar.value) {
+          arkhamdbLogScrollbar.value.scrollTo({ top: 999999, behavior: 'smooth' });
+        }
+      }
+    }
+  } catch (error) {
+    console.error('获取导入日志失败:', error);
+  }
+};
+
+// 停止ArkhamDB导入
+const stopArkhamDBImport = () => {
+  arkhamdbImporting.value = false;
+
+  // 停止定时刷新
+  if (logRefreshInterval.value) {
+    clearInterval(logRefreshInterval.value);
+    logRefreshInterval.value = null;
+  }
+
+  message.info('导入已停止');
+};
+
+// 关闭ArkhamDB导入对话框
+const closeArkhamDBImportDialog = () => {
+  showArkhamDBProgressDialog.value = false;
+
+  // 停止定时刷新
+  if (logRefreshInterval.value) {
+    clearInterval(logRefreshInterval.value);
+    logRefreshInterval.value = null;
+  }
+
+  // 重置状态
+  arkhamdbImporting.value = false;
+  arkhamdbImportCompleted.value = false;
+  arkhamdbImportLogs.value = [];
+  arkhamdbImportResult.value = null;
+  arkhamdbImportTarget.value = null;
+  arkhamdbImportContent.value = null;
+};
+
 // 组件挂载时加载数据
 onMounted(() => {
   loadFileTree();
   console.log(`检测到 CPU 核心数: ${cpuCores.value}`);
+});
+
+// 组件卸载时清理定时器
+onUnmounted(() => {
+  if (logRefreshInterval.value) {
+    clearInterval(logRefreshInterval.value);
+    logRefreshInterval.value = null;
+  }
 });
 
 // 导出方法供父组件调用

@@ -12,6 +12,7 @@ import cardEditor from './cardEditor'
 import ttsScriptEditor from './ttsScriptEditor' // 确保路径正确
 import deckOptionEditor from './deckOptionEditor'
 import languageWelcome from './languageWelcome'
+import arkhamdbImport from './arkhamdbImport'
 
 export default {
   common,
@@ -27,5 +28,6 @@ export default {
   // 新增下面这一行
   ttsScriptEditor,
   deckOptionEditor,
-  languageWelcome
+  languageWelcome,
+  arkhamdbImport
 }

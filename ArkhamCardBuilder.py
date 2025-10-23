@@ -78,6 +78,57 @@ class ArkhamCardBuilder:
         if 'cards' in self.content_pack.get('data', {}):
             ArkhamDBConverter.set_full_database(self.content_pack['data']['cards'])
 
+    def validate_content_pack_structure(self) -> Tuple[bool, List[str]]:
+        """
+        验证内容包结构是否符合要求
+
+        Returns:
+            (是否有效, 错误信息列表)
+        """
+        errors = []
+
+        # 检查meta字段
+        if 'meta' not in self.content_pack:
+            errors.append("缺少meta字段")
+        else:
+            meta = self.content_pack['meta']
+            if not isinstance(meta, dict):
+                errors.append("meta字段必须是对象类型")
+
+        # 检查data字段
+        if 'data' not in self.content_pack:
+            errors.append("缺少data字段")
+        else:
+            data = self.content_pack['data']
+            if not isinstance(data, dict):
+                errors.append("data字段必须是对象类型")
+            else:
+                # 检查cards字段
+                if 'cards' not in data:
+                    errors.append("data字段中缺少cards")
+                else:
+                    cards = data['cards']
+                    if not isinstance(cards, list):
+                        errors.append("data.cards字段必须是数组类型")
+                    elif len(cards) == 0:
+                        errors.append("data.cards数组不能为空")
+
+                # 检查packs字段
+                if 'packs' not in data:
+                    errors.append("data字段中缺少packs")
+                else:
+                    packs = data['packs']
+                    if not isinstance(packs, list):
+                        errors.append("data.packs字段必须是数组类型")
+
+        is_valid = len(errors) == 0
+        if is_valid:
+            self.logger.info("内容包结构验证通过")
+        else:
+            self.logger.error(f"内容包结构验证失败: {', '.join(errors)}")
+
+        return is_valid, errors
+
     def _sanitize_filename(self, name: str, position: int) -> str:
         """
         清理文件名，移除标点符号
@@ -445,27 +496,33 @@ class ArkhamCardBuilder:
         self.logger.info(f"卡牌保存完成: 成功保存{saved_count}张卡牌")
         return saved_count
 
-    def process_content_pack(self) -> Tuple[int, List[Dict[str, Any]]]:
+    def process_content_pack(self) -> Tuple[int, List[Dict[str, Any]], bool, List[str]]:
         """
         处理整个内容包
 
         Returns:
-            (成功保存的卡牌数量, 卡牌对象列表)
+            (成功保存的卡牌数量, 卡牌对象列表, 是否验证通过, 错误信息列表)
         """
         self.logger.info("开始处理内容包...")
 
         try:
+            # 首先验证内容包结构
+            is_valid, errors = self.validate_content_pack_structure()
+            if not is_valid:
+                self.logger.error("内容包结构验证失败，停止处理")
+                return 0, [], False, errors
+
             # 构建卡牌对象
             cards = self.build_cards()
 
             # 保存卡牌
             saved_count = self.save_cards(cards)
 
-            return saved_count, cards
+            return saved_count, cards, True, []
 
         except Exception as e:
             self.logger.error(f"处理内容包时发生错误: {str(e)}")
-            return 0, []
+            return 0, [], False, [f"处理内容包时发生错误: {str(e)}"]
 
 
 # 使用示例

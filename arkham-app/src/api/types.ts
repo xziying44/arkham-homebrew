@@ -521,3 +521,87 @@ export interface ImageHostConfig {
 // 图床API响应类型
 export type ImageHostUploadResponse = BaseResponse<ImageHostUploadData>;
 export type ImageHostCheckResponse = BaseResponse<ImageHostCheckData>;
+
+// ArkhamDB导入相关类型定义
+
+// ArkhamDB导入错误码
+export enum ArkhamDBErrorCode {
+  // ArkhamDB导入相关错误码 (15001-15099)
+  ARKHAMDB_MISSING_DATA = 15001,
+  ARKHAMDB_VALIDATION_FAILED = 15002,
+  ARKHAMDB_MODULE_IMPORT_FAILED = 15003,
+  ARKHAMDB_IMPORT_FAILED = 15004,
+  ARKHAMDB_NO_LOGS = 15005,
+  ARKHAMDB_LOGS_FAILED = 15006,
+  ARKHAMDB_VALIDATE_MISSING_DATA = 15007,
+  ARKHAMDB_VALIDATE_FAILED = 15008,
+  ARKHAMDB_VALIDATE_MODULE_FAILED = 15009,
+  ARKHAMDB_VALIDATE_ERROR = 15010,
+}
+
+// ArkhamDB内容包类型
+export interface ArkhamDBContentPack {
+  meta: {
+    name: string;
+    version?: string;
+    language?: string;
+    [key: string]: any;
+  };
+  data: {
+    cards: any[];
+    packs: any[];
+    [key: string]: any;
+  };
+  [key: string]: any;
+}
+
+// ArkhamDB导入请求类型
+export interface ArkhamDBImportRequest {
+  content_pack: ArkhamDBContentPack;
+  parent_path?: string; // 可选的父目录路径
+}
+
+// ArkhamDB导入响应数据类型
+export interface ArkhamDBImportData {
+  saved_count: number;
+  total_cards: number;
+  work_dir_name: string;
+  work_dir: string;
+  language: string;
+  sample_cards: {
+    name: string;
+    type: string;
+    code: string;
+    position: number;
+  }[];
+}
+
+// ArkhamDB日志响应数据类型
+export interface ArkhamDBLogsData {
+  logs: string;
+  log_length: number;
+  has_logs: boolean;
+}
+
+// ArkhamDB验证请求类型
+export interface ArkhamDBValidateRequest {
+  content_pack: ArkhamDBContentPack;
+}
+
+// ArkhamDB验证响应数据类型
+export interface ArkhamDBValidateData {
+  is_valid: boolean;
+  errors: string[];
+  statistics?: {
+    cards_count: number;
+    packs_count: number;
+    language: string;
+    name: string;
+    version: string;
+  };
+}
+
+// ArkhamDB API响应类型
+export type ArkhamDBImportResponse = BaseResponse<ArkhamDBImportData>;
+export type ArkhamDBLogsResponse = BaseResponse<ArkhamDBLogsData>;
+export type ArkhamDBValidateResponse = BaseResponse<ArkhamDBValidateData>;
