@@ -1415,10 +1415,6 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       },
       {
         key: 'serial_number',
-        showCondition: {
-          field: 'is_back',
-          value: false
-        },
         name: '🔢 Act Number',
         type: 'text',
         layout: 'half',
