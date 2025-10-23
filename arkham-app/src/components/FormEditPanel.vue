@@ -1047,8 +1047,33 @@ const saveAndSwitch = async () => {
         const fileToSwitch = pendingSwitchFile.value;
         pendingSwitchFile.value = null;
 
-        // 触发文件切换逻辑
+        // 如果是切换到新卡牌，先重置状态
         if (fileToSwitch && fileToSwitch.type === 'card') {
+            console.log('🔄 保存后切换到新卡牌，重置编辑器状态');
+
+            // 1. 重置当前面为正面
+            currentSide.value = 'front';
+
+            // 2. 清空卡牌类型，触发表单卸载
+            currentCardType.value = '';
+
+            // 3. 通知父组件清空图片预览
+            emit('update-preview-image', '');
+
+            // 4. 清除防抖定时器
+            clearDebounceTimer();
+
+            // 5. 清空当前数据状态
+            Object.keys(currentCardData).forEach(key => {
+                delete currentCardData[key];
+            });
+
+            // 等待DOM更新，确保状态完全重置
+            await nextTick();
+
+            console.log('✅ 保存后编辑器状态重置完成，开始加载新卡牌数据');
+
+            // 触发文件切换逻辑
             await loadCardData();
         } else {
             // 清空表单数据
@@ -1061,14 +1086,41 @@ const saveAndSwitch = async () => {
 const discardChanges = () => {
     showSaveConfirmDialog.value = false;
     originalFileInfo.value = null;
+    const fileToSwitch = pendingSwitchFile.value;
     pendingSwitchFile.value = null;
     clearDebounceTimer();
 
-    // 重新加载当前文件或清空数据
-    if (props.selectedFile && props.selectedFile.type === 'card') {
-        loadCardData();
+    // 如果是切换到新卡牌，先重置状态
+    if (fileToSwitch && fileToSwitch.type === 'card') {
+        console.log('🔄 放弃修改并切换到新卡牌，重置编辑器状态');
+
+        // 1. 重置当前面为正面
+        currentSide.value = 'front';
+
+        // 2. 清空卡牌类型，触发表单卸载
+        currentCardType.value = '';
+
+        // 3. 通知父组件清空图片预览
+        emit('update-preview-image', '');
+
+        // 4. 清空当前数据状态
+        Object.keys(currentCardData).forEach(key => {
+            delete currentCardData[key];
+        });
+
+        // 等待DOM更新，确保状态完全重置
+        nextTick(() => {
+            console.log('✅ 放弃修改后编辑器状态重置完成，开始加载新卡牌数据');
+            // 触发文件切换逻辑
+            loadCardData();
+        });
     } else {
-        clearFormData();
+        // 重新加载当前文件或清空数据
+        if (props.selectedFile && props.selectedFile.type === 'card') {
+            loadCardData();
+        } else {
+            clearFormData();
+        }
     }
 };
 
@@ -1254,6 +1306,39 @@ watch(() => props.selectedFile, async (newFile, oldFile) => {
         pendingSwitchFile.value = newFile;
         showSaveConfirmDialog.value = true;
         return;
+    }
+
+    // 如果是切换到新文件，先重置状态
+    if (newFile && newFile !== oldFile) {
+        if (newFile.type === 'card') {
+            console.log('🔄 切换到新卡牌，重置编辑器状态');
+
+            // 1. 重置当前面为正面
+            currentSide.value = 'front';
+
+            // 2. 清空卡牌类型，触发表单卸载
+            currentCardType.value = '';
+
+            // 3. 通知父组件清空图片预览
+            emit('update-preview-image', '');
+
+            // 4. 清除防抖定时器
+            clearDebounceTimer();
+
+            // 5. 清空当前数据状态
+            Object.keys(currentCardData).forEach(key => {
+                delete currentCardData[key];
+            });
+
+            // 等待DOM更新，确保状态完全重置
+            await nextTick();
+
+            console.log('✅ 编辑器状态重置完成，开始加载新卡牌数据');
+        } else {
+            // 如果不是卡牌文件，也要清空预览
+            emit('update-preview-image', '');
+            console.log('🔄 切换到非卡牌文件，清空预览');
+        }
     }
 
     // 没有未保存修改，直接切换
