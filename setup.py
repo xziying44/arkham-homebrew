@@ -121,8 +121,8 @@ OPTIONS = {
     'plist': {
         'CFBundleName': 'Arkham Card Maker',
         'CFBundleDisplayName': 'Arkham Card Maker',
-        'CFBundleVersion': '2.9.5',
-        'CFBundleShortVersionString': '2.9.5',
+        'CFBundleVersion': '2.9.8',
+        'CFBundleShortVersionString': '2.9.8',
         'CFBundleIdentifier': 'cn.xziying.arkhamcardmaker',
         'NSPrincipalClass': 'NSApplication',
         'NSHighResolutionCapable': True,

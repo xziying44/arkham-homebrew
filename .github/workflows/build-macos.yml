@@ -43,6 +43,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Arkham-Card-Maker
-          path: |
-            dist/*.app
-            dist/*.dmg
+          path: dist/Arkham-Card-Maker.dmg
