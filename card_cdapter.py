@@ -45,6 +45,7 @@ class CardAdapter:
         (r"<祝福>|<ble>", "🌟"),
         (r"<诅咒>|<cur>", "🌑"),
         (r"<雪花>|<frost>", "❄️"),
+        (r"<arrow>", "→"),
 
         # Additional common tags
         (r'<t>(.*?)</t>', r'{\1}'),
@@ -91,8 +92,14 @@ class CardAdapter:
         if font_manager.lang == 'zh':
             self.conversion_rules.append(
                 (r'<upg>|<升级>', r'<font name="ArnoPro-Regular" offset="3" addsize="8">☐</font>'))
+            self.conversion_rules.append(
+                (r'<res>(.*?)</res>',
+                 f'【(→{font_manager.get_font_text("resolution")}\\1)】')
+            )
         else:
             self.conversion_rules.append((r'<upg>|<升级>', r'<font name="ArnoPro-Regular">☐</font>'))
+            self.conversion_rules.append(
+                (r'<res>(.*?)</res>', f'(→【{font_manager.get_font_text("resolution")}\\1】)'))
         # 编译正则表达式以提高性能
         self._compiled_rules = [
             (re.compile(pattern, re.IGNORECASE), replacement)

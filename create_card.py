@@ -1758,36 +1758,14 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "密谋卡",
-        "name": "Search for a Camp Site",
-        "id": "",
-        "created_at": "",
-        "version": "2.0",
+        "type": "场景卡",
         "language": "en",
-        "deck_options": [],
         "is_back": True,
-        "serial_number": "1b",
-        "threshold": "2<per>",
-        "flavor": "You’re going to have to find a way back to camp, and soon...or you'll have to make due camping in the wilds.",
-        "body": "<act> If each investigator is at the same location and that location has no clues on it: <b>Resign.</b> You set up camp. Each investigator resigns.\n<b>Objective –</b> Find somewhere safe to set up camp. If each undefeated investigator has resigned, advance. The higher the shelter value of the location they resigned at, the better.\n",
+        "name": "Under the Stars",
+        "flavor": "Exhausted and terrified by your ordeal, you decide this is as good a place as any to make camp for the night. Perhaps tomorrow you can salvage some kind of academic value out of this hellish journey, but for now such things seem trivial. Survival is the only thing on your mind. ",
+        "body": "<res>1</res>",
         "encounter_group": "edge_of_the_earth_the_crash",
-        "card_number": "21",
-        "encounter_group_number": "4/5",
-        "illustrator": "Juan Carlos Barquet",
-        "picture_layout": {
-            "mode": "custom",
-            "offset": {
-                "x": -210,
-                "y": 0
-            },
-            "scale": 1,
-            "crop": {
-                "top": 0,
-                "right": 0,
-                "bottom": 0,
-                "left": 0
-            }
-        }
+        "serial_number": "1b"
     }
 
     # 创建字体和图片管理器
@@ -1809,7 +1787,7 @@ if __name__ == '__main__':
     profiler = cProfile.Profile()
     profiler.enable()
 
-    fm.set_lang('pl')
+    fm.set_lang('en')
     card = creator.create_card(json_data, picture_path=json_data.get('picture_path', None))
 
     profiler.disable()

@@ -46,6 +46,7 @@ class LanguageTexts:
     not_count: str = "不计入卡牌张数"
     agenda: str = "密谋"
     act: str = "场景"
+    resolution: str = "结局"
     upgrades: str = "升级项"
     victory: str = "胜利<X>。"
     Illus: str = "Illus."
@@ -360,6 +361,8 @@ class FontManager:
             text_key = 'story'
         elif text_key == '插画':
             text_key = 'Illus'
+        elif text_key == '结局':
+            text_key = 'resolution'
         return getattr(config.texts, text_key, text_key)
 
     def get_available_languages(self):
