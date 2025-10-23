@@ -1,0 +1,108 @@
+name: Build macOS App (PyInstaller)
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify icon file
+        run: |
+          if [ -f "favicon.icns" ]; then
+            echo "✅ Icon file found"
+            ls -lh favicon.icns
+          else
+            echo "❌ favicon.icns not found!"
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements-macos.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install -r requirements-macos.txt
+
+      - name: Build with PyInstaller
+        run: |
+          pyinstaller app-macos.spec --clean --noconfirm
+
+      - name: Verify build
+        run: |
+          if [ -d "dist/Arkham Card Maker.app" ]; then
+            echo "✅ Build successful"
+            echo "App size:"
+            du -sh "dist/Arkham Card Maker.app"
+            echo "Contents:"
+            ls -la "dist/Arkham Card Maker.app/Contents/"
+          else
+            echo "❌ Build failed"
+            exit 1
+          fi
+
+      - name: Install create-dmg
+        run: |
+          brew install create-dmg
+
+      - name: Create DMG
+        run: |
+          create-dmg \
+            --volname "Arkham Card Maker" \
+            --volicon "favicon.icns" \
+            --window-pos 200 120 \
+            --window-size 800 400 \
+            --icon-size 100 \
+            --icon "Arkham Card Maker.app" 200 190 \
+            --hide-extension "Arkham Card Maker.app" \
+            --app-drop-link 600 185 \
+            "Arkham-Card-Maker.dmg" \
+            "dist/Arkham Card Maker.app"
+
+      - name: Get package info
+        run: |
+          echo "📦 Package Information:"
+          echo "━━━━━━━━━━━━━━━━━━━━━"
+          if [ -d "dist/Arkham Card Maker.app" ]; then
+            echo "App size: $(du -sh 'dist/Arkham Card Maker.app' | cut -f1)"
+          fi
+          if [ -f "Arkham-Card-Maker.dmg" ]; then
+            echo "DMG size: $(du -sh 'Arkham-Card-Maker.dmg' | cut -f1)"
+          fi
+
+      - name: Upload App artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Arkham-Card-Maker-macOS-App
+          path: dist/Arkham Card Maker.app
+          retention-days: 30
+
+      - name: Upload DMG artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Arkham-Card-Maker-macOS-DMG
+          path: Arkham-Card-Maker.dmg
+          retention-days: 30
