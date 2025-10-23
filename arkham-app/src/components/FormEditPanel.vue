@@ -243,6 +243,7 @@ const emit = defineEmits<{
     'toggle-image-preview': [];
     'update-preview-image': [image: string | { front: string; back?: string }];
     'update-preview-side': [side: 'front' | 'back'];
+    'update-preview-loading': [loading: boolean];
     'refresh-file-tree': [];
 }>();
 
@@ -354,6 +355,9 @@ const showSaveConfirmDialog = ref(false);
 const saving = ref(false);
 const generating = ref(false);
 const exporting = ref(false);
+
+// 新增：图片预览加载状态
+const imagePreviewLoading = ref(false);
 
 // 导入JSON相关状态
 const importJsonText = ref('');
@@ -638,15 +642,15 @@ const triggerDebouncedPreviewUpdate = () => {
                 return;
             }
 
-            const imageBase64 = await generateCardImage();
-            if (imageBase64) {
-                emit('update-preview-image', imageBase64);
-                console.log('✅ 防抖预览更新成功');
-            }
+            console.log('🔄 防抖预览更新，不显示特殊加载动画');
+
+            // 调用统一的autoGeneratePreview，不结束加载动画
+            await autoGeneratePreview(false);
         } catch (error) {
             console.warn('⚠️ 防抖预览更新失败:', error);
             // 不显示错误消息，避免打扰用户编辑体验
         } finally {
+            console.log('✅ 防抖预览更新完成');
             isUserEditing.value = false;
             debounceTimer.value = null;
         }
@@ -705,16 +709,9 @@ watch(currentSide, () => {
     currentCardType.value = editingData.type || '';
     console.log(`🔄 切换到${currentSide.value}面，当前类型:`, currentCardType.value);
 
-    // 通知图片预览组件切换显示面
+    // 【重要】只通知图片预览组件切换显示面，不重新生成！
+    // 双面卡牌是一次性生成正反面的，切换时不需要重新生成
     emit('update-preview-side', currentSide.value);
-
-    // 双面卡牌切换时，如果数据有效则触发预览更新
-    if (isDoubleSided.value && editingData.name && editingData.type) {
-        console.log('🔄 双面卡牌切换面，触发预览更新:', currentSide.value);
-        setTimeout(() => {
-            autoGeneratePreview();
-        }, 100);
-    }
 }, { immediate: false });
 
 // 更新TTS脚本数据
@@ -779,12 +776,12 @@ const saveOriginalData = () => {
 };
 
 // 自动生成卡图（如果数据有效的话）
-const autoGeneratePreview = async () => {
-    // 只有当卡牌名称和类型都有值时才自动生成
-    if (currentCardData.name && currentCardData.name.trim() &&
-        currentCardData.type && currentCardData.type.trim()) {
+const autoGeneratePreview = async (endLoadingAnimation = false) => {
+    // 只有当卡牌类型有值时才自动生成
+    if (currentCardData.type && currentCardData.type.trim()) {
         try {
-            console.log('🔄 自动生成预览开始，当前编辑面:', currentSide.value);
+            console.log('🔄 自动生成预览开始，结束加载动画:', endLoadingAnimation);
+
             const result_card = await CardService.generateCard(currentCardData as CardData);
             const imageBase64 = result_card?.image;
 
@@ -802,9 +799,23 @@ const autoGeneratePreview = async () => {
                     console.log('✅ 单面卡牌预览生成成功');
                 }
             }
+
+            // 【新增】如果需要结束加载动画，则结束
+            if (endLoadingAnimation) {
+                imagePreviewLoading.value = false;
+                emit('update-preview-loading', false);
+                console.log('✅ 自动生成完成，结束卡牌形状加载动画');
+            }
         } catch (error) {
             // 自动生成失败不显示错误消息，避免打扰用户
             console.warn('自动生成卡图失败:', error);
+
+            // 如果需要结束加载动画，失败时也要结束
+            if (endLoadingAnimation) {
+                imagePreviewLoading.value = false;
+                emit('update-preview-loading', false);
+                console.log('❌ 自动生成失败，结束卡牌形状加载动画');
+            }
         }
     }
 };
@@ -814,9 +825,15 @@ const loadCardData = async () => {
     if (!props.selectedFile || props.selectedFile.type !== 'card' || !props.selectedFile.path) {
         return;
     }
+
+    let loadError = null; // 在try块外部定义
+
     try {
         // 清除防抖定时器
         clearDebounceTimer();
+
+        // 【修改】不在这里设置加载动画，由调用方设置
+        console.log('🔄 loadCardData：加载文件数据');
 
         // 先清空卡牌类型，触发表单卸载
         currentCardType.value = '';
@@ -911,49 +928,46 @@ const loadCardData = async () => {
         setTimeout(() => {
             saveOriginalData();
             console.log('💾 原始数据已保存，当前卡牌类型:', currentCardType.value);
-            // 加载完成后自动生成预览
-            autoGeneratePreview();
+            // 【关键】加载完成后自动生成预览，并结束加载动画
+            autoGeneratePreview(true);
         }, 100);
 
         // 双面卡牌额外处理：确保图片预览立即更新
         if (cardData.version === '2.0') {
             console.log('🔄 检测到双面卡牌，立即触发预览更新');
             setTimeout(() => {
-                autoGeneratePreview();
+                autoGeneratePreview(true);
             }, 200);
         }
     } catch (error) {
-        console.error('加载卡牌数据失败:', error);
+        loadError = error; // 赋值给外部变量
+        console.error('加载卡牌数据失败:', loadError);
         message.error(t('cardEditor.panel.loadCardDataFailed'));
-    }
-};
+    } finally {
+        // 【修改】检查是否有加载错误
+        if (loadError) {
+            // 文件加载失败，结束加载动画
+            setTimeout(() => {
+                imagePreviewLoading.value = false;
+                emit('update-preview-loading', false);
+                console.log('❌ 文件加载失败，隐藏卡牌形状加载动画');
+            }, 300);
+        } else {
+            console.log('✅ 文件加载成功，等待自动生成完成');
 
-// 生成卡图的通用方法
-const generateCardImage = async (): Promise<string | { front: string; back?: string } | null> => {
-    // 验证卡牌数据
-    const validation = CardService.validateCardData(currentCardData as CardData);
-    if (!validation.isValid) {
-        message.error(`${t('cardEditor.panel.cardDataValidationFailed')}: ` + validation.errors.join(', '));
-        return null;
-    }
+            // 【重要】检查是否有有效数据
+            const hasValidData = currentCardData.name && currentCardData.name.trim() &&
+                currentCardData.type && currentCardData.type.trim();
 
-    try {
-        const result_card = await CardService.generateCard(currentCardData as CardData);
-        const imageBase64 = result_card?.image;
-
-        // 检查是否为双面卡牌
-        if (result_card?.back_image) {
-            return {
-                front: imageBase64,
-                back: result_card.back_image
-            };
+            if (!hasValidData) {
+                // 新创建的空卡牌，直接结束加载动画
+                imagePreviewLoading.value = false;
+                emit('update-preview-loading', false);
+                console.log('⚠️ 新卡牌无有效数据，结束卡牌形状加载动画');
+            } else {
+                console.log('✅ 文件加载成功，有有效数据，等待自动生成完成');
+            }
         }
-
-        return imageBase64;
-    } catch (error) {
-        console.error('生成卡图失败:', error);
-        message.error(`${t('cardEditor.panel.generateCardImageFailed')}: ${error.message || '未知错误'}`);
-        return null;
     }
 };
 
@@ -1073,6 +1087,11 @@ const saveAndSwitch = async () => {
 
             console.log('✅ 保存后编辑器状态重置完成，开始加载新卡牌数据');
 
+            // 【新增】保存并切换文件时显示加载动画
+            imagePreviewLoading.value = true;
+            emit('update-preview-loading', true);
+            console.log('🔄 保存并切换文件，开始显示卡牌形状加载动画');
+
             // 触发文件切换逻辑
             await loadCardData();
         } else {
@@ -1107,6 +1126,11 @@ const discardChanges = () => {
         Object.keys(currentCardData).forEach(key => {
             delete currentCardData[key];
         });
+
+        // 【新增】放弃修改并切换文件时显示加载动画
+        imagePreviewLoading.value = true;
+        emit('update-preview-loading', true);
+        console.log('🔄 放弃修改并切换文件，开始显示卡牌形状加载动画');
 
         // 等待DOM更新，确保状态完全重置
         nextTick(() => {
@@ -1192,14 +1216,21 @@ const previewCard = async () => {
         // 清除防抖定时器，避免重复生成
         clearDebounceTimer();
 
-        const imageBase64 = await generateCardImage();
-        if (imageBase64) {
-            emit('update-preview-image', imageBase64);
-            message.success(t('cardEditor.panel.cardPreviewGenerated'));
-        }
+        // 【移除】手动预览时不显示卡牌形状加载动画
+        // imagePreviewLoading.value = true;
+        // emit('update-preview-loading', true);
+        console.log('🔄 手动预览卡图，不显示特殊加载动画');
+
+        // 【重要】调用统一的autoGeneratePreview，不结束加载动画
+        await autoGeneratePreview(false);
+        message.success(t('cardEditor.panel.cardPreviewGenerated'));
     } catch (error) {
         console.error('预览卡图失败:', error);
     } finally {
+        // 【移除】手动预览时不显示卡牌形状加载动画
+        // imagePreviewLoading.value = false;
+        // emit('update-preview-loading', false);
+        console.log('✅ 手动预览完成');
         generating.value = false;
     }
 };
@@ -1344,6 +1375,11 @@ watch(() => props.selectedFile, async (newFile, oldFile) => {
     // 没有未保存修改，直接切换
     originalFileInfo.value = null;
     if (newFile && newFile.type === 'card') {
+        // 【新增】直接切换文件时显示加载动画
+        imagePreviewLoading.value = true;
+        emit('update-preview-loading', true);
+        console.log('🔄 直接切换文件，开始显示卡牌形状加载动画');
+
         await loadCardData();
     } else {
         clearFormData();

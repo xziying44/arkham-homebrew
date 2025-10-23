@@ -29,6 +29,7 @@
       @toggle-image-preview="toggleImagePreview"
       @update-preview-image="updatePreviewImage"
       @update-preview-side="updatePreviewSide"
+      @update-preview-loading="updatePreviewLoading"
       @refresh-file-tree="refreshFileTree"
     />
 
@@ -48,6 +49,7 @@
       :image-key="typeof selectedFile?.path === 'string' ? selectedFile.path : null"
       :current-side="currentPreviewSide"
       :is-mobile="isMobile"
+      :is-loading="imagePreviewLoading"
       @toggle="toggleImagePreview"
       @update-side="updatePreviewSideFromImage"
       ref="imagePreviewRef"
@@ -102,6 +104,7 @@
           :image-key="typeof selectedFile?.path === 'string' ? selectedFile.path : null"
           :current-side="currentPreviewSide"
           :is-mobile="true"
+          :is-loading="imagePreviewLoading"
           @update-side="updatePreviewSideFromImage"
           ref="mobileImagePreviewRef"
         />
@@ -170,6 +173,9 @@ const selectedFile = ref<TreeOption | null>(null);
 // 图片预览
 const currentImage = ref('');
 const currentPreviewSide = ref<'front' | 'back'>('front');
+
+// 图片预览加载状态
+const imagePreviewLoading = ref(false);
 const imagePreviewRef = ref();
 const formEditPanelRef = ref();
 const fileTreeRef = ref();
@@ -300,6 +306,12 @@ const updatePreviewImage = (imageBase64: string) => {
   // 因为子组件现在会根据 imageKey 的变化自动处理
   // const previewRef = shouldShowImagePreview.value ? imagePreviewRef : mobileImagePreviewRef;
   // previewRef.value?.fitToContainer();
+};
+
+// 处理图片预览加载状态更新
+const updatePreviewLoading = (loading: boolean) => {
+  imagePreviewLoading.value = loading;
+  console.log(`🔄 WorkspaceMain 接收到加载状态更新: ${loading ? '显示' : '隐藏'} 加载动画`);
 };
 
 // 处理编辑器端的面切换

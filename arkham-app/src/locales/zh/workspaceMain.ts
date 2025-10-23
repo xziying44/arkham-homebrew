@@ -257,6 +257,7 @@ export default {
     emptyText: '选择图片进行预览',
     frontSide: '正面',
     backSide: '反面',
+    loadingText: '正在生成卡牌...',
     controls: {
       zoomIn: '放大',
       zoomOut: '缩小',

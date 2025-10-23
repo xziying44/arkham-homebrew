@@ -28,7 +28,18 @@
         </n-button-group>
       </div>
 
-      <div v-if="displayedImage" class="image-viewer" :class="{ 'is-dragging': isDragging }" @wheel="handleImageWheel"
+      <!-- 加载动画 - 卡牌形状毛玻璃背景 -->
+      <div v-if="props.isLoading" class="card-loading-animation">
+        <div class="card-shape">
+          <div class="card-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">{{ $t('workspaceMain.imagePreview.loadingText') }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 实际图片显示 -->
+      <div v-else-if="displayedImage" class="image-viewer" :class="{ 'is-dragging': isDragging }" @wheel="handleImageWheel"
         @mousedown="startImageDrag">
         <img :src="displayedImage" alt="预览图片" :style="{
           transform: `scale(${imageScale}) translate(${imageOffsetX}px, ${imageOffsetY}px)`,
@@ -36,6 +47,7 @@
         }" draggable="false" class="preview-image" @load="onImageLoad" />
       </div>
 
+      <!-- 空状态占位符 -->
       <div v-else class="image-placeholder">
         <n-empty :description="$t('workspaceMain.imagePreview.emptyText')" size="large">
           <template #icon>
@@ -83,6 +95,8 @@ interface Props {
   imageKey: string | null;
   // 新增：当前要显示的面
   currentSide: 'front' | 'back';
+  // 新增：是否显示加载动画
+  isLoading?: boolean;
 }
 
 const props = defineProps<Props>();
@@ -479,5 +493,155 @@ onUnmounted(() => {
   padding: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* 卡牌加载动画样式 */
+.card-loading-animation {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: radial-gradient(circle at center, rgba(102, 126, 234, 0.05) 0%, transparent 70%);
+}
+
+.card-shape {
+  width: 280px;
+  height: 390px;
+  background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(255, 255, 255, 0.1) 100%);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.1),
+    0 0 80px rgba(102, 126, 234, 0.1),
+    inset 0 0 20px rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+  animation: cardFloat 3s ease-in-out infinite;
+}
+
+.card-shape::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg,
+    transparent 30%,
+    rgba(102, 126, 234, 0.1) 50%,
+    transparent 70%);
+  animation: cardShine 4s ease-in-out infinite;
+}
+
+.card-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(102, 126, 234, 0.1);
+  border-top: 4px solid #667eea;
+  border-radius: 50%;
+  animation: spinnerRotation 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+.loading-text {
+  font-size: 16px;
+  font-weight: 500;
+  color: #667eea;
+  text-align: center;
+  animation: textPulse 2s ease-in-out infinite;
+}
+
+/* 加载动画关键帧 */
+@keyframes cardFloat {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-8px) scale(1.02);
+  }
+}
+
+@keyframes cardShine {
+  0% {
+    transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  }
+  50% {
+    transform: translateX(100%) translateY(100%) rotate(45deg);
+  }
+  100% {
+    transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  }
+}
+
+@keyframes spinnerRotation {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes textPulse {
+  0%, 100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .card-shape {
+    width: 220px;
+    height: 308px;
+  }
+
+  .loading-spinner {
+    width: 36px;
+    height: 36px;
+    border-width: 3px;
+    margin-bottom: 16px;
+  }
+
+  .loading-text {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .card-shape {
+    width: 180px;
+    height: 252px;
+  }
+
+  .loading-spinner {
+    width: 32px;
+    height: 32px;
+    margin-bottom: 12px;
+  }
+
+  .loading-text {
+    font-size: 12px;
+  }
 }
 </style>

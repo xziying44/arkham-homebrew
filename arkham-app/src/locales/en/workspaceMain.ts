@@ -260,6 +260,7 @@ export default {
     emptyText: 'Select an image to preview',
     frontSide: 'Front',
     backSide: 'Back',
+    loadingText: 'Generating card...',
     controls: {
       zoomIn: 'Zoom In',
       zoomOut: 'Zoom Out',
