@@ -7,7 +7,7 @@ import sys
 import threading
 import time
 import traceback
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional, Union, Tuple
 
 from PIL import Image
 
@@ -514,6 +514,41 @@ class WorkspaceManager:
                 picture_path = full_picture_path
         return picture_path
 
+    @staticmethod
+    def center_crop_if_larger(image: Image.Image, target_size: Tuple[int, int]) -> Image.Image:
+        """
+        如果图片大于目标大小，则中心裁剪到目标大小；否则返回原图
+
+        Args:
+            image: PIL图片对象
+            target_size: 目标大小，格式为 (width, height)
+
+        Returns:
+            处理后的PIL图片对象
+        """
+        target_width, target_height = target_size
+        img_width, img_height = image.size
+
+        # 如果图片的宽度和高度都小于目标大小，返回原图
+        if img_width <= target_width and img_height <= target_height:
+            return image
+
+        # 计算裁剪区域
+        # 如果某个维度小于目标大小，使用原始大小
+        crop_width = min(img_width, target_width)
+        crop_height = min(img_height, target_height)
+
+        # 计算中心点裁剪的左上角坐标
+        left = (img_width - crop_width) // 2
+        top = (img_height - crop_height) // 2
+        right = left + crop_width
+        bottom = top + crop_height
+
+        # 裁剪图片
+        cropped_image = image.crop((left, top, right, bottom))
+
+        return cropped_image
+
     def generate_card_image(self, json_data: Dict[str, Any], silence=False):
         """
         生成卡图
@@ -537,11 +572,13 @@ class WorkspaceManager:
             card_type = json_data.get('type', '')
             cardback_filename = None
             if card_type == '玩家卡背':
-                # 生成玩家卡背
                 cardback_filename = 'cardback/player-back.jpg'
             elif card_type == '遭遇卡背':
-                # 生成遭遇卡背
                 cardback_filename = 'cardback/encounter-back.jpg'
+            elif card_type == '定制卡背':
+                cardback_filename = 'cardback/upgrade-back.png'
+            elif card_type == '敌库卡背':
+                cardback_filename = 'cardback/enemy-back.png'
             if cardback_filename:
                 cardback_path = os.path.join('.', cardback_filename)
                 # 如果是PyInstaller打包的程序
@@ -551,6 +588,8 @@ class WorkspaceManager:
                 if os.path.exists(cardback_path):
                     # 创建Card对象并设置图片
                     cardback_pil = Image.open(cardback_path)
+                    # 裁剪图片到指定大小
+                    cardback_pil = self.center_crop_if_larger(cardback_pil, (739, 1049))
                     card = Card(cardback_pil.width, cardback_pil.height, image=cardback_pil)
                     card.image = cardback_pil
                     return card

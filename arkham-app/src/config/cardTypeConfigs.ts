@@ -1625,7 +1625,17 @@ export const cardBackConfigs: Record<string, CardTypeConfig> = {
     field_type_display: '🎯 遭遇卡背',
     card_category: 'encounter',
     fields: []
-  }
+  },
+  '定制卡背': {
+    field_type_display: '🃏 定制卡背',
+    card_category: 'player',
+    fields: []
+  },
+  '敌库卡背': {
+    field_type_display: '👹 敌库卡背',
+    card_category: 'encounter',
+    fields: []
+  },
 };
 
 export const cardTypeOptions = [
@@ -1649,11 +1659,13 @@ export const cardTypeOptions = [
   { label: '--- 系统预设 ---', value: '__divider__', disabled: true },
   { label: cardBackConfigs['玩家卡背'].field_type_display, value: '玩家卡背' },
   { label: cardBackConfigs['遭遇卡背'].field_type_display, value: '遭遇卡背' },
+  { label: cardBackConfigs['定制卡背'].field_type_display, value: '定制卡背' },
+  { label: cardBackConfigs['敌库卡背'].field_type_display, value: '敌库卡背' },
 ];
 
 // 获取卡牌类型对应的默认背面配置
 export const getDefaultBackType = (frontType: string): { type: string; is_back?: boolean } | null => {
-  const playerCardTypes = ['支援卡', '事件卡', '技能卡', '定制卡'];
+  const playerCardTypes = ['支援卡', '事件卡', '技能卡'];
   const encounterCardTypes = ['故事卡', '诡计卡', '敌人卡'];
 
   if (playerCardTypes.includes(frontType)) {
@@ -1662,6 +1674,10 @@ export const getDefaultBackType = (frontType: string): { type: string; is_back?:
 
   if (encounterCardTypes.includes(frontType)) {
     return { type: '遭遇卡背' };
+  }
+
+  if (frontType === '定制卡') {
+    return { type: '定制卡背' };
   }
 
   if (frontType === '地点卡') {
