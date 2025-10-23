@@ -294,7 +294,12 @@ const getFieldLayoutClass = (layout: string = 'full') => {
 const getFieldValue = (field: FormField) => {
     if (field.index !== undefined) {
         const array = getDeepValue(sideCardData, field.key);
-        return Array.isArray(array) ? array[field.index] : undefined;
+        if (Array.isArray(array)) {
+            return array[field.index] !== undefined ? array[field.index] : '';
+        }
+        // 如果不是数组，尝试从旧的单值格式读取
+        const oldValue = getDeepValue(sideCardData, field.key);
+        return oldValue !== undefined ? oldValue : '';
     }
     return getDeepValue(sideCardData, field.key);
 };
@@ -315,12 +320,13 @@ const getDeepValue = (obj: any, path: string) => {
 const setFieldValue = (field: FormField, value: any) => {
     if (field.index !== undefined) {
         setArrayValue(field.key, field.index, value);
+        // 对于带索引的字段，传递完整的字段标识符
+        updateSideData(`${field.key}[${field.index}]`, value);
     } else {
         setDeepValue(sideCardData, field.key, value);
+        // 通知父组件数据变化
+        updateSideData(field.key, value);
     }
-
-    // 通知父组件数据变化
-    updateSideData(field.key, value);
 };
 
 const setDeepValue = (obj: any, path: string, value: any) => {

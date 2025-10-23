@@ -682,7 +682,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         type: 'number',
         layout: 'quarter',
         min: 1,
-        max: 9
+        max: 19
       },
       {
         key: 'attribute',
@@ -691,7 +691,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         type: 'number',
         layout: 'quarter',
         min: 1,
-        max: 9
+        max: 19
       },
       {
         key: 'attribute',
@@ -700,7 +700,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         type: 'number',
         layout: 'quarter',
         min: 1,
-        max: 9
+        max: 19
       },
       {
         key: 'attribute',
@@ -709,7 +709,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         type: 'number',
         layout: 'quarter',
         min: 1,
-        max: 9
+        max: 19
       },
       {
         key: 'health',

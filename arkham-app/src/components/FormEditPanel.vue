@@ -366,13 +366,46 @@ const lastDataSnapshot = ref<string>('');
 
 // 【新增】处理面数据更新的函数
 const updateCardSideData = (side: string, fieldKey: string, value: any) => {
-    if (side === 'back') {
-        if (!currentCardData.back) {
-            currentCardData.back = {};
+    // 检查是否为带索引的字段（如 "attribute[0]"）
+    const indexedFieldMatch = fieldKey.match(/^(.+)\[(\d+)\]$/);
+
+    if (indexedFieldMatch) {
+        // 处理带索引的字段
+        const baseKey = indexedFieldMatch[1];
+        const index = parseInt(indexedFieldMatch[2]);
+
+        if (side === 'back') {
+            if (!currentCardData.back) {
+                currentCardData.back = {};
+            }
+            if (!Array.isArray(currentCardData.back[baseKey])) {
+                currentCardData.back[baseKey] = [];
+            }
+            // 确保数组长度足够
+            while (currentCardData.back[baseKey].length <= index) {
+                currentCardData.back[baseKey].push(undefined);
+            }
+            currentCardData.back[baseKey][index] = value;
+        } else {
+            if (!Array.isArray(currentCardData[baseKey])) {
+                currentCardData[baseKey] = [];
+            }
+            // 确保数组长度足够
+            while (currentCardData[baseKey].length <= index) {
+                currentCardData[baseKey].push(undefined);
+            }
+            currentCardData[baseKey][index] = value;
         }
-        currentCardData.back[fieldKey] = value;
     } else {
-        currentCardData[fieldKey] = value;
+        // 处理普通字段
+        if (side === 'back') {
+            if (!currentCardData.back) {
+                currentCardData.back = {};
+            }
+            currentCardData.back[fieldKey] = value;
+        } else {
+            currentCardData[fieldKey] = value;
+        }
     }
     // 触发防抖预览更新
     triggerDebouncedPreviewUpdate();
@@ -782,6 +815,16 @@ const loadCardData = async () => {
         const cardData = JSON.parse(content || '{}');
 
         // 加载新数据 - 修复：确保deck_options等关键字段正确加载
+        const processedCardData = { ...cardData };
+
+        // 处理调查员属性字段的兼容性
+        if (processedCardData.type === '调查员' && processedCardData.attribute !== undefined && !Array.isArray(processedCardData.attribute)) {
+            // 如果attribute是单个值，转换为数组格式（向后兼容）
+            const oldValue = processedCardData.attribute;
+            processedCardData.attribute = [oldValue, undefined, undefined, undefined]; // 意志、智力、战力、敏捷
+            console.log('🔄 转换调查员属性为现代数组格式:', processedCardData.attribute);
+        }
+
         Object.assign(currentCardData, {
             type: '',
             name: '',
@@ -789,7 +832,7 @@ const loadCardData = async () => {
             created_at: '',
             version: '1.0',
             language: 'zh', // 新增：默认语言
-            ...cardData
+            ...processedCardData
         });
 
         // 修复：确保deck_options字段被正确处理
@@ -1169,6 +1212,11 @@ const resetForm = () => {
         quantity: hiddenData.quantity || 1,
         back: backData
     });
+
+    // 如果是调查员卡，重置属性数组
+    if (currentCardData.type === '调查员') {
+        currentCardData.attribute = [];
+    }
 
     currentCardType.value = '';
     saveOriginalData();
