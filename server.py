@@ -1,5 +1,6 @@
 import json
 import os
+import platform
 import queue
 import sys
 import threading
@@ -17,7 +18,43 @@ from bin.logger import logger_manager
 from bin.workspace_manager import WorkspaceManager
 from bin.image_uploader import create_uploader
 
+
 # 导入日志系统
+# ============================================
+# 辅助函数：获取用户可写的配置目录
+# ============================================
+def get_user_config_directory():
+    """
+    获取用户配置目录（兼容开发和打包环境）
+
+    Returns:
+        str: 用户配置目录的绝对路径
+    """
+    system = platform.system()
+    if getattr(sys, 'frozen', False):
+        # ===== 打包应用 =====
+        if system == 'Darwin':  # macOS
+            # macOS：使用标准应用支持目录
+            config_dir = os.path.expanduser('~/Library/Application Support/ArkhamCardMaker')
+        elif system == 'Windows':  # Windows
+            # Windows：使用程序运行目录（便携模式）
+            if hasattr(sys, '_MEIPASS'):
+                # PyInstaller 打包：exe 所在目录
+                exe_dir = os.path.dirname(sys.executable)
+            else:
+                exe_dir = os.path.dirname(os.path.abspath(__file__))
+            config_dir = os.path.join(exe_dir, 'config')
+        else:  # Linux 或其他系统
+            # Linux：使用用户配置目录
+            config_dir = os.path.expanduser('~/.config/arkham-card-maker')
+    else:
+        # 开发环境 - 使用项目根目录
+        config_dir = os.path.dirname(os.path.abspath(__file__))
+
+    # 确保目录存在
+    os.makedirs(config_dir, exist_ok=True)
+    return config_dir
+
 
 app = Flask(__name__)
 if not hasattr(app, 'window'):
@@ -822,12 +859,12 @@ def save_card():
 def get_config():
     """获取配置项"""
     if current_workspace is None:
-        # 创建临时WorkspaceManager实例来获取全局配置
-        temp_workspace = WorkspaceManager(os.getcwd())
+        # ✅ 修复：使用用户可写的配置目录
+        config_dir = get_user_config_directory()
+        temp_workspace = WorkspaceManager(config_dir)
         config = temp_workspace.get_global_config()
     else:
         config = current_workspace.get_config()
-
     logger_manager.debug("获取配置成功")
     return jsonify(create_response(
         msg="获取配置成功",
@@ -845,17 +882,15 @@ def save_config():
             code=6002,
             msg="请提供配置数据"
         )), 400
-
     config = data['config']
     logger_manager.info("保存配置")
-
     if current_workspace is None:
-        # 创建临时WorkspaceManager实例来保存全局配置
-        temp_workspace = WorkspaceManager(os.getcwd())
+        # ✅ 修复：使用用户可写的配置目录
+        config_dir = get_user_config_directory()
+        temp_workspace = WorkspaceManager(config_dir)
         success = temp_workspace.save_global_config(config)
     else:
         success = current_workspace.save_config(config)
-
     if success:
         logger_manager.info("配置保存成功")
         return jsonify(create_response(msg="保存配置成功"))
