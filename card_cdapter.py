@@ -8,27 +8,6 @@ from ResourceManager import FontManager
 
 class CardAdapter:
     """卡牌适配器 - 将卡牌JSON中的标签转化为统一的emoji格式"""
-    # 语言特定的引号映射
-    QUOTE_MAPPINGS = {
-        'en': {
-            'single_open': '‘',
-            'single_close': '’',
-            'double_open': '“',
-            'double_close': '”'
-        },
-        'pl': {
-            'single_open': '‘',
-            'single_close': '’',
-            'double_open': '„',
-            'double_close': '”'
-        },
-        'zh': {
-            'single_open': '‘',
-            'single_close': '’',
-            'double_open': '“',
-            'double_close': '”'
-        }
-    }
     # 静态转化表：(正则模式, emoji结果)
     CONVERSION_RULES: List[Tuple[str, str]] = [
         # Punctuation replacements (must come early, order matters!)
@@ -102,18 +81,12 @@ class CardAdapter:
         self.font_manager = font_manager
         self.lang = font_manager.lang if hasattr(font_manager, 'lang') else 'en'
 
-        # 获取当前语言的引号配置
-        quote_config = self.QUOTE_MAPPINGS.get(self.lang, self.QUOTE_MAPPINGS['en'])
 
         fullname = self.original_data.get('name', '')
         if not isinstance(fullname, str):
             fullname = ''
         fullname = self.clean_name(fullname)
         self.conversion_rules = self.get_conversion_rules() + [
-            # 语言特定的引号替换
-            (r'"(.*?)"', f'{quote_config["double_open"]}\\1{quote_config["double_close"]}'),
-            (r"'(.*?)'", f'{quote_config["single_open"]}\\1{quote_config["single_close"]}'),
-
             (r"<pre>|<猎物>", font_manager.get_font_text('prey')),
             (r"<spa>|<生成>", font_manager.get_font_text('spawn')),
             (r"<for>|<强制>", font_manager.get_font_text('forced')),
@@ -224,17 +197,9 @@ class CardAdapter:
         """
         result = text
 
-        # 首先处理转义的引号，将它们转换为占位符
-        result = re.sub(r'\\"', '（引号双）', result)
-        result = re.sub(r"\\'", '（引号单）', result)
-
         # 应用所有转换规则
         for pattern, replacement in self._compiled_rules:
             result = pattern.sub(replacement, result)
-
-        # 恢复转义的引号
-        result = result.replace('（引号双）', '"')
-        result = result.replace('（引号单）', "'")
 
         # 原有的其他清理操作
         result = result.replace('\{', '{')
