@@ -639,9 +639,9 @@ class Card:
 
         :param cost: 费用
         """
-        default_position = [(70, 50), (70, 40)]
+        default_position = [(70, 50), (70, 50)]
         if self.card_class == '弱点':
-            default_position = [(74, 50), (74, 40)]
+            default_position = [(71, 53), (71, 53)]
         if 0 <= cost < 100:
             self.draw_centered_text(
                 position=default_position[0],
@@ -899,10 +899,10 @@ class Card:
         investigator_width = 0
         investigator_font = None
         # 画调查员标
-        if '<调查员>' in text:
+        if '<调查员>' in text or '<per>' in text:
             try:
                 if int(number) > 0:
-                    investigator_font = self.font_manager.get_font('arkham-icons', 24)
+                    investigator_font = self.font_manager.get_font('arkham-icons', 27)
                     investigator_width, _ = self._get_text_dimensions('v', investigator_font)
             except:
                 pass
@@ -914,13 +914,13 @@ class Card:
         if number == 'x' and self.card_type in ['场景卡', '密谋卡']:
             y -= 4
         self.draw.text((x, y), number, font=font, fill=color, stroke_width=2, stroke_fill=stroke_color)
-        # 加入标记数据
-        if number == 'x':
-            number = '无'
         # 画调查员
         if investigator_font is not None:
-            x = position[0] + number_width // 2 - investigator_width // 2 + 4
-            self.draw.text((x, y + 3), 'v', font=investigator_font, fill=color, stroke_width=1,
+            rate = 5
+            if self.card_type in ['敌人卡']:
+                rate = 10
+            x = position[0] + number_width // 2 - investigator_width // 2 + 2
+            self.draw.text((x, y + font_size // rate), 'v', font=investigator_font, fill=color, stroke_width=2,
                            stroke_fill=stroke_color)
 
     def set_basic_weakness_icon(self):

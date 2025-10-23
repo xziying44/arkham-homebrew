@@ -1750,40 +1750,26 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "升级卡",
-        "name": "<uni>Terror of the Stars",
+        "type": "场景卡",
+        "name": "Search for a Camp Site",
         "id": "",
         "created_at": "",
         "version": "2.0",
         "language": "en",
-        "back": {
-            "type": "",
-            "language": "en"
-        },
         "deck_options": [],
-        "class": "",
-        "subtitle": "Bringer of Ice and Death",
-        "attack": "4",
-        "enemy_health": "3",
-        "evade": "3",
-        "enemy_damage": 2,
-        "enemy_damage_horror": 2,
-        "traits": [
-            "Monster",
-            "Eidolon",
-            "Elite"
-        ],
-        "body": "<反应> When a card you",
-        "victory": 1,
-        "encounter_group": "",
-        "encounter_group_number": "5/5",
-        "card_number": "22",
-        "illustrator": "Apterus",
+        "serial_number": "1a",
+        "threshold": "2<per>",
+        "flavor": "You’re going to have to find a way back to camp, and soon...or you'll have to make due camping in the wilds.",
+        "body": "<act> If each investigator is at the same location and that location has no clues on it: <b>Resign.</b> You set up camp. Each investigator resigns.\n<b>Objective –</b> Find somewhere safe to set up camp. If each undefeated investigator has resigned, advance. The higher the shelter value of the location they resigned at, the better.\n",
+        "encounter_group": "edge_of_the_earth_the_crash",
+        "card_number": "21",
+        "encounter_group_number": "4/5",
+        "illustrator": "Juan Carlos Barquet",
         "picture_layout": {
             "mode": "custom",
             "offset": {
-                "x": 0,
-                "y": -229
+                "x": -210,
+                "y": 0
             },
             "scale": 1,
             "crop": {
