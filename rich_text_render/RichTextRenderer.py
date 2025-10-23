@@ -524,7 +524,7 @@ class RichTextRenderer:
                             # 释放缓存
                             success = virtual_text_box.push(push_cache)
                             success = virtual_text_box.push(text_object)
-                            push_cache = []
+                            push_cache.clear()
                         else:
                             # 暂存
                             push_cache.append(text_object)
@@ -539,7 +539,7 @@ class RichTextRenderer:
             elif item.tag == "br":
                 if len(push_cache) > 0:
                     success = virtual_text_box.push(push_cache)
-                    push_cache = []
+                    push_cache.clear()
                 if html_tag_stack.get_top() == 'body':
                     success = virtual_text_box.new_paragraph()
                 else:
@@ -547,7 +547,7 @@ class RichTextRenderer:
             elif item.tag == "par":
                 if len(push_cache) > 0:
                     success = virtual_text_box.push(push_cache)
-                    push_cache = []
+                    push_cache.clear()
                 success = virtual_text_box.new_paragraph()
             elif item.tag == "font":
                 font_name = item.attributes.get('name', base_options.font_name)
