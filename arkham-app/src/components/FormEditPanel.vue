@@ -396,6 +396,24 @@ const updateCardSideData = (side: string, fieldKey: string, value: any) => {
             }
             currentCardData[baseKey][index] = value;
         }
+    } else if (fieldKey.includes('.')) {
+        // 处理多级字段（如 "scenario_card.skull"）
+        const keys = fieldKey.split('.');
+        const targetObj = side === 'back' ?
+            (currentCardData.back || (currentCardData.back = {})) :
+            currentCardData;
+
+        // 设置深层嵌套值
+        let current = targetObj;
+        for (let i = 0; i < keys.length - 1; i++) {
+            const key = keys[i];
+            if (!current[key] || typeof current[key] !== 'object') {
+                current[key] = {};
+            }
+            current = current[key];
+        }
+        current[keys[keys.length - 1]] = value;
+        console.log(`🔧 设置多级字段: ${fieldKey} = ${value}`, targetObj);
     } else {
         // 处理普通字段
         if (side === 'back') {
