@@ -90,8 +90,8 @@
                     </div>
                 </div>
                 <div class="form-row">
-                    <!-- 卡牌数量 -->
-                    <div class="form-field layout-half">
+                    <!-- 卡牌数量 - 正面可编辑，背面只读 -->
+                    <div class="form-field layout-half" v-if="props.side === 'front'">
                         <FormFieldComponent :field="{
                             key: 'quantity',
                             name: $t('cardEditor.panel.cardQuantity'),
@@ -99,12 +99,19 @@
                             min: 1,
                             max: 999,
                             defaultValue: 1
-                        }" :value="sideCardData.quantity || 1" :new-string-value="newStringValue"
-                            @update:value="updateSideData('quantity', $event)"
+                        }" :value="quantity" :new-string-value="newStringValue"
+                            @update:value="quantity = $event"
                             @update:new-string-value="newStringValue = $event" />
                     </div>
+                    <!-- 卡牌数量 - 背面显示只读 -->
+                    <div class="form-field layout-half" v-else>
+                        <n-form-item :label="$t('cardEditor.panel.cardQuantity')">
+                            <n-input-number :value="quantity" readonly :precision="0" :min="1" :max="999"
+                                style="width: 100%" />
+                        </n-form-item>
+                    </div>
                     <!-- 卡牌版权信息 -->
-                    <div class="form-field layout-half">
+                    <div class="form-field layout-half" v-if="props.side === 'front'">
                         <FormFieldComponent :field="{
                             key: 'footer_copyright',
                             name: $t('cardEditor.panel.copyright'),
@@ -114,9 +121,16 @@
                             @update:value="updateSideData('footer_copyright', $event)"
                             @update:new-string-value="newStringValue = $event" />
                     </div>
+                    <!-- 版权信息 - 背面显示只读 -->
+                    <div class="form-field layout-half" v-else>
+                        <n-form-item :label="$t('cardEditor.panel.copyright')">
+                            <n-input :value="props.cardData.footer_copyright || ''" readonly
+                                :placeholder="'例如：© 2024 Fantasy Flight Games'" style="width: 100%" />
+                        </n-form-item>
+                    </div>
                 </div>
-                <div class="form-row">
-                    <!-- 卡牌备注信息 -->
+                <div class="form-row" v-if="props.side === 'front'">
+                    <!-- 卡牌备注信息 - 只在正面显示 -->
                     <div class="form-field layout-full">
                         <FormFieldComponent :field="{
                             key: 'remark',
@@ -127,6 +141,16 @@
                         }" :value="sideCardData.requirements || ''" :new-string-value="newStringValue"
                             @update:value="updateSideData('requirements', $event)"
                             @update:new-string-value="newStringValue = $event" />
+                    </div>
+                </div>
+                <div class="form-row" v-else>
+                    <!-- 卡牌备注信息 - 背面显示只读 -->
+                    <div class="form-field layout-full">
+                        <n-form-item :label="$t('cardEditor.panel.cardRemarks')">
+                            <n-input :value="props.cardData.requirements || ''" readonly type="textarea"
+                                :rows="2" :maxlength="200"
+                                :placeholder="'请在这里输入卡牌备注信息...'" style="width: 100%" />
+                        </n-form-item>
                     </div>
                 </div>
             </n-form>
@@ -172,6 +196,24 @@ const currentLanguage = computed({
     set: (value) => {
         sideCardData.language = value;
         updateSideData('language', value);
+    }
+});
+
+// 获取共享的卡牌数量（正面和背面都使用同一个数量）
+const quantity = computed({
+    get: () => {
+        // 对于背面，从props中获取正面数据
+        if (props.side === 'back') {
+            return props.cardData.quantity || 1;
+        }
+        // 对于正面，从sideCardData获取
+        return sideCardData.quantity || 1;
+    },
+    set: (value) => {
+        // 只允许正面修改数量
+        if (props.side === 'front') {
+            updateSideData('quantity', value);
+        }
     }
 });
 
@@ -433,8 +475,8 @@ const updateLanguage = (value: string) => {
 
 // 卡牌类型变更处理
 const onCardTypeChange = (newType: string) => {
-    // 保留需要保留的字段
-    const hiddenFields = ['id', 'created_at', 'version', 'type', 'name', 'language', 'quantity', 'footer_copyright'];
+    // 保留需要保留的字段（移除quantity，因为现在是共享的）
+    const hiddenFields = ['id', 'created_at', 'version', 'type', 'name', 'language', 'footer_copyright'];
     const newData = {};
 
     hiddenFields.forEach(field => {

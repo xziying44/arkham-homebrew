@@ -75,7 +75,7 @@ export default {
     // Card info
     cardInfo: 'Card Information',
     illustrator: '🎨 Illustrator',
-    encounterGroupNumber: '📋 Encounter Group Number',
+    encounterGroupNumber: '📋 Encounter Group',
     cardNumber: '📋 Card Number',
     cardRemarks: '📝 Card Notes',
     cardQuantity: 'Card Quantity',
