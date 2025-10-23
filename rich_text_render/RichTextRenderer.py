@@ -481,6 +481,10 @@ class RichTextRenderer:
         # 字体偏移量
         font_offset_y = 0
         font_addsize = 0
+
+        # push缓存
+        push_cache = []
+
         for item in parsed_items:
             success = True
             if item.tag == "text":
@@ -511,16 +515,39 @@ class RichTextRenderer:
                         )
                 else:
                     text_box = self._get_text_box(item.content, font)
-                    success = virtual_text_box.push(
-                        TextObject(item.content, font, font_name, font.size, text_box[1], text_box[0],
-                                   base_options.font_color)
-                    )
+                    text_object = TextObject(item.content, font, font_name, font.size, text_box[1], text_box[0],
+                                             base_options.font_color)
+                    if self.font_manager.lang == 'zh':
+                        virtual_text_box.push(text_object)
+                    else:
+                        if item.content == ' ':
+                            # 释放缓存
+                            success = virtual_text_box.push(push_cache)
+                            success = virtual_text_box.push(text_object)
+                            push_cache = []
+                        else:
+                            # 暂存
+                            push_cache.append(text_object)
+            elif item.tag == "nbsp":
+                # 不断行空格
+                font = font_stack.get_top()
+                font_name = font_stack.get_top_font_name()
+                text_box = self._get_text_box(' ', font)
+                text_object = TextObject(' ', font, font_name, font.size, text_box[1], text_box[0],
+                                         base_options.font_color)
+                push_cache.append(text_object)
             elif item.tag == "br":
+                if len(push_cache) > 0:
+                    success = virtual_text_box.push(push_cache)
+                    push_cache = []
                 if html_tag_stack.get_top() == 'body':
                     success = virtual_text_box.new_paragraph()
                 else:
                     success = virtual_text_box.newline()
             elif item.tag == "par":
+                if len(push_cache) > 0:
+                    success = virtual_text_box.push(push_cache)
+                    push_cache = []
                 success = virtual_text_box.new_paragraph()
             elif item.tag == "font":
                 font_name = item.attributes.get('name', base_options.font_name)
@@ -573,6 +600,8 @@ class RichTextRenderer:
 
             if not success:
                 return False, None
+        if len(push_cache) > 0:
+            virtual_text_box.push(push_cache)
 
         return True, virtual_text_box
 

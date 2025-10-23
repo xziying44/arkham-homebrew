@@ -136,13 +136,13 @@
       "upgrades": "UPGRADES",
       "victory": "Victory <X>.",
       "Illus": "Illus.",
-      "prey": "<b>Prey</b> – ",
-      "spawn": "<b>Spawn</b> – ",
-      "forced": "<b>Forced</b> – ",
-      "haunted": "<b>Haunted</b> – ",
-      "objective": "<b>Objective</b> – ",
+      "prey": "<b>Prey</b><nbsp>–",
+      "spawn": "<b>Spawn</b><nbsp>–",
+      "forced": "<b>Forced</b><nbsp>–",
+      "haunted": "<b>Haunted</b><nbsp>–",
+      "objective": "<b>Objective</b><nbsp>–",
       "patrol": "Patrol",
-      "revelation": "<b>Revelation</b> – "
+      "revelation": "<b>Revelation</b><nbsp>–"
     }
   },
   {
@@ -209,13 +209,13 @@
       "upgrades": "USPRAWNIENIE",
       "victory": "Zwycięstwo <X>.",
       "Illus": "Ilus.",
-      "prey": "<b>Polowanie</b> – ",
-      "spawn": "<b>Rozstawienie</b> – ",
-      "forced": "<b>Wymuszony</b> – ",
-      "haunted": "<b>Nawiedzona</b> – ",
-      "objective": "<b>Cel</b> – ",
+      "prey": "<b>Polowanie</b><nbsp>–",
+      "spawn": "<b>Rozstawienie</b><nbsp>–",
+      "forced": "<b>Wymuszony</b><nbsp>–",
+      "haunted": "<b>Nawiedzona</b><nbsp>–",
+      "objective": "<b>Cel</b><nbsp>–",
       "patrol": "Wędrujący",
-      "revelation": "<b>Odkrycie</b> – "
+      "revelation": "<b>Odkrycie</b><nbsp>–"
     }
   }
 ]

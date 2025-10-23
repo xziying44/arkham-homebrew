@@ -50,7 +50,8 @@ class CardAdapter:
         (r'<t>(.*?)</t>', r'{\1}'),
         (r'{{(.*?)}}', r'【\1】'),
         (r'(?<!\\)\{([^}]*)\}', r'<trait>\1</trait>'),
-        (r'\n<par>\n', '<par>')
+        (r'\n<par>\n', '<par>'),
+        (r'(?<!\\)_', '<nbsp>'),
     ]
 
     # 需要转化的字段路径配置
@@ -187,6 +188,7 @@ class CardAdapter:
             result = pattern.sub(replacement, result)
         result = result.replace('\{', '{')
         result = result.replace('\[', '[')
+        result = result.replace('\_', '_')
         return result
 
     @classmethod

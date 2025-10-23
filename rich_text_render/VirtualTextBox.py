@@ -433,7 +433,30 @@ class VirtualTextBox:
         if not self._move_to_next_line(obj.height): return False
         return self.push(obj)
 
-    def push(self, obj: DrawObject) -> bool:
+    # 在 VirtualTextBox 类中添加/修改以下方法
+
+    def push(self, obj: Union[DrawObject, List[DrawObject]]) -> bool:
+        """
+        推入一个对象或对象数组到文本框中
+
+        Args:
+            obj: 单个DrawObject或DrawObject列表。
+                 如果是列表，将作为一个整体进行排版（要么全部在当前行，要么整体换行）
+
+        Returns:
+            bool: 是否成功推入
+        """
+        # 如果是列表，调用数组处理逻辑
+        if isinstance(obj, list):
+            return self._push_array(obj)
+
+        # 原有的单个对象处理逻辑
+        return self._push_single(obj)
+
+    def _push_single(self, obj: DrawObject) -> bool:
+        """
+        推入单个对象（原push方法的逻辑）
+        """
         if not self._can_fit_vertically(obj.height):
             return False
 
@@ -450,7 +473,7 @@ class VirtualTextBox:
                 new_line_height = max(new_line_height, d_obj.height)
             self.current_line_height = max(self.current_line_height, new_line_height)
             for d_obj in dangling_objects:
-                if not self.push(d_obj):
+                if not self._push_single(d_obj):
                     return False
 
         # 检查是否是行首的空格（TextObject且内容为空格且光标在行首）
@@ -471,6 +494,88 @@ class VirtualTextBox:
         self.render_list.append(render_item)
         self.cursor_x += obj.width
         return True
+
+    def _push_array(self, objects: List[DrawObject]) -> bool:
+        """
+        推入对象数组，将数组作为一个整体进行排版
+
+        Args:
+            objects: DrawObject列表
+
+        Returns:
+            bool: 是否成功推入整个数组
+        """
+        if not objects:
+            return True
+
+        # 计算数组的总宽度和最大高度
+        total_width = sum(obj.width for obj in objects)
+        max_height = max(obj.height for obj in objects)
+
+        # 检查垂直空间是否足够
+        if not self._can_fit_vertically(max_height):
+            return False
+
+        # 检查当前行是否能容纳整个数组
+        can_fit_current = self._can_fit_in_current_line(total_width)
+
+        # 如果当前行放不下，需要换行
+        if not can_fit_current:
+            # 先处理行尾的悬挂标点
+            dangling_objects = self._pop_dangling_punctuation_from_line_end()
+
+            # 检查下一行是否有足够空间
+            if not self._can_fit_next_line(max_height):
+                return False
+
+            # 换行
+            if not self._move_to_next_line(max_height):
+                return False
+
+            # 处理悬挂的标点符号
+            for d_obj in dangling_objects:
+                if not self._push_single(d_obj):
+                    return False
+
+            # 重新检查换行后当前行是否能容纳整个数组
+            next_line_available_width = self.current_line_right - self.cursor_x
+            if total_width > next_line_available_width:
+                return False
+
+        # 现在可以放置整个数组了
+        # 保存当前行高，用于后续更新
+        array_line_y = self.cursor_y
+
+        # 逐个推入数组中的对象
+        for i, obj in enumerate(objects):
+            # 检查是否是行首的纯空格，如果是则跳过
+            if isinstance(obj, TextObject) and self.cursor_x == self.current_line_left:
+                if obj.text.strip() == '':
+                    continue
+
+            # 更新当前行高
+            self.current_line_height = max(self.current_line_height, obj.height)
+
+            # 创建渲染项
+            render_item = RenderItem(obj, self.cursor_x + obj.offset_x, self.cursor_y + obj.offset_y)
+            self.render_list.append(render_item)
+
+            # 移动光标
+            self.cursor_x += obj.width
+
+        return True
+
+    def push_array(self, objects: List[DrawObject]) -> bool:
+        """
+        推入对象数组的便捷方法（与push(list)等效）
+
+        Args:
+            objects: DrawObject列表
+
+        Returns:
+            bool: 是否成功推入整个数组
+        """
+        return self.push(objects)
 
     def _pop_dangling_punctuation_from_line_end(self) -> List[DrawObject]:
         if not self.render_list: return []
