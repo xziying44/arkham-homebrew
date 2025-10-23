@@ -127,6 +127,15 @@ OPTIONS = {
         'NSPrincipalClass': 'NSApplication',
         'NSHighResolutionCapable': True,
         'LSMinimumSystemVersion': '10.13.0',
+
+        # 添加网络和屏幕权限
+        'NSAppTransportSecurity': {
+            'NSAllowsArbitraryLoads': True,
+            'NSAllowsLocalNetworking': True
+        },
+        'NSAppleEventsUsageDescription': 'This app needs to control the browser.',
+        'NSCameraUsageDescription': 'This app may need camera access.',
+
         'CFBundleDocumentTypes': [],
         'LSArchitecturePriority': ['arm64', 'x86_64'],
     },
