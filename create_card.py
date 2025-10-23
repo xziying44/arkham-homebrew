@@ -1405,8 +1405,16 @@ class CardCreator:
         # 写序列号
         small_words = self.font_manager.get_font_text('场景') if data['type'] == '场景卡' \
             else self.font_manager.get_font_text('密谋')
-        small_words += data.get('serial_number', '')
-        card.draw_centered_text((96, 68), small_words, "卡牌类型字体", 28, (0, 0, 0))
+        small_words = small_words.upper()
+        if self.font_manager.lang != 'zh' and data['type'] != '场景卡':
+            font_size = 21
+            if self.font_manager.lang == 'pl':
+                font_size -= 4
+            card.draw_centered_text((98, 60), small_words.strip(), "卡牌类型字体", font_size, (0, 0, 0))
+            card.draw_centered_text((98, 78), data.get('serial_number', ''), "卡牌类型字体", font_size, (0, 0, 0))
+        else:
+            small_words += data.get('serial_number', '')
+            card.draw_centered_text((98, 68), small_words, "卡牌类型字体", 28, (0, 0, 0))
 
         # 写标题
         if self.font_manager.lang == 'zh':
@@ -1750,14 +1758,15 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "场景卡",
+        "type": "密谋卡",
         "name": "Search for a Camp Site",
         "id": "",
         "created_at": "",
         "version": "2.0",
         "language": "en",
         "deck_options": [],
-        "serial_number": "1a",
+        "is_back": True,
+        "serial_number": "1b",
         "threshold": "2<per>",
         "flavor": "You’re going to have to find a way back to camp, and soon...or you'll have to make due camping in the wilds.",
         "body": "<act> If each investigator is at the same location and that location has no clues on it: <b>Resign.</b> You set up camp. Each investigator resigns.\n<b>Objective –</b> Find somewhere safe to set up camp. If each undefeated investigator has resigned, advance. The higher the shelter value of the location they resigned at, the better.\n",
@@ -1800,7 +1809,7 @@ if __name__ == '__main__':
     profiler = cProfile.Profile()
     profiler.enable()
 
-    fm.set_lang('en')
+    fm.set_lang('pl')
     card = creator.create_card(json_data, picture_path=json_data.get('picture_path', None))
 
     profiler.disable()

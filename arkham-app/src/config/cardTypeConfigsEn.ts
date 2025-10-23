@@ -1281,10 +1281,6 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       },
       {
         key: 'serial_number',
-        showCondition: {
-          field: 'is_back',
-          value: false
-        },
         name: '🔢 Agenda Number',
         type: 'text',
         layout: 'half',
