@@ -287,10 +287,10 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'full',
         options: [
           { label: '🧠 Willpower', value: '意志' },
-          { label: '⚔️ Combat', value: '战力' },
-          { label: '⚡ Agility', value: '敏捷' },
+          { label: '👊 Combat', value: '战力' },
+          { label: '🦶 Agility', value: '敏捷' },
           { label: '📚 Intellect', value: '智力' },
-          { label: '🌟 Wild', value: '狂野' }
+          { label: '❓ Wild', value: '狂野' }
         ]
       },
       {
@@ -476,10 +476,10 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'full',
         options: [
           { label: '🧠 Willpower', value: '意志' },
-          { label: '⚔️ Combat', value: '战力' },
-          { label: '⚡ Agility', value: '敏捷' },
+          { label: '👊 Combat', value: '战力' },
+          { label: '🦶 Agility', value: '敏捷' },
           { label: '📚 Intellect', value: '智力' },
-          { label: '🌟 Wild', value: '狂野' }
+          { label: '❓ Wild', value: '狂野' }
         ]
       },
       {
@@ -585,10 +585,10 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'full',
         options: [
           { label: '🧠 Willpower', value: '意志' },
-          { label: '⚔️ Combat', value: '战力' },
-          { label: '⚡ Agility', value: '敏捷' },
+          { label: '👊 Combat', value: '战力' },
+          { label: '🦶 Agility', value: '敏捷' },
           { label: '📚 Intellect', value: '智力' },
-          { label: '🌟 Wild', value: '狂野' }
+          { label: '❓ Wild', value: '狂野' }
         ]
       },
       {

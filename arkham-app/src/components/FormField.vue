@@ -92,7 +92,7 @@
       <div v-if="value && value.length > 0" class="selected-items">
         <n-tag v-for="(item, index) in value" :key="index" closable @close="$emit('remove-multi-select-item', index)"
           class="item-tag">
-          {{ item }}
+          {{ getMultiSelectLabel(item, field) }}
         </n-tag>
       </div>
     </div>
@@ -375,6 +375,16 @@ const confirmEdit = () => {
 const cancelEdit = () => {
   editingIndex.value = null;
   editingValue.value = '';
+};
+
+// 获取多选组件中项目的翻译标签
+const getMultiSelectLabel = (itemValue: string, field: FormField): string => {
+  if (!field.options || !Array.isArray(field.options)) {
+    return itemValue; // 如果没有选项数组，返回原始值
+  }
+
+  const option = field.options.find(opt => opt.value === itemValue);
+  return option ? option.label : itemValue; // 找到对应选项则返回标签，否则返回原始值
 };
 
 // 去掉emoji和空格，获取纯净的字段名

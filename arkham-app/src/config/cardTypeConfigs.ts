@@ -286,10 +286,10 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'full',
         options: [
           { label: '🧠 意志', value: '意志' },
-          { label: '⚔️ 战力', value: '战力' },
-          { label: '⚡ 敏捷', value: '敏捷' },
+          { label: '👊 战力', value: '战力' },
+          { label: '🦶 敏捷', value: '敏捷' },
           { label: '📚 智力', value: '智力' },
-          { label: '🌟 狂野', value: '狂野' }
+          { label: '❓ 狂野', value: '狂野' }
         ]
       },
       {
@@ -474,10 +474,10 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'full',
         options: [
           { label: '🧠 意志', value: '意志' },
-          { label: '⚔️ 战力', value: '战力' },
-          { label: '⚡ 敏捷', value: '敏捷' },
+          { label: '👊 战力', value: '战力' },
+          { label: '🦶 敏捷', value: '敏捷' },
           { label: '📚 智力', value: '智力' },
-          { label: '🌟 狂野', value: '狂野' }
+          { label: '❓ 狂野', value: '狂野' }
         ]
       },
       {
@@ -582,10 +582,10 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'full',
         options: [
           { label: '🧠 意志', value: '意志' },
-          { label: '⚔️ 战力', value: '战力' },
-          { label: '⚡ 敏捷', value: '敏捷' },
+          { label: '👊 战力', value: '战力' },
+          { label: '🦶 敏捷', value: '敏捷' },
           { label: '📚 智力', value: '智力' },
-          { label: '🌟 狂野', value: '狂野' }
+          { label: '❓ 狂野', value: '狂野' }
         ]
       },
       {
