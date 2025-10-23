@@ -1006,7 +1006,7 @@ class CardCreator:
                          f"({self.font_manager.get_font_text('不计入卡牌张数')})" \
                          f"{self.font_manager.get_font_text('：')}" \
                          f"{card_back['requirement']}" \
-                         f"{self.font_manager.get_font_text('。')}\n"
+                         f"\n"
         if 'other' in card_back and card_back['other'] != '':
             test_text += card_back['other'] + '\n'
         if 'story' in card_back and card_back['story'] != '':
