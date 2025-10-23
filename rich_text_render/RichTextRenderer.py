@@ -485,6 +485,12 @@ class RichTextRenderer:
         # push缓存
         push_cache = []
 
+        def pop_cache():
+            """弹出缓存"""
+            if len(push_cache) > 0:
+                virtual_text_box.push(push_cache)
+                push_cache.clear()
+
         for item in parsed_items:
             success = True
             if item.tag == "text":
@@ -522,9 +528,8 @@ class RichTextRenderer:
                     else:
                         if item.content == ' ':
                             # 释放缓存
-                            success = virtual_text_box.push(push_cache)
+                            pop_cache()
                             success = virtual_text_box.push(text_object)
-                            push_cache.clear()
                         else:
                             # 暂存
                             push_cache.append(text_object)
@@ -537,17 +542,13 @@ class RichTextRenderer:
                                          base_options.font_color)
                 push_cache.append(text_object)
             elif item.tag == "br":
-                if len(push_cache) > 0:
-                    success = virtual_text_box.push(push_cache)
-                    push_cache.clear()
+                pop_cache()
                 if html_tag_stack.get_top() == 'body':
                     success = virtual_text_box.new_paragraph()
                 else:
                     success = virtual_text_box.newline()
             elif item.tag == "par":
-                if len(push_cache) > 0:
-                    success = virtual_text_box.push(push_cache)
-                    push_cache.clear()
+                pop_cache()
                 success = virtual_text_box.new_paragraph()
             elif item.tag == "font":
                 font_name = item.attributes.get('name', base_options.font_name)
@@ -566,6 +567,7 @@ class RichTextRenderer:
             elif item.tag == "p":
                 html_tag_stack.push("p")
             elif item.tag == "/p":
+                pop_cache()
                 html_tag_stack.pop()
             elif item.tag == "flavor":
                 html_tag_stack.push("flavor")
@@ -590,6 +592,7 @@ class RichTextRenderer:
                 elif item.tag in ["/b", "/i", '/trait']:
                     font_stack.pop()
                 elif item.tag == "/flavor":
+                    pop_cache()
                     html_tag_stack.pop()
                     font_stack.pop()
                     virtual_text_box.cancel_line_padding()
@@ -600,8 +603,7 @@ class RichTextRenderer:
 
             if not success:
                 return False, None
-        if len(push_cache) > 0:
-            virtual_text_box.push(push_cache)
+        pop_cache()
 
         return True, virtual_text_box
 

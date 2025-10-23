@@ -1758,14 +1758,45 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "场景卡",
+        "type": "调查员",
+        "name": "🏅Rodney Dorman",
+        "id": "",
+        "created_at": "",
+        "version": "2.0",
         "language": "en",
-        "is_back": True,
-        "name": "Under the Stars",
-        "flavor": "Exhausted and terrified by your ordeal, you decide this is as good a place as any to make camp for the night. Perhaps tomorrow you can salvage some kind of academic value out of this hellish journey, but for now such things seem trivial. Survival is the only thing on your mind. ",
-        "body": "<res>1</res>",
-        "encounter_group": "edge_of_the_earth_the_crash",
-        "serial_number": "1b"
+        "subtitle": "The Attorney",
+        "class": "探求者",
+        "attribute": [
+            3,
+            4,
+            3,
+            2
+        ],
+        "health": 7,
+        "horror": 7,
+        "traits": [
+            "Civic",
+            "Veteran"
+        ],
+        "body": "【Forced】 - When the game begins: Reveal cards from the top of your deck until you reveal a {Case} asset. Put that asset into play. Shuffle each other revealed card back into your deck.\nThe first investigate action you perform on each turn does not provoke attacks of opportunity.\n⭐ effect: +1. You may shuffle a {Case} asset from your discard pile into your deck.",
+        "flavor": "Shuffle each other revealed card back into your deck.",
+        "image_mode": 1,
+        "back": {
+            "name": "🏅Rodney Dorman",
+            "subtitle": "The Attorney",
+            "class": "探求者",
+            "card_back": {
+                "other": "【Deck Size】: 30\n【Deckbuilding Options】: Seeker cards (🔍) level 0-5, {Insight} cards level 0-4, up to 10 other Rogue and/or Guardian (🚶/🛡️) cards level 0-1, Neutral cards level 0-5.\n【Deckbuilding Requirements】 (do not count toward deck size): Case #17, Case #75, Case #257, Case #1910, Unhappy Client, 1 random basic weakness.",
+                "story": "You had a case you needed solved, Rodney Dorman had your back. He got the evidence, the interviews, and he worked fast and quick so you see justice done. That was before his last trip to France where he had been invited to see a showing of \"The King in Yellow\". It was an absolutely fascinating play that stuck with him a bit too much once he returned to Arkham. He could not get it off his mind, an endless fixation that was only silenced through booze. Now, he has been trying to get off the bottle and go through his massive backlog of unsolved cases. He worked as hard as he can, but no matter what he did, he cannot get that play out of his mind (or what was left of it anyways)."
+            },
+            "type": "调查员背面",
+            "image_mode": 1,
+            "language": "en",
+            "version": "2.0"
+        },
+        "position": 4,
+        "code": "1a947a01-c46b-4985-806d-74edc2bbaa99",
+        "deck_options": [],
     }
 
     # 创建字体和图片管理器
