@@ -21,18 +21,13 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
+          architecture: 'arm64'
 
       # --- 修改的核心部分 ---
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          grep -v -E "pywin32|pyinstaller|pythonnet|clr_loader|pefile|pywin32-ctypes" requirements.txt > requirements-macos.txt
-          
-          echo "--- macOS dependencies ---"
-          cat requirements-macos.txt
-          echo "--------------------------"
-          
-          pip install py2app
+          pip install py2app dmgbuild
           pip install -r requirements-macos.txt
 
 
@@ -42,14 +37,12 @@ jobs:
 
       - name: Create DMG
         run: |
-          hdiutil create -volname "阿卡姆印牌姬" \
-            -srcfolder "dist/阿卡姆印牌姬.app" \
-            -ov -format UDZO "阿卡姆印牌姬.dmg"
+          dmgbuild -s dmg_settings.py "Arkham Card Maker" "dist/Arkham-Card-Maker.dmg"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: macos-app
+          name: Arkham-Card-Maker
           path: |
             dist/*.app
-            *.dmg
+            dist/*.dmg

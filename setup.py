@@ -146,5 +146,5 @@ setup(
 # 如果安装了 dmgbuild
 import os
 
-if os.system('which dmgbuild') == 0:
-    os.system('dmgbuild -s dmg_settings.py "Arkham Card Maker" "dist/Arkham-Card-Maker.dmg"')
+# if os.system('which dmgbuild') == 0:
+#     os.system('dmgbuild -s dmg_settings.py "Arkham Card Maker" "dist/Arkham-Card-Maker.dmg"')
