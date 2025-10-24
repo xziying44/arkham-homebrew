@@ -90,7 +90,7 @@
                     <div v-if="isDoubleSided && currentSide === 'back'">
                         <CardSideEditor
                             side="back"
-                            :card-data="currentCardData.back || {}"
+                            :card-data="{ ...currentCardData.back || {}, quantity: currentCardData.quantity || 1 }"
                             :card-type-configs="cardTypeConfigs"
                             :card-type-options="cardTypeOptions"
                             :language-options="languageOptions"

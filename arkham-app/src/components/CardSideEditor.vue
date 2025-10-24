@@ -234,6 +234,15 @@ watch(() => props.cardData, (newData) => {
     }
 }, { deep: true, immediate: true });
 
+// 【新增】监听正面数量变化（仅背面需要）
+watch(() => props.cardData.quantity, (newQuantity) => {
+    if (props.side === 'back' && newQuantity !== undefined) {
+        console.log(`🔄 ${props.side}面数量同步更新:`, newQuantity);
+        // 触发组件重新渲染，确保显示最新的数量
+        // 不需要直接修改sideCardData.quantity，因为quantity计算属性会直接从props获取
+    }
+});
+
 // 监听sideCardData的类型变化，同步更新currentSideType
 watch(() => sideCardData.type, (newType) => {
     if (newType !== currentSideType.value) {
