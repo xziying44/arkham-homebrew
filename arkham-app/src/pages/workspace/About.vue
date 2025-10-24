@@ -105,7 +105,7 @@
         <!-- 致谢 -->
         <div class="section">
           <h2>{{ $t('about.sections.thanks.title') }}</h2>
-          <p class="section-text">{{ $t('about.sections.thanks.description') }}</p>
+          <div class="section-text" v-html="$t('about.sections.thanks.description')"></div>
         </div>
 
         <!-- 底部支撑盒子 - 防止内容被裁切 -->

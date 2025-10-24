@@ -54,7 +54,7 @@ export default {
     },
     thanks: {
       title: '🙏 特别感谢',
-      description: '感谢所有阿卡姆精神病院fan-made部社区贡献内容的朋友们，以及为本项目提供建议和反馈的用户。特别感谢：爆破专家苦力怕（卡牌UI制作）、Chr1Z（SCED数据格式支持）、felice（arkham.build数据格式支持）。如果您在使用过程中遇到问题或有改进建议，欢迎通过邮箱联系我们。'
+      description: '感谢所有阿卡姆精神病院fan-made部社区贡献内容的朋友们，以及为本项目提供建议和反馈的用户。特别感谢：<br><br>@爆破专家苦力怕（卡牌UI制作）<br>@Chr1Z（SCED数据格式支持）<br>@felice（arkham.build数据格式支持）<br>@morvael（英文和波兰语言卡牌排版改进指导和测试）<br><br>如果您在使用过程中遇到问题或有改进建议，欢迎通过邮箱联系我们。'
     },
     footer: {
       thanks: '感谢您使用阿卡姆印牌姬'
