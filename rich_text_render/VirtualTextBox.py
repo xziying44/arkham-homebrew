@@ -660,54 +660,129 @@ class VirtualTextBox:
     def _calculate_horizontal_bounds(self, vertices: List[Tuple[int, int]],
                                      start_y: float, end_y: float,
                                      padding: int) -> Tuple[int, int]:
+        """
+        计算多边形在指定y范围内的水平边界
+        重要：需要找到在整个y范围内都有效的最保守（最窄）的边界
+        """
         y_min = min(start_y, end_y)
         y_max = max(start_y, end_y)
-        intersection_x_coords = []
-        valid_edges = []
+
+        # 初始化为最宽可能的值
+        max_left = float('-inf')  # 所有y值中最靠右的左边界
+        min_right = float('inf')  # 所有y值中最靠左的右边界
+
         vertex_count = len(vertices)
-        for i in range(vertex_count):
-            _, y1 = vertices[i]
-            _, y2 = vertices[(i + 1) % vertex_count]
-            edge_y_min = min(y1, y2)
-            edge_y_max = max(y1, y2)
-            if (y_min <= edge_y_min <= y_max or y_min <= edge_y_max <= y_max or
-                    (edge_y_min <= y_min and edge_y_max >= y_max)):
-                valid_edges.append((vertices[i], vertices[(i + 1) % vertex_count]))
-        for edge in valid_edges:
-            point1, point2 = edge
-            x1, y1 = point1
-            x2, y2 = point2
-            edge_y_min = min(y1, y2)
-            edge_y_max = max(y1, y2)
-            if y1 == y2: continue
-            for y in range(int(start_y), int(end_y), 3):
-                if edge_y_min < y < edge_y_max:
-                    intersection_x = x1 + (x2 - x1) * (y - y1) / (y2 - y1)
-                    intersection_x_coords.append(intersection_x)
-        if not intersection_x_coords:
-            min_x = min(vertex[0] for vertex in vertices)
-            max_x = max(vertex[0] for vertex in vertices)
-            return min_x + padding, max_x - padding
-        intersection_x_coords.sort()
-        left_bound = 0
-        right_bound = 0
-        max_width = 0
-        for i in range(len(intersection_x_coords) - 1):
-            current_width = intersection_x_coords[i + 1] - intersection_x_coords[i]
-            if current_width > max_width:
-                max_width = current_width
-                left_bound = intersection_x_coords[i]
-                right_bound = intersection_x_coords[i + 1]
-        if left_bound == 0 and right_bound == 0:
-            left_bound = min(intersection_x_coords)
-            right_bound = max(intersection_x_coords)
-        final_left = left_bound + padding
-        final_right = right_bound - padding
-        if final_left > final_right:
-            min_x = min(vertex[0] for vertex in vertices)
-            max_x = max(vertex[0] for vertex in vertices)
-            return min_x, max_x
+
+        # 对y范围进行密集采样，确保捕捉到所有变化
+        num_samples = max(int(y_max - y_min) // 2, 20)  # 至少20个采样点
+
+        for sample_idx in range(num_samples):
+            # 计算当前采样的y值
+            if num_samples > 1:
+                y = y_min + (y_max - y_min) * sample_idx / (num_samples - 1)
+            else:
+                y = y_min
+
+            intersections = []
+
+            # 找出所有与当前y值相交的边
+            for i in range(vertex_count):
+                x1, y1 = vertices[i]
+                x2, y2 = vertices[(i + 1) % vertex_count]
+
+                # 处理水平边
+                if abs(y2 - y1) < 0.001:  # 近似水平
+                    if abs(y - y1) < 1:  # y值接近水平边
+                        intersections.append(x1)
+                        intersections.append(x2)
+                    continue
+
+                # 检查y是否在边的范围内（包含端点）
+                edge_y_min = min(y1, y2)
+                edge_y_max = max(y1, y2)
+
+                if edge_y_min - 0.1 <= y <= edge_y_max + 0.1:
+                    # 使用线性插值计算交点
+                    t = (y - y1) / (y2 - y1)
+                    # 确保t在[0,1]范围内
+                    t = max(0, min(1, t))
+                    intersection_x = x1 + t * (x2 - x1)
+                    intersections.append(intersection_x)
+
+            # 如果找到交点，更新边界
+            if len(intersections) >= 2:
+                intersections.sort()
+                current_left = intersections[0]
+                current_right = intersections[-1]
+
+                # 更新最保守的边界
+                max_left = max(max_left, current_left)
+                min_right = min(min_right, current_right)
+
+        # 如果没有找到有效的边界，使用备用方案
+        if max_left == float('-inf') or min_right == float('inf') or max_left >= min_right:
+            # 直接计算start_y和end_y两个位置的边界，取较窄的
+            bounds_at_start = self._get_bounds_at_y(vertices, start_y)
+            bounds_at_end = self._get_bounds_at_y(vertices, end_y)
+
+            if bounds_at_start and bounds_at_end:
+                max_left = max(bounds_at_start[0], bounds_at_end[0])
+                min_right = min(bounds_at_start[1], bounds_at_end[1])
+            elif bounds_at_start:
+                max_left, min_right = bounds_at_start
+            elif bounds_at_end:
+                max_left, min_right = bounds_at_end
+            else:
+                # 最后的备用：使用多边形的边界框
+                min_x = min(v[0] for v in vertices)
+                max_x = max(v[0] for v in vertices)
+                max_left = min_x
+                min_right = max_x
+
+        # 应用padding
+        final_left = max_left + padding
+        final_right = min_right - padding
+
+        # 确保边界有效
+        if final_left >= final_right:
+            # 如果padding太大，至少返回一个最小宽度
+            center = (max_left + min_right) / 2
+            return round(center - 1), round(center + 1)
+
         return round(final_left), round(final_right)
+
+    def _get_bounds_at_y(self, vertices: List[Tuple[int, int]], y: float) -> Optional[Tuple[float, float]]:
+        """
+        辅助方法：获取特定y坐标处的水平边界
+        """
+        intersections = []
+        vertex_count = len(vertices)
+
+        for i in range(vertex_count):
+            x1, y1 = vertices[i]
+            x2, y2 = vertices[(i + 1) % vertex_count]
+
+            # 处理水平边
+            if abs(y2 - y1) < 0.001:
+                if abs(y - y1) < 1:
+                    intersections.extend([x1, x2])
+                continue
+
+            # 检查y是否在边的范围内
+            edge_y_min = min(y1, y2)
+            edge_y_max = max(y1, y2)
+
+            if edge_y_min <= y <= edge_y_max:
+                t = (y - y1) / (y2 - y1)
+                t = max(0, min(1, t))
+                intersection_x = x1 + t * (x2 - x1)
+                intersections.append(intersection_x)
+
+        if len(intersections) >= 2:
+            intersections.sort()
+            return intersections[0], intersections[-1]
+
+        return None
 
     def add_flex(self):
         """
