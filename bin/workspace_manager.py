@@ -3,6 +3,7 @@ import io
 import json
 import mimetypes
 import os
+import re
 import sys
 import threading
 import time
@@ -30,6 +31,8 @@ except ImportError:
 
 class WorkspaceManager:
     """工作空间管理类，负责文件和目录操作"""
+    # 预编译正则表达式，提高性能
+    _TYPE_RE = re.compile(r'"type"\s*:\s*"([^"]+)"')
 
     # 系统配置字段定义 - 这些字段会保存到全局配置文件中
     SYSTEM_CONFIG_FIELDS = [
@@ -148,6 +151,20 @@ class WorkspaceManager:
 
         return type_mapping.get(ext, 'file')
 
+    def _get_card_type(self, item_path: str) -> str:
+        """快速读取 JSON 文件中的 'type' 字段（仅扫描部分内容，不加载整个文件）"""
+        try:
+            with open(item_path, 'r', encoding='utf-8') as f:
+                # 只读取前几 KB，足够覆盖大多数 JSON 的前部字段
+                chunk = f.read(4096)
+            match = self._TYPE_RE.search(chunk)
+            if match:
+                return match.group(1)
+        except Exception as e:
+            # 可根据需要打印日志或忽略
+            print(f"[WARN] 无法读取 {item_path}: {e}")
+        return ''
+
     def _is_image_file(self, file_path: str) -> bool:
         """检查是否是图片文件"""
         return self._get_file_type(file_path) == 'image'
@@ -207,12 +224,19 @@ class WorkspaceManager:
 
                 elif os.path.isfile(item_path):
                     # 处理文件
-                    items.append({
+                    file_type = self._get_file_type(item)
+                    item_info = {
                         'label': item,
                         'key': item_key,
-                        'type': self._get_file_type(item),
-                        'path': relative_path  # 使用相对路径
-                    })
+                        'type': file_type,
+                        'path': relative_path,  # 使用相对路径
+                    }
+
+                    # 当文件类型为 card 时，额外提取 card_type
+                    if file_type == 'card':
+                        item_info['card_type'] = self._get_card_type(item_path)
+
+                    items.append(item_info)
 
         except PermissionError:
             # 如果没有权限访问目录，跳过

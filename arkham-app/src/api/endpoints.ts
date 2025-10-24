@@ -48,7 +48,7 @@ export const API_ENDPOINTS = {
   GET_FILE_TREE: {
     url: '/api/file-tree',
     method: HttpMethod.GET,
-    timeout: 10000
+    timeout: 60000
   } as ApiConfig,
 
   CREATE_DIRECTORY: {
