@@ -88,17 +88,17 @@
         "vertical_offset": 4
       },
       "card_type": {
-        "name": "ArnoPro-Smbd",
+        "name": "ArnoPro-BoldDisplay",
         "size_percent": 0.95,
         "vertical_offset": 3
       },
       "trait": {
-        "name": "NimbusRomNo9L-MedIta",
+        "name": "ArnoPro-BoldItalic",
         "size_percent": 0.88,
         "vertical_offset": 9
       },
       "bold": {
-        "name": "NimbusRomNo9L-Med",
+        "name": "ArnoPro-Bold",
         "size_percent": 1.0,
         "vertical_offset": 0
       },
