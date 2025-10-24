@@ -812,8 +812,11 @@ class CardCreator:
 
         if 'cost' in data and isinstance(data['cost'], int):
             card.set_card_cost(data['cost'])
+        vertices = [(19, 660), (718, 660), (718, 906), (290, 906), (73, 965), (19, 965)]
+        if data.get('flavor'):
+            vertices = [(19, 660), (718, 660), (718, 906), (19, 906)]
 
-        card.draw_text(body, vertices=[(19, 660), (718, 660), (718, 910), (19, 910)],
+        card.draw_text(body, vertices=vertices,
                        default_font_name='正文字体', default_size=32, padding=15, draw_virtual_box=False)
 
         if 'slots' in data and isinstance(data['slots'], str):
@@ -1237,8 +1240,11 @@ class CardCreator:
             card.draw_centered_text((375, 98), data['subtitle'], "副标题字体", 31, (0, 0, 0))
 
         card.draw_centered_text((375, 643), traits, "特性字体", 32, (0, 0, 0))
-        card.draw_text(body, vertices=[(19, 662), (718, 662), (718, 925), (19, 925)],
-                       default_font_name='正文字体', default_size=32, padding=15, draw_virtual_box=False)
+        vertices = [(19, 662), (718, 662), (718, 906), (290, 906), (73, 965), (19, 965)]
+        if data.get('flavor'):
+            vertices = [(19, 662), (718, 662), (718, 906), (19, 906)]
+        card.draw_text(body, vertices=vertices, default_font_name='正文字体', default_size=32, padding=15,
+                       draw_virtual_box=False)
 
         if 'cost' in data and isinstance(data['cost'], int):
             card.set_card_cost(data['cost'])
@@ -1770,9 +1776,9 @@ if __name__ == '__main__':
         "id": "",
         "created_at": "",
         "version": "2.0",
+        "class": "弱点",
         "language": "en",
         "subtitle": "John Dee Translation",
-        "class": "弱点",
         "level": -1,
         "cost": -1,
         "submit_icon": [],
@@ -1785,8 +1791,8 @@ if __name__ == '__main__':
         "horror": -1,
         "slots": None,
         "slots2": None,
-        "body": "Daisy Walker deck only. Advanced.\n【Revelation】 - Put The Necronomicon into play in your threat area, with 3 horror on it. It cannot leave play while it has 1 or more horror on it.  \n【Forced】 - The first time you draw an encounter card each round: Either move 1 horror from The Necronomicon to Daisy Walker, or draw an additional encounter card. If you drew an additional encounter card, remove 1 horror from The Necronomicon. Then, if The Necronomicon has no horror on it, discard it. ",
-        "flavor": "",
+        "body": "Daisy Walker deck only. Advanced.\n【Revelation】 - Put The Necronomicon into play in your threat area, with 3 horror on it horror on it horror on it horror on it horror on it horror on it. It cannot leave play while it has 1 or more horror on it.  \n【Forced】 - The first time you draw an encounter card each round: Either move 1 horror from The Necronomicon to Daisy Walker, or draw an additional encounter card. If you drew an additional encounter card, remove 1 horror from The Necronomicon. Necronomicon Ne Ne Ne",
+        "flavor": "123",
         "illustrator": "",
         "card_number": "6",
         "encounter_group_number": "",
