@@ -37,12 +37,8 @@ def get_user_config_directory():
         # ===== 打包应用 =====
         if system == 'Darwin':  # macOS
             # 使用 macOS 标准应用数据目录
-            config_dir = os.path.expanduser('~/Library/Application Support/ArkhamCardMaker')
-
-            # 备用方案：如果Application Support不可写，使用Documents
-            if not _test_directory_writable(config_dir):
-                config_dir = os.path.expanduser('~/Documents/ArkhamCardMaker/config')
-
+            config_dir = os.path.join(os.path.expanduser('~'), 'Documents', 'ArkhamCardMaker')
+            os.makedirs(config_dir, exist_ok=True)
         elif system == 'Windows':  # Windows
             # Windows：便携模式，使用exe同级目录
             if hasattr(sys, '_MEIPASS'):
@@ -62,27 +58,6 @@ def get_user_config_directory():
     return config_dir
 
 
-def _test_directory_writable(directory_path):
-    """
-    测试目录是否可写（仅用于macOS的备用方案检测）
-
-    Args:
-        directory_path (str): 要测试的目录路径
-
-    Returns:
-        bool: 目录是否可写
-    """
-    try:
-        os.makedirs(directory_path, exist_ok=True)
-        test_file = os.path.join(directory_path, '.write_test')
-        with open(test_file, 'w') as f:
-            f.write('test')
-        os.remove(test_file)
-        return True
-    except (OSError, PermissionError):
-        return False
-
-
 app = Flask(__name__)
 if not hasattr(app, 'window'):
     app.window = None
@@ -92,7 +67,7 @@ selection_lock = threading.Lock()
 is_selecting = False
 
 # 全局实例
-quick_start = QuickStart()
+quick_start = QuickStart(os.path.join(get_user_config_directory(), "recent_directories.json"))
 current_workspace: WorkspaceManager = None
 github_image_host = None
 

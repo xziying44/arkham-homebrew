@@ -22,27 +22,6 @@ class LoggerManager:
         if self._logger is None:
             self._setup_logger()
 
-    @staticmethod
-    def _test_directory_writable(directory_path):
-        """
-        测试目录是否可写
-
-        Args:
-            directory_path (str): 要测试的目录路径
-
-        Returns:
-            bool: 目录是否可写
-        """
-        try:
-            os.makedirs(directory_path, exist_ok=True)
-            test_file = os.path.join(directory_path, '.write_test')
-            with open(test_file, 'w') as f:
-                f.write('test')
-            os.remove(test_file)
-            return True
-        except (OSError, PermissionError):
-            return False
-
     def _get_log_directory(self):
         """
         获取日志目录（兼容开发和打包环境）
@@ -55,11 +34,8 @@ class LoggerManager:
             # 打包后的应用
             if platform.system() == 'Darwin':  # macOS
                 # 使用系统标准目录，更新时不会被删除
-                log_dir = os.path.expanduser('~/Library/Logs/ArkhamCardMaker')
-
-                # 备用方案：如果Library/Logs不可写，使用Documents
-                if not self._test_directory_writable(log_dir):
-                    log_dir = os.path.expanduser('~/Documents/ArkhamCardMaker/logs')
+                log_dir = os.path.join(os.path.expanduser('~'), 'Documents', 'ArkhamCardMaker')
+                os.makedirs(log_dir, exist_ok=True)
 
             elif platform.system() == 'Windows':  # Windows
                 # Windows：便携模式，使用exe同级目录
