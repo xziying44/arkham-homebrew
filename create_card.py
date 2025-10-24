@@ -1197,11 +1197,19 @@ class CardCreator:
         """设置技能卡内容"""
         card.draw_left_text((140, 30), data['name'], "标题字体", 48, (0, 0, 0))
         card.draw_centered_text((368, 707), traits, "特性字体", 32, (0, 0, 0))
+        vertices = [(75, 725), (682, 725), (692, 770), (704, 838), (701, 914), (679, 995),
+                    (74, 995), (91, 920), (96, 844)]
+        if 'victory' in data and data.get('victory') is not None:
+            vertices = [(75, 725), (682, 725), (692, 770), (704, 838), (701, 914), (682, 970),
+                        (77, 970), (91, 920), (96, 844)]
         card.draw_text(
             body,
-            vertices=[(75, 725), (682, 725), (692, 770), (704, 838), (701, 914), (679, 995),
-                      (74, 995), (91, 920), (96, 844)],
+            vertices=vertices,
             default_font_name='正文字体', default_size=32, padding=15, draw_virtual_box=False
+        )
+        card.draw_victory_points(
+            position=(378, 973),
+            victory_value=data.get('victory')
         )
 
     def _setup_event_card_content(self, card, data, traits, body):
@@ -1778,40 +1786,39 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "事件卡",
-        "name": "Recursive Directive",
+        "type": "技能卡",
+        "name": "Shared Insight",
         "id": "",
         "created_at": "",
         "version": "2.0",
         "language": "en",
-        "class": "中立",
-        "level": 3,
-        "cost": 1,
+        "class": "探求者",
+        "level": 0,
+        "cost": -1,
         "submit_icon": [
-            "意志",
+            "智力",
             "狂野"
         ],
         "traits": [
-            "Tactic",
-            "Fated"
+            "Practiced"
         ],
-        "body": "Fast. Play only during your turn.\nResolve an ➡️ ability on two different non-weakness neutral assets you control, ignoring their ➡️ cost. Those assets do not exhaust as part of their ability’s cost.\nIf the chosen assets were Forgotten Blueprint and Old Schematics, add Recursive Directive to the victory display. Otherwise, remove it from the game.",
-        "flavor": "",
-        "victory": 1,
+        "body": "This card can only be committed to a skill test being performed by another investigator either at your location, or at a connecting location. If this skill test succeeds by 2 or more, return this card to your hand.",
+        "flavor": "\"Sometimes all you need is a different perspective to solve the problem.\"",
         "illustrator": "",
-        "card_number": "121",
+        "card_number": "45",
         "encounter_group_number": "",
         "image_mode": 1,
         "back": {
             "type": "玩家卡背",
-            "name": "Recursive Directive (背面)",
+            "name": "Shared Insight (背面)",
             "image_mode": 0,
             "language": "en",
             "version": "2.0"
         },
-        "position": 121,
-        "code": "b00ca6a6-40c3-4653-b345-0f764deb17ee",
-        "deck_options": []
+        "position": 45,
+        "code": "1702d362-197e-400b-8217-93cf2f868021",
+        "deck_options": [],
+        "victory": 3
     }
 
     # 创建字体和图片管理器
