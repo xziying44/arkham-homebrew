@@ -185,6 +185,9 @@ class ArkhamDBConverter:
                                 formatted_text)
         # 1. 替换HTML粗体标签为【】
         formatted_text = re.sub(r'<b><i>(.*?)</i></b>', r'{\1}', formatted_text)
+        formatted_text = re.sub(r'<b><i>(.*?)</b></i>', r'{\1}', formatted_text)
+        formatted_text = re.sub(r'<i><b>(.*?)</b></i>', r'{\1}', formatted_text)
+        formatted_text = re.sub(r'<i><b>(.*?)</i></b>', r'{\1}', formatted_text)
         formatted_text = re.sub(r'\[\[(.*?)]]', r'{\1}', formatted_text)
         formatted_text = re.sub(r'<b>(.*?)</b>', r'【\1】', formatted_text)
         formatted_text = re.sub(r'<p>(.*?)</p>', r'\1\n', formatted_text)
