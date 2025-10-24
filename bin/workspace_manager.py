@@ -687,18 +687,14 @@ class WorkspaceManager:
                 return None
 
             # 获取背面数据
-            back_data = json_data.get('back', {})
-            if not back_data:
+            back_json_data = json_data.get('back', {})
+            if not back_json_data:
                 print("双面卡牌缺少背面数据")
                 return {
                     'front': front_card,
                     'back': None
                 }
 
-            # 为背面数据复制一些必要字段（从正面继承）
-            back_json_data = back_data.copy()
-            # 继承正面的语言设置
-            back_json_data['language'] = json_data.get('language', 'zh')
             # 继承其他必要字段
             if 'version' not in back_json_data:
                 back_json_data['version'] = json_data.get('version', '2.0')
