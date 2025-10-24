@@ -81,7 +81,6 @@ class CardAdapter:
         self.font_manager = font_manager
         self.lang = font_manager.lang if hasattr(font_manager, 'lang') else 'en'
 
-
         fullname = self.original_data.get('name', '')
         if not isinstance(fullname, str):
             fullname = ''
@@ -106,7 +105,7 @@ class CardAdapter:
         else:
             self.conversion_rules.append((r'<upg>|<升级>', r'<font name="ArnoPro-Regular">☐</font>'))
             self.conversion_rules.append(
-                (r'<res>(.*?)</res>', f'(→【{font_manager.get_font_text("resolution")}\\1】)'))
+                (r'<res>(.*?)</res>', f'→【{font_manager.get_font_text("resolution")}\\1】'))
         # 编译正则表达式以提高性能
         self._compiled_rules = [
             (re.compile(pattern, re.IGNORECASE), replacement)
