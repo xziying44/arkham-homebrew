@@ -26,34 +26,61 @@ from bin.image_uploader import create_uploader
 def get_user_config_directory():
     """
     获取用户配置目录（兼容开发和打包环境）
-
+    - macOS: 使用系统标准目录，更新安全
+    - Windows: 使用运行目录，便携模式
     Returns:
         str: 用户配置目录的绝对路径
     """
     system = platform.system()
+
     if getattr(sys, 'frozen', False):
         # ===== 打包应用 =====
         if system == 'Darwin':  # macOS
-            # macOS：使用标准应用支持目录
+            # 使用 macOS 标准应用数据目录
             config_dir = os.path.expanduser('~/Library/Application Support/ArkhamCardMaker')
+
+            # 备用方案：如果Application Support不可写，使用Documents
+            if not _test_directory_writable(config_dir):
+                config_dir = os.path.expanduser('~/Documents/ArkhamCardMaker/config')
+
         elif system == 'Windows':  # Windows
-            # Windows：使用程序运行目录（便携模式）
+            # Windows：便携模式，使用exe同级目录
             if hasattr(sys, '_MEIPASS'):
                 # PyInstaller 打包：exe 所在目录
                 exe_dir = os.path.dirname(sys.executable)
             else:
                 exe_dir = os.path.dirname(os.path.abspath(__file__))
             config_dir = os.path.join(exe_dir, 'config')
+
         else:  # Linux 或其他系统
-            # Linux：使用用户配置目录
             config_dir = os.path.expanduser('~/.config/arkham-card-maker')
     else:
-        # 开发环境 - 使用项目根目录
+        # 开发环境
         config_dir = os.path.dirname(os.path.abspath(__file__))
-
     # 确保目录存在
     os.makedirs(config_dir, exist_ok=True)
     return config_dir
+
+
+def _test_directory_writable(directory_path):
+    """
+    测试目录是否可写（仅用于macOS的备用方案检测）
+
+    Args:
+        directory_path (str): 要测试的目录路径
+
+    Returns:
+        bool: 目录是否可写
+    """
+    try:
+        os.makedirs(directory_path, exist_ok=True)
+        test_file = os.path.join(directory_path, '.write_test')
+        with open(test_file, 'w') as f:
+            f.write('test')
+        os.remove(test_file)
+        return True
+    except (OSError, PermissionError):
+        return False
 
 
 app = Flask(__name__)

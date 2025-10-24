@@ -1,5 +1,6 @@
 import logging
 import os
+import platform
 import sys
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
@@ -21,23 +22,63 @@ class LoggerManager:
         if self._logger is None:
             self._setup_logger()
 
+    @staticmethod
+    def _test_directory_writable(directory_path):
+        """
+        测试目录是否可写
+
+        Args:
+            directory_path (str): 要测试的目录路径
+
+        Returns:
+            bool: 目录是否可写
+        """
+        try:
+            os.makedirs(directory_path, exist_ok=True)
+            test_file = os.path.join(directory_path, '.write_test')
+            with open(test_file, 'w') as f:
+                f.write('test')
+            os.remove(test_file)
+            return True
+        except (OSError, PermissionError):
+            return False
+
     def _get_log_directory(self):
         """
         获取日志目录（兼容开发和打包环境）
-
+        - macOS: 使用系统标准目录，更新安全
+        - Windows: 使用运行目录，便携模式
         Returns:
             str: 日志目录的绝对路径
         """
         if getattr(sys, 'frozen', False):
-            # 打包后的应用 - 使用 macOS 标准日志目录
-            log_dir = os.path.expanduser('~/Library/Logs/ArkhamCardMaker')
-        else:
-            # 开发环境 - 使用项目根目录下的 logs 文件夹
-            # 获取当前文件的目录，然后向上查找项目根目录
-            current_file = Path(__file__).resolve()
-            project_root = current_file.parent.parent  # 假设 logger.py 在 bin/ 或 utils/ 下
-            log_dir = project_root / 'logs'
+            # 打包后的应用
+            if platform.system() == 'Darwin':  # macOS
+                # 使用系统标准目录，更新时不会被删除
+                log_dir = os.path.expanduser('~/Library/Logs/ArkhamCardMaker')
 
+                # 备用方案：如果Library/Logs不可写，使用Documents
+                if not self._test_directory_writable(log_dir):
+                    log_dir = os.path.expanduser('~/Documents/ArkhamCardMaker/logs')
+
+            elif platform.system() == 'Windows':  # Windows
+                # Windows：便携模式，使用exe同级目录
+                if hasattr(sys, '_MEIPASS'):
+                    # PyInstaller 打包：exe 所在目录
+                    exe_dir = os.path.dirname(sys.executable)
+                else:
+                    exe_dir = os.path.dirname(os.path.abspath(__file__))
+                log_dir = os.path.join(exe_dir, 'logs')
+
+            else:  # Linux 或其他系统
+                log_dir = os.path.expanduser('~/Documents/ArkhamCardMaker/logs')
+        else:
+            # 开发环境
+            current_file = Path(__file__).resolve()
+            project_root = current_file.parent.parent
+            log_dir = project_root / 'logs'
+        # 确保目录存在
+        os.makedirs(log_dir, exist_ok=True)
         return str(log_dir)
 
     def _setup_logger(self):
