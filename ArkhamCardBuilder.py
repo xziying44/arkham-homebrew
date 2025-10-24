@@ -148,28 +148,91 @@ class ArkhamCardBuilder:
 
     def _download_image_to_base64(self, url: str, max_retries: int = 2) -> Optional[str]:
         """
-        下载图片并转换为base64编码
+        下载图片并转换为base64编码，包含data URL格式的元数据
+        根据实际的content-type判断图片格式，非图片格式默认为PNG
 
         Args:
             url: 图片URL
             max_retries: 最大重试次数
 
         Returns:
-            base64编码的图片字符串，失败返回None
+            完整的data URL格式的base64字符串，失败返回None
         """
         for attempt in range(max_retries + 1):
             try:
                 response = requests.get(url, timeout=30)
                 response.raise_for_status()
 
+                # 获取响应的content-type
+                content_type = response.headers.get('content-type', '').lower()
+
+                # 判断是否为图片格式
+                if self._is_image_content_type(content_type):
+                    # 使用实际的图片格式
+                    mime_type = content_type.split(';')[0].strip()  # 移除可能的参数部分
+                    self.logger.debug(f"检测到图片格式: {mime_type} for URL: {url}")
+                else:
+                    # 非图片格式，默认使用PNG
+                    mime_type = 'image/png'
+                    self.logger.warning(f"非图片格式或未知格式 ({content_type})，默认使用 PNG: {url}")
+
                 # 转换为base64
                 image_data = base64.b64encode(response.content).decode('utf-8')
-                return image_data
 
-            except Exception as e:
-                self.logger.warning(f"图片下载失败 (尝试 {attempt + 1}/{max_retries + 1}): {url} - {str(e)}")
+                # 构建完整的data URL
+                data_url = f"data:{mime_type};base64,{image_data}"
+
+                self.logger.info(f"成功下载图片 ({mime_type}): {url}")
+                return data_url
+
+            except requests.RequestException as e:
+                self.logger.warning(f"网络请求失败 (尝试 {attempt + 1}/{max_retries + 1}): {url} - {str(e)}")
                 if attempt == max_retries:
                     return None
+            except Exception as e:
+                self.logger.warning(f"图片处理失败 (尝试 {attempt + 1}/{max_retries + 1}): {url} - {str(e)}")
+                if attempt == max_retries:
+                    return None
+
+    def _is_image_content_type(self, content_type: str) -> bool:
+        """
+        判断content-type是否为图片格式
+
+        Args:
+            content_type: HTTP响应的content-type头
+
+        Returns:
+            是否为图片格式
+        """
+        if not content_type:
+            return False
+
+        # 常见的图片MIME类型
+        image_mime_types = {
+            'image/png',
+            'image/jpeg',
+            'image/jpg',
+            'image/gif',
+            'image/webp',
+            'image/bmp',
+            'image/tiff',
+            'image/svg+xml',
+            'image/x-icon',
+            'image/ico'
+        }
+
+        # 提取主要的MIME类型（移除参数部分）
+        main_type = content_type.split(';')[0].strip().lower()
+
+        # 检查是否在已知的图片类型中
+        if main_type in image_mime_types:
+            return True
+
+        # 检查是否以 'image/' 开头（兼容未列出的图片格式）
+        if main_type.startswith('image/'):
+            return True
+
+        return False
 
     def _build_card_index(self):
         """构建卡牌索引，处理linked_card关系"""
@@ -261,6 +324,22 @@ class ArkhamCardBuilder:
         else:
             card_obj['image_mode'] = 0
 
+    def _add_tts_script_metadata(self, card_obj: Dict[str, Any], card_code: str):
+        """
+        为卡牌正面添加TTS脚本元数据
+
+        Args:
+            card_obj: 卡牌对象
+            card_code: 卡牌代码
+        """
+        if card_code:
+            # 构建TTS脚本元数据
+            gm_notes = json.dumps({"id": card_code})
+            card_obj['tts_script'] = {
+                "GMNotes": gm_notes
+            }
+            self.logger.debug(f"添加TTS脚本元数据: {card_code}")
+
     def _add_language_and_version(self, card_obj: Dict[str, Any]):
         """
         为卡牌对象添加语言和版本信息
@@ -328,6 +407,9 @@ class ArkhamCardBuilder:
 
         # 添加正面图片数据
         self._add_image_data_to_card(front_obj, card, is_front=True)
+
+        # 添加TTS脚本元数据到正面
+        self._add_tts_script_metadata(front_obj, card_code)
 
         # 处理背面
         back_obj = None
@@ -399,6 +481,9 @@ class ArkhamCardBuilder:
         # 添加正面图片数据
         self._add_image_data_to_card(card_obj, card, is_front=True)
 
+        # 添加TTS脚本元数据到正面
+        self._add_tts_script_metadata(card_obj, card_code)
+
         # 根据正面卡牌类型获取默认卡背
         default_back_type = self._get_default_card_back_type(card_obj)
 
@@ -420,9 +505,83 @@ class ArkhamCardBuilder:
 
         return card_obj
 
+    def _save_single_card(self, card: Dict[str, Any]) -> bool:
+        """
+        保存单张卡牌到文件
+
+        Args:
+            card: 卡牌对象
+
+        Returns:
+            是否保存成功
+        """
+        try:
+            # 生成文件名
+            filename = self._sanitize_filename(
+                card.get('name', 'unknown'),
+                card.get('position', 0)
+            )
+
+            file_path = self.work_dir / filename
+
+            # 保存为JSON文件
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(card, f, ensure_ascii=False, indent=2)
+
+            self.logger.info(f"保存卡牌: {filename}")
+            return True
+
+        except Exception as e:
+            self.logger.error(f"保存卡牌失败: {card.get('name', 'unknown')} - {str(e)}")
+            return False
+
+    def build_and_save_cards(self) -> int:
+        """
+        构建并保存所有卡牌对象（边构建边保存，避免内存溢出）
+
+        Returns:
+            成功保存的卡牌数量
+        """
+        self.logger.info("开始构建并保存卡牌对象...")
+        self.logger.info(f"内容包语言: {self.language}")
+
+        # 构建索引
+        self._build_card_index()
+
+        saved_count = 0
+        processed_codes = set()
+
+        for card in self.content_pack['data']['cards']:
+            card_code = card.get('code')
+            if not card_code or card_code in processed_codes:
+                continue
+
+            card_obj = None
+
+            # 检查是否是双面卡
+            if card_code in self.double_sided_pairs:
+                card_obj = self._handle_double_sided_card(card)
+            else:
+                card_obj = self._handle_single_sided_card(card)
+
+            # 立即保存构建的卡牌
+            if card_obj:
+                if self._save_single_card(card_obj):
+                    saved_count += 1
+
+                processed_codes.add(card_code)
+
+                # 如果是双面卡，也标记关联卡牌为已处理
+                if card_code in self.linked_card_relations:
+                    linked_code = self.linked_card_relations[card_code]
+                    processed_codes.add(linked_code)
+
+        self.logger.info(f"卡牌构建并保存完成: 共成功保存{saved_count}张卡牌")
+        return saved_count
+
     def build_cards(self) -> List[Dict[str, Any]]:
         """
-        构建所有卡牌对象
+        构建所有卡牌对象（保留原有方法以兼容性）
 
         Returns:
             卡牌对象列表
@@ -463,7 +622,7 @@ class ArkhamCardBuilder:
 
     def save_cards(self, cards: List[Dict[str, Any]]) -> int:
         """
-        保存卡牌对象到文件
+        保存卡牌对象到文件（保留原有方法以兼容性）
 
         Args:
             cards: 卡牌对象列表
@@ -474,34 +633,18 @@ class ArkhamCardBuilder:
         saved_count = 0
 
         for card in cards:
-            try:
-                # 生成文件名
-                filename = self._sanitize_filename(
-                    card.get('name', 'unknown'),
-                    card.get('position', 0)
-                )
-
-                file_path = self.work_dir / filename
-
-                # 保存为JSON文件
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    json.dump(card, f, ensure_ascii=False, indent=2)
-
+            if self._save_single_card(card):
                 saved_count += 1
-                self.logger.info(f"保存卡牌: {filename}")
-
-            except Exception as e:
-                self.logger.error(f"保存卡牌失败: {card.get('name', 'unknown')} - {str(e)}")
 
         self.logger.info(f"卡牌保存完成: 成功保存{saved_count}张卡牌")
         return saved_count
 
     def process_content_pack(self) -> Tuple[int, List[Dict[str, Any]], bool, List[str]]:
         """
-        处理整个内容包
+        处理整个内容包（使用边构建边保存的方式）
 
         Returns:
-            (成功保存的卡牌数量, 卡牌对象列表, 是否验证通过, 错误信息列表)
+            (成功保存的卡牌数量, 空卡牌列表, 是否验证通过, 错误信息列表)
         """
         self.logger.info("开始处理内容包...")
 
@@ -512,13 +655,10 @@ class ArkhamCardBuilder:
                 self.logger.error("内容包结构验证失败，停止处理")
                 return 0, [], False, errors
 
-            # 构建卡牌对象
-            cards = self.build_cards()
+            # 构建并保存卡牌对象（边构建边保存）
+            saved_count = self.build_and_save_cards()
 
-            # 保存卡牌
-            saved_count = self.save_cards(cards)
-
-            return saved_count, cards, True, []
+            return saved_count, [], True, []
 
         except Exception as e:
             self.logger.error(f"处理内容包时发生错误: {str(e)}")
@@ -535,24 +675,16 @@ def main():
     builder = ArkhamCardBuilder(content_pack, r'D:\汉化文件夹\测试导出空间')
 
     # 处理内容包
-    saved_count, cards = builder.process_content_pack()
+    saved_count, _, is_valid, errors = builder.process_content_pack()
 
     # 输出日志
     print("处理完成!")
     print(f"成功保存 {saved_count} 张卡牌")
     print(f"内容包语言: {builder.language}")
+    if not is_valid:
+        print(f"验证错误: {errors}")
     print("\n处理日志:")
     print(builder.get_logs())
-
-    # 检查生成的卡牌对象
-    if cards:
-        sample_card = cards[0]
-        print(f"\n示例卡牌字段: {list(sample_card.keys())}")
-        print(f"语言设置: {sample_card.get('language')}")
-        print(f"版本设置: {sample_card.get('version')}")
-        if 'back' in sample_card:
-            print(f"背面语言: {sample_card['back'].get('language')}")
-            print(f"背面版本: {sample_card['back'].get('version')}")
 
 
 if __name__ == "__main__":

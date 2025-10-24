@@ -203,6 +203,8 @@ class ArkhamDBConverter:
         formatted_text = re.sub(r'\n- ', r"\n<bul> ", formatted_text)
         formatted_text = re.sub(r'\n-', r"\n<bul> ", formatted_text)
 
+        formatted_text = re.sub(r'</hdr>', r"】", formatted_text)
+        formatted_text = re.sub(r'<hdr>', r"【", formatted_text)
         formatted_text = re.sub(r'^- ', r"<bul> ", formatted_text)
         formatted_text = re.sub(r'^-(?![0-9X])', r"<bul> ", formatted_text)
 
