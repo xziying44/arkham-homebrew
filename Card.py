@@ -807,7 +807,7 @@ class Card:
             )
         else:
             self.draw_centered_text(
-                position=(323, 952),
+                position=(323, 962),
                 text='x',
                 font_name='arkham-icons',
                 font_size=58,
@@ -841,7 +841,7 @@ class Card:
             )
         else:
             self.draw_centered_text(
-                position=(433, 952),
+                position=(433, 962),
                 text='x',
                 font_name='arkham-icons',
                 font_size=58,
