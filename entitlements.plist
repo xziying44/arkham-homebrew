@@ -2,6 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <!-- 现有的权限保持不变 -->
     <key>com.apple.security.cs.allow-jit</key>
     <true/>
     <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
@@ -12,5 +13,44 @@
     <true/>
     <key>com.apple.security.network.server</key>
     <true/>
+
+    <!-- ========== 新增的文件系统权限 ========== -->
+
+    <!-- 禁用应用程序沙盒（最简单的解决方案） -->
+    <key>com.apple.security.app-sandbox</key>
+    <false/>
+
+    <!-- 如果上面的不起作用，可以尝试以下更细粒度的权限 -->
+
+    <!-- 用户选择的文件读写权限 -->
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+
+    <!-- Documents 文件夹访问权限 -->
+    <key>com.apple.security.files.documents.read-write</key>
+    <true/>
+
+    <!-- Downloads 文件夹访问权限 -->
+    <key>com.apple.security.files.downloads.read-write</key>
+    <true/>
+
+    <!-- 用户主目录访问权限 -->
+    <key>com.apple.security.personal-information.location</key>
+    <true/>
+
+    <!-- 如果需要访问 Application Support 目录 -->
+    <key>com.apple.security.temporary-exception.files.home-relative-path.read-write</key>
+    <array>
+        <string>Library/Application Support/</string>
+        <string>Documents/</string>
+        <string>Desktop/</string>
+    </array>
+
+    <!-- 临时异常：如果以上都不行，可以添加完整文件系统访问 -->
+    <!-- 注意：这个权限很宽泛，生产环境中要谨慎使用 -->
+    <!--
+    <key>com.apple.security.files.all</key>
+    <true/>
+    -->
 </dict>
 </plist>
