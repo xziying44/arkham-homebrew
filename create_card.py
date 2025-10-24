@@ -1265,7 +1265,9 @@ class CardCreator:
             card.set_health_and_horror(health, horror)
 
         if data.get('victory') is not None:
-            pos = (675, 938) if 'slots' not in data else (379, 885)
+            pos = (379, 885)
+            if 'slots' not in data or not data.get('slots'):
+                pos = (675, 933)
             card.draw_victory_points(
                 position=pos,
                 victory_value=data.get('victory')
