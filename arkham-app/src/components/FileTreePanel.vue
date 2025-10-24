@@ -504,6 +504,11 @@ import { ref, h, onMounted, computed, nextTick, onUnmounted } from 'vue';
 import { NIcon, useMessage, NText, NTag } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import type { TreeOption, FormInst, FormRules } from 'naive-ui';
+
+// 扩展TreeOption接口以支持卡牌类型
+interface ExtendedTreeOption extends TreeOption {
+  card_type?: string; // 卡牌类型
+}
 import {
   FolderOpenOutline,
   DocumentOutline,
@@ -906,13 +911,18 @@ const getFileType = (fileName: string): string => {
 };
 
 // 转换API返回的文件树结构为组件所需格式
-const convertFileTreeData = (node: any): TreeOption => {
-  const treeNode: TreeOption = {
+const convertFileTreeData = (node: any): ExtendedTreeOption => {
+  const treeNode: ExtendedTreeOption = {
     label: node.label,
     key: node.key,
     type: node.type,
     path: node.path
   };
+
+  // 保留card_type属性（如果存在）
+  if (node.card_type) {
+    treeNode.card_type = node.card_type;
+  }
 
   if (node.children && node.children.length > 0) {
     treeNode.children = node.children.map(convertFileTreeData);
@@ -1052,10 +1062,10 @@ const renderTreeLabel = ({ option }: { option: TreeOption }) => {
 const renderTreePrefix = ({ option }: { option: TreeOption }) => {
   const iconStyle = { marginRight: '6px' };
 
-  const iconMap = {
+  // 基础文件类型图标映射
+  const baseIconMap = {
     'workspace': { component: LayersOutline, color: '#667eea' },
     'directory': { component: FolderOpenOutline, color: '#ffa726' },
-    'card': { component: DocumentOutline, color: '#42a5f5' },
     'image': { component: ImageOutline, color: '#66bb6a' },
     'config': { component: GridOutline, color: '#ff7043' },
     'data': { component: GridOutline, color: '#ff7043' },
@@ -1065,7 +1075,67 @@ const renderTreePrefix = ({ option }: { option: TreeOption }) => {
     'default': { component: DocumentOutline, color: '#90a4ae' }
   };
 
-  const iconConfig = iconMap[option.type as keyof typeof iconMap] || iconMap.default;
+  // 卡牌类型图标映射
+  const cardTypeIconMap = {
+    '支援卡': { component: DocumentOutline, emoji: '📦' },
+    '事件卡': { component: DocumentOutline, emoji: '⚡' },
+    '技能卡': { component: DocumentOutline, emoji: '🎯' },
+    '调查员': { component: DocumentOutline, emoji: '👤' },
+    '调查员背面': { component: DocumentOutline, emoji: '🔄' },
+    '定制卡': { component: DocumentOutline, emoji: '🎨' },
+    '故事卡': { component: DocumentOutline, emoji: '📖' },
+    '诡计卡': { component: DocumentOutline, emoji: '🎭' },
+    '敌人卡': { component: DocumentOutline, emoji: '👹' },
+    '地点卡': { component: DocumentOutline, emoji: '📍' },
+    '密谋卡': { component: DocumentOutline, emoji: '🌙' },
+    '密谋卡-大画': { component: DocumentOutline, emoji: '🌕' },
+    '场景卡': { component: DocumentOutline, emoji: '🎬' },
+    '场景卡-大画': { component: DocumentOutline, emoji: '🎞️' },
+    '冒险参考卡': { component: DocumentOutline, emoji: '📋' }
+  };
+
+  // 如果是卡牌类型且有card_type属性
+  if (option.type === 'card' && (option as ExtendedTreeOption).card_type) {
+    const cardType = (option as ExtendedTreeOption).card_type as string;
+    const cardIconConfig = cardTypeIconMap[cardType as keyof typeof cardTypeIconMap];
+
+    if (cardIconConfig) {
+      // 创建带emoji的图标
+      return h('div', {
+        style: {
+          display: 'flex',
+          alignItems: 'center',
+          marginRight: '6px',
+          fontSize: '14px'
+        }
+      }, [
+        h('span', {
+          style: {
+            marginRight: '4px',
+            fontSize: '12px'
+          }
+        }, cardIconConfig.emoji),
+        h(NIcon, {
+          component: cardIconConfig.component,
+          color: '#42a5f5',
+          size: 14
+        })
+      ]);
+    }
+  }
+
+  // 普通卡牌类型（没有card_type属性的.card文件）
+  if (option.type === 'card') {
+    return h(NIcon, {
+      component: DocumentOutline,
+      color: '#42a5f5',
+      size: 14,
+      style: iconStyle
+    });
+  }
+
+  // 其他文件类型
+  const iconConfig = baseIconMap[option.type as keyof typeof baseIconMap] || baseIconMap.default;
 
   return h(NIcon, {
     component: iconConfig.component,
