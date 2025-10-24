@@ -51,6 +51,8 @@ You can use more advanced flavor tags to customize functionality:
  <flavor align="left" flex="false" padding="0" quote="false">xxx</flavor>
 ●The <upg> tag will automatically generate a TTS checkbox script when used in custom cards.
 
+<fullname> represents the name of this card.
+
 Available icon tags:
 🏅 <*> unique
 ⭕ <rea> reaction

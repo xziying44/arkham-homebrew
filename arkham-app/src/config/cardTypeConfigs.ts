@@ -52,6 +52,8 @@ const bodyTip = `输入格式：
  <flavor align="left" flex="false" padding="0" quote="false">xxx</flavor>
 ● <upg>或<升级>在定制卡中使用会自动生成TTS的复选框脚本。
 
+<fullname> 表示本卡牌名称
+
 可用图标标签：
 🏅 <独特>
 ⭕ <反应>
