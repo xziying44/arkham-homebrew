@@ -191,13 +191,11 @@ class ContentPackageManager:
                             card_index: int) -> Optional[Dict[str, Any]]:
         """
         创建卡牌对象
-
         Args:
             card_data: 卡牌JSON数据
             front_url: 正面图片URL
             back_url: 背面图片URL
             card_index: 卡牌索引
-
         Returns:
             dict: 卡牌对象，失败时返回None
         """
@@ -206,10 +204,19 @@ class ContentPackageManager:
             card_type = card_data.get("type", "")
             is_investigator = card_type == "调查员"
 
+            # 定义需要使用act.json模板的卡牌类型
+            act_card_types = {"密谋卡", "密谋卡-大画", "场景卡", "场景卡-大画"}
+            is_act_card = card_type in act_card_types
             # 选择模板
-            template_name = "Investigator.json" if is_investigator else "General.json"
-            template = self._read_template(template_name)
+            if is_investigator:
+                template_name = "Investigator.json"
+            elif is_act_card:
+                template_name = "Act.json"
+            else:
+                template_name = "General.json"
+            print(card_type + ' - ' + template_name)
 
+            template = self._read_template(template_name)
             if not template:
                 self._add_log(f"无法读取模板文件: {template_name}")
                 return None
@@ -243,14 +250,6 @@ class ContentPackageManager:
                 "UniqueBack": is_investigator,
                 "Type": 0
             }
-
-            # 设置调查员卡的特殊属性
-            if is_investigator:
-                template["SidewaysCard"] = True
-                template["HideWhenFaceDown"] = False
-            else:
-                template["SidewaysCard"] = False
-                template["HideWhenFaceDown"] = True
 
             # 读取原始卡牌对象中的LuaScript和GMNotes信息
             tts_script = card_data.get("tts_script", {})
