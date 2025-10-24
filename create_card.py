@@ -1209,10 +1209,15 @@ class CardCreator:
         offset = {'潜修者': -3, '守护者': -1, '生存者': -1, '中立': -3}.get(data.get('class', ''), 0)
         card.draw_centered_text((370, 621 + offset), data['name'], "标题字体", 48, (0, 0, 0))
         card.draw_centered_text((368, 675), traits, "特性字体", 32, (0, 0, 0))
+        vertices = [(45, 690), (694, 690), (706, 757), (704, 817), (680, 887), (670, 952),
+                    (598, 992), (135, 992), (77, 949), (61, 907), (31, 793)]
+
+        if 'victory' in data and data.get('victory') is not None:
+            vertices = [(45, 690), (694, 690), (706, 757), (704, 817), (680, 887), (670, 960),
+                        (77, 960), (61, 907), (31, 793)]
         card.draw_text(
             body,
-            vertices=[(45, 690), (694, 690), (706, 757), (704, 817), (680, 887), (670, 952),
-                      (598, 992), (135, 992), (77, 949), (61, 907), (31, 793)],
+            vertices=vertices,
             default_font_name='正文字体', default_size=32, padding=18, draw_virtual_box=False
         )
 
@@ -1771,41 +1776,39 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "支援卡",
-        "name": "The Necronomicon",
+        "type": "事件卡",
+        "name": "Recursive Directive",
         "id": "",
         "created_at": "",
         "version": "2.0",
-        "class": "弱点",
         "language": "en",
-        "subtitle": "John Dee Translation",
-        "level": -1,
-        "cost": -1,
-        "submit_icon": [],
-        "traits": [
-            "Item",
-            "Tome",
-            "Cursed"
+        "class": "中立",
+        "level": 3,
+        "cost": 1,
+        "submit_icon": [
+            "意志",
+            "狂野"
         ],
-        "health": -1,
-        "horror": -1,
-        "slots": None,
-        "slots2": None,
-        "body": "Daisy Walker deck only. Advanced.\n【Revelation】 - Put The Necronomicon into play in your threat area, with 3 horror on it horror on it horror on it horror on it horror on it horror on it. It cannot leave play while it has 1 or more horror on it.  \n【Forced】 - The first time you draw an encounter card each round: Either move 1 horror from The Necronomicon to Daisy Walker, or draw an additional encounter card. If you drew an additional encounter card, remove 1 horror from The Necronomicon. Necronomicon Ne Ne Ne",
-        "flavor": "123",
+        "traits": [
+            "Tactic",
+            "Fated"
+        ],
+        "body": "Fast. Play only during your turn.\nResolve an ➡️ ability on two different non-weakness neutral assets you control, ignoring their ➡️ cost. Those assets do not exhaust as part of their ability’s cost.\nIf the chosen assets were Forgotten Blueprint and Old Schematics, add Recursive Directive to the victory display. Otherwise, remove it from the game.",
+        "flavor": "",
+        "victory": 1,
         "illustrator": "",
-        "card_number": "6",
+        "card_number": "121",
         "encounter_group_number": "",
         "image_mode": 1,
         "back": {
             "type": "玩家卡背",
-            "name": "The Necronomicon (背面)",
+            "name": "Recursive Directive (背面)",
             "image_mode": 0,
             "language": "en",
             "version": "2.0"
         },
-        "position": 6,
-        "code": "4b3bb0d8-9207-4503-9842-172a59d802d6",
+        "position": 121,
+        "code": "b00ca6a6-40c3-4653-b345-0f764deb17ee",
         "deck_options": []
     }
 
