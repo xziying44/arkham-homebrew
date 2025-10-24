@@ -463,7 +463,7 @@ class RichTextRenderer:
             else:
                 line_height = int(size_to_test * self.line_spacing_multiplier)
         else:
-            offsize = 3
+            offsize = 2
             if size_to_test < (25 + offsize) and self.line_spacing_multiplier > 0.98:
                 line_height = int(size_to_test * 0.98)
             elif size_to_test < (27 + offsize) and self.line_spacing_multiplier > 1:

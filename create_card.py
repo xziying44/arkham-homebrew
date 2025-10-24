@@ -543,11 +543,14 @@ class CardCreator:
         # 写正文和风味
         card.draw_text(
             text=body,
-            vertices=[(38, 700), (704, 700), (704, 1010), (38, 1010)],
+            vertices=[
+                (38, 700), (704, 700), (704, 984),
+                (523, 1010), (216, 1010), (38, 984)
+            ],
             default_font_name='正文字体',
             default_size=32,
             padding=18,
-            draw_virtual_box=False
+            draw_virtual_box=True
         )
 
         # 画胜利点
@@ -871,7 +874,11 @@ class CardCreator:
         card.draw_centered_text((370, 715), self._integrate_traits_text(data.get('traits', [])), "特性字体", 32,
                                 (0, 0, 0))
 
-        card.draw_text(body, vertices=[(38, 726), (704, 726), (704, 980), (38, 980)],
+        card.draw_text(body,
+                       vertices=[
+                           (38, 726), (704, 726), (704, 960),
+                           (519, 1010), (219, 1010), (38, 960),
+                       ],
                        default_font_name='正文字体', default_size=32, padding=18, draw_virtual_box=False)
 
     def _create_weakness_enemy_card(self, card, data, body, dp):
@@ -1758,45 +1765,42 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "调查员",
-        "name": "🏅Rodney Dorman",
+        "type": "支援卡",
+        "name": "The Necronomicon",
         "id": "",
         "created_at": "",
         "version": "2.0",
         "language": "en",
-        "subtitle": "The Attorney",
-        "class": "探求者",
-        "attribute": [
-            3,
-            4,
-            3,
-            2
-        ],
-        "health": 7,
-        "horror": 7,
+        "subtitle": "John Dee Translation",
+        "class": "弱点",
+        "level": -1,
+        "cost": -1,
+        "submit_icon": [],
         "traits": [
-            "Civic",
-            "Veteran"
+            "Item",
+            "Tome",
+            "Cursed"
         ],
-        "body": "【Forced】 - When the game begins: Reveal cards from the top of your deck until you reveal a {Case} asset. Put that asset into play. Shuffle each other revealed card back into your deck.\nThe first investigate action you perform on each turn does not provoke attacks of opportunity.\n⭐ effect: +1. You may shuffle a {Case} asset from your discard pile into your deck.",
-        "flavor": "Shuffle each other revealed card back into your deck.",
+        "health": -1,
+        "horror": -1,
+        "slots": None,
+        "slots2": None,
+        "body": "Daisy Walker deck only. Advanced.\n【Revelation】 - Put The Necronomicon into play in your threat area, with 3 horror on it. It cannot leave play while it has 1 or more horror on it.  \n【Forced】 - The first time you draw an encounter card each round: Either move 1 horror from The Necronomicon to Daisy Walker, or draw an additional encounter card. If you drew an additional encounter card, remove 1 horror from The Necronomicon. Then, if The Necronomicon has no horror on it, discard it. ",
+        "flavor": "",
+        "illustrator": "",
+        "card_number": "6",
+        "encounter_group_number": "",
         "image_mode": 1,
         "back": {
-            "name": "🏅Rodney Dorman",
-            "subtitle": "The Attorney",
-            "class": "探求者",
-            "card_back": {
-                "other": "【Deck Size】: 30\n【Deckbuilding Options】: Seeker cards (🔍) level 0-5, {Insight} cards level 0-4, up to 10 other Rogue and/or Guardian (🚶/🛡️) cards level 0-1, Neutral cards level 0-5.\n【Deckbuilding Requirements】 (do not count toward deck size): Case #17, Case #75, Case #257, Case #1910, Unhappy Client, 1 random basic weakness.",
-                "story": "You had a case you needed solved, Rodney Dorman had your back. He got the evidence, the interviews, and he worked fast and quick so you see justice done. That was before his last trip to France where he had been invited to see a showing of \"The King in Yellow\". It was an absolutely fascinating play that stuck with him a bit too much once he returned to Arkham. He could not get it off his mind, an endless fixation that was only silenced through booze. Now, he has been trying to get off the bottle and go through his massive backlog of unsolved cases. He worked as hard as he can, but no matter what he did, he cannot get that play out of his mind (or what was left of it anyways)."
-            },
-            "type": "调查员背面",
-            "image_mode": 1,
+            "type": "玩家卡背",
+            "name": "The Necronomicon (背面)",
+            "image_mode": 0,
             "language": "en",
             "version": "2.0"
         },
-        "position": 4,
-        "code": "1a947a01-c46b-4985-806d-74edc2bbaa99",
-        "deck_options": [],
+        "position": 6,
+        "code": "4b3bb0d8-9207-4503-9842-172a59d802d6",
+        "deck_options": []
     }
 
     # 创建字体和图片管理器
