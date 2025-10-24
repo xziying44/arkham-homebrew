@@ -12,6 +12,7 @@ import webview
 from PIL import Image
 from flask import Flask, jsonify, request, send_from_directory, Response
 
+from bin.config_directory_manager import config_dir_manager
 from bin.file_manager import QuickStart
 from bin.gitHub_image import GitHubImageHost
 from bin.logger import logger_manager
@@ -24,38 +25,7 @@ from bin.image_uploader import create_uploader
 # 辅助函数：获取用户可写的配置目录
 # ============================================
 def get_user_config_directory():
-    """
-    获取用户配置目录（兼容开发和打包环境）
-    - macOS: 使用系统标准目录，更新安全
-    - Windows: 使用运行目录，便携模式
-    Returns:
-        str: 用户配置目录的绝对路径
-    """
-    system = platform.system()
-
-    if getattr(sys, 'frozen', False):
-        # ===== 打包应用 =====
-        if system == 'Darwin':  # macOS
-            # 使用 macOS 标准应用数据目录
-            config_dir = os.path.join(os.path.expanduser('~'), 'Documents', 'ArkhamCardMaker')
-            os.makedirs(config_dir, exist_ok=True)
-        elif system == 'Windows':  # Windows
-            # Windows：便携模式，使用exe同级目录
-            if hasattr(sys, '_MEIPASS'):
-                # PyInstaller 打包：exe 所在目录
-                exe_dir = os.path.dirname(sys.executable)
-            else:
-                exe_dir = os.path.dirname(os.path.abspath(__file__))
-            config_dir = os.path.join(exe_dir, 'config')
-
-        else:  # Linux 或其他系统
-            config_dir = os.path.expanduser('~/.config/arkham-card-maker')
-    else:
-        # 开发环境
-        config_dir = os.path.dirname(os.path.abspath(__file__))
-    # 确保目录存在
-    os.makedirs(config_dir, exist_ok=True)
-    return config_dir
+    return config_dir_manager.get_global_config_dir()
 
 
 app = Flask(__name__)
@@ -67,7 +37,7 @@ selection_lock = threading.Lock()
 is_selecting = False
 
 # 全局实例
-quick_start = QuickStart(os.path.join(get_user_config_directory(), "recent_directories.json"))
+quick_start = QuickStart(config_dir_manager.get_recent_directories_file_path())
 current_workspace: WorkspaceManager = None
 github_image_host = None
 

@@ -13,6 +13,7 @@ from typing import List, Dict, Any, Optional, Union, Tuple
 from PIL import Image
 
 from Card import Card
+from bin.config_directory_manager import config_dir_manager
 from bin.deck_exporter import DeckExporter
 from bin.logger import logger_manager
 from bin.tts_card_converter import TTSCardConverter
@@ -1078,7 +1079,7 @@ class WorkspaceManager:
     @staticmethod
     def _get_global_config_path() -> str:
         """获取全局配置文件路径"""
-        return os.path.join(os.path.abspath("."), "global_config.json")
+        return config_dir_manager.get_global_config_file_path()
 
     def _get_default_global_config(self) -> Dict[str, Any]:
         """获取默认全局配置"""

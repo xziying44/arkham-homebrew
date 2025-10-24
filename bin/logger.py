@@ -6,6 +6,8 @@ from datetime import datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
+from bin.config_directory_manager import config_dir_manager
+
 
 class LoggerManager:
     """日志管理器，提供统一的日志记录功能"""
@@ -22,46 +24,11 @@ class LoggerManager:
         if self._logger is None:
             self._setup_logger()
 
-    def _get_log_directory(self):
-        """
-        获取日志目录（兼容开发和打包环境）
-        - macOS: 使用系统标准目录，更新安全
-        - Windows: 使用运行目录，便携模式
-        Returns:
-            str: 日志目录的绝对路径
-        """
-        if getattr(sys, 'frozen', False):
-            # 打包后的应用
-            if platform.system() == 'Darwin':  # macOS
-                # 使用系统标准目录，更新时不会被删除
-                log_dir = os.path.join(os.path.expanduser('~'), 'Documents', 'ArkhamCardMaker')
-                os.makedirs(log_dir, exist_ok=True)
-
-            elif platform.system() == 'Windows':  # Windows
-                # Windows：便携模式，使用exe同级目录
-                if hasattr(sys, '_MEIPASS'):
-                    # PyInstaller 打包：exe 所在目录
-                    exe_dir = os.path.dirname(sys.executable)
-                else:
-                    exe_dir = os.path.dirname(os.path.abspath(__file__))
-                log_dir = os.path.join(exe_dir, 'logs')
-
-            else:  # Linux 或其他系统
-                log_dir = os.path.expanduser('~/Documents/ArkhamCardMaker/logs')
-        else:
-            # 开发环境
-            current_file = Path(__file__).resolve()
-            project_root = current_file.parent.parent
-            log_dir = project_root / 'logs'
-        # 确保目录存在
-        os.makedirs(log_dir, exist_ok=True)
-        return str(log_dir)
-
     def _setup_logger(self):
         """设置日志系统"""
         try:
             # 获取日志目录
-            log_dir = self._get_log_directory()
+            log_dir = config_dir_manager.get_logs_dir()
 
             # 确保日志目录存在
             os.makedirs(log_dir, exist_ok=True)
