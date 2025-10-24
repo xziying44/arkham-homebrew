@@ -550,7 +550,7 @@ class CardCreator:
             default_font_name='正文字体',
             default_size=32,
             padding=18,
-            draw_virtual_box=True
+            draw_virtual_box=False
         )
 
         # 画胜利点
@@ -623,7 +623,7 @@ class CardCreator:
 
         # 写特性
         card.draw_centered_text(
-            position=(370, 218),
+            position=(370, 212),
             text=self._integrate_traits_text(data.get('traits', [])),
             font_name="特性字体",
             font_size=32,
@@ -642,8 +642,8 @@ class CardCreator:
             card.draw_text(
                 text=body,
                 vertices=[
-                    (90, 230), (645, 230), (716, 270), (716, 450),
-                    (538, 510), (190, 510), (20, 450), (20, 270)
+                    (90, 234), (645, 234), (716, 270), (716, 458),
+                    (538, 510), (190, 510), (20, 458), (20, 270)
                 ],
                 default_font_name='正文字体',
                 default_size=32,
@@ -654,8 +654,8 @@ class CardCreator:
             card.draw_text(
                 text=body,
                 vertices=[
-                    (90, 230), (645, 230), (716, 270), (716, 450),
-                    (538, 540), (190, 540), (20, 450), (20, 270)
+                    (90, 234), (645, 234), (716, 270), (716, 458),
+                    (538, 540), (190, 540), (20, 458), (20, 270)
                 ],
                 default_font_name='正文字体',
                 default_size=32,
@@ -900,7 +900,7 @@ class CardCreator:
         card.draw_centered_text((370, 28), data['name'], "标题字体", 48, (0, 0, 0))
         card.draw_centered_text((370, 79), self.font_manager.get_font_text(data['weakness_type'])
                                 , "副标题字体", 28, (0, 0, 0))
-        card.draw_centered_text((370, 218), self._integrate_traits_text(data.get('traits', [])), "特性字体", 32,
+        card.draw_centered_text((370, 212), self._integrate_traits_text(data.get('traits', [])), "特性字体", 32,
                                 (0, 0, 0))
 
         if data.get('victory') is not None:
@@ -908,11 +908,11 @@ class CardCreator:
                 position=(380, 512),
                 victory_value=data.get('victory')
             )
-            vertices = [(90, 230), (645, 230), (716, 270), (716, 450),
-                        (538, 510), (190, 510), (20, 450), (20, 270)]
+            vertices = [(90, 234), (645, 234), (716, 270), (716, 458),
+                        (538, 510), (190, 510), (20, 458), (20, 270)]
         else:
-            vertices = [(90, 230), (645, 230), (716, 270), (716, 450),
-                        (538, 540), (190, 540), (20, 450), (20, 270)]
+            vertices = [(90, 234), (645, 234), (716, 270), (716, 458),
+                        (538, 540), (190, 540), (20, 458), (20, 270)]
 
         card.draw_text(body, vertices=vertices, default_font_name='正文字体', default_size=32, padding=15,
                        draw_virtual_box=False)
@@ -1786,39 +1786,39 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "技能卡",
-        "name": "Shared Insight",
+        "type": "敌人卡",
+        "name": "Issith",
         "id": "",
         "created_at": "",
         "version": "2.0",
         "language": "en",
-        "class": "探求者",
-        "level": 0,
+        "class": None,
+        "level": -1,
         "cost": -1,
-        "submit_icon": [
-            "智力",
-            "狂野"
-        ],
+        "submit_icon": [],
         "traits": [
-            "Practiced"
+            "Humanoid",
+            "Monster",
+            "Serpent"
         ],
-        "body": "This card can only be committed to a skill test being performed by another investigator either at your location, or at a connecting location. If this skill test succeeds by 2 or more, return this card to your hand.",
-        "flavor": "\"Sometimes all you need is a different perspective to solve the problem.\"",
-        "illustrator": "",
-        "card_number": "45",
-        "encounter_group_number": "",
+        "attack": "3",
+        "enemy_health": "3",
+        "evade": "2",
+        "enemy_damage": 1,
+        "enemy_damage_horror": 1,
+        "body": "Bonded (Stolen Idol of Yoth).\n【Prey】 - Bearer.\nAlert. Hunter.\n【Forced】 - After you reveal the recorded chaos token during a skill test: Ready Issith and resolve its hunter keyword. (Limit once per round.)",
+        "flavor": "",
         "image_mode": 1,
         "back": {
             "type": "玩家卡背",
-            "name": "Shared Insight (背面)",
+            "name": "Issith (背面)",
             "image_mode": 0,
             "language": "en",
             "version": "2.0"
         },
-        "position": 45,
-        "code": "1702d362-197e-400b-8217-93cf2f868021",
-        "deck_options": [],
-        "victory": 3
+        "position": 126,
+        "code": "4ac58d97-9521-4609-bcc0-a1d88d494289",
+        "deck_options": []
     }
 
     # 创建字体和图片管理器
