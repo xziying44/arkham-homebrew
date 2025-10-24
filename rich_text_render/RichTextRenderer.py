@@ -416,13 +416,18 @@ class RichTextRenderer:
                 text, polygon_vertices, padding, options, mid_size
             )
 
+            # 调试日志
+            # print(f"[DEBUG] 尝试字体大小: {mid_size}, fits={fits}, low={low}, high={high}")
+
             if fits:
                 # 成功: 保存结果, 尝试更大的字体
                 best_vbox = vbox_instance
                 low = mid_size + 1
+                # print(f"[DEBUG] 字体大小 {mid_size} 适合，尝试增大字体 -> 新 low={low}")
             else:
                 # 失败: 字体太大, 减小字体
                 high = mid_size - 1
+                # print(f"[DEBUG] 字体大小 {mid_size} 太大，减小字体 -> 新 high={high}")
 
         if best_vbox:
             font_size = high  # 'high' holds the last successful size
@@ -448,15 +453,25 @@ class RichTextRenderer:
         parsed_items = self.rich_text_parser.parse(text, self.font_manager.lang)
 
         # 使用构造函数中传入的行距倍率来计算行高
-        if size_to_test < 27 and self.line_spacing_multiplier > 1.05:
-            line_height = int(size_to_test * 1.05)
-        elif size_to_test < 29 and self.line_spacing_multiplier > 1.1:
-            line_height = int(size_to_test * 1.1)
-        elif size_to_test < 32 and self.line_spacing_multiplier > 1.15:
-            line_height = int(size_to_test * 1.15)
+        if self.font_manager.lang == 'zh':
+            if size_to_test < 27 and self.line_spacing_multiplier > 1.05:
+                line_height = int(size_to_test * 1.05)
+            elif size_to_test < 29 and self.line_spacing_multiplier > 1.1:
+                line_height = int(size_to_test * 1.1)
+            elif size_to_test < 32 and self.line_spacing_multiplier > 1.15:
+                line_height = int(size_to_test * 1.15)
+            else:
+                line_height = int(size_to_test * self.line_spacing_multiplier)
         else:
-            # print("使用默认行高")
-            line_height = int(size_to_test * self.line_spacing_multiplier)
+            offsize = 3
+            if size_to_test < (25 + offsize) and self.line_spacing_multiplier > 0.98:
+                line_height = int(size_to_test * 0.98)
+            elif size_to_test < (27 + offsize) and self.line_spacing_multiplier > 1:
+                line_height = int(size_to_test * 1)
+            elif size_to_test < (29 + offsize) and self.line_spacing_multiplier > 1.05:
+                line_height = int(size_to_test * 1.05)
+            else:
+                line_height = int(size_to_test * self.line_spacing_multiplier)
         # print(f"行高: {line_height}")
         # print(f"行距倍率: {self.line_spacing_multiplier}")
         # print(f"字体大小: {size_to_test}")
@@ -488,8 +503,10 @@ class RichTextRenderer:
         def pop_cache():
             """弹出缓存"""
             if len(push_cache) > 0:
-                virtual_text_box.push(push_cache)
+                _success = virtual_text_box.push(push_cache)
                 push_cache.clear()
+                return _success
+            return True
 
         for item in parsed_items:
             success = True
@@ -528,8 +545,8 @@ class RichTextRenderer:
                     else:
                         if item.content == ' ':
                             # 释放缓存
-                            pop_cache()
-                            success = virtual_text_box.push(text_object)
+                            success = pop_cache()
+                            success = success and virtual_text_box.push(text_object)
                         else:
                             # 暂存
                             push_cache.append(text_object)
@@ -542,11 +559,11 @@ class RichTextRenderer:
                                          base_options.font_color)
                 push_cache.append(text_object)
             elif item.tag == "br":
-                pop_cache()
+                success = pop_cache()
                 if html_tag_stack.get_top() == 'body':
-                    success = virtual_text_box.new_paragraph()
+                    success = success and virtual_text_box.new_paragraph()
                 else:
-                    success = virtual_text_box.newline()
+                    success = success and virtual_text_box.newline()
             elif item.tag == "par":
                 pop_cache()
                 success = virtual_text_box.new_paragraph()
@@ -567,7 +584,7 @@ class RichTextRenderer:
             elif item.tag == "p":
                 html_tag_stack.push("p")
             elif item.tag == "/p":
-                pop_cache()
+                success = pop_cache()
                 html_tag_stack.pop()
             elif item.tag == "flavor":
                 html_tag_stack.push("flavor")
@@ -592,7 +609,7 @@ class RichTextRenderer:
                 elif item.tag in ["/b", "/i", '/trait']:
                     font_stack.pop()
                 elif item.tag == "/flavor":
-                    pop_cache()
+                    success = pop_cache()
                     html_tag_stack.pop()
                     font_stack.pop()
                     virtual_text_box.cancel_line_padding()
@@ -603,7 +620,10 @@ class RichTextRenderer:
 
             if not success:
                 return False, None
-        pop_cache()
+
+        success = pop_cache()
+        if not success:
+            return False, None
 
         return True, virtual_text_box
 
