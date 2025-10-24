@@ -639,9 +639,7 @@ class Card:
 
         :param cost: 费用
         """
-        default_position = [(70, 50), (70, 50)]
-        if self.card_class == '弱点':
-            default_position = [(71, 53), (71, 53)]
+        default_position = [(71, 53), (71, 55)]
         if 0 <= cost < 100:
             self.draw_centered_text(
                 position=default_position[0],
