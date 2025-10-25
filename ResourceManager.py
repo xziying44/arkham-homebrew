@@ -70,55 +70,80 @@ class LanguageConfig:
     texts: LanguageTexts  # 文本配置
 
 
-def list_directory_bytes(directory):
-    """使用字节模式列出目录（处理编码问题）"""
+# ============================================
+# 文件系统扫描和编码修复
+# ============================================
+def scan_directory_properly(directory):
+    """
+    正确扫描目录，处理 Android 编码问题
+    返回: [(显示名称, 实际文件路径), ...]
+    """
+    files_info = []
+
     try:
-        # 先转换为字节
+        # 使用字节模式扫描
         dir_bytes = os.fsencode(directory)
 
-        # 列出文件（返回字节）
-        files_bytes = os.listdir(dir_bytes)
-
-        # 解码为字符串
-        files = []
-        for file_bytes in files_bytes:
+        for entry_bytes in os.listdir(dir_bytes):
             try:
-                # 尝试 UTF-8 解码
-                filename = os.fsdecode(file_bytes)
-                files.append(filename)
-            except UnicodeDecodeError:
-                logger_manager.error(f"[编码] 无法解码文件名: {file_bytes}")
-                # 使用替换模式强制解码
-                filename = file_bytes.decode('utf-8', errors='replace')
-                files.append(filename)
+                # 方式1: 使用 os.fsdecode（优先）
+                display_name = os.fsdecode(entry_bytes)
+                file_path = os.path.join(directory, display_name)
 
-        return files
+                # 检查文件是否真实存在
+                if os.path.exists(file_path):
+                    files_info.append((display_name, file_path))
+                    continue
+
+            except Exception as e:
+                pass
+
+            # 方式2: 如果方式1失败，尝试强制UTF-8解码
+            try:
+                display_name = entry_bytes.decode('utf-8')
+                file_path = os.path.join(directory, display_name)
+
+                if os.path.exists(file_path):
+                    files_info.append((display_name, file_path))
+                    continue
+
+            except Exception as e:
+                pass
+
+            # 方式3: 使用字节路径
+            try:
+                # 直接使用字节构建路径
+                file_path_bytes = os.path.join(dir_bytes, entry_bytes)
+                file_path = os.fsdecode(file_path_bytes)
+
+                # 尝试解码显示名称
+                try:
+                    display_name = entry_bytes.decode('utf-8')
+                except:
+                    display_name = entry_bytes.decode('utf-8', errors='replace')
+
+                if os.path.exists(file_path):
+                    files_info.append((display_name, file_path))
+                    continue
+
+            except Exception as e:
+                pass
+
+            # 如果所有方法都失败，打印警告
+            logger_manager.info(f"[扫描] 无法处理文件: {entry_bytes}")
+
     except Exception as e:
-        logger_manager.error(f"[编码] 列出目录失败: {e}")
-        # 回退到普通模式
-        return os.listdir(directory)
-
-
-def list_directory_with_encoding_fix(directory):
-    """列出目录内容，并修复文件名编码"""
-    try:
-        if not os.path.exists(directory):
-            logger_manager.warning(f"[目录列表] 目录不存在: {directory}")
-            return []
-
-        # ✅ 优先使用字节模式
-        if 'ANDROID_ARGUMENT' in os.environ:
-            return list_directory_bytes(directory)
-
-        # 非 Android 环境使用普通模式
-        return os.listdir(directory)
-    except Exception as e:
-        logger_manager.error(f"[目录列表] 列出目录失败: {directory}, 错误: {e}")
+        logger_manager.info(f"[扫描] 扫描目录失败: {directory}")
+        logger_manager.info(f"[扫描] 错误: {e}")
         import traceback
-        traceback.print_exc()
-        return []
+        traceback.logger_manager.info_exc()
+
+    return files_info
 
 
+# ============================================
+# 原有函数保持不变
+# ============================================
 def get_resource_path(relative_path):
     """获取资源文件的绝对路径，适用于开发环境、PyInstaller打包和Android打包"""
 
@@ -131,7 +156,6 @@ def get_resource_path(relative_path):
             activity = PythonActivity.mActivity
 
             # 获取应用的私有文件目录
-            # 方式1: 使用 getFilesDir()
             files_dir = activity.getFilesDir().getAbsolutePath()
 
             # 资源文件在 app 目录下
@@ -151,30 +175,11 @@ def get_resource_path(relative_path):
             if os.path.exists(cwd_path):
                 return cwd_path
 
-            # 如果都找不到，打印调试信息
-            logger_manager.info(f"[Android] 资源文件未找到: {relative_path}")
-            logger_manager.info(f"[Android] 尝试过的路径:")
-            logger_manager.info(f"  1. {resource_path}")
-            logger_manager.info(f"  2. {direct_path}")
-            logger_manager.info(f"  3. {cwd_path}")
-            logger_manager.info(f"[Android] 当前工作目录: {os.getcwd()}")
-            logger_manager.info(f"[Android] 文件目录: {files_dir}")
-
-            # 列出实际存在的文件
-            try:
-                app_dir = os.path.join(files_dir, 'app')
-                if os.path.exists(app_dir):
-                    print(f"[Android] app 目录内容: {os.listdir(app_dir)[:10]}")
-            except:
-                pass
-
             # 返回第一个尝试的路径（即使不存在）
             return resource_path
 
         except Exception as e:
-            print(f"[Android] 获取资源路径失败: {e}")
-            import traceback
-            traceback.print_exc()
+            logger_manager.info(f"[Android] 获取资源路径失败: {e}")
             # 回退到相对路径
             return os.path.join(os.path.abspath("."), relative_path)
 
@@ -199,7 +204,9 @@ class ImageManager:
         self.load_images(image_folder)
         logger_manager.info(f"[ImageManager] 加载完成，共加载 {len(self.image_map)} 张图片")
         if self.image_map:
-            logger_manager.info(f"[ImageManager] 图片列表示例: {list(self.image_map.keys())[:5]}")
+            # 显示前5个键（用于调试）
+            keys_sample = list(self.image_map.keys())[:5]
+            logger_manager.info(f"[ImageManager] 图片键示例: {keys_sample}")
 
     def load_images(self, image_folder):
         """加载图片目录下所有支持的图像文件"""
@@ -210,51 +217,49 @@ class ImageManager:
 
         try:
             if not os.path.exists(image_folder_path):
-                logger_manager.error(f"[ImageManager] 错误：图片目录不存在 - {image_folder_path}")
+                logger_manager.info(f"[ImageManager] 错误：图片目录不存在 - {image_folder_path}")
                 return
 
             if not os.path.isdir(image_folder_path):
-                logger_manager.error(f"[ImageManager] 错误：路径不是目录 - {image_folder_path}")
+                logger_manager.info(f"[ImageManager] 错误：路径不是目录 - {image_folder_path}")
                 return
 
-            # ✅ 使用编码修复的目录列表函数
-            files = list_directory_with_encoding_fix(image_folder_path)
-            logger_manager.info(f"[ImageManager] 目录中的文件数: {len(files)}")
+            # ✅ 使用新的扫描函数
+            files_info = scan_directory_properly(image_folder_path)
+            logger_manager.info(f"[ImageManager] 扫描到 {len(files_info)} 个文件")
 
             loaded_count = 0
-            for filename in files:
-                name, ext = os.path.splitext(filename)
-                if ext.lower() in supported_ext:
-                    # ✅ 使用原始文件名（可能是修复后的）构建完整路径
-                    file_path = os.path.join(image_folder_path, filename)
+            for display_name, file_path in files_info:
+                name, ext = os.path.splitext(display_name)
 
-                    # 检查文件是否真实存在
-                    if not os.path.exists(file_path):
-                        logger_manager.warning(f"[ImageManager] 警告：文件路径不存在 - {file_path}")
-                        continue
+                if ext.lower() not in supported_ext:
+                    continue
 
-                    image = self.open(file_path)
-                    if image:
-                        # 统一使用小写文件名作为键
-                        key = name.lower()
-                        self.image_map[key] = image
-                        loaded_count += 1
+                # 检查文件是否真实存在（应该已经确认过了）
+                if not os.path.exists(file_path):
+                    logger_manager.info(f"[ImageManager] 警告：文件不存在 - {file_path}")
+                    continue
 
-                        # 只打印前10个文件的加载信息
-                        if loaded_count <= 10:
-                            logger_manager.info(f"[ImageManager] 加载图片 #{loaded_count}: {name} (key: {key})")
-                    else:
-                        logger_manager.error(f"[ImageManager] 加载失败: {filename}")
+                # 打开图片
+                image = self.open(file_path)
+                if image:
+                    # 使用显示名称（去除扩展名）作为键
+                    key = name.lower()
+                    self.image_map[key] = image
+                    loaded_count += 1
 
-            logger_manager.info(f"[ImageManager] 成功加载 {loaded_count}/{len(files)} 张图片")
+                    # 只打印前10个文件的详细信息
+                    if loaded_count <= 10:
+                        logger_manager.info(f"[ImageManager] #{loaded_count}: {display_name} -> key: {key}")
+                else:
+                    logger_manager.info(f"[ImageManager] 加载失败: {display_name}")
 
-        except FileNotFoundError as e:
-            logger_manager.error(f"[ImageManager] 错误：图片目录未找到 - {image_folder_path}")
-            logger_manager.error(f"[ImageManager] 异常: {e}")
+            logger_manager.info(f"[ImageManager] 成功加载 {loaded_count} 张图片")
+
         except Exception as e:
-            logger_manager.error(f"[ImageManager] 图片加载失败: {str(e)}")
+            logger_manager.info(f"[ImageManager] 图片加载失败: {str(e)}")
             import traceback
-            traceback.print_exc()
+            traceback.logger_manager.info_exc()
 
     def open(self, path, **kwargs):
         """
@@ -271,7 +276,7 @@ class ImageManager:
                 img = img.convert('RGB')
             return img
         except Exception as e:
-            print(f"无法打开图片 {path}: {str(e)}")
+            logger_manager.info(f"无法打开图片 {path}: {str(e)}")
             return None
 
     def get_image(self, image_name):
@@ -319,7 +324,7 @@ class FontManager:
                 if ext.lower() in supported_ext:
                     self.font_map[name.lower()] = os.path.join(self.font_folder, filename)
         except Exception as e:
-            print(f"字体加载失败: {str(e)}")
+            logger_manager.info(f"字体加载失败: {str(e)}")
 
     def _load_language_configs(self, lang_config=None):
         """加载多语言配置"""
@@ -329,7 +334,7 @@ class FontManager:
             if os.path.exists(default_config_path):
                 lang_config = default_config_path
             else:
-                print("警告：未找到语言配置文件，将使用空配置")
+                logger_manager.info("警告：未找到语言配置文件，将使用空配置")
                 return
 
         if isinstance(lang_config, str):
@@ -339,7 +344,7 @@ class FontManager:
                     config_data = json.load(f)
                     self._parse_config_data(config_data)
             except Exception as e:
-                print(f"加载语言配置文件失败: {str(e)}")
+                logger_manager.info(f"加载语言配置文件失败: {str(e)}")
         elif isinstance(lang_config, list):
             # 从列表加载
             self._parse_config_data(lang_config)
@@ -377,7 +382,7 @@ class FontManager:
                 self.language_configs[lang_key] = lang_config
 
             except Exception as e:
-                print(f"解析语言配置失败 {lang_data.get('name', 'unknown')}: {str(e)}")
+                logger_manager.info(f"解析语言配置失败 {lang_data.get('name', 'unknown')}: {str(e)}")
 
     def set_lang(self, lang='zh'):
         """设置当前语言"""
@@ -387,7 +392,7 @@ class FontManager:
         if lang in self.language_configs:
             self.lang = lang
         else:
-            print(f"警告：未找到语言 '{lang}' 的配置，使用默认配置")
+            logger_manager.info(f"警告：未找到语言 '{lang}' 的配置，使用默认配置")
             # 如果没有找到指定语言，尝试使用第一个可用的语言配置
             if self.language_configs:
                 self.lang = list(self.language_configs.keys())[0]
@@ -425,7 +430,7 @@ class FontManager:
     def get_font(self, font_name, font_size):
         """获取字体对象"""
         font_path = self.get_font_path(font_name)
-        # print(font_name,font_size)
+        # logger_manager.info(font_name,font_size)
         return ImageFont.truetype(font_path, font_size)
 
     def get_font_path(self, font_name):
@@ -588,5 +593,5 @@ class FontManager:
         with open('language_config.json', 'w', encoding='utf-8') as f:
             json.dump(default_config, f, indent=2, ensure_ascii=False)
 
-        print("默认语言配置文件已创建：language_config.json")
+        logger_manager.info("默认语言配置文件已创建：language_config.json")
         return default_config
