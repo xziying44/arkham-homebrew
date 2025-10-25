@@ -2261,6 +2261,11 @@ defineExpose({
   overflow-y: auto;
   padding: 12px;
   background: linear-gradient(145deg, #f8fafc 0%, #e2e8f0 100%);
+  /* 移动端滚动优化 */
+  -webkit-overflow-scrolling: touch;
+  /* 确保滚动容器有正确的高度 */
+  min-height: 0;
+  height: 0;
 }
 
 .file-tree-content::-webkit-scrollbar {
@@ -2473,6 +2478,24 @@ defineExpose({
 @media (max-width: 800px) {
   :deep(.n-grid) {
     grid-template-columns: 1fr !important;
+  }
+}
+
+/* 移动端文件树滚动优化 */
+@media (max-width: 768px) {
+  .file-tree-pane {
+    height: 100vh;
+    max-height: 100vh;
+  }
+
+  .file-tree-content {
+    padding: 8px;
+    /* 确保移动端滚动容器占满可用空间 */
+    height: calc(100vh - 60px); /* 减去头部高度 */
+    min-height: calc(100vh - 60px);
+    /* 增强滚动体验 */
+    overscroll-behavior: contain;
+    touch-action: pan-y;
   }
 }
 </style>

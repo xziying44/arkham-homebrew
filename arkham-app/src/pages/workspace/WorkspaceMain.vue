@@ -613,7 +613,8 @@ onUnmounted(() => {
 
   .file-tree-modal {
     max-width: 95vw;
-    max-height: 75vh; /* 为顶部和底部导航预留空间 */
+    max-height: 85vh; /* 增加最大高度限制 */
+    height: 85vh; /* 设置固定高度确保滚动容器正常工作 */
   }
 
   .image-modal {
@@ -647,7 +648,8 @@ onUnmounted(() => {
 
   .file-tree-modal {
     max-width: 90vw;
-    max-height: 70vh;
+    max-height: 80vh; /* 增加高度限制 */
+    height: 80vh; /* 设置固定高度 */
   }
 
   .image-modal {
