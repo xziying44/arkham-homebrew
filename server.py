@@ -8,7 +8,6 @@ import traceback
 from typing import Optional
 from functools import wraps
 
-import webview
 from PIL import Image
 from flask import Flask, jsonify, request, send_from_directory, Response
 
@@ -232,6 +231,7 @@ def api_select_directory():
 
     # 判断是否在 pywebview 环境中运行
     if hasattr(app, 'window') and app.window:
+        import webview
         # --- pywebview 模式 ---
         logger_manager.debug("使用 pywebview 模式打开目录选择对话框")
         result = app.window.create_file_dialog(webview.FOLDER_DIALOG)

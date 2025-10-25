@@ -7,21 +7,22 @@ package.domain = cn.xziying
 # 源代码
 source.dir = .
 source.include_exts = py,png,jpg,jpeg,kv,atlas,json,txt,ttf,otf,woff,woff2,ico,icns
-source.include_patterns = assets/*,images/*,fonts/*,static/*,templates/*,prompt/*,cardback/*,bin/*
+# 2. 包含所有的资源和自定义Python模块目录
+source.include_dirs = ., assets, fonts, images, cardback, templates, static, prompt, bin, export_helper, rich_text_render
 
 # 排除文件
 source.exclude_exts = spec,md
 source.exclude_dirs = tests,venv,venv-android,__pycache__,.git,.github,build,dist
-source.exclude_patterns = license,images/original/*
+source.exclude_patterns = license,images/original/*,app.py,setup.py,dmg_settings.py,macapp.py,*.spec,*.md,requirements*.txt,README*
 
 # 入口文件
-source.main = app_android.py
+source.main = main.py
 
 # 版本
 version = 2.9.9
 
 # 依赖
-requirements = python3,kivy==2.3.0,flask==3.1.0,werkzeug==3.1.3,jinja2==3.1.5,click==8.1.8,markupsafe==3.0.2,itsdangerous==2.2.0,pillow==11.1.0,requests==2.32.5,urllib3==2.5.0,certifi==2025.1.31,charset-normalizer==3.4.3,idna==3.10,numpy==2.3.2,cloudinary==1.44.1,pydantic==2.10.6,pydantic_core==2.27.2,android
+requirements = python3,kivy==2.3.0,flask==2.2.5,pillow,requests,numpy,cloudinary,pydantic<2,android
 
 # Android 配置
 android.permissions = INTERNET,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,ACCESS_NETWORK_STATE,MANAGE_EXTERNAL_STORAGE
