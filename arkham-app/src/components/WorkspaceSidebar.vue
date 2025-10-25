@@ -11,15 +11,23 @@
     </div>
 
     <nav class="sidebar-nav">
-      <div 
-        v-for="item in navItems" 
+      <div
+        v-for="item in navItems"
         :key="item.key"
-        class="nav-item" 
+        class="nav-item"
         :class="{ 'active': activeItem === item.key }"
         @click="selectItem(item.key)"
       >
         <div class="nav-icon" v-html="item.icon"></div>
         <span v-if="!collapsed" class="nav-label">{{ item.label }}</span>
+      </div>
+      <!-- 移动端返回按钮 -->
+      <div
+        class="nav-item mobile-back-btn"
+        @click="goBack"
+      >
+        <div class="nav-icon">🏠</div>
+        <span class="nav-label">{{ $t('workspace.sidebar.backToHome') }}</span>
       </div>
     </nav>
 
@@ -219,15 +227,69 @@ const goBack = () => {
   background: rgba(255, 255, 255, 0.2);
 }
 
+.mobile-back-btn {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .workspace-sidebar {
-    width: 60px;
+    width: 100%;
+    height: 70px;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 20px;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
   }
-  
-  .workspace-sidebar .nav-label,
-  .workspace-sidebar .logo,
-  .workspace-sidebar .sidebar-footer {
+
+  .sidebar-header {
     display: none;
+  }
+
+  .sidebar-nav {
+    flex: 1;
+    padding: 0;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+  }
+
+  .nav-item {
+    padding: 8px 12px;
+    flex-direction: column;
+    gap: 4px;
+    border-radius: 8px;
+    min-width: 50px;
+  }
+
+  .nav-icon {
+    font-size: 1.4rem;
+    margin-right: 0;
+  }
+
+  .nav-label {
+    font-size: 0.7rem;
+    opacity: 1;
+    white-space: nowrap;
+  }
+
+  .sidebar-footer {
+    display: none;
+  }
+
+  .workspace-sidebar.collapsed {
+    width: 100%;
+  }
+
+  .collapsed .nav-label {
+    opacity: 1;
+  }
+
+  .collapse-btn {
+    display: none;
+  }
+
+  .mobile-back-btn {
+    display: flex;
   }
 }
 </style>

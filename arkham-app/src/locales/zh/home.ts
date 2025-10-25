@@ -54,5 +54,10 @@ export default {
     unknownError: '选择目录时发生未知错误',
     workspaceNotExists: '工作目录不存在，请重新选择',
     accessDenied: '无法访问该目录，请检查权限'
+  },
+
+  mobileNav: {
+    openProject: '打开项目',
+    recentProjects: '历史项目'
   }
 }

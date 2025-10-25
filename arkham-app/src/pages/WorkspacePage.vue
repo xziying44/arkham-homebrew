@@ -89,11 +89,14 @@ const goBack = () => {
 
 @media (max-width: 768px) {
   .workspace-container {
-    flex-direction: column;
+    flex-direction: column-reverse;
+    height: 100vh;
   }
-  
+
   .workspace-main {
     flex: 1;
+    height: calc(100vh - 70px); /* 减去底部导航栏高度 */
+    overflow: hidden;
   }
 }
 </style>

@@ -4,94 +4,277 @@
     <input ref="folderInput" type="file" webkitdirectory style="display: none" @change="handleFolderSelected">
 
     <!-- ============================================= -->
-    <!-- 左侧操作窗格 (Left Pane) -->
+    <!-- 桌面端：左右分栏布局 -->
     <!-- ============================================= -->
-    <div class="left-pane">
-      <div class="left-content">
-        <!-- 语言切换按钮 -->
-        <div class="language-switcher-container">
-          <n-dropdown :options="languageOptions" @select="handleLanguageChange" trigger="click">
-            <n-button quaternary size="small" class="language-btn">
-              <template #icon>
-                <n-icon :component="LanguageOutline" />
-              </template>
-              {{ currentLanguageLabel }}
-            </n-button>
-          </n-dropdown>
-        </div>
-
-        <!-- Logo 和标题 -->
-        <div class="logo-area">
-          <div class="logo-icon">
-            <n-icon size="48" :component="ColorWand" color="white" />
+    <template v-if="!isMobile">
+      <!-- 左侧操作窗格 -->
+      <div class="left-pane">
+        <div class="left-content">
+          <!-- 语言切换按钮 -->
+          <div class="language-switcher-container">
+            <n-dropdown :options="languageOptions" @select="handleLanguageChange" trigger="click">
+              <n-button quaternary size="small" class="language-btn">
+                <template #icon>
+                  <n-icon :component="LanguageOutline" />
+                </template>
+                {{ currentLanguageLabel }}
+              </n-button>
+            </n-dropdown>
           </div>
-          <div class="logo-text">
-            <h1>{{ $t('home.title') }}</h1>
-            <p>{{ $t('home.subtitle') }}</p>
-          </div>
-        </div>
 
-        <!-- 主要操作按钮 -->
-        <div class="primary-action">
-          <button class="open-folder-btn" @click="handleOpenFolder" :disabled="isSelecting">
-            <div class="btn-icon">
-              <n-icon size="28" :component="FolderOpenOutline" />
+          <!-- Logo 和标题 -->
+          <div class="logo-area">
+            <div class="logo-icon">
+              <n-icon size="48" :component="ColorWand" color="white" />
             </div>
-            <div class="btn-content">
-              <span class="btn-title">{{ $t('home.actions.openProject') }}</span>
-              <span class="btn-desc">
-                {{ isSelecting ? $t('home.actions.selecting') : $t('home.actions.openProjectDesc') }}
-              </span>
+            <div class="logo-text">
+              <h1>{{ $t('home.title') }}</h1>
+              <p>{{ $t('home.subtitle') }}</p>
             </div>
-            <div class="btn-arrow">
-              <n-icon size="20" :component="ArrowForwardOutline" />
+          </div>
+
+          <!-- 主要操作按钮 -->
+          <div class="primary-action">
+            <button class="open-folder-btn" @click="handleOpenFolder" :disabled="isSelecting">
+              <div class="btn-icon">
+                <n-icon size="28" :component="FolderOpenOutline" />
+              </div>
+              <div class="btn-content">
+                <span class="btn-title">{{ $t('home.actions.openProject') }}</span>
+                <span class="btn-desc">
+                  {{ isSelecting ? $t('home.actions.selecting') : $t('home.actions.openProjectDesc') }}
+                </span>
+              </div>
+              <div class="btn-arrow">
+                <n-icon size="20" :component="ArrowForwardOutline" />
+              </div>
+            </button>
+          </div>
+
+          <!-- 服务状态指示器 -->
+          <div class="service-status">
+            <div class="status-item" :class="{ 'online': serviceOnline, 'offline': !serviceOnline }">
+              <n-icon :component="serviceOnline ? CheckmarkCircle : AlertCircle" />
+              <span>{{ serviceOnline ? $t('home.serviceStatus.connected') : $t('home.serviceStatus.disconnected')
+                }}</span>
             </div>
-          </button>
-        </div>
+            <div v-if="serviceOnline && hasWorkspace" class="status-item workspace-info">
+              <n-icon :component="FolderOpenOutline" />
+              <span>{{ $t('home.serviceStatus.workspace', { name: workspaceName }) }}</span>
+            </div>
+          </div>
 
-        <!-- 服务状态指示器 -->
-        <div class="service-status">
-          <div class="status-item" :class="{ 'online': serviceOnline, 'offline': !serviceOnline }">
-            <n-icon :component="serviceOnline ? CheckmarkCircle : AlertCircle" />
-            <span>{{ serviceOnline ? $t('home.serviceStatus.connected') : $t('home.serviceStatus.disconnected')
-              }}</span>
-          </div>
-          <div v-if="serviceOnline && hasWorkspace" class="status-item workspace-info">
-            <n-icon :component="FolderOpenOutline" />
-            <span>{{ $t('home.serviceStatus.workspace', { name: workspaceName }) }}</span>
-          </div>
-        </div>
-
-        <!-- 快捷说明 -->
-        <div class="quick-info">
-          <div class="info-item">
-            <n-icon :component="FileTrayFullOutline" color="#a855f7" />
-            <span>{{ $t('home.features.lightweight') }}</span>
-          </div>
-          <div class="info-item">
-            <n-icon :component="LayersOutline" color="#a855f7" />
-            <span>{{ $t('home.features.workspace') }}</span>
-          </div>
-          <div class="info-item">
-            <n-icon :component="ImageOutline" color="#a855f7" />
-            <span>{{ $t('home.features.autoTTS') }}</span>
+          <!-- 快捷说明 -->
+          <div class="quick-info">
+            <div class="info-item">
+              <n-icon :component="FileTrayFullOutline" color="#a855f7" />
+              <span>{{ $t('home.features.lightweight') }}</span>
+            </div>
+            <div class="info-item">
+              <n-icon :component="LayersOutline" color="#a855f7" />
+              <span>{{ $t('home.features.workspace') }}</span>
+            </div>
+            <div class="info-item">
+              <n-icon :component="ImageOutline" color="#a855f7" />
+              <span>{{ $t('home.features.autoTTS') }}</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      <!-- 右侧内容窗格 -->
+      <div class="right-pane">
+        <div class="content-wrapper">
+          <header class="content-header">
+            <div class="header-with-actions">
+              <div>
+                <h2>{{ $t('home.recentProjects.title') }}</h2>
+                <p class="subtitle">{{ $t('home.recentProjects.subtitle') }}</p>
+              </div>
+              <div class="header-actions" v-if="recentDirectories.length > 0">
+                <n-button size="small" quaternary @click="handleClearRecent" :loading="clearingRecent">
+                  <template #icon>
+                    <n-icon :component="TrashOutline" />
+                  </template>
+                  {{ $t('home.recentProjects.clearRecords') }}
+                </n-button>
+              </div>
+            </div>
+          </header>
+
+          <!-- 最近项目列表容器 -->
+          <div class="recent-list-container">
+            <!-- 加载状态 -->
+            <div v-if="loadingRecent" class="loading-state">
+              <n-spin size="large" />
+              <p>{{ $t('home.recentProjects.loading') }}</p>
+            </div>
+
+            <!-- 最近目录列表 -->
+            <n-list v-else-if="recentDirectories.length > 0" hoverable clickable>
+              <n-list-item v-for="directory in recentDirectories" :key="directory.path"
+                @click="handleOpenRecent(directory)">
+                <n-thing>
+                  <template #header>{{ directory.name }}</template>
+                  <template #description>
+                    <div class="recent-item-details">
+                      <span class="recent-item-path">{{ directory.path }}</span>
+                      <span class="recent-item-time">{{ directory.formatted_time }}</span>
+                    </div>
+                  </template>
+                  <template #action>
+                    <n-button size="small" quaternary circle @click.stop="handleRemoveRecent(directory)"
+                      :loading="removingRecentPath === directory.path">
+                      <template #icon>
+                        <n-icon :component="CloseOutline" />
+                      </template>
+                    </n-button>
+                  </template>
+                  <template #header-extra>
+                    <n-icon class="hover-arrow" :component="ArrowForwardOutline" />
+                  </template>
+                </n-thing>
+              </n-list-item>
+            </n-list>
+
+            <!-- 空状态 -->
+            <div v-else class="empty-state-enhanced">
+              <div class="empty-icon">
+                <n-icon :component="CubeOutline" size="64" color="#cbd5e1" />
+              </div>
+
+              <div class="empty-content">
+                <h3 class="empty-title">{{ $t('home.recentProjects.emptyStateTitle') }}</h3>
+                <p class="empty-description">{{ $t('home.recentProjects.emptyStateDescription') }}</p>
+
+                <div class="empty-guide">
+                  <p class="guide-title">{{ $t('home.recentProjects.emptyStateGuide') }}</p>
+                  <ul class="guide-options">
+                    <li>
+                      <n-icon :component="FileTrayFullOutline" color="#667eea" />
+                      <span>{{ $t('home.recentProjects.emptyStateOption1') }}</span>
+                    </li>
+                    <li>
+                      <n-icon :component="FolderOpenOutline" color="#667eea" />
+                      <span>{{ $t('home.recentProjects.emptyStateOption2') }}</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div class="empty-actions">
+                  <n-button
+                    type="primary"
+                    size="large"
+                    @click="handleOpenFolder"
+                    :disabled="isSelecting || !serviceOnline"
+                    :loading="isSelecting"
+                  >
+                    <template #icon>
+                      <n-icon :component="FolderOpenOutline" />
+                    </template>
+                    {{ $t('home.actions.openProject') }}
+                  </n-button>
+
+                  <div v-if="!serviceOnline" class="service-warning">
+                    <n-icon :component="AlertCircle" color="#f59e0b" />
+                    <span>{{ $t('home.messages.serviceOffline') }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
 
     <!-- ============================================= -->
-    <!-- 右侧内容窗格 (Right Pane) -->
+    <!-- 手机端：单页面 + 切换按钮 -->
     <!-- ============================================= -->
-    <div class="right-pane">
-      <div class="content-wrapper">
-        <header class="content-header">
-          <div class="header-with-actions">
-            <div>
-              <h2>{{ $t('home.recentProjects.title') }}</h2>
-              <p class="subtitle">{{ $t('home.recentProjects.subtitle') }}</p>
+    <template v-else>
+      <!-- 手机端容器 -->
+      <div class="mobile-container">
+        <!-- 页面 1：打开文件夹页面 -->
+        <div v-show="currentMobileView === 'main'" class="mobile-main-view">
+          <!-- 语言切换按钮 -->
+          <div class="mobile-language-switcher">
+            <n-dropdown :options="languageOptions" @select="handleLanguageChange" trigger="click">
+              <n-button quaternary size="small" class="language-btn">
+                <template #icon>
+                  <n-icon :component="LanguageOutline" />
+                </template>
+                {{ currentLanguageLabel }}
+              </n-button>
+            </n-dropdown>
+          </div>
+
+          <!-- Logo 和标题 -->
+          <div class="mobile-logo-area">
+            <div class="mobile-logo-icon">
+              <n-icon size="64" :component="ColorWand" color="white" />
             </div>
-            <div class="header-actions" v-if="recentDirectories.length > 0">
+            <div class="mobile-logo-text">
+              <h1>{{ $t('home.title') }}</h1>
+              <p>{{ $t('home.subtitle') }}</p>
+            </div>
+          </div>
+
+          <!-- 主要操作按钮 -->
+          <div class="mobile-primary-action">
+            <button class="mobile-open-folder-btn" @click="handleOpenFolder" :disabled="isSelecting">
+              <div class="mobile-btn-icon">
+                <n-icon size="36" :component="FolderOpenOutline" />
+              </div>
+              <div class="mobile-btn-content">
+                <span class="mobile-btn-title">{{ $t('home.actions.openProject') }}</span>
+                <span class="mobile-btn-desc">
+                  {{ isSelecting ? $t('home.actions.selecting') : $t('home.actions.openProjectDesc') }}
+                </span>
+              </div>
+              <div class="mobile-btn-arrow">
+                <n-icon size="24" :component="ArrowForwardOutline" />
+              </div>
+            </button>
+          </div>
+
+          <!-- 服务状态指示器 -->
+          <div class="mobile-service-status">
+            <div class="mobile-status-item" :class="{ 'online': serviceOnline, 'offline': !serviceOnline }">
+              <n-icon :component="serviceOnline ? CheckmarkCircle : AlertCircle" />
+              <span>{{ serviceOnline ? $t('home.serviceStatus.connected') : $t('home.serviceStatus.disconnected')
+                }}</span>
+            </div>
+            <div v-if="serviceOnline && hasWorkspace" class="mobile-status-item workspace-info">
+              <n-icon :component="FolderOpenOutline" />
+              <span>{{ $t('home.serviceStatus.workspace', { name: workspaceName }) }}</span>
+            </div>
+          </div>
+
+          <!-- 快捷说明 -->
+          <div class="mobile-quick-info">
+            <div class="mobile-info-item">
+              <n-icon :component="FileTrayFullOutline" color="#a855f7" />
+              <span>{{ $t('home.features.lightweight') }}</span>
+            </div>
+            <div class="mobile-info-item">
+              <n-icon :component="LayersOutline" color="#a855f7" />
+              <span>{{ $t('home.features.workspace') }}</span>
+            </div>
+            <div class="mobile-info-item">
+              <n-icon :component="ImageOutline" color="#a855f7" />
+              <span>{{ $t('home.features.autoTTS') }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 页面 2：历史记录页面 -->
+        <div v-show="currentMobileView === 'recent'" class="mobile-recent-view">
+          <!-- 头部 -->
+          <header class="mobile-content-header">
+            <div class="mobile-header">
+              <h2>{{ $t('home.recentProjects.title') }}</h2>
+              <p class="mobile-subtitle">{{ $t('home.recentProjects.subtitle') }}</p>
+            </div>
+            <div class="mobile-header-actions" v-if="recentDirectories.length > 0">
               <n-button size="small" quaternary @click="handleClearRecent" :loading="clearingRecent">
                 <template #icon>
                   <n-icon :component="TrashOutline" />
@@ -99,92 +282,98 @@
                 {{ $t('home.recentProjects.clearRecords') }}
               </n-button>
             </div>
-          </div>
-        </header>
+          </header>
 
-        <!-- 最近项目列表容器 -->
-        <div class="recent-list-container">
-          <!-- 加载状态 -->
-          <div v-if="loadingRecent" class="loading-state">
-            <n-spin size="large" />
-            <p>{{ $t('home.recentProjects.loading') }}</p>
-          </div>
-
-          <!-- 最近目录列表 -->
-          <n-list v-else-if="recentDirectories.length > 0" hoverable clickable>
-            <n-list-item v-for="directory in recentDirectories" :key="directory.path"
-              @click="handleOpenRecent(directory)">
-              <n-thing>
-                <template #header>{{ directory.name }}</template>
-                <template #description>
-                  <div class="recent-item-details">
-                    <span class="recent-item-path">{{ directory.path }}</span>
-                    <span class="recent-item-time">{{ directory.formatted_time }}</span>
-                  </div>
-                </template>
-                <template #action>
-                  <n-button size="small" quaternary circle @click.stop="handleRemoveRecent(directory)"
-                    :loading="removingRecentPath === directory.path">
-                    <template #icon>
-                      <n-icon :component="CloseOutline" />
-                    </template>
-                  </n-button>
-                </template>
-                <template #header-extra>
-                  <n-icon class="hover-arrow" :component="ArrowForwardOutline" />
-                </template>
-              </n-thing>
-            </n-list-item>
-          </n-list>
-
-          <!-- 空状态 - 增强的引导信息 -->
-          <div v-else class="empty-state-enhanced">
-            <div class="empty-icon">
-              <n-icon :component="CubeOutline" size="64" color="#cbd5e1" />
+          <!-- 最近项目列表容器 -->
+          <div class="mobile-recent-list-container">
+            <!-- 加载状态 -->
+            <div v-if="loadingRecent" class="loading-state">
+              <n-spin size="large" />
+              <p>{{ $t('home.recentProjects.loading') }}</p>
             </div>
-            
-            <div class="empty-content">
-              <h3 class="empty-title">{{ $t('home.recentProjects.emptyStateTitle') }}</h3>
-              <p class="empty-description">{{ $t('home.recentProjects.emptyStateDescription') }}</p>
-              
-              <div class="empty-guide">
-                <p class="guide-title">{{ $t('home.recentProjects.emptyStateGuide') }}</p>
-                <ul class="guide-options">
-                  <li>
-                    <n-icon :component="FileTrayFullOutline" color="#667eea" />
-                    <span>{{ $t('home.recentProjects.emptyStateOption1') }}</span>
-                  </li>
-                  <li>
-                    <n-icon :component="FolderOpenOutline" color="#667eea" />
-                    <span>{{ $t('home.recentProjects.emptyStateOption2') }}</span>
-                  </li>
-                </ul>
-              </div>
-              
-              <div class="empty-actions">
-                <n-button 
-                  type="primary" 
-                  size="large"
-                  @click="handleOpenFolder" 
-                  :disabled="isSelecting || !serviceOnline"
-                  :loading="isSelecting"
-                >
-                  <template #icon>
-                    <n-icon :component="FolderOpenOutline" />
+
+            <!-- 最近目录列表 -->
+            <n-list v-else-if="recentDirectories.length > 0" hoverable clickable>
+              <n-list-item v-for="directory in recentDirectories" :key="directory.path"
+                @click="handleOpenRecent(directory)">
+                <n-thing>
+                  <template #header>{{ directory.name }}</template>
+                  <template #description>
+                    <div class="recent-item-details">
+                      <span class="recent-item-path">{{ directory.path }}</span>
+                      <span class="recent-item-time">{{ directory.formatted_time }}</span>
+                    </div>
                   </template>
-                  {{ $t('home.actions.openProject') }}
-                </n-button>
-                
-                <div v-if="!serviceOnline" class="service-warning">
-                  <n-icon :component="AlertCircle" color="#f59e0b" />
-                  <span>{{ $t('home.messages.serviceOffline') }}</span>
+                  <template #action>
+                    <n-button size="small" quaternary circle @click.stop="handleRemoveRecent(directory)"
+                      :loading="removingRecentPath === directory.path">
+                      <template #icon>
+                        <n-icon :component="CloseOutline" />
+                      </template>
+                    </n-button>
+                  </template>
+                  <template #header-extra>
+                    <n-icon class="hover-arrow" :component="ArrowForwardOutline" />
+                  </template>
+                </n-thing>
+              </n-list-item>
+            </n-list>
+
+            <!-- 空状态 -->
+            <div v-else class="mobile-empty-state">
+              <div class="mobile-empty-icon">
+                <n-icon :component="CubeOutline" size="64" color="#cbd5e1" />
+              </div>
+
+              <div class="mobile-empty-content">
+                <h3 class="mobile-empty-title">{{ $t('home.recentProjects.emptyStateTitle') }}</h3>
+                <p class="mobile-empty-description">{{ $t('home.recentProjects.emptyStateDescription') }}</p>
+
+                <div class="mobile-empty-actions">
+                  <n-button
+                    type="primary"
+                    size="large"
+                    @click="switchToMainView"
+                    :disabled="isSelecting || !serviceOnline"
+                    :loading="isSelecting"
+                  >
+                    <template #icon>
+                      <n-icon :component="FolderOpenOutline" />
+                    </template>
+                    {{ $t('home.actions.openProject') }}
+                  </n-button>
+
+                  <div v-if="!serviceOnline" class="service-warning">
+                    <n-icon :component="AlertCircle" color="#f59e0b" />
+                    <span>{{ $t('home.messages.serviceOffline') }}</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
+
+        <!-- 底部切换按钮 -->
+        <div class="mobile-bottom-nav">
+          <button
+            class="mobile-nav-btn"
+            :class="{ 'active': currentMobileView === 'main' }"
+            @click="switchToMainView"
+          >
+            <n-icon size="24" :component="FolderOpenOutline" />
+            <span>{{ $t('home.mobileNav.openProject') }}</span>
+          </button>
+          <button
+            class="mobile-nav-btn"
+            :class="{ 'active': currentMobileView === 'recent' }"
+            @click="switchToRecentView"
+          >
+            <n-icon size="24" :component="CubeOutline" />
+            <span>{{ $t('home.mobileNav.recentProjects') }}</span>
+          </button>
+        </div>
       </div>
-    </div>
+    </template>
 
     <!-- 语言欢迎弹窗 -->
     <LanguageWelcomeModal
@@ -274,6 +463,25 @@ const serviceOnline = ref(false);
 const hasWorkspace = ref(false);
 const workspaceName = ref<string>('');
 let statusCheckInterval: NodeJS.Timeout | null = null;
+
+// ----------- 手机端相关 -----------
+const windowWidth = ref(window.innerWidth);
+const isMobile = computed(() => windowWidth.value <= 768);
+const currentMobileView = ref<'main' | 'recent'>('main');
+
+// ----------- 手机端页面切换 -----------
+const switchToMainView = () => {
+  currentMobileView.value = 'main';
+};
+
+const switchToRecentView = () => {
+  currentMobileView.value = 'recent';
+};
+
+// ----------- 窗口大小监听 -----------
+const handleResize = () => {
+  windowWidth.value = window.innerWidth;
+};
 
 // ----------- 最近目录数据 -----------
 const recentDirectories = ref<RecentDirectory[]>([]);
@@ -761,6 +969,9 @@ const handleOpenRecent = async (directory: RecentDirectory) => {
 onMounted(async () => {
   console.log('🎯 [阿卡姆印牌姬] Welcome组件已挂载');
 
+  // 添加窗口大小监听
+  window.addEventListener('resize', handleResize, { passive: true });
+
   // 检查首次访问（异步）
   await checkFirstVisit();
 
@@ -784,6 +995,7 @@ onMounted(async () => {
 onUnmounted(() => {
   console.log('🎯 [阿卡姆印牌姬] Welcome组件已卸载');
   stopStatusCheck();
+  window.removeEventListener('resize', handleResize);
 });
 </script>
 
@@ -1301,42 +1513,322 @@ onUnmounted(() => {
   }
 }
 
+/* ============================================= */
+/* 手机端样式 */
+/* ============================================= */
 @media (max-width: 768px) {
   .welcome-container {
+    display: block;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+  }
+
+  /* 手机端容器 */
+  .mobile-container {
+    height: 100vh;
+    width: 100vw;
+    display: flex;
     flex-direction: column;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   }
 
-  .left-pane {
-    width: 100%;
-    padding: 30px 20px;
+  /* 手机端主页面 */
+  .mobile-main-view {
+    flex: 1;
+    padding: 20px 16px calc(80px + 20px) 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 0;
   }
 
-  .language-switcher-container {
-    position: static;
-    text-align: right;
+  .mobile-language-switcher {
+    position: absolute;
+    top: 20px;
+    right: 16px;
+    z-index: 10;
+  }
+
+  .mobile-language-btn {
+    color: rgba(255, 255, 255, 0.9) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(10px);
+  }
+
+  .mobile-logo-area {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  .mobile-logo-icon {
     margin-bottom: 20px;
   }
 
-  .right-pane {
-    padding: 30px 20px;
+  .mobile-logo-text h1 {
+    color: white;
+    font-size: 32px;
+    font-weight: 700;
+    margin: 0 0 8px 0;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 
-  .logo-text h1 {
-    font-size: 28px;
-  }
-
-  .btn-title {
+  .mobile-logo-text p {
+    color: rgba(255, 255, 255, 0.8);
     font-size: 16px;
+    margin: 0;
   }
 
-  .btn-desc {
-    font-size: 13px;
+  .mobile-primary-action {
+    margin-bottom: 30px;
   }
 
-  .header-with-actions {
+  .mobile-open-folder-btn {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    padding: 24px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    text-align: left;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .mobile-open-folder-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .mobile-open-folder-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  }
+
+  .mobile-btn-icon {
+    flex-shrink: 0;
+    width: 64px;
+    height: 64px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mobile-btn-content {
+    flex-grow: 1;
+  }
+
+  .mobile-btn-title {
+    display: block;
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .mobile-btn-desc {
+    display: block;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.4;
+  }
+
+  .mobile-btn-arrow {
+    flex-shrink: 0;
+    opacity: 0.6;
+    transition: all 0.3s ease;
+  }
+
+  .mobile-open-folder-btn:hover:not(:disabled) .mobile-btn-arrow {
+    opacity: 1;
+    transform: translateX(4px);
+  }
+
+  .mobile-service-status {
+    margin-bottom: 20px;
+    display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .mobile-status-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    color: white;
+  }
+
+  .mobile-status-item.online {
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+  }
+
+  .mobile-status-item.offline {
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.1);
+  }
+
+  .mobile-status-item.workspace-info {
+    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+  }
+
+  .mobile-quick-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .mobile-info-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 14px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 12px 16px;
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+  }
+
+  /* 手机端历史记录页面 */
+  .mobile-recent-view {
+    flex: 1;
+    background: #f8fafc;
+    padding: 20px 16px calc(80px + 20px) 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .mobile-content-header {
+    flex-shrink: 0;
+    margin-bottom: 20px;
+  }
+
+  .mobile-header h2 {
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #1e293b;
+  }
+
+  .mobile-subtitle {
+    font-size: 16px;
+    color: #64748b;
+    margin: 0;
+  }
+
+  .mobile-header-actions {
+    margin-top: 16px;
+  }
+
+  .mobile-recent-list-container {
+    flex-grow: 1;
+    overflow-y: auto;
+    min-height: 0;
+  }
+
+  .mobile-empty-state {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 40px 20px;
+    text-align: center;
+  }
+
+  .mobile-empty-icon {
+    margin-bottom: 24px;
+    opacity: 0.6;
+  }
+
+  .mobile-empty-content {
+    max-width: 400px;
+    width: 100%;
+  }
+
+  .mobile-empty-title {
+    font-size: 24px;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 16px 0;
+  }
+
+  .mobile-empty-description {
+    font-size: 16px;
+    color: #64748b;
+    line-height: 1.6;
+    margin: 0 0 32px 0;
+  }
+
+  .mobile-empty-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     gap: 16px;
+  }
+
+  /* 底部导航 */
+  .mobile-bottom-nav {
+    height: 80px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 20px;
+    flex-shrink: 0;
+  }
+
+  .mobile-nav-btn {
+    background: none;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    min-width: 100px;
+  }
+
+  .mobile-nav-btn:hover {
+    background: rgba(102, 126, 234, 0.1);
+    color: #667eea;
+  }
+
+  .mobile-nav-btn.active {
+    background: rgba(102, 126, 234, 0.15);
+    color: #667eea;
+  }
+
+  .mobile-nav-btn span {
+    font-size: 12px;
+    font-weight: 500;
   }
 }
 </style>

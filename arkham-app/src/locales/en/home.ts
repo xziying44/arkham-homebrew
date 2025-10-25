@@ -54,5 +54,10 @@ export default {
     unknownError: 'Unknown error occurred while selecting directory',
     workspaceNotExists: 'Workspace directory does not exist, please reselect',
     accessDenied: 'Cannot access directory, please check permissions'
+  },
+
+  mobileNav: {
+    openProject: 'Open Project',
+    recentProjects: 'Recent Projects'
   }
 }
