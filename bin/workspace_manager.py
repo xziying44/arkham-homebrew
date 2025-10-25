@@ -276,41 +276,65 @@ class WorkspaceManager:
     def create_directory(self, dir_name: str, parent_path: Optional[str] = None) -> bool:
         """创建目录"""
         try:
-            if parent_path:
+            # ✅ 修复：处理 '.' 作为 parent_path 的情况
+            if parent_path and parent_path != '.':
                 # 确保parent_path在工作目录内
                 if not self._is_path_in_workspace(parent_path):
+                    logger_manager.error(f"路径不在工作目录内: {parent_path}")
                     return False
                 target_path = self._get_absolute_path(os.path.join(parent_path, dir_name))
             else:
+                # parent_path 为 None 或 '.' 时，直接在工作目录创建
                 target_path = os.path.join(self.workspace_path, dir_name)
 
+            logger_manager.info(f"创建目录: {target_path}")
             os.makedirs(target_path, exist_ok=True)
+            logger_manager.info(f"目录创建成功: {target_path}")
             return True
 
+        except PermissionError as e:
+            logger_manager.error(f"权限错误: {e}")
+            logger_manager.error(f"目标路径: {target_path}")
+            return False
         except Exception as e:
-            print(f"创建目录失败: {e}")
+            logger_manager.exception(f"创建目录失败: {e}")
             return False
 
     def create_file(self, file_name: str, content: str = "", parent_path: Optional[str] = None) -> bool:
         """创建文件"""
         try:
-            if parent_path:
+            # ✅ 修复：处理 '.' 作为 parent_path 的情况
+            if parent_path and parent_path != '.':
                 # 确保parent_path在工作目录内
                 if not self._is_path_in_workspace(parent_path):
+                    logger_manager.error(f"路径不在工作目录内: {parent_path}")
                     return False
                 target_path = self._get_absolute_path(os.path.join(parent_path, file_name))
             else:
+                # parent_path 为 None 或 '.' 时，直接在工作目录创建
                 target_path = os.path.join(self.workspace_path, file_name)
 
-            # 确保父目录存在
-            os.makedirs(os.path.dirname(target_path), exist_ok=True)
+            logger_manager.info(f"创建文件: {target_path}")
 
-            with open(target_path, 'w', encoding='utf-8') as f:
-                f.write(content)
-            return True
+            # 确保父目录存在
+            parent_dir = os.path.dirname(target_path)
+            os.makedirs(parent_dir, exist_ok=True)
+
+            # ✅ 添加详细的错误日志
+            try:
+                with open(target_path, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                logger_manager.info(f"文件创建成功: {target_path}")
+                return True
+            except PermissionError as e:
+                logger_manager.error(f"权限错误: {e}")
+                logger_manager.error(f"目标路径: {target_path}")
+                logger_manager.error(f"工作目录: {self.workspace_path}")
+                logger_manager.error("请确保应用有写入权限")
+                return False
 
         except Exception as e:
-            print(f"创建文件失败: {e}")
+            logger_manager.exception(f"创建文件失败: {e}")
             return False
 
     def rename_item(self, old_path: str, new_name: str) -> bool:
@@ -484,19 +508,30 @@ class WorkspaceManager:
         try:
             # 确保路径在工作目录内
             if not self._is_path_in_workspace(file_path):
+                logger_manager.error(f"路径不在工作目录内: {file_path}")
                 return False
 
             abs_file_path = self._get_absolute_path(file_path)
+            logger_manager.info(f"保存文件内容: {abs_file_path}")
 
             # 确保父目录存在
-            os.makedirs(os.path.dirname(abs_file_path), exist_ok=True)
+            parent_dir = os.path.dirname(abs_file_path)
+            os.makedirs(parent_dir, exist_ok=True)
 
-            with open(abs_file_path, 'w', encoding='utf-8') as f:
-                f.write(content)
-            return True
+            # ✅ 添加详细的错误日志
+            try:
+                with open(abs_file_path, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                logger_manager.info(f"文件内容保存成功: {abs_file_path}")
+                return True
+            except PermissionError as e:
+                logger_manager.error(f"权限错误: {e}")
+                logger_manager.error(f"文件路径: {abs_file_path}")
+                logger_manager.error("请确保应用有写入权限")
+                return False
 
         except Exception as e:
-            print(f"保存文件内容失败: {e}")
+            logger_manager.exception(f"保存文件内容失败: {e}")
             return False
 
     def get_card_base64(self, json_data: Dict[str, Any]) -> Union[str, Image.Image, None]:
@@ -822,37 +857,46 @@ class WorkspaceManager:
         Args:
             json_data: 卡牌数据的JSON字典
             filename: 保存的文件名（包含扩展名）
-            parent_path: 保存的父目录相对路径，如果为None则保存到工作目录
+            parent_path: 保存的父目录相对路径，如果为None或'.'则保存到工作目录
 
         Returns:
             bool: 保存是否成功
         """
         try:
             # 生成卡图
-            card_image = self.generate_card_image(json_data).image
-            if card_image is None:
+            card = self.generate_card_image(json_data)
+            if card is None or card.image is None:
+                logger_manager.error("生成卡图失败")
                 return False
 
-            # 确定保存路径
-            if parent_path:
+            # ✅ 修复：处理 '.' 作为 parent_path 的情况
+            if parent_path and parent_path != '.':
                 # 确保parent_path在工作目录内
                 if not self._is_path_in_workspace(parent_path):
+                    logger_manager.error(f"路径不在工作目录内: {parent_path}")
                     return False
                 save_path = self._get_absolute_path(os.path.join(parent_path, filename))
             else:
+                # parent_path 为 None 或 '.' 时，直接保存到工作目录
                 save_path = os.path.join(self.workspace_path, filename)
 
+            logger_manager.info(f"保存卡图到: {save_path}")
+
             # 确保父目录存在
-            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            parent_dir = os.path.dirname(save_path)
+            os.makedirs(parent_dir, exist_ok=True)
 
             # 保存图片
-            card_image.save(save_path)
-
-            print(f"卡图已保存到: {self._get_relative_path(save_path)}")
+            card.image.save(save_path)
+            logger_manager.info(f"卡图保存成功: {self._get_relative_path(save_path)}")
             return True
 
+        except PermissionError as e:
+            logger_manager.error(f"权限错误: {e}")
+            logger_manager.error(f"保存路径: {save_path}")
+            return False
         except Exception as e:
-            print(f"保存卡图失败: {e}")
+            logger_manager.exception(f"保存卡图失败: {e}")
             return False
 
     def save_card_image_enhanced(self, json_data: Dict[str, Any], filename: str,
@@ -1020,19 +1064,24 @@ class WorkspaceManager:
                 if width > height:
                     # 横向图片顺时针旋转90度
                     image = image.rotate(-90, expand=True)
-                    print(f"横向图片已旋转90度，原尺寸: {width}x{height}，新尺寸: {image.size}")
+                    logger_manager.info(f"横向图片已旋转90度，原尺寸: {width}x{height}，新尺寸: {image.size}")
 
-            # 确定保存路径
-            if parent_path:
+            # ✅ 修复：处理 '.' 作为 parent_path 的情况
+            if parent_path and parent_path != '.':
                 # 确保parent_path在工作目录内
                 if not self._is_path_in_workspace(parent_path):
+                    logger_manager.error(f"路径不在工作目录内: {parent_path}")
                     return None
                 save_path = self._get_absolute_path(os.path.join(parent_path, filename))
             else:
+                # parent_path 为 None 或 '.' 时，直接保存到工作目录
                 save_path = os.path.join(self.workspace_path, filename)
 
+            logger_manager.info(f"保存图片到: {save_path}")
+
             # 确保父目录存在
-            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            parent_dir = os.path.dirname(save_path)
+            os.makedirs(parent_dir, exist_ok=True)
 
             # 根据格式保存图片
             if export_format == 'JPG':
@@ -1044,11 +1093,15 @@ class WorkspaceManager:
                 # PNG格式保持透明通道
                 image.save(save_path, format='PNG', optimize=True)
 
-            print(f"图片已保存到: {self._get_relative_path(save_path)}")
+            logger_manager.info(f"图片保存成功: {self._get_relative_path(save_path)}")
             return self._get_relative_path(save_path)
 
+        except PermissionError as e:
+            logger_manager.error(f"权限错误: {e}")
+            logger_manager.error(f"保存路径: {save_path}")
+            return None
         except Exception as e:
-            print(f"保存图片失败: {e}")
+            logger_manager.exception(f"保存图片失败: {e}")
             return None
 
     def _generate_thumbnail(self, json_data: Dict[str, Any], image: Image.Image) -> Card:
