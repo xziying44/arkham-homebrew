@@ -1421,12 +1421,14 @@ onUnmounted(() => {
 <style scoped>
 .form-pane {
     flex: 1;
-    min-width: 400px;
+    min-width: 300px;
+    width: 100%;
     display: flex;
     flex-direction: column;
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
 }
 
 .pane-header {
@@ -1516,6 +1518,8 @@ onUnmounted(() => {
     display: flex;
     flex-direction: column;
     gap: 16px;
+    max-width: 95vw;
+    width: auto;
 }
 
 .json-display-container {
@@ -1560,6 +1564,8 @@ onUnmounted(() => {
     flex-direction: column;
     gap: 16px;
     min-height: 300px;
+    max-width: 95vw;
+    width: auto;
 }
 
 .import-textarea {
@@ -1837,29 +1843,56 @@ onUnmounted(() => {
 }
 
 @media (max-width: 480px) {
+    .form-pane {
+        min-width: 100%;
+        width: 100%;
+    }
+
+    .pane-header {
+        padding: 8px 12px;
+        min-width: auto;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .pane-title {
+        font-size: 16px;
+    }
+
+    /* 模态框移动端适配 */
+    .json-modal-content {
+        max-width: 95vw;
+        width: auto;
+    }
+
+    .import-json-content {
+        max-width: 95vw;
+        width: auto;
+    }
+
     .welcome-guide {
         padding: 30px 16px;
         margin: 10px;
     }
-    
+
     .welcome-icon {
         font-size: 3rem;
         margin-bottom: 16px;
     }
-    
+
     .welcome-title {
         font-size: 1.4rem;
     }
-    
+
     .guide-steps {
         gap: 16px;
     }
-    
+
     .guide-step {
         padding: 10px 12px;
         gap: 10px;
     }
-    
+
     .step-icon {
         width: 36px;
         height: 36px;

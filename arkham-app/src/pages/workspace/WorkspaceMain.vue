@@ -495,6 +495,7 @@ onUnmounted(() => {
   justify-content: center;
   z-index: 2000;
   padding: 20px;
+  box-sizing: border-box;
 }
 
 .mobile-modal-content {
@@ -502,12 +503,13 @@ onUnmounted(() => {
   border-radius: 12px;
   width: 100%;
   height: 100%;
-  max-width: 100%;
-  max-height: 100%;
+  max-width: 95vw;
+  max-height: 95vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  box-sizing: border-box;
 }
 
 .modal-header {
@@ -544,7 +546,7 @@ onUnmounted(() => {
 }
 
 .file-tree-modal {
-  max-width: 400px;
+  max-width: 95vw;
   max-height: 80vh;
 }
 
@@ -565,20 +567,32 @@ onUnmounted(() => {
 @media (max-width: 768px) {
   .workspace-main-container {
     flex-direction: column;
+    height: 100%;
+    width: 100%;
   }
-  
+
   /* 移动端样式调整 */
   .mobile-controls {
-    bottom: 80px; /* 避免与底部导航冲突 */
+    bottom: 90px; /* 避免与底部导航冲突 */
   }
-  
+
   .mobile-modal {
     padding: 10px;
   }
-  
+
+  .mobile-modal-content {
+    max-width: 95vw;
+    max-height: 95vh;
+  }
+
   .file-tree-modal {
-    max-width: 100%;
-    max-height: 85vh;
+    max-width: 95vw;
+    max-height: 75vh; /* 为顶部和底部导航预留空间 */
+  }
+
+  .image-modal {
+    max-width: 95vw;
+    max-height: 75vh;
   }
 }
 
@@ -589,18 +603,33 @@ onUnmounted(() => {
     height: 45px;
     font-size: 18px;
   }
-  
+
   .mobile-controls {
-    bottom: 70px;
+    bottom: 80px;
     right: 15px;
   }
-  
+
   .modal-header {
     padding: 12px 16px;
   }
-  
+
   .modal-header h3 {
     font-size: 16px;
+  }
+
+  .file-tree-modal {
+    max-width: 90vw;
+    max-height: 70vh;
+  }
+
+  .image-modal {
+    max-width: 95vw;
+    max-height: 70vh;
+  }
+
+  /* 确保模态框内容在小屏幕上不溢出 */
+  .mobile-modal-content {
+    box-sizing: border-box;
   }
 }
 </style>

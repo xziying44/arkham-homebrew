@@ -39,7 +39,7 @@
 
     <!-- 新建文件夹对话框 -->
     <n-modal v-model:show="showCreateFolderDialog">
-      <n-card style="width: 400px" :title="$t('workspaceMain.fileTree.createFolder.title')" :bordered="false"
+      <n-card style="width: 90vw; max-width: 400px" :title="$t('workspaceMain.fileTree.createFolder.title')" :bordered="false"
         size="huge" role="dialog" aria-modal="true">
         <n-form ref="createFolderFormRef" :model="createFolderForm" :rules="createFolderRules">
           <n-form-item path="name" :label="$t('workspaceMain.fileTree.createFolder.label')">
@@ -61,7 +61,7 @@
 
     <!-- 新建卡牌对话框 -->
     <n-modal v-model:show="showCreateCardDialog">
-      <n-card style="width: 400px" :title="$t('workspaceMain.fileTree.createCard.title')" :bordered="false" size="huge"
+      <n-card style="width: 90vw; max-width: 400px" :title="$t('workspaceMain.fileTree.createCard.title')" :bordered="false" size="huge"
         role="dialog" aria-modal="true">
         <n-form ref="createCardFormRef" :model="createCardForm" :rules="createCardRules">
           <n-form-item path="name" :label="$t('workspaceMain.fileTree.createCard.label')">
@@ -83,7 +83,7 @@
 
     <!-- 重命名对话框 -->
     <n-modal v-model:show="showRenameDialog">
-      <n-card style="width: 450px" :title="$t('workspaceMain.fileTree.rename.title')" :bordered="false" size="huge"
+      <n-card style="width: 90vw; max-width: 450px" :title="$t('workspaceMain.fileTree.rename.title')" :bordered="false" size="huge"
         role="dialog" aria-modal="true">
         <n-form ref="renameFormRef" :model="renameForm" :rules="renameRules">
           <n-form-item path="filename" :label="$t('workspaceMain.fileTree.rename.filenameLabel')">
@@ -115,7 +115,7 @@
 
     <!-- 删除确认对话框 -->
     <n-modal v-model:show="showDeleteDialog">
-      <n-card style="width: 450px" :title="$t('workspaceMain.fileTree.delete.title')" :bordered="false" size="huge"
+      <n-card style="width: 90vw; max-width: 450px" :title="$t('workspaceMain.fileTree.delete.title')" :bordered="false" size="huge"
         role="dialog" aria-modal="true">
         <n-space vertical>
           <n-alert type="warning" :title="$t('workspaceMain.fileTree.delete.warning')">
@@ -143,7 +143,7 @@
 
     <!-- 快速批量导出进度对话框 -->
     <n-modal v-model:show="showBatchExportDialog">
-      <n-card style="width: 600px" :title="$t('workspaceMain.fileTree.quickExport.title')" :bordered="false" size="huge"
+      <n-card style="width: 95vw; max-width: 600px" :title="$t('workspaceMain.fileTree.quickExport.title')" :bordered="false" size="huge"
         role="dialog" aria-modal="true">
         <n-space vertical size="large">
           <n-space vertical size="small">
@@ -221,7 +221,7 @@
 
     <!-- 高级导出对话框 -->
     <n-modal v-model:show="showAdvancedExportDialog">
-      <n-card style="width: 800px" :title="$t('workspaceMain.fileTree.advancedExport.title')" :bordered="false"
+      <n-card style="width: 95vw; max-width: 800px" :title="$t('workspaceMain.fileTree.advancedExport.title')" :bordered="false"
         size="huge" role="dialog" aria-modal="true">
         <n-space vertical size="medium">
           <!-- 基本信息 -->
@@ -400,7 +400,7 @@
 
     <!-- ArkhamDB导入警告对话框 -->
     <n-modal v-model:show="showArkhamDBImportDialog">
-      <n-card style="width: 500px" :title="$t('arkhamdbImport.title')" :bordered="false" size="huge"
+      <n-card style="width: 90vw; max-width: 500px" :title="$t('arkhamdbImport.title')" :bordered="false" size="huge"
         role="dialog" aria-modal="true">
         <n-space vertical size="large">
           <n-alert type="warning" :title="$t('arkhamdbImport.actions.import')">
@@ -434,7 +434,7 @@
 
     <!-- ArkhamDB导入进度对话框 -->
     <n-modal v-model:show="showArkhamDBProgressDialog" :mask-closable="false">
-      <n-card style="width: 700px" :title="$t('arkhamdbImport.importResult.title')" :bordered="false" size="huge"
+      <n-card style="width: 95vw; max-width: 700px" :title="$t('arkhamdbImport.importResult.title')" :bordered="false" size="huge"
         role="dialog" aria-modal="true">
         <n-space vertical size="large">
           <!-- 导入状态 -->
