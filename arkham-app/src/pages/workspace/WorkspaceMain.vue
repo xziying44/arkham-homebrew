@@ -219,12 +219,13 @@ const closeMobileImagePreview = () => {
 const handleMobileFileSelect = async (keys: Array<string | number>, option?: TreeOption) => {
   // 处理文件选择
   await handleFileSelect(keys, option);
-  // 关闭移动端文件树模态框
-  closeMobileFileTree();
-  // 如果选中的是图片，自动打开图片预览
-  if (option && isImageFile(option) && currentImage.value) {
-    showMobileImagePreview.value = true;
+
+  // 只有选择 .card 文件时才关闭模态框并返回编辑界面
+  if (option && option.type === 'card') {
+    // 关闭移动端文件树模态框
+    closeMobileFileTree();
   }
+  // 其他类型的文件（文件夹、图片等）不关闭模态框，允许用户继续浏览
 };
 
 const toggleFileTree = () => {
