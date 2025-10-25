@@ -70,51 +70,50 @@ class LanguageConfig:
     texts: LanguageTexts  # 文本配置
 
 
-def fix_filename_encoding(filename):
-    """修复文件名编码问题（特别是 Android 环境）"""
+def list_directory_bytes(directory):
+    """使用字节模式列出目录（处理编码问题）"""
     try:
-        # 如果是在 Android 环境
-        if 'ANDROID_ARGUMENT' in os.environ:
-            # 尝试使用 UTF-8 重新编码
-            if isinstance(filename, bytes):
-                return filename.decode('utf-8', errors='ignore')
-            elif isinstance(filename, str):
-                # 尝试修复已经错误编码的字符串
-                try:
-                    # 先尝试编码为 latin-1 再解码为 utf-8
-                    return filename.encode('latin-1').decode('utf-8')
-                except (UnicodeDecodeError, UnicodeEncodeError):
-                    # 如果失败，保持原样
-                    return filename
-        return filename
+        # 先转换为字节
+        dir_bytes = os.fsencode(directory)
+
+        # 列出文件（返回字节）
+        files_bytes = os.listdir(dir_bytes)
+
+        # 解码为字符串
+        files = []
+        for file_bytes in files_bytes:
+            try:
+                # 尝试 UTF-8 解码
+                filename = os.fsdecode(file_bytes)
+                files.append(filename)
+            except UnicodeDecodeError:
+                logger_manager.error(f"[编码] 无法解码文件名: {file_bytes}")
+                # 使用替换模式强制解码
+                filename = file_bytes.decode('utf-8', errors='replace')
+                files.append(filename)
+
+        return files
     except Exception as e:
-        print(f"[编码修复] 处理文件名失败: {filename}, 错误: {e}")
-        return filename
+        logger_manager.error(f"[编码] 列出目录失败: {e}")
+        # 回退到普通模式
+        return os.listdir(directory)
 
 
 def list_directory_with_encoding_fix(directory):
     """列出目录内容，并修复文件名编码"""
     try:
         if not os.path.exists(directory):
-            print(f"[目录列表] 目录不存在: {directory}")
+            logger_manager.warning(f"[目录列表] 目录不存在: {directory}")
             return []
 
-        # 使用 os.listdir 获取文件列表
-        files = os.listdir(directory)
+        # ✅ 优先使用字节模式
+        if 'ANDROID_ARGUMENT' in os.environ:
+            return list_directory_bytes(directory)
 
-        # 修复编码
-        fixed_files = []
-        for filename in files:
-            fixed_name = fix_filename_encoding(filename)
-            fixed_files.append(fixed_name)
-
-            # 如果修复后的名称不同，打印日志
-            if fixed_name != filename:
-                print(f"[编码修复] 原始: {repr(filename)}, 修复后: {fixed_name}")
-
-        return fixed_files
+        # 非 Android 环境使用普通模式
+        return os.listdir(directory)
     except Exception as e:
-        print(f"[目录列表] 列出目录失败: {directory}, 错误: {e}")
+        logger_manager.error(f"[目录列表] 列出目录失败: {directory}, 错误: {e}")
         import traceback
         traceback.print_exc()
         return []
