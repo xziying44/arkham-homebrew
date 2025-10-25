@@ -10,8 +10,8 @@
     </div>
 
     <div class="image-content" ref="imageContainer">
-      <!-- 双面卡牌切换按钮 -->
-      <div v-if="isDoubleSided" class="card-side-switch">
+      <!-- 双面卡牌切换按钮 - 仅PC端显示 -->
+      <div v-if="isDoubleSided && !isMobile" class="card-side-switch">
         <n-button-group size="small">
           <n-button
             :type="currentDisplaySide === 'front' ? 'primary' : 'default'"
@@ -39,12 +39,32 @@
       </div>
 
       <!-- 实际图片显示 -->
-      <div v-else-if="displayedImage" class="image-viewer" :class="{ 'is-dragging': isDragging }" @wheel="handleImageWheel"
-        @mousedown="startImageDrag">
-        <img :src="displayedImage" alt="预览图片" :style="{
-          transform: `scale(${imageScale}) translate(${imageOffsetX}px, ${imageOffsetY}px)`,
-          transformOrigin: 'center center'
-        }" draggable="false" class="preview-image" @load="onImageLoad" />
+      <div
+        v-else-if="displayedImage"
+        class="image-viewer"
+        :class="{
+          'is-dragging': isDragging,
+          'is-mobile': isMobile
+        }"
+        @wheel="handleImageWheel"
+        @mousedown="startImageDrag"
+        @touchstart="handleTouchStart"
+        @touchmove="handleTouchMove"
+        @touchend="handleTouchEnd"
+        @touchcancel="handleTouchEnd"
+      >
+        <img
+          :src="displayedImage"
+          alt="预览图片"
+          :style="{
+            transform: `scale(${imageScale}) translate(${imageOffsetX}px, ${imageOffsetY}px)`,
+            transformOrigin: 'center center',
+            cursor: isMobile ? 'default' : 'grab'
+          }"
+          draggable="false"
+          class="preview-image"
+          @load="onImageLoad"
+        />
       </div>
 
       <!-- 空状态占位符 -->
@@ -56,8 +76,8 @@
         </n-empty>
       </div>
 
-      <!-- 图片控制工具栏 -->
-      <div v-if="displayedImage" class="image-controls">
+      <!-- 图片控制工具栏 - PC端显示完整控件，移动端只显示必要的 -->
+      <div v-if="displayedImage && !isMobile" class="image-controls">
         <n-button-group size="small">
           <n-button @click="zoomIn" :title="$t('workspaceMain.imagePreview.controls.zoomIn')">
             <n-icon :component="AddOutline" />
@@ -78,12 +98,35 @@
           </n-button>
         </n-button-group>
       </div>
+
+      <!-- 移动端简化控制 - 显示双面切换按钮 -->
+      <div v-if="displayedImage && isMobile" class="mobile-controls">
+        <div class="mobile-card-side-switch">
+          <n-button-group size="medium">
+            <n-button
+              :type="currentDisplaySide === 'front' ? 'primary' : 'default'"
+              @click="switchSide('front')"
+              round
+            >
+              {{ $t('workspaceMain.imagePreview.frontSide') }}
+            </n-button>
+            <n-button
+              v-if="isDoubleSided"
+              :type="currentDisplaySide === 'back' ? 'primary' : 'default'"
+              @click="switchSide('back')"
+              round
+            >
+              {{ $t('workspaceMain.imagePreview.backSide') }}
+            </n-button>
+          </n-button-group>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onUnmounted, watch, nextTick } from 'vue';
+import { ref, computed, onUnmounted, watch, nextTick, onMounted } from 'vue';
 import { ImageOutline, Close, AddOutline, RemoveOutline, CopyOutline } from '@vicons/ionicons5';
 import { useMessage } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
@@ -109,8 +152,20 @@ const emit = defineEmits<{
 const message = useMessage();
 const { t } = useI18n();
 
+// 移动端检测
+const isMobile = ref(false);
+
 // 双面卡牌状态
 const currentDisplaySide = ref<'front' | 'back'>('front');
+
+// 移动端触摸状态
+const touchStartDistance = ref(0);
+const touchStartScale = ref(1);
+const touchStartX = ref(0);
+const touchStartY = ref(0);
+const touchStartOffsetX = ref(0);
+const touchStartOffsetY = ref(0);
+const isTouching = ref(false);
 
 // 监听外部传入的currentSide变化
 watch(() => props.currentSide, (newSide) => {
@@ -161,6 +216,23 @@ let dragStartY = 0;
 let dragStartOffsetX = 0;
 let dragStartOffsetY = 0;
 let dragAnimationFrameId: number;
+
+// 检测是否为移动端设备
+const checkIsMobile = () => {
+  const userAgent = navigator.userAgent.toLowerCase();
+  const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
+  const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  const isSmallScreen = window.innerWidth <= 768;
+
+  isMobile.value = isMobileDevice || (hasTouch && isSmallScreen);
+  console.log('📱 设备检测:', { isMobileDevice, hasTouch, isSmallScreen, result: isMobile.value });
+};
+
+// 初始化移动端检测
+onMounted(() => {
+  checkIsMobile();
+  window.addEventListener('resize', checkIsMobile);
+});
 
 // 复制图片到剪贴板
 const copyImageToClipboard = async () => {
@@ -219,8 +291,14 @@ const calculateFitScale = (imageElement: HTMLImageElement) => {
   if (!imageContainer.value) return 1;
 
   const containerRect = imageContainer.value.getBoundingClientRect();
-  const containerWidth = containerRect.width - 40; // 留一些边距
-  const containerHeight = containerRect.height - 80; // 留一些边距给工具栏
+
+  // 移动端和PC端使用不同的边距计算
+  const isMobileDevice = isMobile.value;
+  const horizontalMargin = isMobileDevice ? 20 : 40;
+  const verticalMargin = isMobileDevice ? 60 : 80; // 移动端减少顶部工具栏占用的空间
+
+  const containerWidth = containerRect.width - horizontalMargin;
+  const containerHeight = containerRect.height - verticalMargin;
 
   const imageWidth = imageElement.naturalWidth;
   const imageHeight = imageElement.naturalHeight;
@@ -231,8 +309,18 @@ const calculateFitScale = (imageElement: HTMLImageElement) => {
   const scaleX = containerWidth / imageWidth;
   const scaleY = containerHeight / imageHeight;
 
-  // 取较小的缩放比例以保持图片完整显示，并限制最大缩放比例
-  return Math.min(scaleX, scaleY, 1);
+  // 移动端允许稍微放大以确保更好的视觉效果
+  const maxScale = isMobileDevice ? 1.2 : 1;
+
+  // 取较小的缩放比例以保持图片完整显示
+  const fitScale = Math.min(scaleX, scaleY);
+
+  // 移动端特殊处理：如果图片太小，适当放大
+  if (isMobileDevice && fitScale < 0.5) {
+    return Math.min(0.8, fitScale * 1.6);
+  }
+
+  return Math.min(fitScale, maxScale);
 };
 
 // 【核心修改】图片加载完成时的处理
@@ -268,8 +356,11 @@ const fitToContainer = () => {
   }
 };
 
-// 【核心修改】鼠标滚轮缩放 - 标记为用户控制
+// 【修复】鼠标滚轮缩放 - PC端专用
 const handleImageWheel = (event: WheelEvent) => {
+  // 如果是移动端，阻止PC端的滚轮缩放
+  if (isMobile.value) return;
+
   event.preventDefault();
   isViewUserControlled.value = true;
   const delta = event.deltaY > 0 ? -0.1 : 0.1;
@@ -296,8 +387,11 @@ const resetImageView = () => {
   imageOffsetY.value = 0;
 };
 
-// 【核心修改】开始拖拽 - 标记为用户控制
+// 【修复】开始拖拽 - PC端专用
 const startImageDrag = (event: MouseEvent) => {
+  // 如果是移动端，阻止PC端的拖拽
+  if (isMobile.value) return;
+
   isViewUserControlled.value = true;
   isDragging.value = true;
   dragStartX = event.clientX;
@@ -334,6 +428,80 @@ const stopImageDrag = () => {
   if (dragAnimationFrameId) {
     cancelAnimationFrame(dragAnimationFrameId);
   }
+};
+
+// 计算两点之间的距离
+const getDistance = (touch1: Touch, touch2: Touch) => {
+  const dx = touch1.clientX - touch2.clientX;
+  const dy = touch1.clientY - touch2.clientY;
+  return Math.sqrt(dx * dx + dy * dy);
+};
+
+// 移动端触摸开始事件
+const handleTouchStart = (event: TouchEvent) => {
+  if (!isMobile.value) return;
+
+  // 强制阻止所有默认行为
+  event.preventDefault();
+  event.stopPropagation();
+  isTouching.value = true;
+
+  if (event.touches.length === 1) {
+    // 单指触摸 - 准备拖动
+    const touch = event.touches[0];
+    touchStartX.value = touch.clientX;
+    touchStartY.value = touch.clientY;
+    touchStartOffsetX.value = imageOffsetX.value;
+    touchStartOffsetY.value = imageOffsetY.value;
+    console.log('👆 单指触摸开始，位置:', touch.clientX, touch.clientY);
+  } else if (event.touches.length === 2) {
+    // 双指触摸 - 准备缩放
+    touchStartDistance.value = getDistance(event.touches[0], event.touches[1]);
+    touchStartScale.value = imageScale.value;
+    console.log('🤚 双指触摸开始，初始距离:', touchStartDistance.value);
+  }
+};
+
+// 移动端触摸移动事件
+const handleTouchMove = (event: TouchEvent) => {
+  if (!isMobile.value || !isTouching.value) return;
+
+  // 强制阻止所有默认行为，包括页面滚动
+  event.preventDefault();
+  event.stopPropagation();
+
+  if (event.touches.length === 1) {
+    // 单指拖动
+    const touch = event.touches[0];
+    const deltaX = touch.clientX - touchStartX.value;
+    const deltaY = touch.clientY - touchStartY.value;
+
+    imageOffsetX.value = touchStartOffsetX.value + deltaX;
+    imageOffsetY.value = touchStartOffsetY.value + deltaY;
+
+    // 标记为用户控制
+    isViewUserControlled.value = true;
+  } else if (event.touches.length === 2) {
+    // 双指缩放
+    const currentDistance = getDistance(event.touches[0], event.touches[1]);
+    const scale = currentDistance / touchStartDistance.value;
+
+    imageScale.value = Math.max(0.1, Math.min(5, touchStartScale.value * scale));
+
+    // 标记为用户控制
+    isViewUserControlled.value = true;
+    console.log('🔍 双指缩放:', imageScale.value.toFixed(2));
+  }
+};
+
+// 移动端触摸结束事件
+const handleTouchEnd = (event: TouchEvent) => {
+  if (!isMobile.value) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+  isTouching.value = false;
+  console.log('👋 触摸结束');
 };
 
 // 【核心修改】监听 imageKey 的变化
@@ -385,6 +553,7 @@ defineExpose({
 onUnmounted(() => {
   document.removeEventListener('mousemove', handleImageDrag);
   document.removeEventListener('mouseup', stopImageDrag);
+  window.removeEventListener('resize', checkIsMobile);
 
   if (dragAnimationFrameId) {
     cancelAnimationFrame(dragAnimationFrameId);
@@ -402,19 +571,22 @@ onUnmounted(() => {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   transition: width var(--resize-transition);
   will-change: width;
+  height: 100vh !important; /* 强制占满高度 */
+  min-height: 100vh !important; /* 强制最小高度 */
 }
 
 .pane-header {
   flex-shrink: 0;
-  padding: 12px 16px;
+  padding: 8px 12px; /* 减少内边距 */
   background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
   color: white;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  min-height: 40px; /* 设置最小高度 */
 }
 
 .pane-title {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px; /* 稍微减小字体 */
   color: white;
 }
 
@@ -423,6 +595,9 @@ onUnmounted(() => {
   position: relative;
   overflow: hidden;
   background: linear-gradient(145deg, #f8fafc 0%, #e2e8f0 100%);
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* 确保flex子元素能正确计算高度 */
 }
 
 .image-viewer {
@@ -434,6 +609,8 @@ onUnmounted(() => {
   cursor: grab;
   overflow: hidden;
   background: radial-gradient(circle at center, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  flex: 1; /* 确保image-viewer能占据所有可用空间 */
+  min-height: 0; /* 确保flex子元素能正确计算高度 */
 }
 
 .image-viewer:active,
@@ -609,6 +786,91 @@ onUnmounted(() => {
   }
 }
 
+/* 移动端专用样式 */
+.mobile-controls {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 15;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(15px);
+  border-radius: 20px;
+  padding: 8px 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* 强制移动端占满高度 */
+@media (max-width: 768px) {
+  .image-pane {
+    height: 100vh !important;
+    min-height: 100vh !important;
+  }
+
+  .image-content {
+    flex: 1 !important;
+    height: calc(100vh - 40px) !important; /* 减去标题栏高度 */
+    min-height: calc(100vh - 40px) !important;
+  }
+
+  .image-viewer {
+    flex: 1 !important;
+    height: calc(100vh - 120px) !important; /* 减去标题栏和控制按钮高度 */
+    min-height: calc(100vh - 120px) !important;
+  }
+}
+
+.mobile-card-side-switch :deep(.n-button) {
+  min-width: 70px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+
+.mobile-card-side-switch :deep(.n-button--primary-type) {
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.mobile-card-side-switch :deep(.n-button--default-type) {
+  background: rgba(248, 250, 252, 0.9);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  color: #64748b;
+}
+
+.mobile-card-side-switch :deep(.n-button--default-type:hover) {
+  background: rgba(241, 245, 249, 0.95);
+  border-color: rgba(203, 213, 225, 0.8);
+  color: #475569;
+}
+
+.image-viewer.is-mobile {
+  cursor: default;
+  touch-action: none; /* 防止浏览器默认的触摸行为 */
+  user-select: none; /* 防止文本选择 */
+  -webkit-user-select: none; /* Safari兼容 */
+  -moz-user-select: none; /* Firefox兼容 */
+  -ms-user-select: none; /* IE兼容 */
+  overscroll-behavior: contain; /* 防止滚动传播 */
+}
+
+.image-viewer.is-mobile .preview-image {
+  cursor: default;
+}
+
+/* 确保PC端光标样式不受影响 */
+.image-viewer:not(.is-mobile) {
+  cursor: grab;
+}
+
+.image-viewer:not(.is-mobile):active,
+.image-viewer:not(.is-mobile).is-dragging {
+  cursor: grabbing;
+}
+
 /* 响应式调整 */
 @media (max-width: 768px) {
   .card-shape {
@@ -626,9 +888,64 @@ onUnmounted(() => {
   .loading-text {
     font-size: 14px;
   }
+
+  /* 移动端隐藏PC端控件 - 只在小屏幕设备上生效 */
+  .card-side-switch {
+    display: none;
+  }
+
+  .image-controls {
+    display: none;
+  }
+
+  /* 确保移动端控件显示 */
+  .mobile-controls {
+    display: block !important;
+  }
+
+  /* 移动端内容区域优化 - 只在移动设备上生效 */
+  .image-content {
+    overflow: hidden;
+  }
+
+  /* 移动端图片查看器优化 - 只在移动设备上生效 */
+  .image-viewer {
+    padding: 5px; /* 进一步减少内边距 */
+    touch-action: none;
+    position: relative;
+    /* 强制阻止所有触摸行为 */
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    flex: 1; /* 确保移动端也能占满空间 */
+    min-height: 0; /* 确保flex子元素能正确计算高度 */
+  }
+
+  .preview-image {
+    max-width: calc(100vw - 20px); /* 减少边距 */
+    max-height: calc(100vh - 100px); /* 增加可用高度 */
+    pointer-events: none; /* 防止图片本身的触摸事件干扰 */
+    object-fit: contain; /* 确保图片适应容器 */
+  }
 }
 
 @media (max-width: 480px) {
+  .image-pane {
+    height: 100vh !important;
+    min-height: 100vh !important;
+  }
+
+  .image-content {
+    flex: 1 !important;
+    height: calc(100vh - 35px) !important; /* 减去更小的标题栏高度 */
+    min-height: calc(100vh - 35px) !important;
+  }
+
+  .image-viewer {
+    flex: 1 !important;
+    height: calc(100vh - 115px) !important; /* 减去标题栏和控制按钮高度 */
+    min-height: calc(100vh - 115px) !important;
+  }
+
   .card-shape {
     width: 180px;
     height: 252px;
@@ -641,6 +958,33 @@ onUnmounted(() => {
   }
 
   .loading-text {
+    font-size: 12px;
+  }
+
+  .mobile-controls {
+    bottom: 20px;
+    padding: 6px 12px;
+  }
+
+  .mobile-card-side-switch :deep(.n-button) {
+    min-width: 60px;
+    padding: 6px 12px;
+    font-size: 14px;
+  }
+
+  .preview-image {
+    max-width: calc(100vw - 15px); /* 进一步减少边距 */
+    max-height: calc(100vh - 85px); /* 进一步增加可用高度 */
+    object-fit: contain; /* 确保图片适应容器 */
+  }
+
+  /* 更小的标题栏 */
+  .pane-header {
+    padding: 6px 10px;
+    min-height: 35px;
+  }
+
+  .pane-title {
     font-size: 12px;
   }
 }

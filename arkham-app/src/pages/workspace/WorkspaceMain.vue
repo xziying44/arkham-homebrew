@@ -94,8 +94,8 @@
 
     <div v-if="showMobileImagePreview" class="mobile-modal" @click="closeMobileImagePreview">
       <div class="mobile-modal-content image-modal" @click.stop>
-        <div class="modal-header">
-          <h3>{{ $t('workspaceMain.imagePreview.title') }}</h3>
+        <!-- 移除重复标题，只保留关闭按钮 -->
+        <div class="modal-header-simple">
           <button class="close-btn" @click="closeMobileImagePreview">{{ $t('workspaceMain.modals.close') }}</button>
         </div>
         <ImagePreviewPanel
@@ -504,13 +504,14 @@ onUnmounted(() => {
   border-radius: 12px;
   width: 100%;
   height: 100%;
-  max-width: 95vw;
-  max-height: 95vh;
+  max-width: 98vw;
+  max-height: 98vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
   box-sizing: border-box;
+  position: relative;
 }
 
 .modal-header {
@@ -530,19 +531,41 @@ onUnmounted(() => {
   color: #374151;
 }
 
+/* 简化的模态框头部 - 只有关闭按钮 */
+.modal-header-simple {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 12px 12px 0 0;
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 10;
+}
+
 .close-btn {
-  background: none;
-  border: none;
-  font-size: 24px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  font-size: 20px;
   color: #6b7280;
   cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
+  padding: 6px 10px;
+  border-radius: 8px;
   transition: all 0.2s ease;
+  min-width: 36px;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .close-btn:hover {
-  background: #e5e7eb;
+  background: rgba(241, 245, 249, 0.95);
+  border-color: rgba(203, 213, 225, 0.8);
   color: #374151;
 }
 
@@ -552,8 +575,10 @@ onUnmounted(() => {
 }
 
 .image-modal {
-  max-width: 90vw;
-  max-height: 90vh;
+  max-width: 95vw;
+  max-height: 95vh;
+  width: 95vw;
+  height: 95vh;
 }
 
 /* 响应式布局 */
@@ -592,8 +617,10 @@ onUnmounted(() => {
   }
 
   .image-modal {
-    max-width: 95vw;
-    max-height: 75vh;
+    max-width: 98vw;
+    max-height: 98vh;
+    width: 98vw;
+    height: 98vh;
   }
 }
 
@@ -624,8 +651,10 @@ onUnmounted(() => {
   }
 
   .image-modal {
-    max-width: 95vw;
-    max-height: 70vh;
+    max-width: 98vw;
+    max-height: 98vh;
+    width: 98vw;
+    height: 98vh;
   }
 
   /* 确保模态框内容在小屏幕上不溢出 */
