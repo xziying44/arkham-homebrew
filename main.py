@@ -1,4 +1,4 @@
-# app_android.py - 完整版本，支持目录选择
+# main.py - 完整版本，支持目录选择
 import os
 import sys
 import threading

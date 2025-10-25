@@ -6,7 +6,7 @@ package.domain = cn.xziying
 
 # 源代码
 source.dir = .
-source.include_exts = py,png,jpg,jpeg,kv,atlas,json,txt,ttf,otf,woff,woff2,ico,icns
+source.include_exts = py,png,jpg,jpeg,kv,atlas,json,txt,ttf,otf,woff,woff2,ico,icns,html,css,js
 # 2. 包含所有的资源和自定义Python模块目录
 source.include_dirs = ., assets, fonts, images, cardback, templates, static, prompt, bin, export_helper, rich_text_render
 
