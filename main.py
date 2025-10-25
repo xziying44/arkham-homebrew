@@ -1,4 +1,4 @@
-# main.py - 修复 WebViewClient 问题
+# main.py - 在权限请求部分修改
 import os
 import sys
 import threading
@@ -26,20 +26,59 @@ PythonActivity = autoclass('org.kivy.android.PythonActivity')
 Intent = autoclass('android.content.Intent')
 Uri = autoclass('android.net.Uri')
 Environment = autoclass('android.os.Environment')
+Build = autoclass('android.os.Build')
 WebView = autoclass('android.webkit.WebView')
 WebViewClient = autoclass('android.webkit.WebViewClient')
 WebSettings = autoclass('android.webkit.WebSettings')
 LayoutParams = autoclass('android.view.ViewGroup$LayoutParams')
 
-# 请求必要的权限
-Logger.info("Android: 请求权限...")
-request_permissions([
-    Permission.READ_EXTERNAL_STORAGE,
-    Permission.WRITE_EXTERNAL_STORAGE,
-    Permission.INTERNET,
-    Permission.ACCESS_NETWORK_STATE
-])
+# ============================================
+# ✅ 方案3：请求管理所有文件权限（Android 11+）
+# ============================================
+Logger.info("Android: 检查 Android 版本...")
+sdk_version = Build.VERSION.SDK_INT
+Logger.info(f"Android: SDK 版本 = {sdk_version}")
 
+if sdk_version >= 30:  # Android 11+
+    Logger.info("Android 11+: 检查是否需要管理所有文件权限")
+    try:
+        if not Environment.isExternalStorageManager():
+            Logger.warning("Android: 没有管理所有文件权限，准备请求")
+
+
+            # 延迟请求权限（让应用先启动）
+            def request_manage_permission():
+                try:
+                    Settings = autoclass('android.provider.Settings')
+                    currentActivity = PythonActivity.mActivity
+
+                    intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                    uri = Uri.parse(f"package:{currentActivity.getPackageName()}")
+                    intent.setData(uri)
+                    currentActivity.startActivity(intent)
+                    Logger.info("Android: 已跳转到权限设置页面")
+                except Exception as e:
+                    Logger.error(f"Android: 跳转权限设置失败: {e}")
+
+
+            # 延迟3秒后请求权限
+            threading.Timer(3.0, request_manage_permission).start()
+        else:
+            Logger.info("Android: 已有管理所有文件权限")
+    except Exception as e:
+        Logger.error(f"Android: 检查管理权限失败: {e}")
+        import traceback
+
+        Logger.error(traceback.format_exc())
+else:
+    # Android 10 及以下
+    Logger.info("Android 10 及以下: 请求传统存储权限")
+    request_permissions([
+        Permission.READ_EXTERNAL_STORAGE,
+        Permission.WRITE_EXTERNAL_STORAGE,
+        Permission.INTERNET,
+        Permission.ACCESS_NETWORK_STATE
+    ])
 
 class AndroidWebView(Widget):
     """Android WebView Widget"""
