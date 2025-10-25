@@ -1484,8 +1484,12 @@ onUnmounted(() => {
 
 .form-content {
     flex: 1;
-    overflow: hidden;
+    overflow: auto;
     background: linear-gradient(145deg, #f8fafc 0%, #e2e8f0 100%);
+    /* 移动端滚动优化 */
+    -webkit-overflow-scrolling: touch;
+    /* 确保滚动容器在移动端有正确的高度 */
+    height: 0;
 }
 
 .empty-state {
@@ -1846,6 +1850,9 @@ onUnmounted(() => {
     .form-pane {
         min-width: 100%;
         width: 100%;
+        height: 100vh; /* 确保移动端占满视口高度 */
+        display: flex;
+        flex-direction: column;
     }
 
     .pane-header {
@@ -1853,10 +1860,24 @@ onUnmounted(() => {
         min-width: auto;
         width: 100%;
         box-sizing: border-box;
+        flex-shrink: 0; /* 防止头部被压缩 */
     }
 
     .pane-title {
         font-size: 16px;
+    }
+
+    /* 优化移动端滚动容器 */
+    .form-content {
+        height: 0; /* 让flex子元素正确计算高度 */
+        flex: 1;
+        overflow-y: auto; /* 只允许垂直滚动 */
+        -webkit-overflow-scrolling: touch; /* iOS平滑滚动 */
+    }
+
+    .form-wrapper {
+        padding: 16px 12px; /* 移动端减少内边距 */
+        min-height: min-content; /* 确保内容能完整显示 */
     }
 
     /* 模态框移动端适配 */
@@ -1897,6 +1918,23 @@ onUnmounted(() => {
         width: 36px;
         height: 36px;
         font-size: 1.1rem;
+    }
+
+    /* 移动端操作按钮区域优化 */
+    .form-actions {
+        padding: 16px 12px;
+        margin-top: 24px;
+        flex-shrink: 0; /* 防止操作按钮被压缩 */
+    }
+
+    .form-actions :deep(.n-space) {
+        flex-wrap: wrap;
+        gap: 8px !important;
+    }
+
+    .form-actions :deep(.n-button) {
+        flex: 1;
+        min-width: 0;
     }
 }
 </style>

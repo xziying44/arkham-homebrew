@@ -564,6 +564,8 @@ const removeImage = (field: FormField) => {
     gap: 16px;
     margin-bottom: 16px;
     align-items: flex-start;
+    /* 移动端优化 */
+    flex-wrap: wrap;
 }
 
 .form-field {
@@ -589,8 +591,16 @@ const removeImage = (field: FormField) => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
+    .card-side-editor {
+        /* 确保移动端有足够的空间进行滚动 */
+        min-height: 100%;
+        padding-bottom: 40px; /* 为底部操作按钮留出空间 */
+    }
+
     .form-row {
         flex-direction: column;
+        gap: 12px; /* 移动端减少间距 */
+        margin-bottom: 12px;
     }
 
     .layout-full,
@@ -598,6 +608,17 @@ const removeImage = (field: FormField) => {
     .layout-third,
     .layout-quarter {
         flex: 1;
+        width: 100%; /* 确保移动端占满宽度 */
+    }
+
+    .form-card {
+        margin-bottom: 16px; /* 移动端减少卡片间距 */
+    }
+
+    /* 移动端表单字段优化 */
+    .form-field {
+        min-width: 0;
+        width: 100%;
     }
 }
 </style>

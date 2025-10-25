@@ -99,8 +99,9 @@ const goBack = () => {
   .workspace-main {
     flex: 1;
     height: calc(100vh - 70px); /* 减去底部导航栏高度 */
-    overflow: hidden;
+    overflow: auto; /* 允许滚动而不是隐藏 */
     width: 100%;
+    -webkit-overflow-scrolling: touch; /* iOS平滑滚动优化 */
   }
 }
 </style>
