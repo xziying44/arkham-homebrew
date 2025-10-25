@@ -5,19 +5,18 @@
     :closable="false"
     :auto-focus="false"
     :block-scroll="true"
-    :style="{ maxHeight: '90vh', overflow: 'hidden' }"
     transform-origin="center"
+    preset="card"
     class="language-welcome-modal"
+    :style="{ 
+      maxWidth: '600px',
+      width: '90vw',
+      margin: '0 auto'
+    }"
   >
-    <n-card
-      class="language-welcome-card"
-      :bordered="false"
-      size="huge"
-      role="dialog"
-      aria-modal="true"
-    >
+    <template #default>
       <div class="language-welcome-content">
-        <!-- 欢迎图标和标题 -->
+        <!-- 欢迎图标和标题 - 固定在顶部 -->
         <div class="welcome-header">
           <div class="welcome-icon">
             <n-icon size="64" :component="LanguageOutline" color="#667eea" />
@@ -26,31 +25,33 @@
           <p class="welcome-subtitle">{{ $t('languageWelcome.subtitle') }}</p>
         </div>
 
-        <!-- 语言选择网格 -->
-        <div class="language-grid">
-          <div
-            v-for="language in languageOptions"
-            :key="language.key"
-            class="language-option"
-            :class="{ 'selected': selectedLanguage === language.key }"
-            @click="selectLanguage(language.key)"
-          >
-            <div class="language-card">
-              <div class="language-flag">
-                <n-icon size="32" :component="language.icon" />
-              </div>
-              <div class="language-info">
-                <h3 class="language-name">{{ language.label }}</h3>
-                <p class="language-native">{{ language.nativeName }}</p>
-              </div>
-              <div class="language-check" v-if="selectedLanguage === language.key">
-                <n-icon size="20" :component="CheckmarkCircle" color="#10b981" />
+        <!-- 语言选择区域 - 可滚动 -->
+        <div class="language-selection-area">
+          <div class="language-grid">
+            <div
+              v-for="language in languageOptions"
+              :key="language.key"
+              class="language-option"
+              :class="{ 'selected': selectedLanguage === language.key }"
+              @click="selectLanguage(language.key)"
+            >
+              <div class="language-card">
+                <div class="language-flag">
+                  <n-icon size="32" :component="language.icon" />
+                </div>
+                <div class="language-info">
+                  <h3 class="language-name">{{ language.label }}</h3>
+                  <p class="language-native">{{ language.nativeName }}</p>
+                </div>
+                <div class="language-check" v-if="selectedLanguage === language.key">
+                  <n-icon size="20" :component="CheckmarkCircle" color="#10b981" />
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- 确认按钮 -->
+        <!-- 确认按钮 - 固定在底部 -->
         <div class="welcome-actions">
           <n-button
             type="primary"
@@ -66,9 +67,8 @@
             {{ $t('languageWelcome.confirm') }}
           </n-button>
         </div>
-
       </div>
-    </n-card>
+    </template>
   </n-modal>
 </template>
 
@@ -132,9 +132,6 @@ const languageOptions = [
 // 选择语言
 const selectLanguage = (languageKey: string) => {
   selectedLanguage.value = languageKey;
-
-  // 立即预览语言切换（可选）
-  // setLanguage(languageKey);
 };
 
 // 确认语言选择
@@ -167,12 +164,6 @@ const confirmLanguage = async () => {
   }
 };
 
-// 跳过语言选择
-const skipLanguage = () => {
-  showLanguageModal.value = false;
-  localStorage.setItem('language-welcome-completed', 'true');
-};
-
 // 监听弹窗显示状态，重置选择
 watch(() => props.show, (newShow) => {
   if (newShow) {
@@ -183,41 +174,38 @@ watch(() => props.show, (newShow) => {
 </script>
 
 <style scoped>
-.language-welcome-modal {
-  --n-border-radius: 16px;
+/* 移除 n-card 默认的 padding */
+.language-welcome-modal :deep(.n-card) {
+  padding: 0 !important;
+  max-height: 85vh;
+  overflow: hidden;
 }
 
-.language-welcome-card {
-  max-width: 600px;
-  width: 90vw;
-  max-height: 85vh;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-  display: flex;
-  flex-direction: column;
+.language-welcome-modal :deep(.n-card__content) {
+  padding: 0 !important;
+  height: 100%;
+  overflow: hidden;
 }
 
 .language-welcome-content {
-  padding: 20px;
-  overflow: visible;
-  flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  min-height: 0;
+  height: 100%;
+  max-height: 85vh;
+  overflow: hidden;
 }
 
-/* 欢迎头部 */
+/* 欢迎头部 - 固定在顶部 */
 .welcome-header {
   text-align: center;
-  margin-bottom: 30px;
-  padding: 10px 0;
+  padding: 24px 24px 16px 24px;
   flex-shrink: 0;
+  background: white;
+  border-bottom: 1px solid #f1f5f9;
 }
 
 .welcome-icon {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   display: flex;
   justify-content: center;
 }
@@ -240,14 +228,20 @@ watch(() => props.show, (newShow) => {
   margin-right: auto;
 }
 
-/* 语言选择网格 */
+/* 语言选择区域 - 可滚动 */
+.language-selection-area {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 24px;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
 .language-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
-  margin-bottom: 30px;
-  flex: 1;
-  min-height: 0;
 }
 
 .language-option {
@@ -323,12 +317,14 @@ watch(() => props.show, (newShow) => {
   border: 2px solid #10b981;
 }
 
-/* 操作按钮区域 */
+/* 操作按钮区域 - 固定在底部 */
 .welcome-actions {
   display: flex;
   justify-content: center;
-  margin-bottom: 15px;
+  padding: 16px 24px 24px 24px;
   flex-shrink: 0;
+  background: white;
+  border-top: 1px solid #f1f5f9;
 }
 
 .confirm-btn {
@@ -339,39 +335,60 @@ watch(() => props.show, (newShow) => {
   border-radius: 12px;
 }
 
-.welcome-skip {
-  text-align: center;
-  flex-shrink: 0;
+/* 美化滚动条 */
+.language-selection-area::-webkit-scrollbar {
+  width: 6px;
 }
 
-.skip-btn {
-  font-size: 14px;
-  color: #64748b;
-  text-decoration: underline;
-  text-decoration-style: dotted;
+.language-selection-area::-webkit-scrollbar-track {
+  background: #f8fafc;
+  border-radius: 3px;
 }
 
-.skip-btn:hover {
-  color: #475569;
+.language-selection-area::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 3px;
 }
 
-/* 响应式设计 */
+.language-selection-area::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8;
+}
+
+/* 响应式设计 - 手机端优化 */
 @media (max-width: 640px) {
-  .language-welcome-card {
-    width: 95vw;
-    margin: 10px;
+  .language-welcome-modal :deep(.n-card) {
+    max-height: 90vh;
+    border-radius: 16px 16px 0 0;
   }
 
   .language-welcome-content {
-    padding: 16px;
+    max-height: 90vh;
+  }
+
+  .welcome-header {
+    padding: 20px 16px 12px 16px;
+  }
+
+  .welcome-icon {
+    margin-bottom: 12px;
+  }
+
+  .welcome-icon :deep(.n-icon) {
+    font-size: 48px !important;
   }
 
   .welcome-title {
-    font-size: 24px;
+    font-size: 22px;
+    margin-bottom: 8px;
   }
 
   .welcome-subtitle {
     font-size: 14px;
+    padding: 0 8px;
+  }
+
+  .language-selection-area {
+    padding: 16px;
   }
 
   .language-grid {
@@ -380,29 +397,142 @@ watch(() => props.show, (newShow) => {
   }
 
   .language-card {
-    padding: 20px;
+    padding: 18px;
+    gap: 10px;
+  }
+
+  .language-flag {
+    width: 56px;
+    height: 56px;
+  }
+
+  .language-flag :deep(.n-icon) {
+    font-size: 28px !important;
+  }
+
+  .language-name {
+    font-size: 17px;
+  }
+
+  .language-native {
+    font-size: 13px;
+  }
+
+  .language-check {
+    top: 10px;
+    right: 10px;
+    width: 28px;
+    height: 28px;
+  }
+
+  .language-check :deep(.n-icon) {
+    font-size: 16px !important;
+  }
+
+  .welcome-actions {
+    padding: 12px 16px 20px 16px;
   }
 
   .confirm-btn {
     width: 100%;
+    min-width: auto;
+    height: 46px;
+    font-size: 15px;
   }
 }
 
-/* 美化滚动条 */
-.language-welcome-content::-webkit-scrollbar {
-  width: 6px;
+/* 超小屏幕优化 */
+@media (max-width: 375px) {
+  .welcome-header {
+    padding: 16px 12px 10px 12px;
+  }
+
+  .welcome-title {
+    font-size: 20px;
+  }
+
+  .welcome-subtitle {
+    font-size: 13px;
+  }
+
+  .language-selection-area {
+    padding: 12px;
+  }
+
+  .language-card {
+    padding: 16px;
+  }
+
+  .language-flag {
+    width: 48px;
+    height: 48px;
+  }
+
+  .language-name {
+    font-size: 16px;
+  }
+
+  .welcome-actions {
+    padding: 12px 12px 16px 12px;
+  }
 }
 
-.language-welcome-content::-webkit-scrollbar-track {
-  background: transparent;
-}
+/* 横屏适配 */
+@media (max-height: 600px) and (orientation: landscape) {
+  .language-welcome-modal :deep(.n-card) {
+    max-height: 95vh;
+  }
 
-.language-welcome-content::-webkit-scrollbar-thumb {
-  background-color: #cbd5e1;
-  border-radius: 3px;
-}
+  .language-welcome-content {
+    max-height: 95vh;
+  }
 
-.language-welcome-content::-webkit-scrollbar-thumb:hover {
-  background-color: #94a3b8;
+  .welcome-header {
+    padding: 12px 20px 8px 20px;
+  }
+
+  .welcome-icon {
+    margin-bottom: 8px;
+  }
+
+  .welcome-icon :deep(.n-icon) {
+    font-size: 40px !important;
+  }
+
+  .welcome-title {
+    font-size: 20px;
+    margin-bottom: 6px;
+  }
+
+  .welcome-subtitle {
+    font-size: 13px;
+  }
+
+  .language-selection-area {
+    padding: 12px 20px;
+  }
+
+  .language-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .language-card {
+    padding: 12px;
+    flex-direction: row;
+    text-align: left;
+  }
+
+  .language-flag {
+    width: 48px;
+    height: 48px;
+  }
+
+  .welcome-actions {
+    padding: 10px 20px 12px 20px;
+  }
+
+  .confirm-btn {
+    height: 40px;
+  }
 }
 </style>
