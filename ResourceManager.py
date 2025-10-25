@@ -6,6 +6,8 @@ from typing import Optional
 
 from PIL import Image, ImageFont
 
+from bin.logger import logger_manager
+
 
 @dataclass
 class FontInfo:
@@ -69,10 +71,69 @@ class LanguageConfig:
 
 
 def get_resource_path(relative_path):
-    """获取资源文件的绝对路径，适用于开发环境和打包后的环境"""
+    """获取资源文件的绝对路径，适用于开发环境、PyInstaller打包和Android打包"""
+
+    # 1. 检查是否在 Android 环境
+    if 'ANDROID_ARGUMENT' in os.environ:
+        # Android 环境：使用应用的私有目录
+        try:
+            from jnius import autoclass
+            PythonActivity = autoclass('org.kivy.android.PythonActivity')
+            activity = PythonActivity.mActivity
+
+            # 获取应用的私有文件目录
+            # 方式1: 使用 getFilesDir()
+            files_dir = activity.getFilesDir().getAbsolutePath()
+
+            # 资源文件在 app 目录下
+            resource_path = os.path.join(files_dir, 'app', relative_path)
+
+            # 检查文件是否存在
+            if os.path.exists(resource_path):
+                return resource_path
+
+            # 方式2: 尝试直接使用相对路径（某些情况下有效）
+            direct_path = os.path.join(os.path.abspath("."), relative_path)
+            if os.path.exists(direct_path):
+                return direct_path
+
+            # 方式3: 检查当前工作目录
+            cwd_path = os.path.join(os.getcwd(), relative_path)
+            if os.path.exists(cwd_path):
+                return cwd_path
+
+            # 如果都找不到，打印调试信息
+            logger_manager.info(f"[Android] 资源文件未找到: {relative_path}")
+            logger_manager.info(f"[Android] 尝试过的路径:")
+            logger_manager.info(f"  1. {resource_path}")
+            logger_manager.info(f"  2. {direct_path}")
+            logger_manager.info(f"  3. {cwd_path}")
+            logger_manager.info(f"[Android] 当前工作目录: {os.getcwd()}")
+            logger_manager.info(f"[Android] 文件目录: {files_dir}")
+
+            # 列出实际存在的文件
+            try:
+                app_dir = os.path.join(files_dir, 'app')
+                if os.path.exists(app_dir):
+                    print(f"[Android] app 目录内容: {os.listdir(app_dir)[:10]}")
+            except:
+                pass
+
+            # 返回第一个尝试的路径（即使不存在）
+            return resource_path
+
+        except Exception as e:
+            print(f"[Android] 获取资源路径失败: {e}")
+            import traceback
+            traceback.print_exc()
+            # 回退到相对路径
+            return os.path.join(os.path.abspath("."), relative_path)
+
+    # 2. PyInstaller 打包环境
     if hasattr(sys, '_MEIPASS'):
-        # PyInstaller 打包后的临时目录
         return os.path.join(sys._MEIPASS, relative_path)
+
+    # 3. 开发环境
     return os.path.join(os.path.abspath("."), relative_path)
 
 
@@ -82,11 +143,14 @@ class ImageManager:
     def __init__(self, image_folder='images'):
         """
         初始化图像管理器
-
         :param image_folder: 图片文件存放目录，默认为'images'
         """
         self.image_map = {}
+        logger_manager.info(f"[ImageManager] 初始化，图片目录: {image_folder}")
         self.load_images(image_folder)
+        logger_manager.info(f"[ImageManager] 加载完成，共加载 {len(self.image_map)} 张图片")
+        if self.image_map:
+            logger_manager.info(f"[ImageManager] 图片列表示例: {list(self.image_map.keys())[:5]}")
 
     def load_images(self, image_folder):
         """加载图片目录下所有支持的图像文件"""
