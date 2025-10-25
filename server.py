@@ -175,13 +175,60 @@ def get_or_create_github_host():
 @app.route('/api/select-directory', methods=['GET'])
 @handle_api_error
 def api_select_directory():
-    """
-    API接口：打开目录选择对话框。
-    - 在 pywebview 环境下，使用原生的对话框。
-    - 在独立的 server 模式下，回退到 tkinter 对话框。
-    """
+    """API接口：打开目录选择对话框"""
     global is_selecting
     logger_manager.info("收到目录选择请求")
+    # 检测 Android 环境
+    IS_ANDROID = 'ANDROID_ARGUMENT' in os.environ
+
+    if IS_ANDROID:
+        logger_manager.debug("Android 环境：使用原生目录选择器")
+
+        # 防止重复调用
+        if not selection_lock.acquire(blocking=False):
+            logger_manager.warning("目录选择操作已在进行中")
+            return jsonify(create_response(
+                code=1001,
+                msg="目录选择操作正在进行中，请稍后再试"
+            )), 409
+
+        try:
+            is_selecting = True
+            result_queue = queue.Queue()
+
+            def on_directory_selected(path):
+                """目录选择回调"""
+                logger_manager.info(f"Android 目录选择回调: {path}")
+                result_queue.put(path)
+
+            # 调用 Android 目录选择器
+            if hasattr(app, 'android_directory_picker'):
+                app.android_directory_picker.pick_directory(on_directory_selected)
+
+                # 等待用户选择（最多60秒）
+                try:
+                    selected_path = result_queue.get(timeout=60)
+                    return _handle_directory_selection(selected_path)
+                except queue.Empty:
+                    logger_manager.error("Android 目录选择超时")
+                    return jsonify(create_response(
+                        code=1002,
+                        msg="目录选择超时，请重试"
+                    )), 408
+            else:
+                logger_manager.error("Android 目录选择器未初始化")
+                # 降级方案：使用默认路径
+                from android.storage import primary_external_storage_path
+                default_path = os.path.join(
+                    primary_external_storage_path(),
+                    "ArkhamCardMaker"
+                )
+                os.makedirs(default_path, exist_ok=True)
+                return _handle_directory_selection(default_path)
+
+        finally:
+            is_selecting = False
+            selection_lock.release()
 
     # 判断是否在 pywebview 环境中运行
     if hasattr(app, 'window') and app.window:
