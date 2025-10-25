@@ -28,13 +28,16 @@ requirements = python3,kivy==2.3.0,flask==2.2.5,pillow,requests,numpy,cloudinary
 android.permissions = INTERNET,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,ACCESS_NETWORK_STATE,MANAGE_EXTERNAL_STORAGE
 
 # ============ 新增：允许明文HTTP流量（用于本地Flask服务器）============
-android.add_manifest_application_attributes = android:usesCleartextTraffic="true"
+# 替换为下面这一行精确的配置：
+android.add_resources = android_resources
+# 并且保持这一行不变:
+android.add_manifest_application_attributes = android:networkSecurityConfig="@xml/network_security_config"
 # ===================================================================
 
 # 添加 Android SDK 版本（需要支持 Storage Access Framework）
 android.api = 33
 android.minapi = 21
-android.ndk = 25b
+# android.ndk = 25b
 android.sdk = 33
 android.archs = arm64-v8a,armeabi-v7a
 android.accept_sdk_license = True
