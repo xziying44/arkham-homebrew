@@ -70,6 +70,56 @@ class LanguageConfig:
     texts: LanguageTexts  # 文本配置
 
 
+def fix_filename_encoding(filename):
+    """修复文件名编码问题（特别是 Android 环境）"""
+    try:
+        # 如果是在 Android 环境
+        if 'ANDROID_ARGUMENT' in os.environ:
+            # 尝试使用 UTF-8 重新编码
+            if isinstance(filename, bytes):
+                return filename.decode('utf-8', errors='ignore')
+            elif isinstance(filename, str):
+                # 尝试修复已经错误编码的字符串
+                try:
+                    # 先尝试编码为 latin-1 再解码为 utf-8
+                    return filename.encode('latin-1').decode('utf-8')
+                except (UnicodeDecodeError, UnicodeEncodeError):
+                    # 如果失败，保持原样
+                    return filename
+        return filename
+    except Exception as e:
+        print(f"[编码修复] 处理文件名失败: {filename}, 错误: {e}")
+        return filename
+
+
+def list_directory_with_encoding_fix(directory):
+    """列出目录内容，并修复文件名编码"""
+    try:
+        if not os.path.exists(directory):
+            print(f"[目录列表] 目录不存在: {directory}")
+            return []
+
+        # 使用 os.listdir 获取文件列表
+        files = os.listdir(directory)
+
+        # 修复编码
+        fixed_files = []
+        for filename in files:
+            fixed_name = fix_filename_encoding(filename)
+            fixed_files.append(fixed_name)
+
+            # 如果修复后的名称不同，打印日志
+            if fixed_name != filename:
+                print(f"[编码修复] 原始: {repr(filename)}, 修复后: {fixed_name}")
+
+        return fixed_files
+    except Exception as e:
+        print(f"[目录列表] 列出目录失败: {directory}, 错误: {e}")
+        import traceback
+        traceback.print_exc()
+        return []
+
+
 def get_resource_path(relative_path):
     """获取资源文件的绝对路径，适用于开发环境、PyInstaller打包和Android打包"""
 
@@ -155,17 +205,57 @@ class ImageManager:
     def load_images(self, image_folder):
         """加载图片目录下所有支持的图像文件"""
         supported_ext = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
-        image_folder = get_resource_path(image_folder)
+        image_folder_path = get_resource_path(image_folder)
+        logger_manager.info(f"[ImageManager] 图片目录路径: {image_folder_path}")
+        logger_manager.info(f"[ImageManager] 目录是否存在: {os.path.exists(image_folder_path)}")
+
         try:
-            for filename in os.listdir(image_folder):
+            if not os.path.exists(image_folder_path):
+                logger_manager.error(f"[ImageManager] 错误：图片目录不存在 - {image_folder_path}")
+                return
+
+            if not os.path.isdir(image_folder_path):
+                logger_manager.error(f"[ImageManager] 错误：路径不是目录 - {image_folder_path}")
+                return
+
+            # ✅ 使用编码修复的目录列表函数
+            files = list_directory_with_encoding_fix(image_folder_path)
+            logger_manager.info(f"[ImageManager] 目录中的文件数: {len(files)}")
+
+            loaded_count = 0
+            for filename in files:
                 name, ext = os.path.splitext(filename)
                 if ext.lower() in supported_ext:
-                    # 统一使用小写文件名作为键
-                    self.image_map[name.lower()] = self.open(os.path.join(image_folder, filename))
-        except FileNotFoundError:
-            print(f"错误：图片目录 {image_folder} 不存在")
+                    # ✅ 使用原始文件名（可能是修复后的）构建完整路径
+                    file_path = os.path.join(image_folder_path, filename)
+
+                    # 检查文件是否真实存在
+                    if not os.path.exists(file_path):
+                        logger_manager.warning(f"[ImageManager] 警告：文件路径不存在 - {file_path}")
+                        continue
+
+                    image = self.open(file_path)
+                    if image:
+                        # 统一使用小写文件名作为键
+                        key = name.lower()
+                        self.image_map[key] = image
+                        loaded_count += 1
+
+                        # 只打印前10个文件的加载信息
+                        if loaded_count <= 10:
+                            logger_manager.info(f"[ImageManager] 加载图片 #{loaded_count}: {name} (key: {key})")
+                    else:
+                        logger_manager.error(f"[ImageManager] 加载失败: {filename}")
+
+            logger_manager.info(f"[ImageManager] 成功加载 {loaded_count}/{len(files)} 张图片")
+
+        except FileNotFoundError as e:
+            logger_manager.error(f"[ImageManager] 错误：图片目录未找到 - {image_folder_path}")
+            logger_manager.error(f"[ImageManager] 异常: {e}")
         except Exception as e:
-            print(f"图片加载失败: {str(e)}")
+            logger_manager.error(f"[ImageManager] 图片加载失败: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
     def open(self, path, **kwargs):
         """
