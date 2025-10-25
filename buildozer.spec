@@ -25,7 +25,7 @@ version = 2.9.9
 requirements = python3,kivy==2.3.0,flask==2.2.5,pillow,requests,numpy,cloudinary,pydantic<2,android
 
 # Android 配置
-android.permissions = INTERNET,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,ACCESS_NETWORK_STATE,MANAGE_EXTERNAL_STORAGE
+android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,MANAGE_EXTERNAL_STORAGE
 
 # ============ 新增：允许明文HTTP流量（用于本地Flask服务器）============
 # 替换为下面这一行精确的配置：
