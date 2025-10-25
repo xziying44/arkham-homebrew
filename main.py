@@ -183,26 +183,59 @@ class AndroidDirectoryPicker:
     def get_real_path_from_uri(self, uri):
         """将 content:// URI 转换为真实文件路径"""
         try:
+            from urllib.parse import unquote  # 导入 URL 解码函数
+
             uri_string = uri.toString()
+            Logger.info(f"Android: 原始 URI: {uri_string}")
 
+            # 先进行 URL 解码
+            uri_string = unquote(uri_string)
+            Logger.info(f"Android: 解码后 URI: {uri_string}")
+
+            # 处理 primary 存储
             if "primary:" in uri_string:
-                path_parts = uri_string.split("primary:")
-                if len(path_parts) > 1:
-                    relative_path = path_parts[1]
-                    relative_path = relative_path.replace("%3A", "/").replace("%2F", "/")
-                    storage_path = Environment.getExternalStorageDirectory().getAbsolutePath()
+                # 找到 "primary:" 的位置
+                primary_index = uri_string.find("primary:")
+                if primary_index != -1:
+                    # 提取 primary: 后面的路径
+                    relative_path = uri_string[primary_index + 8:]  # 8 = len("primary:")
 
-                    if relative_path:
+                    # 移除可能的尾部参数（如 ?xxx）
+                    if '?' in relative_path:
+                        relative_path = relative_path.split('?')[0]
+
+                    Logger.info(f"Android: 相对路径: '{relative_path}'")
+
+                    # 获取外部存储根目录
+                    storage_path = Environment.getExternalStorageDirectory().getAbsolutePath()
+                    Logger.info(f"Android: 存储根路径: {storage_path}")
+
+                    # 如果相对路径不为空，则组合完整路径
+                    if relative_path and relative_path.strip():
                         full_path = os.path.join(storage_path, relative_path)
                     else:
+                        # 如果相对路径为空，说明选择的就是根目录
                         full_path = storage_path
 
-                    return full_path
+                    Logger.info(f"Android: 最终路径: {full_path}")
 
+                    # 验证路径是否存在
+                    if os.path.exists(full_path):
+                        Logger.info(f"Android: 路径验证成功")
+                        return full_path
+                    else:
+                        Logger.warning(f"Android: 路径不存在: {full_path}")
+                        # 如果路径不存在，返回根目录
+                        return storage_path
+
+            # 如果不包含 primary:，返回默认路径
+            Logger.warning("Android: URI 不包含 primary:，使用默认路径")
             return primary_external_storage_path()
 
         except Exception as e:
             Logger.error(f"Android: URI 转换失败: {e}")
+            import traceback
+            Logger.error(traceback.format_exc())
             return primary_external_storage_path()
 
 
