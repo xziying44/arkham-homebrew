@@ -1,4 +1,4 @@
-# main.py - 在权限请求部分修改
+# main.py - 修复 Build.VERSION 访问方式
 import os
 import sys
 import threading
@@ -26,19 +26,26 @@ PythonActivity = autoclass('org.kivy.android.PythonActivity')
 Intent = autoclass('android.content.Intent')
 Uri = autoclass('android.net.Uri')
 Environment = autoclass('android.os.Environment')
-Build = autoclass('android.os.Build')
 WebView = autoclass('android.webkit.WebView')
 WebViewClient = autoclass('android.webkit.WebViewClient')
 WebSettings = autoclass('android.webkit.WebSettings')
 LayoutParams = autoclass('android.view.ViewGroup$LayoutParams')
 
 # ============================================
-# ✅ 方案3：请求管理所有文件权限（Android 11+）
+# ✅ 修复：正确导入 Build.VERSION（使用 $ 访问嵌套类）
 # ============================================
 Logger.info("Android: 检查 Android 版本...")
-sdk_version = Build.VERSION.SDK_INT
-Logger.info(f"Android: SDK 版本 = {sdk_version}")
+try:
+    BuildVersion = autoclass('android.os.Build$VERSION')
+    sdk_version = BuildVersion.SDK_INT
+    Logger.info(f"Android: SDK 版本 = {sdk_version}")
+except Exception as e:
+    Logger.error(f"Android: 获取 SDK 版本失败: {e}")
+    sdk_version = 0  # 默认值
 
+# ============================================
+# 请求管理所有文件权限（Android 11+）
+# ============================================
 if sdk_version >= 30:  # Android 11+
     Logger.info("Android 11+: 检查是否需要管理所有文件权限")
     try:
@@ -57,20 +64,23 @@ if sdk_version >= 30:  # Android 11+
                     intent.setData(uri)
                     currentActivity.startActivity(intent)
                     Logger.info("Android: 已跳转到权限设置页面")
+                    Logger.info("Android: 请在设置中授予「允许管理所有文件」权限，然后返回应用")
                 except Exception as e:
                     Logger.error(f"Android: 跳转权限设置失败: {e}")
+                    import traceback
+                    Logger.error(traceback.format_exc())
 
 
             # 延迟3秒后请求权限
             threading.Timer(3.0, request_manage_permission).start()
         else:
-            Logger.info("Android: 已有管理所有文件权限")
+            Logger.info("Android: ✓ 已有管理所有文件权限")
     except Exception as e:
         Logger.error(f"Android: 检查管理权限失败: {e}")
         import traceback
 
         Logger.error(traceback.format_exc())
-else:
+elif sdk_version > 0:
     # Android 10 及以下
     Logger.info("Android 10 及以下: 请求传统存储权限")
     request_permissions([
@@ -79,6 +89,16 @@ else:
         Permission.INTERNET,
         Permission.ACCESS_NETWORK_STATE
     ])
+else:
+    # 无法获取版本号，请求传统权限
+    Logger.warning("Android: 无法获取 SDK 版本，使用传统权限请求")
+    request_permissions([
+        Permission.READ_EXTERNAL_STORAGE,
+        Permission.WRITE_EXTERNAL_STORAGE,
+        Permission.INTERNET,
+        Permission.ACCESS_NETWORK_STATE
+    ])
+
 
 class AndroidWebView(Widget):
     """Android WebView Widget"""
@@ -212,6 +232,8 @@ class AndroidDirectoryPicker:
 
             except Exception as e:
                 Logger.error(f"Android: 处理选择结果失败: {e}")
+                import traceback
+                Logger.error(traceback.format_exc())
                 if self.callback:
                     self.callback(None)
         else:
@@ -222,7 +244,7 @@ class AndroidDirectoryPicker:
     def get_real_path_from_uri(self, uri):
         """将 content:// URI 转换为真实文件路径"""
         try:
-            from urllib.parse import unquote  # 导入 URL 解码函数
+            from urllib.parse import unquote
 
             uri_string = uri.toString()
             Logger.info(f"Android: 原始 URI: {uri_string}")
