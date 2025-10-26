@@ -1003,6 +1003,8 @@ class ArkhamDBConverter:
         """
         # 1. 获取所有玩家卡通用属性
         card_data = self._extract_common_player_card_properties()
+        if 'subtitle' in card_data:
+            card_data["name"] = f'{card_data["name"]}({card_data["subtitle"]})'
         # 2. 添加事件卡特有的属性
         # 效果、风味文本、胜利点和遭遇组
         card_data["body"] = self._format_text(self.data.get("text"))

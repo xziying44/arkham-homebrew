@@ -8,17 +8,18 @@ import sys
 import threading
 import time
 import traceback
-from typing import List, Dict, Any, Optional, Union, Tuple
+from typing import List, Dict, Any, Optional, Union, Tuple, TYPE_CHECKING
 
 from PIL import Image
 
-from Card import Card
 from bin.config_directory_manager import config_dir_manager
 from bin.deck_exporter import DeckExporter
 from bin.logger import logger_manager
 from bin.tts_card_converter import TTSCardConverter
 from bin.content_package_manager import ContentPackageManager
 
+if TYPE_CHECKING:
+    from Card import Card
 # 导入卡牌生成相关模块
 try:
     from ResourceManager import FontManager, ImageManager
@@ -1104,7 +1105,7 @@ class WorkspaceManager:
             logger_manager.exception(f"保存图片失败: {e}")
             return None
 
-    def _generate_thumbnail(self, json_data: Dict[str, Any], image: Image.Image) -> Card:
+    def _generate_thumbnail(self, json_data: Dict[str, Any], image: Image.Image) -> 'Card':
         """
         生成卡牌缩略图（通过调用卡牌生成API）
         Args:

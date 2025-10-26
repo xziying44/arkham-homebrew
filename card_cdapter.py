@@ -1,9 +1,10 @@
 import re
 import json
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, TYPE_CHECKING
 from copy import deepcopy
 
-from ResourceManager import FontManager
+if TYPE_CHECKING:
+    from ResourceManager import FontManager
 
 
 class CardAdapter:
@@ -67,7 +68,7 @@ class CardAdapter:
         "card_back.option",  # 嵌套字段
     ]
 
-    def __init__(self, card_data: Dict[str, Any], font_manager: FontManager):
+    def __init__(self, card_data: Dict[str, Any], font_manager: 'FontManager'):
         """
         初始化卡牌适配器
         Args:
