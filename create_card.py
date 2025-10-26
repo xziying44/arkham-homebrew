@@ -812,7 +812,7 @@ class CardCreator:
 
         if 'cost' in data and isinstance(data['cost'], int):
             card.set_card_cost(data['cost'])
-        vertices = [(19, 660), (718, 660), (718, 906), (290, 906), (73, 965), (19, 965)]
+        vertices = [(19, 660), (718, 660), (718, 908), (290, 908), (73, 950), (19, 950)]
         if data.get('flavor'):
             vertices = [(19, 660), (718, 660), (718, 906), (19, 906)]
 
@@ -1253,7 +1253,7 @@ class CardCreator:
             card.draw_centered_text((375, 98), data['subtitle'], "副标题字体", 31, (0, 0, 0))
 
         card.draw_centered_text((375, 643), traits, "特性字体", 32, (0, 0, 0))
-        vertices = [(19, 662), (718, 662), (718, 906), (290, 906), (73, 965), (19, 965)]
+        vertices = [(19, 662), (718, 662), (718, 908), (290, 908), (73, 950), (19, 950)]
         if data.get('flavor'):
             vertices = [(19, 662), (718, 662), (718, 906), (19, 906)]
         card.draw_text(body, vertices=vertices, default_font_name='正文字体', default_size=32, padding=15,
@@ -1786,38 +1786,32 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "敌人卡",
-        "name": "Issith",
+        "type": "支援卡",
+        "name": "🏅“爵士”马利根",
         "id": "",
         "created_at": "",
-        "version": "2.0",
-        "language": "en",
-        "class": None,
+        "version": "1.0",
+        "language": "zh",
+        "subtitle": "清洁工工头",
+        "class": "中立",
         "level": -1,
-        "cost": -1,
+        "cost": 0,
         "submit_icon": [],
         "traits": [
-            "Humanoid",
-            "Monster",
-            "Serpent"
+            "盟友",
+            "米斯卡塔尼克"
         ],
-        "attack": "3",
-        "enemy_health": "3",
-        "evade": "2",
-        "enemy_damage": 1,
-        "enemy_damage_horror": 1,
-        "body": "Bonded (Stolen Idol of Yoth).\n【Prey】 - Bearer.\nAlert. Hunter.\n【Forced】 - After you reveal the recorded chaos token during a skill test: Ready Issith and resolve its hunter keyword. (Limit once per round.)",
+        "health": 2,
+        "horror": 2,
+        "body": "<b>显现</b> - 将“爵士”马利根放置入场，位于你所在地点。\n\"爵士\"马利根不由调查员控制时，他获得：“<act>：<b>谈判</b>。检定<int>(3)。如果检定成功，控制‘爵士’马利根。”\n你控制\"爵士\"马利根时，忽略每个未揭示的{米斯卡塔尼克}地点的文本。\"",
         "flavor": "",
+        "encounter_group": "extracurricular_activity",
+        "illustrator": "Nicholas Elias",
+        "card_number": "60",
+        "footer_copyright": "© 2016 FFG",
+        "footer_icon_font": "<font name=\"packicon_dunwich\"></font>",
+        "encounter_group_number": "20/21",
         "image_mode": 1,
-        "back": {
-            "type": "玩家卡背",
-            "name": "Issith (背面)",
-            "image_mode": 0,
-            "language": "en",
-            "version": "2.0"
-        },
-        "position": 126,
-        "code": "4ac58d97-9521-4609-bcc0-a1d88d494289",
         "deck_options": []
     }
 
@@ -1840,7 +1834,7 @@ if __name__ == '__main__':
     profiler = cProfile.Profile()
     profiler.enable()
 
-    fm.set_lang('en')
+    fm.set_lang('zh')
     card = creator.create_card(json_data, picture_path=json_data.get('picture_path', None))
 
     profiler.disable()
