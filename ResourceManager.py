@@ -125,7 +125,7 @@ def load_filename_mapping() -> Dict[str, Dict[str, str]]:
         "fonts": {"中文名.ttf": "english-name.ttf"}
     }
     """
-    mapping_file = get_resource_path('filename_translation_mapping.json')
+    mapping_file = get_resource_path('fonts/filename_translation_mapping.json')
 
     if os.path.exists(mapping_file):
         try:
@@ -329,7 +329,7 @@ def load_filename_mapping() -> Dict[str, Dict[str, str]]:
         "fonts": {"中文名.ttf": "english-name.ttf"}
     }
     """
-    mapping_file = get_resource_path('filename_translation_mapping.json')
+    mapping_file = get_resource_path('fonts/filename_translation_mapping.json')
 
     if os.path.exists(mapping_file):
         try:
