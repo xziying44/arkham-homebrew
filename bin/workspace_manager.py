@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import io
 import json
 import mimetypes
@@ -109,6 +110,166 @@ class WorkspaceManager:
         self._export_params_hash = None
         self.card_lock = threading.Lock()
 
+        # 初始化缓存相关属性
+        self._card_type_cache = {}
+        self._cache_lock = threading.Lock()
+        self._cache_file_path = os.path.join(self.workspace_path, '.cache', 'card_types.json')
+        self._cache_modified = False
+
+        # 加载缓存
+        self._load_card_type_cache()
+
+    def _load_card_type_cache(self):
+        """加载卡牌类型缓存"""
+        try:
+            with self._cache_lock:
+                if os.path.exists(self._cache_file_path):
+                    with open(self._cache_file_path, 'r', encoding='utf-8') as f:
+                        cache_data = json.load(f)
+                        self._card_type_cache = cache_data.get('card_types', {})
+                        logger_manager.info(f"加载卡牌类型缓存: {len(self._card_type_cache)} 条记录")
+                else:
+                    self._card_type_cache = {}
+                    logger_manager.info("未找到缓存文件，创建新的缓存")
+        except Exception as e:
+            logger_manager.error(f"加载卡牌类型缓存失败: {e}")
+            self._card_type_cache = {}
+
+    def _save_card_type_cache(self):
+        """保存卡牌类型缓存"""
+        try:
+            with self._cache_lock:
+                if self._cache_modified:
+                    # 确保缓存目录存在
+                    cache_dir = os.path.dirname(self._cache_file_path)
+                    os.makedirs(cache_dir, exist_ok=True)
+
+                    cache_data = {
+                        'card_types': self._card_type_cache,
+                        'last_updated': time.time()
+                    }
+
+                    with open(self._cache_file_path, 'w', encoding='utf-8') as f:
+                        json.dump(cache_data, f, ensure_ascii=False, indent=2)
+
+                    self._cache_modified = False
+                    logger_manager.info(f"保存卡牌类型缓存: {len(self._card_type_cache)} 条记录")
+        except Exception as e:
+            logger_manager.error(f"保存卡牌类型缓存失败: {e}")
+
+    def _get_file_hash(self, file_path: str) -> str:
+        """获取文件的哈希值，用于判断文件是否被修改"""
+        try:
+            # 使用文件大小和修改时间作为轻量级的哈希
+            stat = os.stat(file_path)
+            hash_data = f"{stat.st_size}_{stat.st_mtime}"
+            return hashlib.md5(hash_data.encode()).hexdigest()
+        except Exception:
+            return ""
+
+    def _update_card_type_cache(self, file_path: str, card_type: str):
+        """更新卡牌类型缓存"""
+        try:
+            with self._cache_lock:
+                relative_path = self._get_relative_path(file_path)
+                file_hash = self._get_file_hash(file_path)
+
+                self._card_type_cache[relative_path] = {
+                    'type': card_type,
+                    'hash': file_hash,
+                    'last_accessed': time.time()
+                }
+                self._cache_modified = True
+        except Exception as e:
+            logger_manager.error(f"更新卡牌类型缓存失败: {e}")
+
+    def _remove_from_cache(self, file_path: str):
+        """从缓存中移除指定文件"""
+        try:
+            with self._cache_lock:
+                relative_path = self._get_relative_path(file_path)
+                if relative_path in self._card_type_cache:
+                    del self._card_type_cache[relative_path]
+                    self._cache_modified = True
+        except Exception as e:
+            logger_manager.error(f"从缓存中移除文件失败: {e}")
+
+    def _remove_directory_from_cache(self, dir_path: str):
+        """从缓存中移除指定目录下的所有卡牌文件"""
+        try:
+            with self._cache_lock:
+                dir_relative_path = self._get_relative_path(dir_path)
+                if not dir_relative_path.endswith('/'):
+                    dir_relative_path += '/'
+
+                # 找到所有在该目录下的卡牌文件
+                to_remove = []
+                for relative_path in self._card_type_cache:
+                    if relative_path.startswith(dir_relative_path) and relative_path.endswith('.card'):
+                        to_remove.append(relative_path)
+
+                # 从缓存中移除
+                for path in to_remove:
+                    del self._card_type_cache[path]
+                    self._cache_modified = True
+
+                if to_remove:
+                    logger_manager.info(f"从缓存中移除目录 {dir_path} 下的 {len(to_remove)} 个卡牌文件")
+        except Exception as e:
+            logger_manager.error(f"从缓存中移除目录文件失败: {e}")
+
+    def _rename_directory_in_cache(self, old_dir_path: str, new_dir_path: str):
+        """重命名缓存中指定目录下的所有卡牌文件"""
+        try:
+            with self._cache_lock:
+                old_relative_path = self._get_relative_path(old_dir_path)
+                new_relative_path = new_dir_path
+                if not old_relative_path.endswith('/'):
+                    old_relative_path += '/'
+                if not new_relative_path.endswith('/'):
+                    new_relative_path += '/'
+
+                # 找到所有需要重命名的卡牌文件
+                to_rename = {}
+                for relative_path in self._card_type_cache:
+                    if relative_path.startswith(old_relative_path) and relative_path.endswith('.card'):
+                        new_path = relative_path.replace(old_relative_path, new_relative_path, 1)
+                        to_rename[relative_path] = new_path
+
+                # 重命名缓存中的路径
+                for old_path, new_path in to_rename.items():
+                    self._card_type_cache[new_path] = self._card_type_cache[old_path]
+                    del self._card_type_cache[old_path]
+                    self._cache_modified = True
+
+                if to_rename:
+                    logger_manager.info(f"重命名缓存中目录 {old_dir_path} 下的 {len(to_rename)} 个卡牌文件")
+        except Exception as e:
+            logger_manager.error(f"重命名缓存中目录文件失败: {e}")
+
+    def clear_card_type_cache(self):
+        """清理卡牌类型缓存"""
+        try:
+            with self._cache_lock:
+                self._card_type_cache.clear()
+                self._cache_modified = True
+                self._save_card_type_cache()
+                logger_manager.info("卡牌类型缓存已清理")
+        except Exception as e:
+            logger_manager.error(f"清理卡牌类型缓存失败: {e}")
+
+    def __del__(self):
+        """析构函数，确保在对象销毁时保存缓存"""
+        try:
+            self._save_card_type_cache()
+        except Exception:
+            # 析构函数中不应抛出异常
+            pass
+
+    def save_cache_on_exit(self):
+        """在程序退出前保存缓存"""
+        self._save_card_type_cache()
+
     def _get_relative_path(self, absolute_path: str) -> str:
         """将绝对路径转换为相对于工作目录的相对路径"""
         try:
@@ -154,17 +315,39 @@ class WorkspaceManager:
         return type_mapping.get(ext, 'file')
 
     def _get_card_type(self, item_path: str) -> str:
-        """快速读取 JSON 文件中的 'type' 字段（仅扫描部分内容，不加载整个文件）"""
+        """快速读取 JSON 文件中的 'type' 字段，优先从缓存获取"""
         try:
+            # 获取相对路径
+            relative_path = self._get_relative_path(item_path)
+
+            # 首先尝试从缓存获取
+            with self._cache_lock:
+                if relative_path in self._card_type_cache:
+                    cache_entry = self._card_type_cache[relative_path]
+
+                    # 检查文件是否被修改
+                    current_hash = self._get_file_hash(item_path)
+                    if current_hash == cache_entry.get('hash', ''):
+                        # 文件未修改，使用缓存数据
+                        cache_entry['last_accessed'] = time.time()
+                        return cache_entry.get('type', '')
+                    else:
+                        # 文件已修改，从缓存中移除
+                        del self._card_type_cache[relative_path]
+
+            # 缓存中没有或文件已修改，从文件读取
             with open(item_path, 'r', encoding='utf-8') as f:
                 # 只读取前几 KB，足够覆盖大多数 JSON 的前部字段
                 chunk = f.read(4096)
             match = self._TYPE_RE.search(chunk)
             if match:
-                return match.group(1)
+                card_type = match.group(1)
+                # 更新缓存
+                self._update_card_type_cache(item_path, card_type)
+                return card_type
         except Exception as e:
             # 可根据需要打印日志或忽略
-            print(f"[WARN] 无法读取 {item_path}: {e}")
+            logger_manager.warning(f"无法读取 {item_path}: {e}")
         return ''
 
     def _is_image_file(self, file_path: str) -> bool:
@@ -351,9 +534,23 @@ class WorkspaceManager:
 
             parent_dir = os.path.dirname(abs_old_path)
             new_path = os.path.join(parent_dir, new_name)
+            new_relative_path = self._get_relative_path(new_path)
 
             if os.path.exists(new_path):
                 return False  # 目标名称已存在
+
+            # 处理缓存更新
+            if os.path.isfile(abs_old_path):
+                # 重命名文件
+                if old_path.endswith('.card'):
+                    # 从缓存中移除旧路径
+                    self._remove_from_cache(old_path)
+                    if new_path.endswith('.card'):
+                        # 如果新文件仍是卡牌文件，移除缓存以便重新读取
+                        self._remove_from_cache(new_relative_path)
+            elif os.path.isdir(abs_old_path):
+                # 重命名目录，需要处理目录下所有卡牌文件的缓存
+                self._rename_directory_in_cache(old_path, new_relative_path)
 
             os.rename(abs_old_path, new_path)
             return True
@@ -374,8 +571,13 @@ class WorkspaceManager:
                 return False
 
             if os.path.isfile(abs_item_path):
+                # 如果是卡牌文件，从缓存中移除
+                if item_path.endswith('.card'):
+                    self._remove_from_cache(item_path)
                 os.remove(abs_item_path)
             elif os.path.isdir(abs_item_path):
+                # 如果是目录，需要清理其中所有卡牌文件的缓存
+                self._remove_directory_from_cache(item_path)
                 import shutil
                 shutil.rmtree(abs_item_path)
 
@@ -524,6 +726,11 @@ class WorkspaceManager:
                 with open(abs_file_path, 'w', encoding='utf-8') as f:
                     f.write(content)
                 logger_manager.info(f"文件内容保存成功: {abs_file_path}")
+
+                # 如果是卡牌文件，更新缓存
+                if file_path.endswith('.card'):
+                    self._remove_from_cache(file_path)  # 移除旧缓存，下次会重新读取
+
                 return True
             except PermissionError as e:
                 logger_manager.error(f"权限错误: {e}")
