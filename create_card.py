@@ -821,6 +821,8 @@ class CardCreator:
 
         if 'slots' in data and isinstance(data['slots'], str):
             card.add_slots(data['slots'])
+        if 'slots2' in data and isinstance(data['slots2'], str):
+            card.add_slots(data['slots2'])
 
         health = data.get('health', -1) if isinstance(data.get('health'), int) else -1
         horror = data.get('horror', -1) if isinstance(data.get('horror'), int) else -1
