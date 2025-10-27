@@ -807,14 +807,14 @@ class CardCreator:
 
         card.draw_centered_text((370, 609), self.font_manager.get_font_text(data['weakness_type']), "卡牌类型字体", 28,
                                 (0, 0, 0))
-        card.draw_centered_text((370, 645), self._integrate_traits_text(data.get('traits', [])), "特性字体", 32,
+        card.draw_centered_text((370, 640), self._integrate_traits_text(data.get('traits', [])), "特性字体", 32,
                                 (0, 0, 0))
 
         if 'cost' in data and isinstance(data['cost'], int):
             card.set_card_cost(data['cost'])
-        vertices = [(19, 660), (718, 660), (718, 908), (290, 908), (73, 950), (19, 950)]
-        if data.get('flavor'):
-            vertices = [(19, 660), (718, 660), (718, 906), (19, 906)]
+        vertices = [(19, 658), (718, 658), (718, 908), (290, 908), (73, 950), (19, 950)]
+        if data.get('flavor') or self.font_manager.lang != 'zh':
+            vertices = [(19, 658), (718, 658), (718, 920), (19, 920)]
 
         card.draw_text(body, vertices=vertices,
                        default_font_name='正文字体', default_size=32, padding=15, draw_virtual_box=False)
@@ -1252,10 +1252,10 @@ class CardCreator:
         if 'subtitle' in data and data['subtitle'] != '':
             card.draw_centered_text((375, 98), data['subtitle'], "副标题字体", 31, (0, 0, 0))
 
-        card.draw_centered_text((375, 643), traits, "特性字体", 32, (0, 0, 0))
-        vertices = [(19, 662), (718, 662), (718, 908), (290, 908), (73, 950), (19, 950)]
-        if data.get('flavor'):
-            vertices = [(19, 662), (718, 662), (718, 906), (19, 906)]
+        card.draw_centered_text((375, 640), traits, "特性字体", 32, (0, 0, 0))
+        vertices = [(19, 658), (718, 658), (718, 908), (290, 908), (73, 950), (19, 950)]
+        if data.get('flavor') or self.font_manager.lang != 'zh':
+            vertices = [(19, 658), (718, 658), (718, 920), (19, 920)]
         card.draw_text(body, vertices=vertices, default_font_name='正文字体', default_size=32, padding=15,
                        draw_virtual_box=False)
 
@@ -1787,31 +1787,36 @@ class CardCreator:
 if __name__ == '__main__':
     json_data = {
         "type": "支援卡",
-        "name": "🏅“爵士”马利根",
+        "name": "🏅The Elder Sign",
         "id": "",
         "created_at": "",
-        "version": "1.0",
-        "language": "zh",
-        "subtitle": "清洁工工头",
-        "class": "中立",
-        "level": -1,
-        "cost": 0,
+        "version": "2.0",
+        "language": "en",
+        "subtitle": "Sigil of Kish",
+        "class": "弱点",
+        "level": 0,
+        "cost": -1,
         "submit_icon": [],
         "traits": [
-            "盟友",
-            "米斯卡塔尼克"
+            "Contract"
         ],
-        "health": 2,
-        "horror": 2,
-        "body": "<b>显现</b> - 将“爵士”马利根放置入场，位于你所在地点。\n\"爵士\"马利根不由调查员控制时，他获得：“<act>：<b>谈判</b>。检定<int>(3)。如果检定成功，控制‘爵士’马利根。”\n你控制\"爵士\"马利根时，忽略每个未揭示的{米斯卡塔尼克}地点的文本。\"",
+        "health": -1,
+        "horror": -1,
+        "body": "Permanent. Limit 1 per deck. Purchase only at deck creation. Uses (3 signs).\n⚡ If you are playing true solo, exhaust The Elder Sign and spend 1 sign. Choose one:\n<bul> Move to a connecting location.\n<bul> You get +2 skill value for your next skill test this round.\n<bul> Gain 1 additional action this turn, which may only be used to activate an ➡️ ability on a scenario card in play.\n⚡ Draw the top card of the encounter deck: Replenish 2 uses on The Elder Sign. ",
         "flavor": "",
-        "encounter_group": "extracurricular_activity",
-        "illustrator": "Nicholas Elias",
-        "card_number": "60",
-        "footer_copyright": "© 2016 FFG",
-        "footer_icon_font": "<font name=\"packicon_dunwich\"></font>",
-        "encounter_group_number": "20/21",
+        "illustrator": "",
+        "card_number": "117",
+        "encounter_group_number": "",
         "image_mode": 1,
+        "back": {
+            "type": "玩家卡背",
+            "name": "The Elder Sign (背面)",
+            "image_mode": 0,
+            "language": "en",
+            "version": "2.0"
+        },
+        "position": 117,
+        "code": "97e40858-5059-4efc-8d36-bd06da6598a1",
         "deck_options": []
     }
 
@@ -1834,7 +1839,7 @@ if __name__ == '__main__':
     profiler = cProfile.Profile()
     profiler.enable()
 
-    fm.set_lang('zh')
+    fm.set_lang('en')
     card = creator.create_card(json_data, picture_path=json_data.get('picture_path', None))
 
     profiler.disable()
