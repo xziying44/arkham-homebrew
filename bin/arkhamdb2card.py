@@ -805,7 +805,7 @@ class ArkhamDBConverter:
         card_data["horror"] = sanity if sanity is not None else -1
 
         # 槽位
-        slot_str = self.data.get("real_slot", "")
+        slot_str = self.data.get("slot", "")
         card_data["slots"] = None
         card_data["slots2"] = None
         if slot_str:
