@@ -743,7 +743,7 @@ const renameRules = computed((): FormRules => ({
     { required: true, message: t('workspaceMain.fileTree.validation.filenameRequired'), trigger: ['input', 'blur'] },
     { min: 1, max: 50, message: t('workspaceMain.fileTree.validation.filenameLength'), trigger: ['input', 'blur'] },
     {
-      pattern: /^[^\\/:*?"<>|.]+$/,
+      pattern: /^[^<>:"/\\|?*]*[^<>:"/\\|?* .]$/,
       message: t('workspaceMain.fileTree.validation.filenameInvalid'),
       trigger: ['input', 'blur']
     }
