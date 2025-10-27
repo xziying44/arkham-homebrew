@@ -670,8 +670,6 @@ class ArkhamDBConverter:
     def registered_base_mark_information(self, card_data: Optional[Dict[str, Any]]):
         """注册底标信息"""
         type_code = self.data.get("type_code")
-        if type_code in ['investigator', 'enemy']:
-            return
         card_data['illustrator'] = self.data.get("illustrator", '')
         card_data['card_number'] = str(self.data.get("position", ''))
 
@@ -809,17 +807,12 @@ class ArkhamDBConverter:
         card_data["slots"] = None
         card_data["slots2"] = None
         if slot_str:
-            if slot_str in self.SLOT_MAP:
-                # 处理单槽位或特殊槽位 (如 "Hand x2")
-                card_data["slots"] = self.SLOT_MAP.get(slot_str)
-            else:
-                # 处理复合槽位 (如 "Hand. Arcane")
-                slot_parts = [p.strip() for p in slot_str.split('.')]
-                if len(slot_parts) == 1:
-                    card_data["slots"] = self.SLOT_MAP.get(slot_parts[0])
-                if len(slot_parts) == 2:
-                    card_data["slots"] = self.SLOT_MAP.get(slot_parts[1])
-                    card_data["slots2"] = self.SLOT_MAP.get(slot_parts[0])
+            slot_parts = [p.strip() for p in slot_str.split('.')]
+            if len(slot_parts) == 1:
+                card_data["slots"] = self.SLOT_MAP.get(slot_parts[0])
+            if len(slot_parts) == 2:
+                card_data["slots"] = self.SLOT_MAP.get(slot_parts[1])
+                card_data["slots2"] = self.SLOT_MAP.get(slot_parts[0])
 
         # 效果、风味文本、胜利点和遭遇组
         card_data["body"] = self._format_text(self.data.get("text"))
