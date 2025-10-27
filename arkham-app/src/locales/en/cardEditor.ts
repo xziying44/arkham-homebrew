@@ -86,6 +86,7 @@ export default {
     previewCard: 'Preview Card',
     exportImage: 'Export Image',
     reset: 'Reset',
+    convertToV2: 'Convert to V2',
 
     // JSON modal
     currentJsonData: 'Current JSON Data',
@@ -140,7 +141,20 @@ export default {
     aiGenerationCompleted: 'AI generation completed but no valid content returned',
     aiReturnedError: 'AI returned error',
     missingRequiredFields: 'Missing required fields',
-    jsonParseError: 'JSON parse error'
+    jsonParseError: 'JSON parse error',
+
+    // Version conversion
+    convertToV2Confirm: 'Convert to Version 2.0',
+    versionConvertInfo: 'Version Conversion Info',
+    versionConvertDescription: 'Convert the current card to version 2.0 (double-sided card), which will create a back side for the card.',
+    convertWillCreateBack: 'The system will automatically set an appropriate back type based on the card type.',
+    currentCard: 'Current Card',
+    currentType: 'Current Type',
+    autoSetBackType: 'Will automatically set back type',
+    confirmConvert: 'Confirm Convert',
+    needCardNameAndType: 'Please enter card name and type first',
+    versionConvertSuccess: 'Successfully converted to version 2.0!',
+    versionConvertFailed: 'Version conversion failed'
   },
 
   // IllustrationLayoutEditor component

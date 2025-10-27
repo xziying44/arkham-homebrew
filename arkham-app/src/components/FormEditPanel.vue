@@ -123,6 +123,11 @@
                             }}</n-button>
                             <n-button @click="exportCard" :loading="exporting" :disabled="!hasValidCardData">{{
                                 $t('cardEditor.panel.exportImage') }}</n-button>
+                            <!-- 版本转换按钮 - 仅在非2.0版本且有有效卡牌数据时显示 -->
+                            <n-button v-if="!isDoubleSided && hasValidCardData" @click="showVersionConvertDialog = true"
+                                type="warning" ghost>
+                                {{ $t('cardEditor.panel.convertToV2') }}
+                            </n-button>
                             <n-button @click="resetForm">{{ $t('cardEditor.panel.reset') }}</n-button>
                         </n-space>
                     </div>
@@ -203,6 +208,39 @@
                         <n-button @click="showSaveConfirmDialog = false">{{ $t('cardEditor.panel.cancel') }}</n-button>
                         <n-button type="primary" @click="saveAndSwitch" :loading="saving">{{ $t('cardEditor.panel.save')
                         }}</n-button>
+                    </n-space>
+                </template>
+            </n-card>
+        </n-modal>
+
+        <!-- 版本转换确认对话框 -->
+        <n-modal v-model:show="showVersionConvertDialog">
+            <n-card style="width: 500px" :title="$t('cardEditor.panel.convertToV2Confirm')" :bordered="false" size="huge"
+                role="dialog" aria-modal="true">
+                <n-space vertical>
+                    <n-alert type="info" :title="$t('cardEditor.panel.versionConvertInfo')">
+                        <template #icon>
+                            <n-icon :component="WarningOutline" />
+                        </template>
+                        <div>
+                            <p>{{ $t('cardEditor.panel.versionConvertDescription') }}</p>
+                            <p style="margin-top: 8px; font-weight: 500;">{{ $t('cardEditor.panel.convertWillCreateBack') }}</p>
+                        </div>
+                    </n-alert>
+                    <n-space vertical size="small">
+                        <p><strong>{{ $t('cardEditor.panel.currentCard') }}:</strong> {{ currentCardData.name || '未命名卡牌' }}</p>
+                        <p><strong>{{ $t('cardEditor.panel.currentType') }}:</strong> {{ currentCardData.type || '未知类型' }}</p>
+                        <p v-if="currentCardData.type" style="color: #666; font-size: 12px;">
+                            {{ $t('cardEditor.panel.autoSetBackType') }}: <strong>{{ getDefaultBackType(currentCardData.type)?.type || '标准卡背' }}</strong>
+                        </p>
+                    </n-space>
+                </n-space>
+                <template #footer>
+                    <n-space justify="end">
+                        <n-button @click="showVersionConvertDialog = false">{{ $t('cardEditor.panel.cancel') }}</n-button>
+                        <n-button type="warning" @click="convertToVersion2" :loading="converting">
+                            {{ $t('cardEditor.panel.confirmConvert') }}
+                        </n-button>
                     </n-space>
                 </template>
             </n-card>
@@ -352,9 +390,11 @@ const currentCardType = ref('');
 const showJsonModal = ref(false);
 const showImportJsonModal = ref(false);
 const showSaveConfirmDialog = ref(false);
+const showVersionConvertDialog = ref(false);
 const saving = ref(false);
 const generating = ref(false);
 const exporting = ref(false);
+const converting = ref(false);
 
 // 新增：图片预览加载状态
 const imagePreviewLoading = ref(false);
@@ -1322,6 +1362,73 @@ const resetForm = () => {
     currentCardType.value = '';
     saveOriginalData();
     message.info(t('cardEditor.panel.formReset'));
+};
+
+// 版本转换功能
+const convertToVersion2 = async () => {
+    if (!currentCardData.type || !currentCardData.name) {
+        message.warning(t('cardEditor.panel.needCardNameAndType'));
+        return;
+    }
+
+    try {
+        converting.value = true;
+
+        // 设置版本为2.0
+        currentCardData.version = '2.0';
+
+        // 创建背面数据结构
+        if (!currentCardData.back) {
+            currentCardData.back = {};
+        }
+
+        // 设置背面语言与正面一致
+        currentCardData.back.language = currentCardData.language || 'zh';
+
+        // 根据正面类型设置默认背面类型
+        const defaultBackConfig = getDefaultBackType(currentCardData.type);
+        if (defaultBackConfig) {
+            currentCardData.back.type = defaultBackConfig.type;
+
+            // 如果需要设置is_back字段
+            if (defaultBackConfig.is_back !== undefined) {
+                currentCardData.back.is_back = defaultBackConfig.is_back;
+            }
+
+            // 如果需要设置location_type字段
+            if (defaultBackConfig.location_type !== undefined) {
+                currentCardData.back.location_type = defaultBackConfig.location_type;
+            }
+
+            console.log(`🔄 版本转换完成，设置背面类型: ${defaultBackConfig.type}, is_back: ${defaultBackConfig.is_back}`);
+        } else {
+            // 如果没有找到特定配置，使用默认卡背
+            currentCardData.back.type = '卡背';
+            console.log('🔄 版本转换完成，使用默认卡背');
+        }
+
+        // 关闭对话框
+        showVersionConvertDialog.value = false;
+
+        // 保存原始数据状态，标记为已修改
+        saveOriginalData();
+
+        // 触发防抖预览更新
+        triggerDebouncedPreviewUpdate();
+
+        message.success(t('cardEditor.panel.versionConvertSuccess'));
+
+        // 切换到背面编辑面，让用户可以看到新生成的背面
+        setTimeout(() => {
+            currentSide.value = 'back';
+        }, 300);
+
+    } catch (error) {
+        console.error('版本转换失败:', error);
+        message.error(t('cardEditor.panel.versionConvertFailed'));
+    } finally {
+        converting.value = false;
+    }
 };
 
 // 监听选中文件变化

@@ -86,6 +86,7 @@ export default {
     previewCard: '预览卡图',
     exportImage: '导出图片',
     reset: '重置',
+    convertToV2: '转换为2.0版本',
 
     // JSON 模态框
     currentJsonData: '当前JSON数据',
@@ -140,7 +141,20 @@ export default {
     aiGenerationCompleted: 'AI生成完成但没有返回有效内容',
     aiReturnedError: 'AI返回错误',
     missingRequiredFields: '缺少必要字段',
-    jsonParseError: 'JSON解析错误'
+    jsonParseError: 'JSON解析错误',
+
+    // 版本转换
+    convertToV2Confirm: '转换为2.0版本',
+    versionConvertInfo: '版本转换信息',
+    versionConvertDescription: '将当前卡牌转换为2.0版本（双面卡牌），这将为卡牌创建一个背面。',
+    convertWillCreateBack: '系统将根据卡牌类型自动设置合适的背面类型。',
+    currentCard: '当前卡牌',
+    currentType: '当前类型',
+    autoSetBackType: '将自动设置背面类型',
+    confirmConvert: '确认转换',
+    needCardNameAndType: '请先填写卡牌名称和类型',
+    versionConvertSuccess: '成功转换为2.0版本！',
+    versionConvertFailed: '版本转换失败'
   },
 
   // IllustrationLayoutEditor component
