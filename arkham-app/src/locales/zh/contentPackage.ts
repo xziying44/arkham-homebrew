@@ -198,15 +198,15 @@ export default {
       description: '为卡牌设置特殊属性标签，这些标签将在导出时保留',
       permanent: {
         label: '永久卡牌',
-        description: '永久卡牌不会从游戏中移除'
+        description: '永久卡牌不占用卡组张数，不会从游戏中移除，且开场设置于场上'
       },
       exceptional: {
         label: '卓越卡牌',
-        description: '卓越卡牌通常有特殊效果和获取方式'
+        description: '卓越卡牌花费两倍经验值，且只能购买一份'
       },
       myriad: {
         label: '无数卡牌',
-        description: '无数卡牌可以在卡组中放入多张'
+        description: '无数卡牌可以在卡组中放入3张，且购买多张时只需花费一份经验'
       },
       exile: {
         label: '可放逐',

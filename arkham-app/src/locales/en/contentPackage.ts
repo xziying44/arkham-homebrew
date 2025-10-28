@@ -198,15 +198,15 @@ export default {
       description: 'Set special attribute tags for cards, these tags will be retained during export',
       permanent: {
         label: 'Permanent Card',
-        description: 'Permanent cards will not be removed from the game'
+        description: 'Permanent cards do not count towards deck size, are not removed from the game, and are set up on the field at the start of the game'
       },
       exceptional: {
         label: 'Exceptional Card',
-        description: 'Exceptional cards usually have special effects and acquisition methods'
+        description: 'Exceptional cards cost double the experience points, and only one copy can be purchased'
       },
       myriad: {
         label: 'Myriad Card',
-        description: 'Myriad cards can have multiple copies in a deck'
+        description: 'Myriad cards can have 3 copies in a deck, and purchasing multiple copies only costs experience once'
       },
       exile: {
         label: 'Exile',
