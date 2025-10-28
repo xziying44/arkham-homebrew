@@ -105,6 +105,7 @@ class Card2ArkhamDBConverter:
             "密谋卡": self._convert_act_agenda,
             "密谋卡-大画": self._convert_act_agenda,
             "诡计卡": self._convert_treachery,
+            "冒险参考卡": self._convert_scenario,
         }
 
         converter = converter_map.get(card_type)
@@ -728,6 +729,83 @@ class Card2ArkhamDBConverter:
         data.update(self._get_image_urls())
 
         return data
+
+    def _convert_scenario(self) -> Dict[str, Any]:
+        """转换冒险参考卡"""
+        flags = self._get_special_flags()
+
+        data = {
+            "code": self._extract_code_from_gmnotes(),
+            "position": self._extract_position(),
+            "quantity": 1,  # 冒险参考卡固定为1
+            "name": self._clean_name(self.card_data.get("name", "")),
+            "type_code": "scenario",
+            "type_name": "剧本",
+            "faction_code": "mythos",
+            "faction_name": "神话",
+            "text": self._build_scenario_text(),
+            "deck_limit": 1,
+            "is_unique": flags["is_unique"],
+            "illustrator": self.card_data.get("illustrator", ""),
+            "pack_code": self.pack_code,
+            "double_sided": True
+        }
+
+        # 遭遇位置
+        encounter_position = self.card_data.get("encounter_group_number", "")
+        if encounter_position:
+            # 解析 "1/21" 格式
+            match = re.search(r'(\d+)/(\d+)', encounter_position)
+            if match:
+                data["encounter_position"] = int(match.group(1))
+
+        # 背面数据
+        if "back" in self.card_data:
+            back = self.card_data["back"]
+            data["back_text"] = self._build_scenario_text(back)
+
+        # 图片
+        data.update(self._get_image_urls())
+
+        return data
+
+    def _build_scenario_text(self, card_data: Dict[str, Any] = None) -> str:
+        """构建冒险参考卡的文本内容"""
+        if card_data is None:
+            card_data = self.card_data
+
+        # 获取难度标签（如 "Easy / Standard" 或 "Hard / Expert"）
+        subtitle = card_data.get("subtitle", "")
+
+        # 获取scenario_card中的混沌标记效果
+        scenario_card = card_data.get("scenario_card", {})
+
+        text_parts = []
+
+        # 添加难度标签
+        if subtitle:
+            text_parts.append(subtitle)
+
+        # 混沌标记顺序
+        token_order = ["skull", "cultist", "tablet", "elder_thing"]
+
+        # 处理每个混沌标记
+        for token_key in token_order:
+            if token_key in scenario_card and scenario_card[token_key]:
+                effect = scenario_card[token_key]
+                # 转换标记名称为显示格式
+                token_display = f"[{token_key}]"
+                # 转换文本格式
+                effect_text = self._convert_text_format(effect)
+                text_parts.append(f"{token_display}：{effect_text}")
+
+        return "\n".join(text_parts)
+
+    def _format_encounter_name(self, encounter_code: str) -> str:
+        """从遭遇组代码格式化显示名称"""
+        # 将下划线替换为空格，首字母大写
+        words = encounter_code.replace("_", " ").split()
+        return " ".join(word.capitalize() for word in words)
 
     def _validate_card_data(self, card_data: Dict[str, Any]) -> Dict[str, Any]:
         """
