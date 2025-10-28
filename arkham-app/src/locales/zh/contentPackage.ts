@@ -9,6 +9,13 @@ export default {
     player_cards: '玩家卡',
     campaign: '剧本卡'
   },
+  statusOptions: {
+    draft: '草稿',
+    alpha: 'Alpha版',
+    beta: 'Beta版',
+    complete: '完成版',
+    final: '最终版'
+  },
   editor: {
     tabs: {
       info: '基础信息',
@@ -39,6 +46,9 @@ export default {
       namePlaceholder: '请输入内容包名称',
       descriptionPlaceholder: '请输入内容包描述',
       authorPlaceholder: '请输入作者名称',
+      languagePlaceholder: '请选择内容包语言',
+      typesPlaceholder: '请选择内容包类型（可多选）',
+      statusPlaceholder: '请选择内容包状态',
       externalLinkPlaceholder: '可选，请输入外部链接地址',
       bannerUrl: '封面URL',
       bannerUrlPlaceholder: '请输入封面图片的网络地址',
@@ -97,7 +107,9 @@ export default {
       authorRequired: '请输入作者',
       authorLength: '作者长度应在1-100字符之间',
       languageRequired: '请选择语言',
-      typesRequired: '请至少选择一种内容包类型'
+      typesRequired: '请至少选择一种内容包类型',
+      atLeastOneType: '请至少选择一种内容包类型',
+      statusRequired: '请选择内容包状态'
     }
   },
   deleteDialog: {

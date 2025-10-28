@@ -9,6 +9,13 @@ export default {
     player_cards: 'Player Cards',
     campaign: 'Campaign'
   },
+  statusOptions: {
+    draft: 'Draft',
+    alpha: 'Alpha',
+    beta: 'Beta',
+    complete: 'Complete',
+    final: 'Final'
+  },
   editor: {
     tabs: {
       info: 'Basic Info',

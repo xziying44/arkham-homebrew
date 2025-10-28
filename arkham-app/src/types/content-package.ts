@@ -11,7 +11,7 @@ export interface ContentPackageMeta {
   language: 'zh' | 'en';  // 语言
   banner_url: string;     // 封面URL
   types: PackageType[];   // 内容包类型
-  status: 'draft' | 'final'; // 状态，默认为final
+  status: 'draft' | 'alpha' | 'beta' | 'complete' | 'final'; // 状态，默认为final
   date_updated: string;   // 标准时间字符串
   generator: string;      // 导出备注信息，默认为"Arkham Card Maker 3.9"
   external_link?: string; // 外部地址（可选）
@@ -111,7 +111,35 @@ export const createDefaultPackage = (): ContentPackage => ({
 });
 
 /**
- * 内容包类型选项
+ * 生成内容包类型选项（支持本地化）
+ */
+export const getPackageTypeOptions = (t: (key: string) => string) => [
+  { label: t('contentPackage.packageTypes.investigators'), value: 'investigators' as PackageType },
+  { label: t('contentPackage.packageTypes.player_cards'), value: 'player_cards' as PackageType },
+  { label: t('contentPackage.packageTypes.campaign'), value: 'campaign' as PackageType }
+];
+
+/**
+ * 生成语言选项（支持本地化）
+ */
+export const getLanguageOptions = (t: (key: string) => string) => [
+  { label: t('contentPackage.languages.zh'), value: 'zh' as const },
+  { label: t('contentPackage.languages.en'), value: 'en' as const }
+];
+
+/**
+ * 生成状态选项（支持本地化）
+ */
+export const getStatusOptions = (t: (key: string) => string) => [
+  { label: t('contentPackage.statusOptions.draft'), value: 'draft' as const },
+  { label: t('contentPackage.statusOptions.alpha'), value: 'alpha' as const },
+  { label: t('contentPackage.statusOptions.beta'), value: 'beta' as const },
+  { label: t('contentPackage.statusOptions.complete'), value: 'complete' as const },
+  { label: t('contentPackage.statusOptions.final'), value: 'final' as const }
+];
+
+/**
+ * 内容包类型选项（向后兼容的静态版本）
  */
 export const PACKAGE_TYPE_OPTIONS = [
   { label: '调查员卡', value: 'investigators' as PackageType },
@@ -120,9 +148,20 @@ export const PACKAGE_TYPE_OPTIONS = [
 ];
 
 /**
- * 语言选项
+ * 语言选项（向后兼容的静态版本）
  */
 export const LANGUAGE_OPTIONS = [
   { label: '中文', value: 'zh' as const },
   { label: '英文', value: 'en' as const }
+];
+
+/**
+ * 状态选项（向后兼容的静态版本）
+ */
+export const STATUS_OPTIONS = [
+  { label: '草稿', value: 'draft' as const },
+  { label: 'Alpha版', value: 'alpha' as const },
+  { label: 'Beta版', value: 'beta' as const },
+  { label: '完成版', value: 'complete' as const },
+  { label: '最终版', value: 'final' as const }
 ];

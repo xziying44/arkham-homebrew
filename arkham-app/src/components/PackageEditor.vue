@@ -85,8 +85,8 @@
                   </n-tag>
                 </n-descriptions-item>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.status')">
-                  <n-tag :type="(packageData.meta?.status || 'draft') === 'final' ? 'success' : 'warning'" size="small">
-                    {{ packageData.meta?.status || 'draft' }}
+                  <n-tag :type="getStatusTagType(packageData.meta?.status || 'draft')" size="small">
+                    {{ getStatusLabel(packageData.meta?.status || 'draft') }}
                   </n-tag>
                 </n-descriptions-item>
                 <n-descriptions-item :label="$t('contentPackage.editor.fields.dateUpdated')">
@@ -432,6 +432,18 @@
           <n-input v-model:value="editForm.author" :placeholder="$t('contentPackage.editor.editMeta.authorPlaceholder')"
             clearable />
         </n-form-item>
+        <n-form-item path="language" :label="$t('contentPackage.editor.fields.language')">
+          <n-select v-model:value="editForm.language" :options="localizedLanguageOptions" :placeholder="$t('contentPackage.editor.editMeta.languagePlaceholder')"
+            clearable />
+        </n-form-item>
+        <n-form-item path="types" :label="$t('contentPackage.editor.fields.types')">
+          <n-select v-model:value="editForm.types" :options="localizedPackageTypeOptions" multiple :placeholder="$t('contentPackage.editor.editMeta.typesPlaceholder')"
+            clearable />
+        </n-form-item>
+        <n-form-item path="status" :label="$t('contentPackage.editor.fields.status')">
+          <n-select v-model:value="editForm.status" :options="localizedStatusOptions" :placeholder="$t('contentPackage.editor.editMeta.statusPlaceholder')"
+            clearable />
+        </n-form-item>
         <n-form-item path="external_link" :label="$t('contentPackage.editor.fields.externalLink')">
           <n-input v-model:value="editForm.external_link"
             :placeholder="$t('contentPackage.editor.editMeta.externalLinkPlaceholder')" clearable />
@@ -721,7 +733,7 @@ import {
   InformationCircleOutline
 } from '@vicons/ionicons5';
 import type { ContentPackageFile, PackageType, ContentPackageCard } from '@/types/content-package';
-import { PACKAGE_TYPE_OPTIONS } from '@/types/content-package';
+import { getPackageTypeOptions, getLanguageOptions, getStatusOptions } from '@/types/content-package';
 import { WorkspaceService } from '@/api';
 import { CardService } from '@/api/card-service';
 import { ConfigService } from '@/api/config-service';
@@ -821,7 +833,10 @@ const editForm = ref({
   author: '',
   external_link: '',
   banner_url: '',
-  banner_base64: ''
+  banner_base64: '',
+  language: 'zh' as 'zh' | 'en',
+  types: [] as PackageType[],
+  status: 'final' as 'draft' | 'alpha' | 'beta' | 'complete' | 'final'
 });
 
 // 响应式的包数据
@@ -860,12 +875,31 @@ const editRules = computed((): FormRules => ({
   author: [
     { required: true, message: t('contentPackage.forms.validation.authorRequired'), trigger: ['input', 'blur'] },
     { min: 1, max: 100, message: t('contentPackage.forms.validation.authorLength'), trigger: ['input', 'blur'] }
+  ],
+  language: [
+    { required: true, message: t('contentPackage.forms.validation.languageRequired'), trigger: ['change', 'blur'] }
+  ],
+  types: [
+    {
+      validator: (rule: any, value: PackageType[]) => {
+        // 确保值是数组并且长度大于0
+        if (!Array.isArray(value)) {
+          return false;
+        }
+        return value.length > 0;
+      },
+      message: t('contentPackage.forms.validation.atLeastOneType'),
+      trigger: ['change', 'blur']
+    }
+  ],
+  status: [
+    { required: true, message: t('contentPackage.forms.validation.statusRequired'), trigger: ['change', 'blur'] }
   ]
 }));
 
 // 获取内容包类型标签
 const getPackageTypeLabel = (type: PackageType): string => {
-  const option = PACKAGE_TYPE_OPTIONS.find(opt => opt.value === type);
+  const option = localizedPackageTypeOptions.value.find(opt => opt.value === type);
   return option ? option.label : type;
 };
 
@@ -877,6 +911,29 @@ const getTypeTagColor = (type: PackageType): string => {
     campaign: 'error'
   };
   return colorMap[type] || 'default';
+};
+
+// 本地化的选项计算属性
+const localizedPackageTypeOptions = computed(() => getPackageTypeOptions(t));
+const localizedLanguageOptions = computed(() => getLanguageOptions(t));
+const localizedStatusOptions = computed(() => getStatusOptions(t));
+
+// 获取状态标签文本
+const getStatusLabel = (status: string): string => {
+  const statusOption = localizedStatusOptions.value.find(opt => opt.value === status);
+  return statusOption ? statusOption.label : status;
+};
+
+// 获取状态标签颜色
+const getStatusTagType = (status: string): string => {
+  const colorMap = {
+    draft: 'warning',
+    alpha: 'info',
+    beta: 'info',
+    complete: 'success',
+    final: 'success'
+  };
+  return colorMap[status as keyof typeof colorMap] || 'default';
 };
 
 // 格式化日期
@@ -958,6 +1015,9 @@ const saveMetaChanges = () => {
           name: editForm.value.name,
           description: editForm.value.description,
           author: editForm.value.author,
+          language: editForm.value.language,
+          types: editForm.value.types,
+          status: editForm.value.status,
           external_link: editForm.value.external_link,
           banner_url: editForm.value.banner_url,
           date_updated: new Date().toISOString()
@@ -987,6 +1047,9 @@ const openEditDialog = () => {
     name: packageData.value?.meta?.name || '',
     description: packageData.value?.meta?.description || '',
     author: packageData.value?.meta?.author || '',
+    language: packageData.value?.meta?.language || 'zh',
+    types: packageData.value?.meta?.types || [],
+    status: packageData.value?.meta?.status || 'final',
     external_link: packageData.value?.meta?.external_link || '',
     banner_url: packageData.value?.meta?.banner_url || '',
     banner_base64: packageData.value?.banner_base64 || ''
