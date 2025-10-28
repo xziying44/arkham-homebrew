@@ -92,6 +92,22 @@ export default {
   optionalAttributes: 'Optional Attributes List',
   addItemOption: 'Add Option',
   noOptionalAttributes: 'No optional attributes available',
+
+  // Deck building order instructions
+  deckBuildingOrder: {
+    title: '⚠️ Deck Building Option Order Instructions',
+    description: 'In investigator deck building options, the order affects the card pool. Please set options in the correct order to ensure accurate card pool calculation.',
+    exampleTitle: 'Example: Parallel Seeker',
+    exampleDescription: 'The correct building order should be:',
+    order1: '1. Haunted Neutral cards level 0-5',
+    order2: '2. Haunted cards level 0-4',
+    order3: '3. Negative conditions, Blessed, Lucky cards level 0-5',
+    order4: '4. Seeker(🌐) level 0-3',
+    order5: '5. Neutral cards level 0-5',
+    order6: '6. Paradigm cards level 0-4',
+    order7: '7. Rogue(💵) level 0, limit 5 cards',
+    note: 'Note: Incorrect order may cause some cards to not be properly added to the card pool.'
+  },
   removeItem: 'Delete',
   itemId: 'ID',
   itemName: 'Name',

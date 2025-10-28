@@ -92,6 +92,22 @@ export default {
   optionalAttributes: '可选属性列表',
   addItemOption: '添加选项',
   noOptionalAttributes: '暂无可选属性',
+
+  // 牌组构建顺序说明
+  deckBuildingOrder: {
+    title: '⚠️ 牌组构建选项顺序说明',
+    description: '调查员牌组构建选项中，顺序会影响卡池。请按照正确的顺序设置选项以确保卡池计算准确。',
+    exampleTitle: '示例：平行记者',
+    exampleDescription: '正确的构建顺序应该是：',
+    order1: '1. 诅咒萦绕中立卡牌等级 0-5',
+    order2: '2. 诅咒萦绕卡牌等级 0-4',
+    order3: '3. 否定条件，幸运、祝福卡牌等级 0-5',
+    order4: '4. 探求者(🌐)等级 0-3',
+    order5: '5. 中立卡牌等级 0-5',
+    order6: '6. 局势卡牌等级 0-4',
+    order7: '7. 流浪者(💵)等级0，限制5张',
+    note: '注意：错误的顺序可能导致某些卡牌无法正确加入卡池。'
+  },
   removeItem: '删除',
   itemId: 'ID',
   itemName: '名称',

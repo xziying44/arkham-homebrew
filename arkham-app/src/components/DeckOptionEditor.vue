@@ -3,6 +3,52 @@
         <n-space vertical size="large">
             <!-- 牌库选项列表 -->
             <div class="deck-options-list">
+                <!-- 牌组构建顺序说明 -->
+                <div class="deck-building-order-notice">
+                    <n-button
+                        text
+                        type="warning"
+                        @click="toggleOrderNotice"
+                        style="margin-bottom: 12px; padding: 8px 12px;"
+                    >
+                        <template #icon>
+                            <n-icon style="margin-right: 6px;">
+                                <span v-if="showOrderNotice">📖</span>
+                                <span v-else>📘</span>
+                            </n-icon>
+                        </template>
+                        {{ $t('deckOptionEditor.deckBuildingOrder.title') }}
+                        <n-icon style="margin-left: 6px; transition: transform 0.2s;" :style="{ transform: showOrderNotice ? 'rotate(180deg)' : 'rotate(0deg)' }">
+                            <span>▼</span>
+                        </n-icon>
+                    </n-button>
+
+                    <n-collapse-transition :show="showOrderNotice">
+                        <n-alert type="warning" style="margin-bottom: 16px;">
+                            <div class="notice-content">
+                                <p>{{ $t('deckOptionEditor.deckBuildingOrder.description') }}</p>
+
+                                <div class="example-section" style="margin-top: 12px;">
+                                    <n-text strong>{{ $t('deckOptionEditor.deckBuildingOrder.exampleTitle') }}:</n-text>
+                                    <p style="margin-top: 8px; margin-bottom: 4px;">{{ $t('deckOptionEditor.deckBuildingOrder.exampleDescription') }}</p>
+                                    <ol style="margin: 8px 0 8px 20px; padding: 0; font-size: 12px; line-height: 1.4;">
+                                        <li>{{ $t('deckOptionEditor.deckBuildingOrder.order1') }}</li>
+                                        <li>{{ $t('deckOptionEditor.deckBuildingOrder.order2') }}</li>
+                                        <li>{{ $t('deckOptionEditor.deckBuildingOrder.order3') }}</li>
+                                        <li>{{ $t('deckOptionEditor.deckBuildingOrder.order4') }}</li>
+                                        <li>{{ $t('deckOptionEditor.deckBuildingOrder.order5') }}</li>
+                                        <li>{{ $t('deckOptionEditor.deckBuildingOrder.order6') }}</li>
+                                        <li>{{ $t('deckOptionEditor.deckBuildingOrder.order7') }}</li>
+                                    </ol>
+                                    <n-text depth="3" style="font-size: 11px; font-style: italic;">
+                                        {{ $t('deckOptionEditor.deckBuildingOrder.note') }}
+                                    </n-text>
+                                </div>
+                            </div>
+                        </n-alert>
+                    </n-collapse-transition>
+                </div>
+
                 <div class="section-header">
                     <n-text depth="3" style="font-size: 12px;">{{ $t('deckOptionEditor.currentOptions') }}</n-text>
                     <n-button size="tiny" type="primary" @click="addDeckOption">
@@ -786,6 +832,9 @@ const isSavingFromEditor = ref(false); // 添加标志防止保存时触发重�
 // 折叠面板状态
 const expandedSections = ref<string[]>([]);
 
+// 牌组构建顺序提示显示状态
+const showOrderNotice = ref(false);
+
 // 基础条件标签状态
 const basicConditionTags = ref<Record<string, boolean>>({});
 
@@ -1379,6 +1428,11 @@ const formatTypeDisplay = (types: string[]) => {
         const typeOption = cardTypeOptions.value.find(opt => opt.value === type);
         return typeOption ? typeOption.label : type;
     }).join(', ');
+};
+
+// 切换牌组构建顺序提示显示状态
+const toggleOrderNotice = () => {
+    showOrderNotice.value = !showOrderNotice.value;
 };
 
 // 复制JSON到剪贴板
@@ -2041,6 +2095,53 @@ if (shouldShowEditor.value) {
     white-space: pre-wrap;
     word-wrap: break-word;
     color: #2d3748;
+}
+
+/* 牌组构建顺序提示样式 */
+.deck-building-order-notice {
+    margin-bottom: 16px;
+}
+
+.deck-building-order-notice :deep(.n-button) {
+    font-weight: 500;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.deck-building-order-notice :deep(.n-button:hover) {
+    background: rgba(245, 158, 11, 0.1);
+}
+
+.deck-building-order-notice :deep(.n-alert) {
+    border-radius: 8px;
+    border-left: 4px solid #f59e0b;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0%, rgba(217, 119, 6, 0.05) 100%);
+    margin-top: 0;
+}
+
+.deck-building-order-notice :deep(.n-alert__header) {
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.notice-content p {
+    margin: 8px 0;
+    line-height: 1.4;
+}
+
+.example-section {
+    background: rgba(255, 255, 255, 0.6);
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.example-section ol {
+    color: #4b5563;
+}
+
+.example-section li {
+    margin-bottom: 2px;
 }
 
 /* 动画效果 */
