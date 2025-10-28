@@ -21,8 +21,8 @@
                     <div v-for="(option, index) in deckOptions" :key="index" class="deck-option-item">
                         <div class="option-header">
                             <div class="option-title">
-                                <n-text strong>{{ $t('deckOptionEditor.option') }} {{ index + 1 }}</n-text>
-                                <n-tag v-if="option.id" size="tiny" type="info">{{ option.id }}</n-tag>
+                                <n-text strong>{{ getOptionDisplayName(option) }}</n-text>
+                                <n-tag v-if="option.id && option.id !== option.name" size="tiny" type="info">{{ option.id }}</n-tag>
                             </div>
                             <div class="option-actions">
                                 <n-button v-if="editingIndex === index" size="tiny" type="success" @click="saveOption(index)">
@@ -43,6 +43,9 @@
                         <!-- 选项预览 -->
                         <div v-if="editingIndex !== index" class="option-preview">
                             <n-space size="small" wrap>
+                                <n-tag v-if="option.name && option.name !== option.id" size="tiny" type="primary">
+                                    名称: {{ option.name }}
+                                </n-tag>
                                 <n-tag v-if="option.faction && option.faction.length > 0" size="tiny" type="primary">
                                     {{ $t('deckOptionEditor.faction') }}: {{ formatFactionDisplay(option.faction) }}
                                 </n-tag>
@@ -61,199 +64,332 @@
                                 <n-tag v-if="option.text && option.text.length > 0" size="tiny" type="info">
                                     {{ $t('deckOptionEditor.textContains') }}: {{ option.text.join(', ') }}
                                 </n-tag>
-                                <n-tag v-if="option.text_exact && option.text_exact.length > 0" size="tiny" type="info">
-                                    {{ $t('deckOptionEditor.textExact') }}: {{ option.text_exact.join(', ') }}
-                                </n-tag>
                                 <n-tag v-if="option.trait && option.trait.length > 0" size="tiny" type="info">
                                     {{ $t('deckOptionEditor.traits') }}: {{ option.trait.join(', ') }}
+                                </n-tag>
+                                <n-tag v-if="option.slot && option.slot.length > 0" size="tiny" type="info">
+                                    槽位: {{ formatSlotDisplay(option.slot) }}
+                                </n-tag>
+                                <n-tag v-if="option.uses && option.uses.length > 0" size="tiny" type="info">
+                                    使用: {{ formatUsesDisplay(option.uses) }}
+                                </n-tag>
+                                <n-tag v-if="option.faction_select && option.faction_select.length > 0" size="tiny" type="warning">
+                                    职阶选择: {{ formatFactionDisplay(option.faction_select) }}
+                                </n-tag>
+                                <n-tag v-if="option.deck_size_select && option.deck_size_select.length > 0" size="tiny" type="warning">
+                                    牌库大小: {{ option.deck_size_select.join(', ') }}张
+                                </n-tag>
+                                <n-tag v-if="option.option_select && option.option_select.length > 0" size="tiny" type="warning">
+                                    高级属性选择 ({{ option.option_select.length }}项)
                                 </n-tag>
                             </n-space>
                         </div>
 
-                        <!-- 折叠式选项编辑器 -->
+                        <!-- 选项编辑器 -->
                         <div v-else class="option-editor" :key="`editing-${index}`">
-                            <n-form :model="option" label-placement="left" label-width="80" size="small">
-                                <!-- ID设置 -->
-                                <n-form-item :label="$t('deckOptionEditor.optionId')">
-                                    <n-input v-model:value="option.id" :placeholder="$t('deckOptionEditor.optionIdPlaceholder')" />
+                            <n-form :model="option" label-placement="left" label-width="100" size="small">
+                                <!-- ID和名称设置 -->
+                                <n-form-item label="选项ID">
+                                    <n-input v-model:value="option.id" placeholder="自动生成或手动输入ID" @blur="syncNameFromId(option)" />
+                                </n-form-item>
+                                <n-form-item label="选项名称">
+                                    <n-input v-model:value="option.name" placeholder="名称通常与ID一致，可手动修改" />
                                 </n-form-item>
 
-                                <!-- 可折叠的配置模块 -->
-                                <n-collapse v-model:value="expandedSections" accordion :key="`collapse-${index}`">
-                                    <!-- 基础过滤条件 -->
-                                    <n-collapse-item :title="$t('deckOptionEditor.basicFilters')" name="basicFilters">
-                                        <div class="collapse-content">
-                                            <!-- 卡牌类型 -->
-                                            <n-form-item :label="$t('deckOptionEditor.cardType')">
-                                                <n-select
-                                                    v-model:value="option.type"
-                                                    :options="cardTypeOptions"
-                                                    multiple
-                                                    :placeholder="$t('deckOptionEditor.selectCardTypes')"
-                                                    :render-tag="renderTag"
-                                                />
-                                            </n-form-item>
+                                <!-- 选择机制 -->
+                                <n-form-item label="选择机制">
+                                    <n-select
+                                        v-model:value="option.selectionType"
+                                        :options="selectionTypeOptions"
+                                        placeholder="请选择选择机制（只能选择一种）"
+                                        @update:value="onSelectionTypeChange(option)"
+                                    />
+                                </n-form-item>
 
-                                            <!-- 职阶 -->
-                                            <n-form-item :label="$t('deckOptionEditor.faction')">
-                                                <n-select
-                                                    v-model:value="option.faction"
-                                                    :options="factionOptions"
-                                                    multiple
-                                                    :placeholder="$t('deckOptionEditor.selectFactions')"
-                                                    :render-tag="renderTag"
+                                <!-- 根据选择机制显示不同配置 -->
+                                <div v-if="option.selectionType && option.selectionType !== 'none'" class="selection-config">
+                                    <!-- 职阶选择配置 -->
+                                    <div v-if="option.selectionType === 'faction'" class="config-section">
+                                        <n-form-item label="可选职阶">
+                                            <n-select
+                                                v-model:value="option.faction_select"
+                                                :options="factionOptions"
+                                                multiple
+                                                placeholder="选择允许的职阶"
+                                                :render-tag="renderTag"
+                                            />
+                                        </n-form-item>
+                                        <n-form-item label="等级范围">
+                                            <n-space>
+                                                <n-input-number
+                                                    v-model:value="option.level.min"
+                                                    :min="0"
+                                                    :max="10"
+                                                    placeholder="最低等级"
+                                                    style="width: 100px"
                                                 />
-                                            </n-form-item>
-
-                                            <!-- 特性 -->
-                                            <n-form-item :label="$t('deckOptionEditor.traits')">
-                                                <n-dynamic-tags v-model:value="option.trait" :placeholder="$t('deckOptionEditor.addTrait')" />
-                                            </n-form-item>
-
-                                            <!-- 槽位 -->
-                                            <n-form-item :label="$t('deckOptionEditor.slots')">
-                                                <n-select
-                                                    v-model:value="option.slot"
-                                                    :options="slotOptions"
-                                                    multiple
-                                                    :placeholder="$t('deckOptionEditor.selectSlots')"
-                                                    :render-tag="renderTag"
+                                                <n-text>-</n-text>
+                                                <n-input-number
+                                                    v-model:value="option.level.max"
+                                                    :min="0"
+                                                    :max="10"
+                                                    placeholder="最高等级"
+                                                    style="width: 100px"
                                                 />
-                                            </n-form-item>
+                                            </n-space>
+                                        </n-form-item>
+                                    </div>
 
-                                            <!-- 使用标记 -->
-                                            <n-form-item :label="$t('deckOptionEditor.uses')">
-                                                <n-select
-                                                    v-model:value="option.uses"
-                                                    :options="usesOptions"
-                                                    multiple
-                                                    :placeholder="$t('deckOptionEditor.selectUses')"
-                                                    :render-tag="renderTag"
-                                                />
-                                            </n-form-item>
+                                    <!-- 牌库大小选择配置 -->
+                                    <div v-if="option.selectionType === 'deckSize'" class="config-section">
+                                        <n-form-item label="可选牌库大小">
+                                            <n-select
+                                                v-model:value="option.deck_size_select"
+                                                :options="deckSizeOptions"
+                                                multiple
+                                                placeholder="选择允许的牌库大小"
+                                                :render-tag="renderTag"
+                                            />
+                                        </n-form-item>
+                                    </div>
+
+                                    <!-- 高级属性选择配置 -->
+                                    <div v-if="option.selectionType === 'advanced'" class="config-section">
+                                        <div class="option-select-list">
+                                            <div class="list-header">
+                                                <n-text strong>可选属性列表</n-text>
+                                                <n-button size="tiny" type="primary" @click="addOptionSelectItem(option)">
+                                                    <template #icon><span>➕</span></template>
+                                                    添加选项
+                                                </n-button>
+                                            </div>
+                                            <div v-if="!option.option_select || option.option_select.length === 0" class="empty-list">
+                                                <n-empty description="暂无可选属性" size="small" />
+                                            </div>
+                                            <div v-else class="option-items">
+                                                <div v-for="(item, itemIndex) in option.option_select" :key="itemIndex" class="option-item">
+                                                    <n-card size="small" class="item-card">
+                                                        <template #header>
+                                                            <div class="item-header">
+                                                                <n-input v-model:value="item.id" placeholder="ID" size="tiny" style="width: 120px" @blur="syncItemNameFromId(item)" />
+                                                                <n-input v-model:value="item.name" placeholder="名称" size="tiny" style="width: 120px" />
+                                                                <n-button size="tiny" type="error" @click="removeOptionSelectItem(option, itemIndex)">删除</n-button>
+                                                            </div>
+                                                        </template>
+                                                        <div class="item-content">
+                                                            <!-- 基础过滤条件 -->
+                                                            <n-form-item label="卡牌类型">
+                                                                <n-select
+                                                                    v-model:value="item.type"
+                                                                    :options="cardTypeOptions"
+                                                                    multiple
+                                                                    placeholder="选择卡牌类型"
+                                                                    size="tiny"
+                                                                    :render-tag="renderTag"
+                                                                />
+                                                            </n-form-item>
+                                                            <n-form-item label="职阶">
+                                                                <n-select
+                                                                    v-model:value="item.faction"
+                                                                    :options="factionOptions"
+                                                                    multiple
+                                                                    placeholder="选择职阶"
+                                                                    size="tiny"
+                                                                    :render-tag="renderTag"
+                                                                />
+                                                            </n-form-item>
+                                                            <n-form-item label="特性">
+                                                                <n-dynamic-tags v-model:value="item.trait" placeholder="添加特性" size="tiny" />
+                                                            </n-form-item>
+                                                            <n-form-item label="槽位">
+                                                                <n-select
+                                                                    v-model:value="item.slot"
+                                                                    :options="slotOptions"
+                                                                    multiple
+                                                                    placeholder="选择槽位"
+                                                                    size="tiny"
+                                                                    :render-tag="renderTag"
+                                                                />
+                                                            </n-form-item>
+                                                            <n-form-item label="使用标记">
+                                                                <n-select
+                                                                    v-model:value="item.uses"
+                                                                    :options="usesOptions"
+                                                                    multiple
+                                                                    placeholder="选择使用标记"
+                                                                    size="tiny"
+                                                                    :render-tag="renderTag"
+                                                                />
+                                                            </n-form-item>
+                                                            <n-form-item label="等级范围">
+                                                                <n-space>
+                                                                    <n-input-number
+                                                                        v-model:value="item.level.min"
+                                                                        :min="0"
+                                                                        :max="10"
+                                                                        placeholder="最低"
+                                                                        size="tiny"
+                                                                        style="width: 80px"
+                                                                    />
+                                                                    <n-text>-</n-text>
+                                                                    <n-input-number
+                                                                        v-model:value="item.level.max"
+                                                                        :min="0"
+                                                                        :max="10"
+                                                                        placeholder="最高"
+                                                                        size="tiny"
+                                                                        style="width: 80px"
+                                                                    />
+                                                                </n-space>
+                                                            </n-form-item>
+                                                        </div>
+                                                    </n-card>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </n-collapse-item>
+                                    </div>
+                                </div>
 
-                                    <!-- 文本匹配 -->
-                                    <n-collapse-item :title="$t('deckOptionEditor.textMatch')" name="textMatch">
-                                        <div class="collapse-content">
-                                            <n-form-item :label="$t('deckOptionEditor.textContains')">
-                                                <n-dynamic-tags v-model:value="option.text" :placeholder="$t('deckOptionEditor.addText')" />
-                                            </n-form-item>
+                                <!-- 基础条件（仅在无选择机制时显示） -->
+                                <div v-show="!option.selectionType || option.selectionType === 'none'" class="basic-conditions">
+                                    <n-divider class="section-divider">
+                                        <n-text strong>基础条件</n-text>
+                                    </n-divider>
 
-                                            <n-form-item :label="$t('deckOptionEditor.textExact')">
-                                                <n-dynamic-tags v-model:value="option.text_exact" :placeholder="$t('deckOptionEditor.addExactText')" />
-                                            </n-form-item>
-                                        </div>
-                                    </n-collapse-item>
+                                    <!-- 适合窄布局的单列显示 -->
+                                    <div style="display: flex; flex-direction: column; gap: 16px;">
+                                        <!-- 卡牌类型 -->
+                                        <n-form-item :label="$t('deckOptionEditor.cardType')">
+                                            <n-select
+                                                v-model:value="option.type"
+                                                :options="cardTypeOptions"
+                                                multiple
+                                                :placeholder="$t('deckOptionEditor.selectCardTypes')"
+                                                :render-tag="renderTag"
+                                            />
+                                        </n-form-item>
 
-                                    <!-- 等级系统 -->
-                                    <n-collapse-item :title="$t('deckOptionEditor.levelSystem')" name="levelSystem">
-                                        <div class="collapse-content">
-                                            <n-form-item :label="$t('deckOptionEditor.levelRange')">
+                                        <!-- 职阶 -->
+                                        <n-form-item :label="$t('deckOptionEditor.faction')">
+                                            <n-select
+                                                v-model:value="option.faction"
+                                                :options="factionOptions"
+                                                multiple
+                                                :placeholder="$t('deckOptionEditor.selectFactions')"
+                                                :render-tag="renderTag"
+                                            />
+                                        </n-form-item>
+
+                                        <!-- 特性 -->
+                                        <n-form-item :label="$t('deckOptionEditor.traits')">
+                                            <n-dynamic-tags v-model:value="option.trait" :placeholder="$t('deckOptionEditor.addTrait')" />
+                                        </n-form-item>
+
+                                        <!-- 槽位 -->
+                                        <n-form-item :label="$t('deckOptionEditor.slots')">
+                                            <n-select
+                                                v-model:value="option.slot"
+                                                :options="slotOptions"
+                                                multiple
+                                                :placeholder="$t('deckOptionEditor.selectSlots')"
+                                                :render-tag="renderTag"
+                                            />
+                                        </n-form-item>
+
+                                        <!-- 使用标记 -->
+                                        <n-form-item :label="$t('deckOptionEditor.uses')">
+                                            <n-select
+                                                v-model:value="option.uses"
+                                                :options="usesOptions"
+                                                multiple
+                                                :placeholder="$t('deckOptionEditor.selectUses')"
+                                                :render-tag="renderTag"
+                                            />
+                                        </n-form-item>
+
+                                        <!-- 文本匹配 -->
+                                        <n-form-item :label="$t('deckOptionEditor.textContains')">
+                                            <n-dynamic-tags v-model:value="option.text" :placeholder="$t('deckOptionEditor.addText')" />
+                                        </n-form-item>
+
+                                        <!-- 等级范围 -->
+                                        <n-form-item :label="$t('deckOptionEditor.levelRange')">
+                                            <n-space>
+                                                <n-input-number
+                                                    v-model:value="option.level.min"
+                                                    :min="0"
+                                                    :max="10"
+                                                    :placeholder="$t('deckOptionEditor.minLevel')"
+                                                    style="width: 100px"
+                                                />
+                                                <n-text>-</n-text>
+                                                <n-input-number
+                                                    v-model:value="option.level.max"
+                                                    :min="0"
+                                                    :max="10"
+                                                    :placeholder="$t('deckOptionEditor.maxLevel')"
+                                                    style="width: 100px"
+                                                />
+                                            </n-space>
+                                        </n-form-item>
+
+                                        <!-- 数量限制 -->
+                                        <n-form-item :label="$t('deckOptionEditor.limit')">
+                                            <n-input-number
+                                                v-model:value="option.limit"
+                                                :min="0"
+                                                :max="50"
+                                                :placeholder="$t('deckOptionEditor.limitPlaceholder')"
+                                                style="width: 150px"
+                                            />
+                                        </n-form-item>
+                                    </div>
+                                </div>
+
+                                <!-- 其他条件 -->
+                                <n-divider class="section-divider">
+                                    <n-text strong>其他条件</n-text>
+                                </n-divider>
+
+                                <n-space vertical size="medium">
+                                    <!-- 否定条件 -->
+                                    <n-form-item>
+                                        <n-switch v-model:value="option.not" size="medium">
+                                            <template #checked>启用否定条件</template>
+                                            <template #unchecked>禁用否定条件</template>
+                                        </n-switch>
+                                    </n-form-item>
+
+                                    <!-- 至少条件 -->
+                                    <n-form-item :label="$t('deckOptionEditor.atLeast')">
+                                        <n-space vertical size="small" style="width: 100%">
+                                            <n-switch v-model:value="atLeastEnabled" size="medium">
+                                                <template #checked>启用至少条件</template>
+                                                <template #unchecked>禁用至少条件</template>
+                                            </n-switch>
+
+                                            <div v-if="atLeastEnabled">
                                                 <n-space>
                                                     <n-input-number
-                                                        v-model:value="option.level.min"
+                                                        v-model:value="option.atleast.min"
                                                         :min="0"
-                                                        :max="10"
-                                                        :placeholder="$t('deckOptionEditor.minLevel')"
-                                                        style="width: 100px"
+                                                        :max="50"
+                                                        :placeholder="$t('deckOptionEditor.minCount')"
+                                                        style="width: 120px"
                                                     />
-                                                    <n-text>-</n-text>
-                                                    <n-input-number
-                                                        v-model:value="option.level.max"
-                                                        :min="0"
-                                                        :max="10"
-                                                        :placeholder="$t('deckOptionEditor.maxLevel')"
-                                                        style="width: 100px"
+                                                    <n-select
+                                                        v-model:value="option.atleast.types"
+                                                        :options="cardTypeOptions"
+                                                        multiple
+                                                        :placeholder="$t('deckOptionEditor.selectAtLeastTypes')"
+                                                        style="width: 200px"
+                                                        :render-tag="renderTag"
                                                     />
                                                 </n-space>
-                                            </n-form-item>
-                                        </div>
-                                    </n-collapse-item>
-
-                                    <!-- 数量限制 -->
-                                    <n-collapse-item :title="$t('deckOptionEditor.quantityLimit')" name="quantityLimit">
-                                        <div class="collapse-content">
-                                            <n-form-item :label="$t('deckOptionEditor.limit')">
-                                                <n-input-number
-                                                    v-model:value="option.limit"
-                                                    :min="0"
-                                                    :max="50"
-                                                    :placeholder="$t('deckOptionEditor.limitPlaceholder')"
-                                                    style="width: 150px"
-                                                />
-                                            </n-form-item>
-                                        </div>
-                                    </n-collapse-item>
-
-                                    <!-- 选择机制 -->
-                                    <n-collapse-item :title="$t('deckOptionEditor.selectionMechanism')" name="selectionMechanism">
-                                        <div class="collapse-content">
-                                            <n-form-item :label="$t('deckOptionEditor.factionSelect')">
-                                                <n-select
-                                                    v-model:value="option.faction_select"
-                                                    :options="factionOptions"
-                                                    multiple
-                                                    :placeholder="$t('deckOptionEditor.selectFactionForSelection')"
-                                                    :render-tag="renderTag"
-                                                />
-                                            </n-form-item>
-
-                                            <n-form-item :label="$t('deckOptionEditor.deckSizeSelect')">
-                                                <n-select
-                                                    v-model:value="option.deck_size_select"
-                                                    :options="deckSizeOptions"
-                                                    multiple
-                                                    :placeholder="$t('deckOptionEditor.selectDeckSizes')"
-                                                    :render-tag="renderTag"
-                                                />
-                                            </n-form-item>
-                                        </div>
-                                    </n-collapse-item>
-
-                                    <!-- 高级规则 -->
-                                    <n-collapse-item :title="$t('deckOptionEditor.advancedRules')" name="advancedRules">
-                                        <div class="collapse-content">
-                                            <!-- 否定条件 -->
-                                            <n-form-item>
-                                                <n-switch v-model:value="option.not">
-                                                    <template #checked>{{ $t('deckOptionEditor.notEnabled') }}</template>
-                                                    <template #unchecked>{{ $t('deckOptionEditor.notDisabled') }}</template>
-                                                </n-switch>
-                                            </n-form-item>
-
-                                            <!-- 至少条件 -->
-                                            <n-form-item :label="$t('deckOptionEditor.atLeast')">
-                                                <n-space vertical size="small">
-                                                    <n-switch v-model:value="atLeastEnabled">
-                                                        <template #checked>{{ $t('deckOptionEditor.atLeastEnabled') }}</template>
-                                                        <template #unchecked>{{ $t('deckOptionEditor.atLeastDisabled') }}</template>
-                                                    </n-switch>
-
-                                                    <div v-if="atLeastEnabled">
-                                                        <n-space>
-                                                            <n-input-number
-                                                                v-model:value="option.atleast.min"
-                                                                :min="0"
-                                                                :max="50"
-                                                                :placeholder="$t('deckOptionEditor.minCount')"
-                                                                style="width: 120px"
-                                                            />
-                                                            <n-select
-                                                                v-model:value="option.atleast.types"
-                                                                :options="cardTypeOptions"
-                                                                multiple
-                                                                :placeholder="$t('deckOptionEditor.selectAtLeastTypes')"
-                                                                style="width: 200px"
-                                                            />
-                                                        </n-space>
-                                                    </div>
-                                                </n-space>
-                                            </n-form-item>
-                                        </div>
-                                    </n-collapse-item>
-                                </n-collapse>
+                                            </div>
+                                        </n-space>
+                                    </n-form-item>
+                                </n-space>
                             </n-form>
                         </div>
                     </div>
@@ -305,13 +441,13 @@ interface Props {
 
 interface DeckOption {
     id?: string;
+    name?: string;
     type?: string[];
     faction?: string[];
     trait?: string[];
     slot?: string[];
     uses?: string[];
     text?: string[];
-    text_exact?: string[];
     level?: {
         min: number;
         max: number;
@@ -323,6 +459,22 @@ interface DeckOption {
     atleast?: {
         min: number;
         types: string[];
+    };
+    selectionType?: 'none' | 'faction' | 'deckSize' | 'advanced';
+    option_select?: OptionSelectItem[];
+}
+
+interface OptionSelectItem {
+    id: string;
+    name?: string;
+    type?: string[];
+    faction?: string[];
+    trait?: string[];
+    slot?: string[];
+    uses?: string[];
+    level?: {
+        min: number;
+        max: number;
     };
 }
 
@@ -398,7 +550,15 @@ const deckSizeOptions = [
     { label: '25张', value: '25' },
     { label: '30张', value: '30' },
     { label: '35张', value: '35' },
-    { label: '40张', value: '40' }
+    { label: '40张', value: '40' },
+    { label: '50张', value: '50' }
+];
+
+const selectionTypeOptions = [
+    { label: '无选择机制 (正常筛选条件)', value: 'none' },
+    { label: '职阶选择 (Class Choice)', value: 'faction' },
+    { label: '牌库大小选择 (Deck Size)', value: 'deckSize' },
+    { label: '高级属性选择 (Advanced Attributes)', value: 'advanced' }
 ];
 
 // 自定义标签渲染
@@ -406,23 +566,120 @@ const renderTag = ({ option }: { option: any }) => {
     return h('span', { style: 'font-size: 12px;' }, option.label);
 };
 
+// 获取选项显示名称
+const getOptionDisplayName = (option: DeckOption) => {
+    if (option.name) {
+        return option.name;
+    }
+    if (option.id) {
+        return option.id;
+    }
+    const index = deckOptions.value.indexOf(option) + 1;
+    return `${t('deckOptionEditor.option')} ${index}`;
+};
+
+// ID变化时同步名称
+const syncNameFromId = (option: DeckOption) => {
+    if (option.id && !option.name) {
+        option.name = option.id;
+    }
+};
+
+// 子项ID变化时同步名称
+const syncItemNameFromId = (item: OptionSelectItem) => {
+    if (item.id && !item.name) {
+        item.name = item.id;
+    }
+};
+
+// 选择机制变化处理
+const onSelectionTypeChange = (option: DeckOption) => {
+    // 清除其他选择机制的数据
+    if (option.selectionType !== 'faction') {
+        option.faction_select = [];
+    }
+    if (option.selectionType !== 'deckSize') {
+        option.deck_size_select = [];
+    }
+    if (option.selectionType !== 'advanced') {
+        option.option_select = [];
+    }
+
+    // 设置特殊名称
+    if (option.selectionType === 'faction') {
+        option.name = 'Class Choice';
+    } else if (option.selectionType === 'deckSize') {
+        option.name = 'Deck Size';
+    } else if (option.selectionType === 'none' || !option.selectionType) {
+        // 无选择机制时，如果名称是特殊名称，则清空
+        if (option.name === 'Class Choice' || option.name === 'Deck Size') {
+            option.name = option.id || '';
+        }
+    }
+};
+
+// 添加高级属性选择项
+const addOptionSelectItem = (option: DeckOption) => {
+    if (!option.option_select) {
+        option.option_select = [];
+    }
+
+    const newItem: OptionSelectItem = {
+        id: `option_${option.option_select.length + 1}`,
+        name: '',
+        type: [],
+        faction: [],
+        trait: [],
+        slot: [],
+        uses: [],
+        level: { min: 0, max: 5 }
+    };
+
+    option.option_select.push(newItem);
+};
+
+// 删除高级属性选择项
+const removeOptionSelectItem = (option: DeckOption, index: number) => {
+    if (option.option_select && option.option_select.length > index) {
+        option.option_select.splice(index, 1);
+    }
+};
+
+// 格式化槽位显示
+const formatSlotDisplay = (slots: string[]) => {
+    return slots.map(slot => {
+        const slotOption = slotOptions.find(opt => opt.value === slot);
+        return slotOption ? slotOption.label.split(' ')[0] : slot;
+    }).join(', ');
+};
+
+// 格式化使用标记显示
+const formatUsesDisplay = (uses: string[]) => {
+    return uses.map(use => {
+        const useOption = usesOptions.find(opt => opt.value === use);
+        return useOption ? useOption.label.split(' ')[0] : use;
+    }).join(', ');
+};
+
 // 添加新的牌库选项
 const addDeckOption = () => {
     const newOption: DeckOption = {
         id: `option_${deckOptions.value.length + 1}`,
+        name: `option_${deckOptions.value.length + 1}`,
         type: [],
         faction: [],
         trait: [],
         slot: [],
         uses: [],
         text: [],
-        text_exact: [],
         level: { min: 0, max: 5 },
         limit: null,
         faction_select: [],
         deck_size_select: [],
         not: false,
-        atleast: null
+        atleast: null,
+        selectionType: 'none',
+        option_select: []
     };
 
     deckOptions.value.push(newOption);
@@ -507,24 +764,69 @@ const autoSaveOptions = () => {
         return;
     }
 
-    // 清理空数据
+    // 清理空数据并转换为最终格式
     const cleanedOptions = deckOptions.value.map(option => {
-        const cleaned: DeckOption = { ...option };
+        const cleaned: any = {};
 
-        // 移除空数组
-        Object.keys(cleaned).forEach(key => {
-            if (Array.isArray(cleaned[key]) && cleaned[key].length === 0) {
-                delete cleaned[key];
+        // 基础字段
+        if (option.id) cleaned.id = option.id;
+        if (option.name && option.name !== option.id) cleaned.name = option.name;
+
+        // 根据选择机制处理数据
+        if (option.selectionType === 'faction') {
+            cleaned.name = 'Class Choice';
+            if (option.faction_select && option.faction_select.length > 0) {
+                cleaned.faction_select = option.faction_select;
             }
-        });
+            if (option.level && (option.level.min !== 0 || option.level.max !== 5)) {
+                cleaned.level = { ...option.level };
+            }
+        } else if (option.selectionType === 'deckSize') {
+            cleaned.name = 'Deck Size';
+            if (option.deck_size_select && option.deck_size_select.length > 0) {
+                cleaned.deck_size_select = option.deck_size_select;
+            }
+            if (option.faction && option.faction.length > 0) {
+                cleaned.faction = option.faction;
+            }
+        } else if (option.selectionType === 'advanced') {
+            if (option.option_select && option.option_select.length > 0) {
+                cleaned.option_select = option.option_select.map(item => {
+                    const cleanedItem: any = { id: item.id };
+                    if (item.name && item.name !== item.id) cleanedItem.name = item.name;
+                    if (item.type && item.type.length > 0) cleanedItem.type = item.type;
+                    if (item.faction && item.faction.length > 0) cleanedItem.faction = item.faction;
+                    if (item.trait && item.trait.length > 0) cleanedItem.trait = item.trait;
+                    if (item.slot && item.slot.length > 0) cleanedItem.slot = item.slot;
+                    if (item.uses && item.uses.length > 0) cleanedItem.uses = item.uses;
+                    if (item.level && (item.level.min !== 0 || item.level.max !== 5)) {
+                        cleanedItem.level = { ...item.level };
+                    }
+                    return cleanedItem;
+                });
+            }
+        } else {
+            // 基础条件
+            if (option.type && option.type.length > 0) cleaned.type = option.type;
+            if (option.faction && option.faction.length > 0) cleaned.faction = option.faction;
+            if (option.trait && option.trait.length > 0) cleaned.trait = option.trait;
+            if (option.slot && option.slot.length > 0) cleaned.slot = option.slot;
+            if (option.uses && option.uses.length > 0) cleaned.uses = option.uses;
+            if (option.text && option.text.length > 0) cleaned.text = option.text;
+            if (option.level && (option.level.min !== 0 || option.level.max !== 5)) {
+                cleaned.level = { ...option.level };
+            }
+            if (option.limit) cleaned.limit = option.limit;
+        }
 
-        // 处理至少条件
-        if (!atLeastEnabled.value || !cleaned.atleast?.min) {
-            delete cleaned.atleast;
+        // 其他条件
+        if (option.not) cleaned.not = option.not;
+        if (atLeastEnabled.value && option.atleast && option.atleast.min) {
+            cleaned.atleast = { ...option.atleast };
         }
 
         return cleaned;
-    });
+    }).filter(option => Object.keys(option).length > 1); // 过滤掉空的选项
 
     emit('update-deck-options', cleanedOptions);
     // 自动保存时不显示消息，避免干扰用户
@@ -532,30 +834,69 @@ const autoSaveOptions = () => {
 
 // 生成最终的JSON预览
 const generateJsonPreview = () => {
+    // 使用与自动保存相同的清理逻辑
     const cleanedOptions = deckOptions.value.map(option => {
-        const cleaned: DeckOption = { ...option };
+        const cleaned: any = {};
 
-        // 移除空数组
-        Object.keys(cleaned).forEach(key => {
-            if (Array.isArray(cleaned[key]) && cleaned[key].length === 0) {
-                delete cleaned[key];
+        // 基础字段
+        if (option.id) cleaned.id = option.id;
+        if (option.name && option.name !== option.id) cleaned.name = option.name;
+
+        // 根据选择机制处理数据
+        if (option.selectionType === 'faction') {
+            cleaned.name = 'Class Choice';
+            if (option.faction_select && option.faction_select.length > 0) {
+                cleaned.faction_select = option.faction_select;
             }
-        });
-
-        // 处理至少条件
-        if (!atLeastEnabled.value || !cleaned.atleast?.min) {
-            delete cleaned.atleast;
+            if (option.level && (option.level.min !== 0 || option.level.max !== 5)) {
+                cleaned.level = { ...option.level };
+            }
+        } else if (option.selectionType === 'deckSize') {
+            cleaned.name = 'Deck Size';
+            if (option.deck_size_select && option.deck_size_select.length > 0) {
+                cleaned.deck_size_select = option.deck_size_select;
+            }
+            if (option.faction && option.faction.length > 0) {
+                cleaned.faction = option.faction;
+            }
+        } else if (option.selectionType === 'advanced') {
+            if (option.option_select && option.option_select.length > 0) {
+                cleaned.option_select = option.option_select.map(item => {
+                    const cleanedItem: any = { id: item.id };
+                    if (item.name && item.name !== item.id) cleanedItem.name = item.name;
+                    if (item.type && item.type.length > 0) cleanedItem.type = item.type;
+                    if (item.faction && item.faction.length > 0) cleanedItem.faction = item.faction;
+                    if (item.trait && item.trait.length > 0) cleanedItem.trait = item.trait;
+                    if (item.slot && item.slot.length > 0) cleanedItem.slot = item.slot;
+                    if (item.uses && item.uses.length > 0) cleanedItem.uses = item.uses;
+                    if (item.level && (item.level.min !== 0 || item.level.max !== 5)) {
+                        cleanedItem.level = { ...item.level };
+                    }
+                    return cleanedItem;
+                });
+            }
+        } else {
+            // 基础条件
+            if (option.type && option.type.length > 0) cleaned.type = option.type;
+            if (option.faction && option.faction.length > 0) cleaned.faction = option.faction;
+            if (option.trait && option.trait.length > 0) cleaned.trait = option.trait;
+            if (option.slot && option.slot.length > 0) cleaned.slot = option.slot;
+            if (option.uses && option.uses.length > 0) cleaned.uses = option.uses;
+            if (option.text && option.text.length > 0) cleaned.text = option.text;
+            if (option.level && (option.level.min !== 0 || option.level.max !== 5)) {
+                cleaned.level = { ...option.level };
+            }
+            if (option.limit) cleaned.limit = option.limit;
         }
 
-        // 移除空字符串
-        Object.keys(cleaned).forEach(key => {
-            if (cleaned[key] === '') {
-                delete cleaned[key];
-            }
-        });
+        // 其他条件
+        if (option.not) cleaned.not = option.not;
+        if (atLeastEnabled.value && option.atleast && option.atleast.min) {
+            cleaned.atleast = { ...option.atleast };
+        }
 
         return cleaned;
-    });
+    }).filter(option => Object.keys(option).length > 1); // 过滤掉空的选项
 
     try {
         finalJsonPreview.value = JSON.stringify(cleanedOptions, null, 2);
@@ -604,22 +945,47 @@ const loadFromCardData = () => {
     const options = props.cardData.deck_options || [];
 
     if (options.length > 0) {
-        deckOptions.value = options.map((option: DeckOption, index: number) => ({
-            id: option.id || `option_${index + 1}`,
-            type: option.type || [],
-            faction: option.faction || [],
-            trait: option.trait || [],
-            slot: option.slot || [],
-            uses: option.uses || [],
-            text: option.text || [],
-            text_exact: option.text_exact || [],
-            level: option.level || { min: 0, max: 5 },
-            limit: option.limit || null,
-            faction_select: option.faction_select || [],
-            deck_size_select: option.deck_size_select || [],
-            not: option.not || false,
-            atleast: option.atleast || null
-        }));
+        deckOptions.value = options.map((option: any, index: number) => {
+            const loadedOption: DeckOption = {
+                id: option.id || `option_${index + 1}`,
+                name: option.name || option.id || `option_${index + 1}`,
+                type: option.type || [],
+                faction: option.faction || [],
+                trait: option.trait || [],
+                slot: option.slot || [],
+                uses: option.uses || [],
+                text: option.text || [],
+                level: option.level || { min: 0, max: 5 },
+                limit: option.limit || null,
+                faction_select: option.faction_select || [],
+                deck_size_select: option.deck_size_select || [],
+                not: option.not || false,
+                atleast: option.atleast || null,
+                selectionType: 'none',
+                option_select: []
+            };
+
+            // 检测选择机制类型
+            if (option.faction_select && option.faction_select.length > 0) {
+                loadedOption.selectionType = 'faction';
+            } else if (option.deck_size_select && option.deck_size_select.length > 0) {
+                loadedOption.selectionType = 'deckSize';
+            } else if (option.option_select && option.option_select.length > 0) {
+                loadedOption.selectionType = 'advanced';
+                loadedOption.option_select = option.option_select.map((item: any) => ({
+                    id: item.id || `item_${index + 1}`,
+                    name: item.name || item.id || '',
+                    type: item.type || [],
+                    faction: item.faction || [],
+                    trait: item.trait || [],
+                    slot: item.slot || [],
+                    uses: item.uses || [],
+                    level: item.level || { min: 0, max: 5 }
+                }));
+            }
+
+            return loadedOption;
+        });
         console.log('📚 成功加载deck_options，共', deckOptions.value.length, '个选项');
     } else {
         deckOptions.value = [];
@@ -765,6 +1131,7 @@ if (shouldShowEditor.value) {
 .deck-option-card {
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
     border: 2px solid rgba(102, 126, 234, 0.2);
+    border-radius: 12px;
 }
 
 .deck-options-list {
@@ -775,48 +1142,53 @@ if (shouldShowEditor.value) {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid rgba(102, 126, 234, 0.1);
 }
 
 .empty-options {
-    padding: 20px;
+    padding: 40px 20px;
     text-align: center;
+    background: rgba(248, 250, 252, 0.5);
+    border-radius: 8px;
+    border: 1px dashed rgba(102, 126, 234, 0.3);
 }
 
 .options-container {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 20px;
 }
 
 .deck-option-item {
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
-    padding: 16px;
-    background: rgba(255, 255, 255, 0.8);
-    transition: all 0.2s ease;
+    border: 2px solid rgba(226, 232, 240, 0.8);
+    border-radius: 12px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.95);
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .deck-option-item:hover {
-    border-color: rgba(102, 126, 234, 0.3);
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+    border-color: rgba(102, 126, 234, 0.4);
+    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.15);
+    transform: translateY(-2px);
 }
 
 .option-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid rgba(226, 232, 240, 0.6);
 }
 
 .option-title {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
 }
 
 .option-actions {
@@ -825,27 +1197,121 @@ if (shouldShowEditor.value) {
 }
 
 .option-preview {
-    padding: 8px 0;
+    padding: 12px 0;
 }
 
 .option-editor {
-    margin-top: 16px;
+    margin-top: 20px;
 }
 
-.editor-section {
-    margin-bottom: 24px;
-    padding: 16px;
+/* 选择机制配置样式 */
+.selection-config {
+    margin: 16px 0;
+    padding: 20px;
     background: rgba(248, 250, 252, 0.8);
-    border-radius: 6px;
+    border-radius: 8px;
+    border: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+.config-section {
+    margin-bottom: 16px;
+}
+
+.config-section:last-child {
+    margin-bottom: 0;
+}
+
+/* 高级属性选择列表样式 */
+.option-select-list {
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.9);
+    overflow: hidden;
+}
+
+.list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: rgba(102, 126, 234, 0.05);
+    border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.empty-list {
+    padding: 20px;
+    text-align: center;
+}
+
+.option-items {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.option-item {
     border: 1px solid rgba(226, 232, 240, 0.6);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.95);
 }
 
-.section-title {
-    margin-bottom: 12px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid rgba(203, 213, 224, 0.5);
+.item-card {
+    border: none;
+    box-shadow: none;
 }
 
+.item-card :deep(.n-card__header) {
+    padding: 12px 16px 8px;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.4);
+}
+
+.item-header {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.item-content {
+    padding: 8px 16px 12px;
+}
+
+.item-content :deep(.n-form-item) {
+    margin-bottom: 8px;
+}
+
+.item-content :deep(.n-form-item:last-child) {
+    margin-bottom: 0;
+}
+
+/* 基础条件样式 */
+.basic-conditions {
+    margin: 20px 0;
+}
+
+.section-divider {
+    margin: 24px 0 16px;
+}
+
+.section-divider :deep(.n-divider__title) {
+    font-weight: 600;
+    color: #667eea;
+}
+
+/* 开关样式优化 */
+.option-editor :deep(.n-switch) {
+    border-radius: 16px;
+}
+
+.option-editor :deep(.n-switch__rail) {
+    background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e0 100%);
+}
+
+.option-editor :deep(.n-switch--checked .n-switch__rail) {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
 
 /* 响应式设计 */
 @media (max-width: 768px) {
@@ -861,93 +1327,61 @@ if (shouldShowEditor.value) {
         align-items: flex-start;
     }
 
-    .editor-section {
-        padding: 12px;
+    .item-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
     }
-}
 
-/* 折叠面板内容样式 */
-.collapse-content {
-    padding: 12px 0;
-}
+    .options-container {
+        gap: 16px;
+    }
 
-.collapse-content :deep(.n-form-item) {
-    margin-bottom: 12px;
-}
-
-.collapse-content :deep(.n-form-item:last-child) {
-    margin-bottom: 0;
+    .deck-option-item {
+        padding: 16px;
+    }
 }
 
 /* JSON预览区域 */
 .json-preview-section {
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
+    border: 2px solid rgba(226, 232, 240, 0.8);
+    border-radius: 12px;
     background: rgba(248, 250, 252, 0.8);
     overflow: hidden;
+    margin-top: 24px;
 }
 
 .json-preview-container {
     position: relative;
     border: 1px solid rgba(203, 213, 224, 0.5);
-    border-radius: 6px;
+    border-radius: 8px;
     background: #f8f9fa;
-    margin-top: 8px;
+    margin-top: 12px;
 }
 
 .preview-code {
-    max-height: 280px;
+    max-height: 320px;
     overflow-y: auto;
-    padding: 16px;
+    padding: 20px;
     margin: 0;
     background: transparent;
-    font-family: 'Courier New', monospace;
-    font-size: 12px;
-    line-height: 1.4;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.5;
     white-space: pre-wrap;
     word-wrap: break-word;
-}
-
-/* 折叠面板样式优化 */
-.option-editor :deep(.n-collapse) {
-    border: none;
-}
-
-.option-editor :deep(.n-collapse-item) {
-    border: 1px solid rgba(226, 232, 240, 0.8);
-    border-radius: 6px;
-    margin-bottom: 8px;
-    background: rgba(255, 255, 255, 0.9);
-    overflow: hidden;
-}
-
-.option-editor :deep(.n-collapse-item:last-child) {
-    margin-bottom: 0;
-}
-
-.option-editor :deep(.n-collapse-item__header) {
-    padding: 12px 16px;
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
-    border-bottom: 1px solid rgba(226, 232, 240, 0.5);
-}
-
-.option-editor :deep(.n-collapse-item__content) {
-    padding: 0 16px 16px;
-}
-
-.option-editor :deep(.n-collapse-item__content-wrapper) {
-    padding: 0;
+    color: #2d3748;
 }
 
 /* 动画效果 */
 .deck-option-item {
-    animation: fadeInUp 0.3s ease-out;
+    animation: fadeInUp 0.4s ease-out;
 }
 
 @keyframes fadeInUp {
     from {
         opacity: 0;
-        transform: translateY(10px);
+        transform: translateY(20px);
     }
     to {
         opacity: 1;
@@ -955,23 +1389,62 @@ if (shouldShowEditor.value) {
     }
 }
 
+/* 滚动条样式 */
+.option-items::-webkit-scrollbar {
+    width: 6px;
+}
+
+.option-items::-webkit-scrollbar-track {
+    background: rgba(226, 232, 240, 0.3);
+    border-radius: 3px;
+}
+
+.option-items::-webkit-scrollbar-thumb {
+    background: rgba(102, 126, 234, 0.4);
+    border-radius: 3px;
+}
+
+.option-items::-webkit-scrollbar-thumb:hover {
+    background: rgba(102, 126, 234, 0.6);
+}
+
+.preview-code::-webkit-scrollbar {
+    width: 8px;
+}
+
+.preview-code::-webkit-scrollbar-track {
+    background: rgba(226, 232, 240, 0.3);
+    border-radius: 4px;
+}
+
+.preview-code::-webkit-scrollbar-thumb {
+    background: rgba(102, 126, 234, 0.4);
+    border-radius: 4px;
+}
+
+.preview-code::-webkit-scrollbar-thumb:hover {
+    background: rgba(102, 126, 234, 0.6);
+}
+
 /* 响应式设计优化 */
 @media (max-width: 768px) {
     .json-preview-section {
-        margin-top: 16px;
+        margin-top: 20px;
     }
 
     .preview-code {
-        font-size: 11px;
+        font-size: 12px;
+        padding: 16px;
+    }
+
+    .selection-config {
+        padding: 16px;
+        margin: 12px 0;
+    }
+
+    .option-items {
         padding: 12px;
-    }
-
-    .option-editor :deep(.n-collapse-item__header) {
-        padding: 10px 12px;
-    }
-
-    .option-editor :deep(.n-collapse-item__content) {
-        padding: 0 12px 12px;
+        max-height: 300px;
     }
 }
 </style>
