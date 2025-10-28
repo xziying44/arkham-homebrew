@@ -18,9 +18,8 @@ from bin.deck_exporter import DeckExporter
 from bin.logger import logger_manager
 from bin.tts_card_converter import TTSCardConverter
 from bin.content_package_manager import ContentPackageManager
+from Card import Card
 
-if TYPE_CHECKING:
-    from Card import Card
 # 导入卡牌生成相关模块
 try:
     from ResourceManager import FontManager, ImageManager

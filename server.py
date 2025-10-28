@@ -699,27 +699,12 @@ def generate_card():
 
     # 检查版本号判断是否为双面卡牌
     version = json_data.get('version', '')
-    card_type = json_data.get('type', '')
-
-    cardback_filename = None
-    if card_type == '玩家卡背':
-        cardback_filename = 'cardback/player-back.jpg'
-    elif card_type == '遭遇卡背':
-        cardback_filename = 'cardback/encounter-back.jpg'
 
     card = None
     card_image = None
     back_image = None
 
-    if cardback_filename:
-        logger_manager.debug(f"加载卡背: {cardback_filename}")
-        # 从程序目录读取
-        cardback_path = os.path.join('.', cardback_filename)
-        # 如果是PyInstaller打包的程序
-        if hasattr(sys, '_MEIPASS'):
-            cardback_path = os.path.join(sys._MEIPASS, cardback_filename)
-        card_image = Image.open(cardback_path)
-    elif version == "2.0":
+    if version == "2.0":
         logger_manager.debug("生成双面卡牌")
         # 双面卡牌处理
         double_sided_result = current_workspace.generate_double_sided_card_image(json_data)
