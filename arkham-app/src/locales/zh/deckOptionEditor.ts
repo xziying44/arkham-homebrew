@@ -49,10 +49,20 @@ export default {
 
   // 选择机制
   selectionMechanism: '🎲 选择机制',
+  selectSelectionType: '请选择选择机制（只能选择一种）',
+  noneSelection: '无选择机制',
   factionSelect: '职阶选择',
   selectFactionForSelection: '选择可供选择的职阶',
   deckSizeSelect: '牌库大小选择',
   selectDeckSizes: '选择可选的牌库大小',
+  advancedSelect: '高级属性选择',
+  selectionTypeNames: {
+    faction: '职阶选择',
+    deckSize: '牌库大小',
+    advanced: '高级属性选择'
+  },
+  defaultAdvancedName: '高级属性选择',
+  newOptionItem: '选项 {index}',
 
   // 高级规则
   advancedRules: '⚙️ 高级规则',
@@ -69,6 +79,12 @@ export default {
   finalPreview: '📋 最终配置预览',
   copyJson: '复制JSON',
   refresh: '刷新',
+
+  // 验证消息
+  validation: {
+    nameRequired: '选项名称不能为空',
+    itemNameRequired: '选项项 "{itemId}" 的名称不能为空'
+  },
 
   // 消息提示
   messages: {

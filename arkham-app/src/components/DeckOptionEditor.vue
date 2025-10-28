@@ -101,7 +101,7 @@
                                     <n-select
                                         v-model:value="option.selectionType"
                                         :options="selectionTypeOptions"
-                                        placeholder="请选择选择机制（只能选择一种）"
+                                        :placeholder="$t('deckOptionEditor.selectSelectionType')"
                                         @update:value="onSelectionTypeChange(option)"
                                     />
                                 </n-form-item>
@@ -171,8 +171,8 @@
                                                     <n-card size="small" class="item-card">
                                                         <template #header>
                                                             <div class="item-header">
-                                                                <n-input v-model:value="item.id" placeholder="ID" size="tiny" style="width: 120px" @blur="syncItemNameFromId(item)" />
-                                                                <n-input v-model:value="item.name" placeholder="名称" size="tiny" style="width: 120px" />
+                                                                <n-input v-model:value="item.id" placeholder="ID" size="tiny" style="width: 100px" @blur="syncItemNameFromId(item)" />
+                                                                <n-input v-model:value="item.name" placeholder="名称（必填）" size="tiny" style="width: 140px" />
                                                                 <n-button size="tiny" type="error" @click="removeOptionSelectItem(option, itemIndex)">删除</n-button>
                                                             </div>
                                                         </template>
@@ -554,12 +554,12 @@ const deckSizeOptions = [
     { label: '50张', value: '50' }
 ];
 
-const selectionTypeOptions = [
-    { label: '无选择机制 (正常筛选条件)', value: 'none' },
-    { label: '职阶选择 (Class Choice)', value: 'faction' },
-    { label: '牌库大小选择 (Deck Size)', value: 'deckSize' },
-    { label: '高级属性选择 (Advanced Attributes)', value: 'advanced' }
-];
+const selectionTypeOptions = computed(() => [
+    { label: t('deckOptionEditor.noneSelection'), value: 'none' },
+    { label: t('deckOptionEditor.selectionTypeNames.faction'), value: 'faction' },
+    { label: t('deckOptionEditor.selectionTypeNames.deckSize'), value: 'deckSize' },
+    { label: t('deckOptionEditor.selectionTypeNames.advanced'), value: 'advanced' }
+]);
 
 // 自定义标签渲染
 const renderTag = ({ option }: { option: any }) => {
@@ -605,14 +605,22 @@ const onSelectionTypeChange = (option: DeckOption) => {
         option.option_select = [];
     }
 
-    // 设置特殊名称
+    // 根据当前语言自动设置name字段的值
     if (option.selectionType === 'faction') {
-        option.name = 'Class Choice';
+        option.name = t('deckOptionEditor.selectionTypeNames.faction');
     } else if (option.selectionType === 'deckSize') {
-        option.name = 'Deck Size';
+        option.name = t('deckOptionEditor.selectionTypeNames.deckSize');
+    } else if (option.selectionType === 'advanced') {
+        // 高级属性选择保持用户自定义名称，如果没有则设置默认值
+        if (!option.name || option.name === '') {
+            option.name = t('deckOptionEditor.defaultAdvancedName');
+        }
     } else if (option.selectionType === 'none' || !option.selectionType) {
-        // 无选择机制时，如果名称是特殊名称，则清空
-        if (option.name === 'Class Choice' || option.name === 'Deck Size') {
+        // 无选择机制时，如果名称是自动设置的名称，则清空
+        const factionName = t('deckOptionEditor.selectionTypeNames.faction');
+        const deckSizeName = t('deckOptionEditor.selectionTypeNames.deckSize');
+        const defaultAdvancedName = t('deckOptionEditor.defaultAdvancedName');
+        if (option.name === factionName || option.name === deckSizeName || option.name === defaultAdvancedName) {
             option.name = option.id || '';
         }
     }
@@ -624,9 +632,10 @@ const addOptionSelectItem = (option: DeckOption) => {
         option.option_select = [];
     }
 
+    const newIndex = option.option_select.length + 1;
     const newItem: OptionSelectItem = {
-        id: `option_${option.option_select.length + 1}`,
-        name: '',
+        id: `option_${newIndex}`,
+        name: t('deckOptionEditor.newOptionItem', { index: newIndex }),
         type: [],
         faction: [],
         trait: [],
@@ -708,9 +717,40 @@ const editOption = (index: number) => {
     atLeastEnabled.value = !!option.atleast;
 };
 
+// 验证选项数据
+const validateOption = (option: DeckOption): { isValid: boolean; message?: string } => {
+    // 验证基础名称
+    if (!option.name || option.name.trim() === '') {
+        return { isValid: false, message: t('deckOptionEditor.validation.nameRequired') };
+    }
+
+    // 验证高级属性选择
+    if (option.selectionType === 'advanced' && option.option_select) {
+        for (const item of option.option_select) {
+            if (!item.name || item.name.trim() === '') {
+                return {
+                    isValid: false,
+                    message: t('deckOptionEditor.validation.itemNameRequired', { itemId: item.id })
+                };
+            }
+        }
+    }
+
+    return { isValid: true };
+};
+
 // 保存选项
 const saveOption = (index: number) => {
     if (index >= 0 && index < deckOptions.value.length) {
+        const option = deckOptions.value[index];
+
+        // 验证选项数据
+        const validation = validateOption(option);
+        if (!validation.isValid) {
+            message.error(validation.message);
+            return;
+        }
+
         editingIndex.value = -1;
         editingBackup.value = null;
 
@@ -774,7 +814,7 @@ const autoSaveOptions = () => {
 
         // 根据选择机制处理数据
         if (option.selectionType === 'faction') {
-            cleaned.name = 'Class Choice';
+            cleaned.name = t('deckOptionEditor.selectionTypeNames.faction');
             if (option.faction_select && option.faction_select.length > 0) {
                 cleaned.faction_select = option.faction_select;
             }
@@ -782,7 +822,7 @@ const autoSaveOptions = () => {
                 cleaned.level = { ...option.level };
             }
         } else if (option.selectionType === 'deckSize') {
-            cleaned.name = 'Deck Size';
+            cleaned.name = t('deckOptionEditor.selectionTypeNames.deckSize');
             if (option.deck_size_select && option.deck_size_select.length > 0) {
                 cleaned.deck_size_select = option.deck_size_select;
             }
@@ -844,7 +884,7 @@ const generateJsonPreview = () => {
 
         // 根据选择机制处理数据
         if (option.selectionType === 'faction') {
-            cleaned.name = 'Class Choice';
+            cleaned.name = t('deckOptionEditor.selectionTypeNames.faction');
             if (option.faction_select && option.faction_select.length > 0) {
                 cleaned.faction_select = option.faction_select;
             }
@@ -852,7 +892,7 @@ const generateJsonPreview = () => {
                 cleaned.level = { ...option.level };
             }
         } else if (option.selectionType === 'deckSize') {
-            cleaned.name = 'Deck Size';
+            cleaned.name = t('deckOptionEditor.selectionTypeNames.deckSize');
             if (option.deck_size_select && option.deck_size_select.length > 0) {
                 cleaned.deck_size_select = option.deck_size_select;
             }
@@ -965,16 +1005,27 @@ const loadFromCardData = () => {
                 option_select: []
             };
 
-            // 检测选择机制类型
+            // 检测选择机制类型并设置正确的名称
             if (option.faction_select && option.faction_select.length > 0) {
                 loadedOption.selectionType = 'faction';
+                // 强制使用当前语言的名称，覆盖原来的name
+                loadedOption.name = t('deckOptionEditor.selectionTypeNames.faction');
             } else if (option.deck_size_select && option.deck_size_select.length > 0) {
                 loadedOption.selectionType = 'deckSize';
+                // 强制使用当前语言的名称，覆盖原来的name
+                loadedOption.name = t('deckOptionEditor.selectionTypeNames.deckSize');
             } else if (option.option_select && option.option_select.length > 0) {
                 loadedOption.selectionType = 'advanced';
+                // 高级属性选择：如果原来有自定义名称则保留，否则使用默认名称
+                if (!option.name || option.name.trim() === '') {
+                    loadedOption.name = t('deckOptionEditor.defaultAdvancedName');
+                } else {
+                    // 保持原来的自定义名称
+                    loadedOption.name = option.name;
+                }
                 loadedOption.option_select = option.option_select.map((item: any) => ({
                     id: item.id || `item_${index + 1}`,
-                    name: item.name || item.id || '',
+                    name: item.name || item.id || t('deckOptionEditor.newOptionItem', { index: index + 1 }),
                     type: item.type || [],
                     faction: item.faction || [],
                     trait: item.trait || [],

@@ -49,10 +49,20 @@ export default {
 
   // Selection mechanism
   selectionMechanism: '🎲 Selection Mechanism',
+  selectSelectionType: 'Please select selection mechanism (only one type allowed)',
+  noneSelection: 'No Selection Mechanism',
   factionSelect: 'Faction Select',
   selectFactionForSelection: 'Select selectable factions',
   deckSizeSelect: 'Deck Size Select',
   selectDeckSizes: 'Select selectable deck sizes',
+  advancedSelect: 'Advanced Attribute Select',
+  selectionTypeNames: {
+    faction: 'Class Choice',
+    deckSize: 'Deck Size',
+    advanced: 'Advanced Attributes'
+  },
+  defaultAdvancedName: 'Advanced Attributes',
+  newOptionItem: 'Option {index}',
 
   // Advanced rules
   advancedRules: '⚙️ Advanced Rules',
@@ -69,6 +79,12 @@ export default {
   finalPreview: '📋 Final Configuration Preview',
   copyJson: 'Copy JSON',
   refresh: 'Refresh',
+
+  // Validation messages
+  validation: {
+    nameRequired: 'Option name cannot be empty',
+    itemNameRequired: 'Item "{itemId}" name cannot be empty'
+  },
 
   // Messages
   messages: {
