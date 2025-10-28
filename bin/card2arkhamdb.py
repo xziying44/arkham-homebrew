@@ -228,6 +228,7 @@ class Card2ArkhamDBConverter:
             '🚶': '[rogue]',
             '🧘': '[mystic]',
             '🏕️': '[survivor]',
+            '🔵': '-',
         }
 
         result = text
