@@ -12,6 +12,59 @@
                 </n-space>
             </n-form-item>
 
+            <!-- 通用入场标记配置 - 所有卡牌类型都支持 -->
+            <n-form-item :label="$t('ttsScriptEditor.entryTokens.label')">
+                <n-space vertical size="medium">
+                    <!-- 入场标记列表 -->
+                    <div v-for="(use, index) in entryTokensConfig" :key="index" class="uses-config-row">
+                        <n-space align="center">
+                            <div class="uses-input-group">
+                                <n-text depth="3" style="font-size: 12px;">{{ $t('ttsScriptEditor.entryTokens.count')
+                                    }}</n-text>
+                                <n-input-number v-model:value="use.count" :min="0" :max="20" :step="1" size="small"
+                                    @update:value="onScriptConfigChange" />
+                            </div>
+                            <div class="uses-input-group">
+                                <n-text depth="3" style="font-size: 12px;">{{ $t('ttsScriptEditor.entryTokens.token')
+                                    }}</n-text>
+                                <n-select v-model:value="use.token" :options="computedTokenOptions"
+                                    :placeholder="$t('ttsScriptEditor.entryTokens.tokenPlaceholder')" style="width: 120px"
+                                    @update:value="(value) => onEntryTokenChange(index, value)" />
+                            </div>
+                            <div class="uses-input-group">
+                                <n-text depth="3" style="font-size: 12px;">{{ $t('ttsScriptEditor.entryTokens.type')
+                                    }}</n-text>
+                                <n-select v-model:value="use.type" :options="getUsesTypeOptions(use.token)"
+                                    :placeholder="$t('ttsScriptEditor.entryTokens.typePlaceholder')" style="width: 120px"
+                                    @update:value="onScriptConfigChange" />
+                            </div>
+                            <n-button @click="removeEntryToken(index)" size="small" type="error" quaternary>
+                                {{ $t('ttsScriptEditor.common.deleteBtn') }}
+                            </n-button>
+                        </n-space>
+                    </div>
+
+                    <!-- 添加入场标记 -->
+                    <n-button @click="addEntryToken" size="small" type="primary" dashed>
+                        {{ $t('ttsScriptEditor.entryTokens.addBtn') }}
+                    </n-button>
+                </n-space>
+            </n-form-item>
+
+            <!-- 游戏开始位置配置 - 所有卡牌类型都支持 -->
+            <n-form-item :label="$t('ttsScriptEditor.gameStart.label')">
+                <n-space>
+                    <n-switch v-model:value="gameStartConfig.startsInPlay" @update:value="onScriptConfigChange">
+                        <template #checked>{{ $t('ttsScriptEditor.gameStart.startsInPlay') }}</template>
+                        <template #unchecked>{{ $t('ttsScriptEditor.gameStart.startsInPlay') }}</template>
+                    </n-switch>
+                    <n-switch v-model:value="gameStartConfig.startsInHand" @update:value="onScriptConfigChange">
+                        <template #checked>{{ $t('ttsScriptEditor.gameStart.startsInHand') }}</template>
+                        <template #unchecked>{{ $t('ttsScriptEditor.gameStart.startsInHand') }}</template>
+                    </n-switch>
+                </n-space>
+            </n-form-item>
+
             <!-- 高级配置 - 仅支持的卡牌类型显示 -->
             <template v-if="hasAdvancedConfig">
                 <!-- 调查员专用配置 -->
@@ -112,48 +165,7 @@
                 </n-form-item>
             </template>
 
-            <!-- 支援卡/事件卡专用配置 -->
-            <template v-if="props.cardType === '支援卡' || props.cardType === '事件卡'">
-                <!-- Uses配置 -->
-                <n-form-item :label="$t('ttsScriptEditor.asset.usesLabel')">
-                    <n-space vertical size="medium">
-                        <!-- Uses列表 -->
-                        <div v-for="(use, index) in assetConfig.uses" :key="index" class="uses-config-row">
-                            <n-space align="center">
-                                <div class="uses-input-group">
-                                    <n-text depth="3" style="font-size: 12px;">{{ $t('ttsScriptEditor.asset.count')
-                                        }}</n-text>
-                                    <n-input-number v-model:value="use.count" :min="0" :max="20" :step="1" size="small"
-                                        @update:value="onScriptConfigChange" />
-                                </div>
-                                <div class="uses-input-group">
-                                    <n-text depth="3" style="font-size: 12px;">{{ $t('ttsScriptEditor.asset.token')
-                                        }}</n-text>
-                                    <n-select v-model:value="use.token" :options="computedTokenOptions"
-                                        :placeholder="$t('ttsScriptEditor.asset.tokenPlaceholder')" style="width: 120px"
-                                        @update:value="(value) => onTokenChange(index, value)" />
-                                </div>
-                                <div class="uses-input-group">
-                                    <n-text depth="3" style="font-size: 12px;">{{ $t('ttsScriptEditor.asset.type')
-                                        }}</n-text>
-                                    <n-select v-model:value="use.type" :options="getUsesTypeOptions(use.token)"
-                                        :placeholder="$t('ttsScriptEditor.asset.typePlaceholder')" style="width: 120px"
-                                        @update:value="onScriptConfigChange" />
-                                </div>
-                                <n-button @click="removeUse(index)" size="small" type="error" quaternary>
-                                    {{ $t('ttsScriptEditor.common.deleteBtn') }}
-                                </n-button>
-                            </n-space>
-                        </div>
-
-                        <!-- 添加Uses -->
-                        <n-button @click="addUse" size="small" type="primary" dashed>
-                            {{ $t('ttsScriptEditor.asset.addBtn') }}
-                        </n-button>
-                    </n-space>
-                </n-form-item>
-            </template>
-
+  
             <!-- 地点卡专用配置 -->
             <template v-if="props.cardType === '地点卡'">
                 <!-- 双面卡牌提示 -->
@@ -228,8 +240,9 @@
                     </n-space>
                 </n-form-item>
             </template>
+            </template>
 
-            <!-- 预览GMNotes -->
+            <!-- 预览GMNotes - 所有卡牌类型都显示 -->
             <n-form-item :label="$t('ttsScriptEditor.preview.label')">
                 <div class="gmnotes-preview">
                     <n-code :code="generatedGMNotes" language="json" :word-wrap="true" class="preview-code" />
@@ -246,10 +259,9 @@
                     </div>
                 </div>
             </n-form-item>
-            </template>
 
             <!-- 不支持高级配置的卡牌类型显示提示 -->
-            <template v-else>
+            <template v-if="!hasAdvancedConfig">
                 <n-alert type="info" :title="$t('ttsScriptEditor.basicConfig.title')">
                     {{ $t('ttsScriptEditor.basicConfig.description') }}
                 </n-alert>
@@ -322,6 +334,8 @@ interface TtsScriptData {
         locationConfig: LocationConfig;
         scriptConfig: ScriptConfig;
         signatureConfig: Array<{ id: string; name: string; count: number }>;
+        entryTokensConfig: UseConfig[]; // 通用入场标记配置
+        gameStartConfig: GameStartConfig; // 游戏开始位置配置
     };
 }
 
@@ -353,6 +367,11 @@ interface LocationConfig {
         connections: string[];
         uses: UseConfig[];
     };
+}
+
+interface GameStartConfig {
+    startsInPlay: boolean;
+    startsInHand: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -408,6 +427,15 @@ const phaseButtonConfig = ref<PhaseButtonConfig>({
 // 签名卡配置
 const signatureConfig = ref<Array<{ id: string; name: string; count: number }>>([]);
 const showSignatureSelector = ref(false);
+
+// 通用入场标记配置 - 所有卡牌类型都支持
+const entryTokensConfig = ref<UseConfig[]>([]);
+
+// 游戏开始位置配置 - 所有卡牌类型都支持
+const gameStartConfig = ref<GameStartConfig>({
+    startsInPlay: false,
+    startsInHand: false
+});
 
 // 职阶映射 (通常为内部数据，无需翻译)
 const classMapping: Record<string, string> = {
@@ -595,7 +623,12 @@ const generatedGMNotes = computed(() => {
         ...(currentEditingData.class && { class: classMapping[currentEditingData.class] || currentEditingData.class }),
         ...(currentEditingData.level != null && { level: currentEditingData.level }),
         ...(currentEditingData.cost != null && { cost: currentEditingData.cost }),
-        ...(currentEditingData.victory != null && { victory: currentEditingData.victory })
+        ...(currentEditingData.victory != null && { victory: currentEditingData.victory }),
+        // 通用入场标记配置 - 所有卡牌类型都支持
+        ...(entryTokensConfig.value.length > 0 && { uses: entryTokensConfig.value }),
+        // 游戏开始位置配置 - 所有卡牌类型都支持
+        ...(gameStartConfig.value.startsInPlay && { startsInPlay: true }),
+        ...(gameStartConfig.value.startsInHand && { startsInHand: true })
     };
 
     let gmNotesData: any;
@@ -637,8 +670,7 @@ const generatedGMNotes = computed(() => {
                     ...(props.cardData.willpowerIcons && { willpowerIcons: props.cardData.willpowerIcons }),
                     ...(props.cardData.intellectIcons && { intellectIcons: props.cardData.intellectIcons }),
                     ...(props.cardData.combatIcons && { combatIcons: props.cardData.combatIcons }),
-                    ...(props.cardData.agilityIcons && { agilityIcons: props.cardData.agilityIcons }),
-                    ...(assetConfig.value.uses.length > 0 && { uses: assetConfig.value.uses })
+                    ...(props.cardData.agilityIcons && { agilityIcons: props.cardData.agilityIcons })
                 };
                 break;
 
@@ -649,13 +681,26 @@ const generatedGMNotes = computed(() => {
                     ...(currentEditingData.victory != null && { victory: currentEditingData.victory })
                 };
 
-                // 只有当地点类型为"已揭示"时才添加uses字段
+                // 构建uses数组：线索值 + 通用入场标记
+                const usesArray = [];
+
+                // 只有当地点类型为"已揭示"时才添加线索值
                 if (currentEditingData.location_type === '已揭示') {
-                    locationData.uses = [{
+                    usesArray.push({
                         ...(isPerInvestigator.value ? { countPerInvestigator: clueCount.value } : { count: clueCount.value }),
                         type: 'Clue',
                         token: 'clue'
-                    }];
+                    });
+                }
+
+                // 添加通用入场标记配置
+                if (entryTokensConfig.value.length > 0) {
+                    usesArray.push(...entryTokensConfig.value);
+                }
+
+                // 如果有uses配置，添加到locationData中
+                if (usesArray.length > 0) {
+                    locationData.uses = usesArray;
                 }
 
                 // 双面卡牌特殊处理：根据正背面存储到不同字段
@@ -758,7 +803,9 @@ const ttsScriptData = computed((): TtsScriptData => ({
         assetConfig: assetConfig.value,
         locationConfig: locationConfig.value,
         scriptConfig: scriptConfig.value,
-        signatureConfig: signatureConfig.value
+        signatureConfig: signatureConfig.value,
+        entryTokensConfig: entryTokensConfig.value,
+        gameStartConfig: gameStartConfig.value
     }
 }));
 
@@ -773,6 +820,37 @@ const generateRandomId = () => {
     onScriptConfigChange();
 };
 
+// 通用入场标记配置方法
+// 添加入场标记
+const addEntryToken = () => {
+    entryTokensConfig.value.push({
+        count: 2,
+        type: 'Resource',
+        token: 'resource'
+    });
+    onScriptConfigChange();
+};
+
+// 删除入场标记
+const removeEntryToken = (index: number) => {
+    entryTokensConfig.value.splice(index, 1);
+    onScriptConfigChange();
+};
+
+// 入场标记令牌类型变化时自动更新type
+const onEntryTokenChange = (index: number, token: string) => {
+    const use = entryTokensConfig.value[index];
+    if (use) {
+        use.token = token;
+        const typeOptions = getUsesTypeOptions(token);
+        if (typeOptions.length > 0) {
+            use.type = typeOptions[0].value;
+        }
+        onScriptConfigChange();
+    }
+};
+
+// 为了向后兼容，保留原来的asset uses方法（用于支援卡/事件卡的现有配置加载）
 // 添加Uses配置
 const addUse = () => {
     assetConfig.value.uses.push({
@@ -1004,6 +1082,11 @@ const syncAttributesFromCardData = () => {
     }
     if ((props.cardType === '支援卡' || props.cardType === '事件卡') && currentEditingData.uses) {
         assetConfig.value.uses = [...currentEditingData.uses];
+        // 同时同步到通用入场标记配置
+        entryTokensConfig.value = [...currentEditingData.uses];
+    } else if (currentEditingData.uses) {
+        // 其他卡牌类型如果有uses字段，也同步到通用入场标记配置
+        entryTokensConfig.value = [...currentEditingData.uses];
     }
     if (props.cardType === '地点卡') {
         // 解析clues字段
@@ -1042,6 +1125,15 @@ const loadFromSavedConfig = (savedConfig: any) => {
         signatureConfig.value = [...savedConfig.signatureConfig];
         console.log('✅ 签名卡配置已加载:', signatureConfig.value.length, '张签名卡');
     }
+    // 加载新的通用配置
+    if (savedConfig?.entryTokensConfig) {
+        entryTokensConfig.value = [...savedConfig.entryTokensConfig];
+        console.log('✅ 入场标记配置已加载:', entryTokensConfig.value.length, '个标记');
+    }
+    if (savedConfig?.gameStartConfig) {
+        gameStartConfig.value = { ...savedConfig.gameStartConfig };
+        console.log('✅ 游戏开始位置配置已加载:', gameStartConfig.value);
+    }
 };
 
 // 从旧数据格式兼容加载
@@ -1064,6 +1156,19 @@ const loadFromLegacyFormat = (ttsScript: any) => {
             }
             if ((props.cardType === '支援卡' || props.cardType === '事件卡') && parsed.uses) {
                 assetConfig.value.uses = parsed.uses;
+                // 同时加载到通用入场标记配置中
+                entryTokensConfig.value = [...parsed.uses];
+            } else if (parsed.uses) {
+                // 其他卡牌类型如果有uses字段，也加载到通用入场标记配置中
+                entryTokensConfig.value = [...parsed.uses];
+            }
+
+            // 加载游戏开始位置配置（如果存在）
+            if (parsed.startsInPlay !== undefined) {
+                gameStartConfig.value.startsInPlay = parsed.startsInPlay;
+            }
+            if (parsed.startsInHand !== undefined) {
+                gameStartConfig.value.startsInHand = parsed.startsInHand;
             }
             if (props.cardType === '地点卡') {
                 // 加载地点卡配置

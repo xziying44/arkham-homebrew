@@ -9,6 +9,24 @@ export default {
     button: '🎲 Random',
   },
 
+  // Entry Token Config - Universal for all card types
+  entryTokens: {
+    label: '🎯 Entry Token Config',
+    count: 'Count',
+    token: 'Token',
+    tokenPlaceholder: 'Select token type',
+    type: 'Type',
+    typePlaceholder: 'Select marker type',
+    addBtn: '➕ Add Token Config',
+  },
+
+  // Game Start Position Config
+  gameStart: {
+    label: '🎮 Game Start Position',
+    startsInPlay: 'Starts in Play',
+    startsInHand: 'Starts in Hand',
+  },
+
   // Basic Config Section
   basicConfig: {
     title: 'ℹ️ Basic Configuration',
