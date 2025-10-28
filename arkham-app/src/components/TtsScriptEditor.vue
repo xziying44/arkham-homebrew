@@ -73,7 +73,7 @@
                 <n-form-item :label="$t('ttsScriptEditor.investigator.extraTokenLabel')">
                     <n-select v-model:value="investigatorConfig.extraToken" :options="computedExtraTokenOptions"
                         :placeholder="$t('ttsScriptEditor.investigator.extraTokenPlaceholder')"
-                        @update:value="onScriptConfigChange" />
+                        multiple :max-tag-count="3" @update:value="onScriptConfigChange" />
                 </n-form-item>
 
                 <!-- 四维属性 -->
@@ -344,7 +344,7 @@ interface ScriptConfig {
 }
 
 interface InvestigatorConfig {
-    extraToken: string;
+    extraToken: string[];
     willpowerIcons: number;
     intellectIcons: number;
     combatIcons: number;
@@ -391,7 +391,7 @@ const scriptConfig = ref<ScriptConfig>({
 
 // 调查员TTS配置
 const investigatorConfig = ref<InvestigatorConfig>({
-    extraToken: 'None',
+    extraToken: [],
     willpowerIcons: 3,
     intellectIcons: 3,
     combatIcons: 2,
@@ -505,7 +505,6 @@ const allowOnlyAlphaNumeric = (value: string) => /^[A-Za-z0-9]*$/.test(value);
 
 // --- 修改: 扩展extraToken选项 ---
 const computedExtraTokenOptions = computed(() => [
-    { label: t('ttsScriptEditor.options.extraToken.none'), value: 'None' },
     { label: t('ttsScriptEditor.options.extraToken.activate'), value: 'Activate' },
     { label: t('ttsScriptEditor.options.extraToken.engage'), value: 'Engage' },
     { label: t('ttsScriptEditor.options.extraToken.evade'), value: 'Evade' },
@@ -644,7 +643,9 @@ const generatedGMNotes = computed(() => {
                     intellectIcons: investigatorConfig.value.intellectIcons,
                     combatIcons: investigatorConfig.value.combatIcons,
                     agilityIcons: investigatorConfig.value.agilityIcons,
-                    extraToken: investigatorConfig.value.extraToken
+                    extraToken: investigatorConfig.value.extraToken.length > 0
+                        ? investigatorConfig.value.extraToken.join('|')
+                        : 'None'
                 };
 
                 // 添加签名卡配置
@@ -1102,7 +1103,12 @@ const loadFromSavedConfig = (savedConfig: any) => {
         console.log('✅ 脚本配置已加载');
     }
     if (savedConfig?.investigatorConfig) {
-        investigatorConfig.value = { ...savedConfig.investigatorConfig };
+        investigatorConfig.value = {
+            ...savedConfig.investigatorConfig,
+            extraToken: Array.isArray(savedConfig.investigatorConfig.extraToken)
+                ? savedConfig.investigatorConfig.extraToken
+                : (savedConfig.investigatorConfig.extraToken || 'None').split('|').filter(token => token && token !== 'None')
+        };
         console.log('✅ 调查员配置已加载');
     }
     if (savedConfig?.assetConfig) {
@@ -1147,7 +1153,7 @@ const loadFromLegacyFormat = (ttsScript: any) => {
             }
             if (props.cardType === '调查员') {
                 investigatorConfig.value = {
-                    extraToken: parsed.extraToken || 'None',
+                    extraToken: (parsed.extraToken || 'None').split('|').filter(token => token && token !== 'None'),
                     willpowerIcons: parsed.willpowerIcons || 3,
                     intellectIcons: parsed.intellectIcons || 3,
                     combatIcons: parsed.combatIcons || 2,
