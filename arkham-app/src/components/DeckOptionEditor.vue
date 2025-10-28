@@ -87,7 +87,7 @@
 
                         <!-- 选项编辑器 -->
                         <div v-else class="option-editor" :key="`editing-${index}`">
-                            <n-form :model="option" label-placement="left" label-width="100" size="small">
+                            <n-form :model="option" label-placement="left" size="small">
                                 <!-- ID和名称设置 -->
                                 <n-form-item label="选项ID">
                                     <n-input v-model:value="option.id" placeholder="自动生成或手动输入ID" @blur="syncNameFromId(option)" />
@@ -177,71 +177,191 @@
                                                             </div>
                                                         </template>
                                                         <div class="item-content">
-                                                            <!-- 基础过滤条件 -->
-                                                            <n-form-item label="卡牌类型">
-                                                                <n-select
-                                                                    v-model:value="item.type"
-                                                                    :options="cardTypeOptions"
-                                                                    multiple
-                                                                    placeholder="选择卡牌类型"
-                                                                    size="tiny"
-                                                                    :render-tag="renderTag"
-                                                                />
-                                                            </n-form-item>
-                                                            <n-form-item label="职阶">
-                                                                <n-select
-                                                                    v-model:value="item.faction"
-                                                                    :options="factionOptions"
-                                                                    multiple
-                                                                    placeholder="选择职阶"
-                                                                    size="tiny"
-                                                                    :render-tag="renderTag"
-                                                                />
-                                                            </n-form-item>
-                                                            <n-form-item label="特性">
-                                                                <n-dynamic-tags v-model:value="item.trait" placeholder="添加特性" size="tiny" />
-                                                            </n-form-item>
-                                                            <n-form-item label="槽位">
-                                                                <n-select
-                                                                    v-model:value="item.slot"
-                                                                    :options="slotOptions"
-                                                                    multiple
-                                                                    placeholder="选择槽位"
-                                                                    size="tiny"
-                                                                    :render-tag="renderTag"
-                                                                />
-                                                            </n-form-item>
-                                                            <n-form-item label="使用标记">
-                                                                <n-select
-                                                                    v-model:value="item.uses"
-                                                                    :options="usesOptions"
-                                                                    multiple
-                                                                    placeholder="选择使用标记"
-                                                                    size="tiny"
-                                                                    :render-tag="renderTag"
-                                                                />
-                                                            </n-form-item>
-                                                            <n-form-item label="等级范围">
-                                                                <n-space>
-                                                                    <n-input-number
-                                                                        v-model:value="item.level.min"
-                                                                        :min="0"
-                                                                        :max="10"
-                                                                        placeholder="最低"
-                                                                        size="tiny"
-                                                                        style="width: 80px"
-                                                                    />
-                                                                    <n-text>-</n-text>
-                                                                    <n-input-number
-                                                                        v-model:value="item.level.max"
-                                                                        :min="0"
-                                                                        :max="10"
-                                                                        placeholder="最高"
-                                                                        size="tiny"
-                                                                        style="width: 80px"
-                                                                    />
+                                                            <!-- 高级属性选项标签 -->
+                                                            <div class="advanced-option-tags">
+                                                                <n-space size="small" wrap>
+                                                                    <!-- 卡牌类型标签 -->
+                                                                    <n-tag
+                                                                        :type="hasAdvancedOptionValue(item, 'type') ? 'primary' : 'default'"
+                                                                        :closable="false"
+                                                                        checkable
+                                                                        :checked="advancedOptionTags[`${option.id || 'new'}_advanced_${itemIndex}`]?.type || hasAdvancedOptionValue(item, 'type')"
+                                                                        @update:checked="() => toggleAdvancedOptionTag(item, itemIndex, option, 'type')"
+                                                                        style="cursor: pointer;"
+                                                                    >
+                                                                        类型
+                                                                        <n-text v-if="hasAdvancedOptionValue(item, 'type')" depth="1" style="font-size: 10px; margin-left: 4px; font-weight: 500;">
+                                                                            ({{ item.type?.length || 0 }})
+                                                                        </n-text>
+                                                                    </n-tag>
+
+                                                                    <!-- 职阶标签 -->
+                                                                    <n-tag
+                                                                        :type="hasAdvancedOptionValue(item, 'faction') ? 'success' : 'default'"
+                                                                        :closable="false"
+                                                                        checkable
+                                                                        :checked="advancedOptionTags[`${option.id || 'new'}_advanced_${itemIndex}`]?.faction || hasAdvancedOptionValue(item, 'faction')"
+                                                                        @update:checked="() => toggleAdvancedOptionTag(item, itemIndex, option, 'faction')"
+                                                                        style="cursor: pointer;"
+                                                                    >
+                                                                        职阶
+                                                                        <n-text v-if="hasAdvancedOptionValue(item, 'faction')" depth="1" style="font-size: 10px; margin-left: 4px; font-weight: 500;">
+                                                                            ({{ item.faction?.length || 0 }})
+                                                                        </n-text>
+                                                                    </n-tag>
+
+                                                                    <!-- 特性标签 -->
+                                                                    <n-tag
+                                                                        :type="hasAdvancedOptionValue(item, 'trait') ? 'info' : 'default'"
+                                                                        :closable="false"
+                                                                        checkable
+                                                                        :checked="advancedOptionTags[`${option.id || 'new'}_advanced_${itemIndex}`]?.trait || hasAdvancedOptionValue(item, 'trait')"
+                                                                        @update:checked="() => toggleAdvancedOptionTag(item, itemIndex, option, 'trait')"
+                                                                        style="cursor: pointer;"
+                                                                    >
+                                                                        特性
+                                                                        <n-text v-if="hasAdvancedOptionValue(item, 'trait')" depth="1" style="font-size: 10px; margin-left: 4px; font-weight: 500;">
+                                                                            ({{ item.trait?.length || 0 }})
+                                                                        </n-text>
+                                                                    </n-tag>
+
+                                                                    <!-- 槽位标签 -->
+                                                                    <n-tag
+                                                                        :type="hasAdvancedOptionValue(item, 'slot') ? 'warning' : 'default'"
+                                                                        :closable="false"
+                                                                        checkable
+                                                                        :checked="advancedOptionTags[`${option.id || 'new'}_advanced_${itemIndex}`]?.slot || hasAdvancedOptionValue(item, 'slot')"
+                                                                        @update:checked="() => toggleAdvancedOptionTag(item, itemIndex, option, 'slot')"
+                                                                        style="cursor: pointer;"
+                                                                    >
+                                                                        槽位
+                                                                        <n-text v-if="hasAdvancedOptionValue(item, 'slot')" depth="1" style="font-size: 10px; margin-left: 4px; font-weight: 500;">
+                                                                            ({{ item.slot?.length || 0 }})
+                                                                        </n-text>
+                                                                    </n-tag>
+
+                                                                    <!-- 使用标记标签 -->
+                                                                    <n-tag
+                                                                        :type="hasAdvancedOptionValue(item, 'uses') ? 'error' : 'default'"
+                                                                        :closable="false"
+                                                                        checkable
+                                                                        :checked="advancedOptionTags[`${option.id || 'new'}_advanced_${itemIndex}`]?.uses || hasAdvancedOptionValue(item, 'uses')"
+                                                                        @update:checked="() => toggleAdvancedOptionTag(item, itemIndex, option, 'uses')"
+                                                                        style="cursor: pointer;"
+                                                                    >
+                                                                        使用
+                                                                        <n-text v-if="hasAdvancedOptionValue(item, 'uses')" depth="1" style="font-size: 10px; margin-left: 4px; font-weight: 500;">
+                                                                            ({{ item.uses?.length || 0 }})
+                                                                        </n-text>
+                                                                    </n-tag>
+
+                                                                    <!-- 等级范围标签 -->
+                                                                    <n-tag
+                                                                        :type="hasAdvancedOptionValue(item, 'level') ? 'warning' : 'default'"
+                                                                        :closable="false"
+                                                                        checkable
+                                                                        :checked="advancedOptionTags[`${option.id || 'new'}_advanced_${itemIndex}`]?.level || hasAdvancedOptionValue(item, 'level')"
+                                                                        @update:checked="() => toggleAdvancedOptionTag(item, itemIndex, option, 'level')"
+                                                                        style="cursor: pointer;"
+                                                                    >
+                                                                        等级
+                                                                        <n-text v-if="hasAdvancedOptionValue(item, 'level')" depth="1" style="font-size: 10px; margin-left: 4px; font-weight: 500;">
+                                                                            ({{ item.level?.min || 0 }}-{{ item.level?.max || 5 }})
+                                                                        </n-text>
+                                                                    </n-tag>
                                                                 </n-space>
-                                                            </n-form-item>
+                                                            </div>
+
+                                                            <!-- 展开的高级选项配置 -->
+                                                            <div v-if="advancedOptionTags[`${option.id || 'new'}_advanced_${itemIndex}`]" class="expanded-advanced-options">
+                                                                <!-- 卡牌类型 -->
+                                                                <div v-show="advancedOptionTags[`${option.id || 'new'}_advanced_${itemIndex}`]?.type" class="advanced-option-config">
+                                                                    <n-form-item label="类型">
+                                                                        <n-select
+                                                                            v-model:value="item.type"
+                                                                            :options="cardTypeOptions"
+                                                                            multiple
+                                                                            placeholder="选择卡牌类型"
+                                                                            size="tiny"
+                                                                            :render-tag="renderTag"
+                                                                        />
+                                                                    </n-form-item>
+                                                                </div>
+
+                                                                <!-- 职阶 -->
+                                                                <div v-show="advancedOptionTags[`${option.id || 'new'}_advanced_${itemIndex}`]?.faction" class="advanced-option-config">
+                                                                    <n-form-item label="职阶">
+                                                                        <n-select
+                                                                            v-model:value="item.faction"
+                                                                            :options="factionOptions"
+                                                                            multiple
+                                                                            placeholder="选择职阶"
+                                                                            size="tiny"
+                                                                            :render-tag="renderTag"
+                                                                        />
+                                                                    </n-form-item>
+                                                                </div>
+
+                                                                <!-- 特性 -->
+                                                                <div v-show="advancedOptionTags[`${option.id || 'new'}_advanced_${itemIndex}`]?.trait" class="advanced-option-config">
+                                                                    <n-form-item label="特性">
+                                                                        <n-dynamic-tags v-model:value="item.trait" placeholder="添加特性" size="tiny" />
+                                                                    </n-form-item>
+                                                                </div>
+
+                                                                <!-- 槽位 -->
+                                                                <div v-show="advancedOptionTags[`${option.id || 'new'}_advanced_${itemIndex}`]?.slot" class="advanced-option-config">
+                                                                    <n-form-item label="槽位">
+                                                                        <n-select
+                                                                            v-model:value="item.slot"
+                                                                            :options="slotOptions"
+                                                                            multiple
+                                                                            placeholder="选择槽位"
+                                                                            size="tiny"
+                                                                            :render-tag="renderTag"
+                                                                        />
+                                                                    </n-form-item>
+                                                                </div>
+
+                                                                <!-- 使用标记 -->
+                                                                <div v-show="advancedOptionTags[`${option.id || 'new'}_advanced_${itemIndex}`]?.uses" class="advanced-option-config">
+                                                                    <n-form-item label="使用">
+                                                                        <n-select
+                                                                            v-model:value="item.uses"
+                                                                            :options="usesOptions"
+                                                                            multiple
+                                                                            placeholder="选择使用标记"
+                                                                            size="tiny"
+                                                                            :render-tag="renderTag"
+                                                                        />
+                                                                    </n-form-item>
+                                                                </div>
+
+                                                                <!-- 等级范围 -->
+                                                                <div v-show="advancedOptionTags[`${option.id || 'new'}_advanced_${itemIndex}`]?.level" class="advanced-option-config">
+                                                                    <n-form-item label="等级">
+                                                                        <n-space>
+                                                                            <n-input-number
+                                                                                v-model:value="item.level.min"
+                                                                                :min="0"
+                                                                                :max="10"
+                                                                                placeholder="最低"
+                                                                                size="tiny"
+                                                                                style="width: 80px"
+                                                                            />
+                                                                            <n-text>-</n-text>
+                                                                            <n-input-number
+                                                                                v-model:value="item.level.max"
+                                                                                :min="0"
+                                                                                :max="10"
+                                                                                placeholder="最高"
+                                                                                size="tiny"
+                                                                                style="width: 80px"
+                                                                            />
+                                                                        </n-space>
+                                                                    </n-form-item>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </n-card>
                                                 </div>
@@ -256,93 +376,234 @@
                                         <n-text strong>基础条件</n-text>
                                     </n-divider>
 
-                                    <!-- 适合窄布局的单列显示 -->
-                                    <div style="display: flex; flex-direction: column; gap: 16px;">
+                                    <!-- 基础条件标签 -->
+                                    <div class="basic-condition-tags">
+                                        <n-space size="small" wrap>
+                                            <!-- 卡牌类型标签 -->
+                                            <n-tag
+                                                :type="hasBasicConditionValue(option, 'type') ? 'primary' : 'default'"
+                                                :closable="false"
+                                                checkable
+                                                :checked="basicConditionTags[`${option.id || 'new'}_basic_tags`]?.type || hasBasicConditionValue(option, 'type')"
+                                                @update:checked="() => toggleBasicConditionTag(option, 'type')"
+                                                style="cursor: pointer;"
+                                            >
+                                                {{ $t('deckOptionEditor.cardType') }}
+                                                <n-text v-if="hasBasicConditionValue(option, 'type')" depth="1" style="font-size: 10px; margin-left: 4px; font-weight: 500;">
+                                                    ({{ option.type?.length || 0 }})
+                                                </n-text>
+                                            </n-tag>
+
+                                            <!-- 职阶标签 -->
+                                            <n-tag
+                                                :type="hasBasicConditionValue(option, 'faction') ? 'success' : 'default'"
+                                                :closable="false"
+                                                checkable
+                                                :checked="basicConditionTags[`${option.id || 'new'}_basic_tags`]?.faction || hasBasicConditionValue(option, 'faction')"
+                                                @update:checked="() => toggleBasicConditionTag(option, 'faction')"
+                                                style="cursor: pointer;"
+                                            >
+                                                {{ $t('deckOptionEditor.faction') }}
+                                                <n-text v-if="hasBasicConditionValue(option, 'faction')" depth="1" style="font-size: 10px; margin-left: 4px; font-weight: 500;">
+                                                    ({{ option.faction?.length || 0 }})
+                                                </n-text>
+                                            </n-tag>
+
+                                            <!-- 特性标签 -->
+                                            <n-tag
+                                                :type="hasBasicConditionValue(option, 'trait') ? 'info' : 'default'"
+                                                :closable="false"
+                                                checkable
+                                                :checked="basicConditionTags[`${option.id || 'new'}_basic_tags`]?.trait || hasBasicConditionValue(option, 'trait')"
+                                                @update:checked="() => toggleBasicConditionTag(option, 'trait')"
+                                                style="cursor: pointer;"
+                                            >
+                                                {{ $t('deckOptionEditor.traits') }}
+                                                <n-text v-if="hasBasicConditionValue(option, 'trait')" depth="1" style="font-size: 10px; margin-left: 4px; font-weight: 500;">
+                                                    ({{ option.trait?.length || 0 }})
+                                                </n-text>
+                                            </n-tag>
+
+                                            <!-- 槽位标签 -->
+                                            <n-tag
+                                                :type="hasBasicConditionValue(option, 'slot') ? 'warning' : 'default'"
+                                                :closable="false"
+                                                checkable
+                                                :checked="basicConditionTags[`${option.id || 'new'}_basic_tags`]?.slot || hasBasicConditionValue(option, 'slot')"
+                                                @update:checked="() => toggleBasicConditionTag(option, 'slot')"
+                                                style="cursor: pointer;"
+                                            >
+                                                {{ $t('deckOptionEditor.slots') }}
+                                                <n-text v-if="hasBasicConditionValue(option, 'slot')" depth="1" style="font-size: 10px; margin-left: 4px; font-weight: 500;">
+                                                    ({{ option.slot?.length || 0 }})
+                                                </n-text>
+                                            </n-tag>
+
+                                            <!-- 使用标记标签 -->
+                                            <n-tag
+                                                :type="hasBasicConditionValue(option, 'uses') ? 'error' : 'default'"
+                                                :closable="false"
+                                                checkable
+                                                :checked="basicConditionTags[`${option.id || 'new'}_basic_tags`]?.uses || hasBasicConditionValue(option, 'uses')"
+                                                @update:checked="() => toggleBasicConditionTag(option, 'uses')"
+                                                style="cursor: pointer;"
+                                            >
+                                                {{ $t('deckOptionEditor.uses') }}
+                                                <n-text v-if="hasBasicConditionValue(option, 'uses')" depth="1" style="font-size: 10px; margin-left: 4px; font-weight: 500;">
+                                                    ({{ option.uses?.length || 0 }})
+                                                </n-text>
+                                            </n-tag>
+
+                                            <!-- 文本匹配标签 -->
+                                            <n-tag
+                                                :type="hasBasicConditionValue(option, 'text') ? 'info' : 'default'"
+                                                :closable="false"
+                                                checkable
+                                                :checked="basicConditionTags[`${option.id || 'new'}_basic_tags`]?.text || hasBasicConditionValue(option, 'text')"
+                                                @update:checked="() => toggleBasicConditionTag(option, 'text')"
+                                                style="cursor: pointer;"
+                                            >
+                                                {{ $t('deckOptionEditor.textContains') }}
+                                                <n-text v-if="hasBasicConditionValue(option, 'text')" depth="1" style="font-size: 10px; margin-left: 4px; font-weight: 500;">
+                                                    ({{ option.text?.length || 0 }})
+                                                </n-text>
+                                            </n-tag>
+
+                                            <!-- 等级范围标签 -->
+                                            <n-tag
+                                                :type="hasBasicConditionValue(option, 'level') ? 'warning' : 'default'"
+                                                :closable="false"
+                                                checkable
+                                                :checked="basicConditionTags[`${option.id || 'new'}_basic_tags`]?.level || hasBasicConditionValue(option, 'level')"
+                                                @update:checked="() => toggleBasicConditionTag(option, 'level')"
+                                                style="cursor: pointer;"
+                                            >
+                                                {{ $t('deckOptionEditor.levelRange') }}
+                                                <n-text v-if="hasBasicConditionValue(option, 'level')" depth="1" style="font-size: 10px; margin-left: 4px; font-weight: 500;">
+                                                    ({{ option.level?.min || 0 }}-{{ option.level?.max || 5 }})
+                                                </n-text>
+                                            </n-tag>
+
+                                            <!-- 数量限制标签 -->
+                                            <n-tag
+                                                :type="hasBasicConditionValue(option, 'limit') ? 'error' : 'default'"
+                                                :closable="false"
+                                                checkable
+                                                :checked="basicConditionTags[`${option.id || 'new'}_basic_tags`]?.limit || hasBasicConditionValue(option, 'limit')"
+                                                @update:checked="() => toggleBasicConditionTag(option, 'limit')"
+                                                style="cursor: pointer;"
+                                            >
+                                                {{ $t('deckOptionEditor.limit') }}
+                                                <n-text v-if="hasBasicConditionValue(option, 'limit')" depth="1" style="font-size: 10px; margin-left: 4px; font-weight: 500;">
+                                                    ({{ option.limit }})
+                                                </n-text>
+                                            </n-tag>
+                                        </n-space>
+                                    </div>
+
+                                    <!-- 展开的条件配置 -->
+                                    <div v-if="basicConditionTags[`${option.id || 'new'}_basic_tags`]" class="expanded-conditions">
                                         <!-- 卡牌类型 -->
-                                        <n-form-item :label="$t('deckOptionEditor.cardType')">
-                                            <n-select
-                                                v-model:value="option.type"
-                                                :options="cardTypeOptions"
-                                                multiple
-                                                :placeholder="$t('deckOptionEditor.selectCardTypes')"
-                                                :render-tag="renderTag"
-                                            />
-                                        </n-form-item>
+                                        <div v-show="basicConditionTags[`${option.id || 'new'}_basic_tags`]?.type" class="condition-config">
+                                            <n-form-item :label="$t('deckOptionEditor.cardType')">
+                                                <n-select
+                                                    v-model:value="option.type"
+                                                    :options="cardTypeOptions"
+                                                    multiple
+                                                    :placeholder="$t('deckOptionEditor.selectCardTypes')"
+                                                    :render-tag="renderTag"
+                                                />
+                                            </n-form-item>
+                                        </div>
 
                                         <!-- 职阶 -->
-                                        <n-form-item :label="$t('deckOptionEditor.faction')">
-                                            <n-select
-                                                v-model:value="option.faction"
-                                                :options="factionOptions"
-                                                multiple
-                                                :placeholder="$t('deckOptionEditor.selectFactions')"
-                                                :render-tag="renderTag"
-                                            />
-                                        </n-form-item>
+                                        <div v-show="basicConditionTags[`${option.id || 'new'}_basic_tags`]?.faction" class="condition-config">
+                                            <n-form-item :label="$t('deckOptionEditor.faction')">
+                                                <n-select
+                                                    v-model:value="option.faction"
+                                                    :options="factionOptions"
+                                                    multiple
+                                                    :placeholder="$t('deckOptionEditor.selectFactions')"
+                                                    :render-tag="renderTag"
+                                                />
+                                            </n-form-item>
+                                        </div>
 
                                         <!-- 特性 -->
-                                        <n-form-item :label="$t('deckOptionEditor.traits')">
-                                            <n-dynamic-tags v-model:value="option.trait" :placeholder="$t('deckOptionEditor.addTrait')" />
-                                        </n-form-item>
+                                        <div v-show="basicConditionTags[`${option.id || 'new'}_basic_tags`]?.trait" class="condition-config">
+                                            <n-form-item :label="$t('deckOptionEditor.traits')">
+                                                <n-dynamic-tags v-model:value="option.trait" :placeholder="$t('deckOptionEditor.addTrait')" />
+                                            </n-form-item>
+                                        </div>
 
                                         <!-- 槽位 -->
-                                        <n-form-item :label="$t('deckOptionEditor.slots')">
-                                            <n-select
-                                                v-model:value="option.slot"
-                                                :options="slotOptions"
-                                                multiple
-                                                :placeholder="$t('deckOptionEditor.selectSlots')"
-                                                :render-tag="renderTag"
-                                            />
-                                        </n-form-item>
+                                        <div v-show="basicConditionTags[`${option.id || 'new'}_basic_tags`]?.slot" class="condition-config">
+                                            <n-form-item :label="$t('deckOptionEditor.slots')">
+                                                <n-select
+                                                    v-model:value="option.slot"
+                                                    :options="slotOptions"
+                                                    multiple
+                                                    :placeholder="$t('deckOptionEditor.selectSlots')"
+                                                    :render-tag="renderTag"
+                                                />
+                                            </n-form-item>
+                                        </div>
 
                                         <!-- 使用标记 -->
-                                        <n-form-item :label="$t('deckOptionEditor.uses')">
-                                            <n-select
-                                                v-model:value="option.uses"
-                                                :options="usesOptions"
-                                                multiple
-                                                :placeholder="$t('deckOptionEditor.selectUses')"
-                                                :render-tag="renderTag"
-                                            />
-                                        </n-form-item>
+                                        <div v-show="basicConditionTags[`${option.id || 'new'}_basic_tags`]?.uses" class="condition-config">
+                                            <n-form-item :label="$t('deckOptionEditor.uses')">
+                                                <n-select
+                                                    v-model:value="option.uses"
+                                                    :options="usesOptions"
+                                                    multiple
+                                                    :placeholder="$t('deckOptionEditor.selectUses')"
+                                                    :render-tag="renderTag"
+                                                />
+                                            </n-form-item>
+                                        </div>
 
                                         <!-- 文本匹配 -->
-                                        <n-form-item :label="$t('deckOptionEditor.textContains')">
-                                            <n-dynamic-tags v-model:value="option.text" :placeholder="$t('deckOptionEditor.addText')" />
-                                        </n-form-item>
+                                        <div v-show="basicConditionTags[`${option.id || 'new'}_basic_tags`]?.text" class="condition-config">
+                                            <n-form-item :label="$t('deckOptionEditor.textContains')">
+                                                <n-dynamic-tags v-model:value="option.text" :placeholder="$t('deckOptionEditor.addText')" />
+                                            </n-form-item>
+                                        </div>
 
                                         <!-- 等级范围 -->
-                                        <n-form-item :label="$t('deckOptionEditor.levelRange')">
-                                            <n-space>
-                                                <n-input-number
-                                                    v-model:value="option.level.min"
-                                                    :min="0"
-                                                    :max="10"
-                                                    :placeholder="$t('deckOptionEditor.minLevel')"
-                                                    style="width: 100px"
-                                                />
-                                                <n-text>-</n-text>
-                                                <n-input-number
-                                                    v-model:value="option.level.max"
-                                                    :min="0"
-                                                    :max="10"
-                                                    :placeholder="$t('deckOptionEditor.maxLevel')"
-                                                    style="width: 100px"
-                                                />
-                                            </n-space>
-                                        </n-form-item>
+                                        <div v-show="basicConditionTags[`${option.id || 'new'}_basic_tags`]?.level" class="condition-config">
+                                            <n-form-item :label="$t('deckOptionEditor.levelRange')">
+                                                <n-space>
+                                                    <n-input-number
+                                                        v-model:value="option.level.min"
+                                                        :min="0"
+                                                        :max="10"
+                                                        :placeholder="$t('deckOptionEditor.minLevel')"
+                                                        style="width: 100px"
+                                                    />
+                                                    <n-text>-</n-text>
+                                                    <n-input-number
+                                                        v-model:value="option.level.max"
+                                                        :min="0"
+                                                        :max="10"
+                                                        :placeholder="$t('deckOptionEditor.maxLevel')"
+                                                        style="width: 100px"
+                                                    />
+                                                </n-space>
+                                            </n-form-item>
+                                        </div>
 
                                         <!-- 数量限制 -->
-                                        <n-form-item :label="$t('deckOptionEditor.limit')">
-                                            <n-input-number
-                                                v-model:value="option.limit"
-                                                :min="0"
-                                                :max="50"
-                                                :placeholder="$t('deckOptionEditor.limitPlaceholder')"
-                                                style="width: 150px"
-                                            />
-                                        </n-form-item>
+                                        <div v-show="basicConditionTags[`${option.id || 'new'}_basic_tags`]?.limit" class="condition-config">
+                                            <n-form-item :label="$t('deckOptionEditor.limit')">
+                                                <n-input-number
+                                                    v-model:value="option.limit"
+                                                    :min="0"
+                                                    :max="50"
+                                                    :placeholder="$t('deckOptionEditor.limitPlaceholder')"
+                                                    style="width: 150px"
+                                                />
+                                            </n-form-item>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -504,6 +765,12 @@ const isSavingFromEditor = ref(false); // 添加标志防止保存时触发重�
 
 // 折叠面板状态
 const expandedSections = ref<string[]>([]);
+
+// 基础条件标签状态
+const basicConditionTags = ref<Record<string, boolean>>({});
+
+// 高级属性选项标签状态
+const advancedOptionTags = ref<Record<string, boolean>>({});
 
 // JSON预览相关
 const finalJsonPreview = ref('');
@@ -668,6 +935,100 @@ const formatUsesDisplay = (uses: string[]) => {
         const useOption = usesOptions.find(opt => opt.value === use);
         return useOption ? useOption.label.split(' ')[0] : use;
     }).join(', ');
+};
+
+// 检查基础条件是否有值
+const hasBasicConditionValue = (option: DeckOption, conditionType: string): boolean => {
+    switch (conditionType) {
+        case 'type':
+            return option.type && option.type.length > 0;
+        case 'faction':
+            return option.faction && option.faction.length > 0;
+        case 'trait':
+            return option.trait && option.trait.length > 0;
+        case 'slot':
+            return option.slot && option.slot.length > 0;
+        case 'uses':
+            return option.uses && option.uses.length > 0;
+        case 'text':
+            return option.text && option.text.length > 0;
+        case 'level':
+            return option.level && (option.level.min !== 0 || option.level.max !== 5);
+        case 'limit':
+            return option.limit !== null && option.limit !== undefined;
+        default:
+            return false;
+    }
+};
+
+// 初始化基础条件标签状态
+const initializeBasicConditionTags = (option: DeckOption) => {
+    const optionKey = `${option.id || 'new'}_basic_tags`;
+    if (!basicConditionTags.value[optionKey]) {
+        basicConditionTags.value[optionKey] = {
+            type: hasBasicConditionValue(option, 'type'),
+            faction: hasBasicConditionValue(option, 'faction'),
+            trait: hasBasicConditionValue(option, 'trait'),
+            slot: hasBasicConditionValue(option, 'slot'),
+            uses: hasBasicConditionValue(option, 'uses'),
+            text: hasBasicConditionValue(option, 'text'),
+            level: hasBasicConditionValue(option, 'level'),
+            limit: hasBasicConditionValue(option, 'limit')
+        };
+    }
+};
+
+// 切换基础条件标签
+const toggleBasicConditionTag = (option: DeckOption, conditionType: string) => {
+    const optionKey = `${option.id || 'new'}_basic_tags`;
+    if (!basicConditionTags.value[optionKey]) {
+        initializeBasicConditionTags(option);
+    }
+    basicConditionTags.value[optionKey][conditionType] = !basicConditionTags.value[optionKey][conditionType];
+};
+
+// 检查高级属性选项是否有值
+const hasAdvancedOptionValue = (item: OptionSelectItem, valueType: string): boolean => {
+    switch (valueType) {
+        case 'type':
+            return item.type && item.type.length > 0;
+        case 'faction':
+            return item.faction && item.faction.length > 0;
+        case 'trait':
+            return item.trait && item.trait.length > 0;
+        case 'slot':
+            return item.slot && item.slot.length > 0;
+        case 'uses':
+            return item.uses && item.uses.length > 0;
+        case 'level':
+            return item.level && (item.level.min !== 0 || item.level.max !== 5);
+        default:
+            return false;
+    }
+};
+
+// 初始化高级属性选项标签状态
+const initializeAdvancedOptionTags = (item: OptionSelectItem, itemIndex: number, option: DeckOption) => {
+    const optionKey = `${option.id || 'new'}_advanced_${itemIndex}`;
+    if (!advancedOptionTags.value[optionKey]) {
+        advancedOptionTags.value[optionKey] = {
+            type: hasAdvancedOptionValue(item, 'type'),
+            faction: hasAdvancedOptionValue(item, 'faction'),
+            trait: hasAdvancedOptionValue(item, 'trait'),
+            slot: hasAdvancedOptionValue(item, 'slot'),
+            uses: hasAdvancedOptionValue(item, 'uses'),
+            level: hasAdvancedOptionValue(item, 'level')
+        };
+    }
+};
+
+// 切换高级属性选项标签
+const toggleAdvancedOptionTag = (item: OptionSelectItem, itemIndex: number, option: DeckOption, valueType: string) => {
+    const optionKey = `${option.id || 'new'}_advanced_${itemIndex}`;
+    if (!advancedOptionTags.value[optionKey]) {
+        initializeAdvancedOptionTags(item, itemIndex, option);
+    }
+    advancedOptionTags.value[optionKey][valueType] = !advancedOptionTags.value[optionKey][valueType];
 };
 
 // 添加新的牌库选项
@@ -1043,6 +1404,18 @@ const loadFromCardData = () => {
         console.log('📚 没有找到deck_options数据或数据为空');
     }
 
+    // 初始化所有选项的标签状态
+    deckOptions.value.forEach(option => {
+        initializeBasicConditionTags(option);
+
+        // 初始化高级属性选项的标签状态
+        if (option.option_select) {
+            option.option_select.forEach((item, itemIndex) => {
+                initializeAdvancedOptionTags(item, itemIndex, option);
+            });
+        }
+    });
+
     editingIndex.value = -1;
     // 生成初始JSON预览
     generateJsonPreview();
@@ -1278,6 +1651,7 @@ if (shouldShowEditor.value) {
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.9);
     overflow: hidden;
+    width: 100%;
 }
 
 .list-header {
@@ -1299,8 +1673,9 @@ if (shouldShowEditor.value) {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    max-height: 400px;
+    max-height: 500px;
     overflow-y: auto;
+    width: 100%;
 }
 
 .option-item {
@@ -1321,8 +1696,14 @@ if (shouldShowEditor.value) {
 
 .item-header {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     align-items: center;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.item-header :deep(.n-input) {
+    flex: 1;
 }
 
 .item-content {
@@ -1333,13 +1714,93 @@ if (shouldShowEditor.value) {
     margin-bottom: 8px;
 }
 
+.item-content :deep(.n-form-item .n-form-item-label) {
+    text-align: left;
+    padding-right: 8px;
+}
+
+.item-content :deep(.n-form-item .n-form-item-blank) {
+    flex: 1;
+}
+
 .item-content :deep(.n-form-item:last-child) {
     margin-bottom: 0;
 }
 
+
+
 /* 基础条件样式 */
 .basic-conditions {
     margin: 20px 0;
+}
+
+/* 基础条件标签样式 */
+.basic-condition-tags {
+    margin-bottom: 16px;
+}
+
+.basic-condition-tags :deep(.n-tag) {
+    transition: all 0.2s ease;
+}
+
+.basic-condition-tags :deep(.n-tag:hover) {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 展开条件配置样式 */
+.expanded-conditions {
+    margin-top: 16px;
+    padding: 16px;
+    background: rgba(248, 250, 252, 0.5);
+    border-radius: 8px;
+    border: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+.condition-config {
+    margin-bottom: 16px;
+}
+
+.condition-config:last-child {
+    margin-bottom: 0;
+}
+
+/* 高级属性选项标签样式 */
+.advanced-option-tags {
+    margin-bottom: 12px;
+}
+
+.advanced-option-tags :deep(.n-tag) {
+    transition: all 0.2s ease;
+    font-size: 11px;
+    padding: 1px 6px;
+    margin: 2px;
+}
+
+.advanced-option-tags :deep(.n-tag:hover) {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.advanced-option-tags :deep(.n-text) {
+    font-size: 10px;
+}
+
+/* 展开高级选项配置样式 */
+.expanded-advanced-options {
+    margin-top: 16px;
+    padding: 16px;
+    background: rgba(248, 250, 252, 0.5);
+    border-radius: 8px;
+    border: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+.advanced-option-config {
+    margin-bottom: 16px;
+}
+
+.advanced-option-config:last-child {
+    margin-bottom: 0;
 }
 
 .section-divider {
