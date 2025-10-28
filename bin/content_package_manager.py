@@ -337,7 +337,7 @@ class ContentPackageManager:
                         signature_to_investigator=signature_to_investigator
                     )
                     converted_card = converter.convert()
-                    converted_cards.append(converted_card)
+                    converted_cards.extend(converted_card)
 
                     # 记录成功信息
                     card_name = card_data.get("name", "未知卡牌")

@@ -61,6 +61,14 @@ class Card2ArkhamDBConverter:
         "狂野": "wild"
     }
 
+    # 默认卡背类型（不需要处理）
+    DEFAULT_BACK_TYPES = {
+        "玩家卡背",
+        "遭遇卡背",
+        "定制卡背",
+        "敌库卡背"
+    }
+
     def __init__(self, card_data: Dict[str, Any], card_meta: Dict[str, Any], pack_code: str,
                  workspace_manager, signature_to_investigator: Dict[str, str] = None) -> None:
         """
@@ -79,12 +87,12 @@ class Card2ArkhamDBConverter:
         self.workspace_manager = workspace_manager
         self.signature_to_investigator = signature_to_investigator or {}
 
-    def convert(self) -> Dict[str, Any]:
+    def convert(self) -> List[Dict[str, Any]]:
         """
         根据卡牌类型执行相应的转换
 
         Returns:
-            ArkhamDB格式的卡牌数据
+            ArkhamDB格式的卡牌数据列表（通常为1个，特殊双面卡为2个）
 
         Raises:
             ValueError: 不支持的卡牌类型
@@ -112,15 +120,138 @@ class Card2ArkhamDBConverter:
         if not converter:
             raise ValueError(f"不支持的卡牌类型: {card_type}")
 
+        # 转换主卡
         card_data = converter()
+
         # 对所有非调查员卡检查是否需要添加restrictions
         if card_type != "调查员":
             card_data = self._add_signature_restrictions(card_data)
 
         flags = self._get_special_flags()
         card_data = card_data | flags
+        card_data = self._validate_card_data(card_data)
 
-        return self._validate_card_data(card_data)
+        # 检查是否需要生成背面独立对象
+        back_card = self._check_and_convert_back()
+
+        if back_card:
+            # 有特殊背面，返回两个对象
+            # 在正面卡中添加linked_card引用
+            card_data = {k: v for k, v in card_data.items() if not k.startswith("back_")}
+            card_data["double_sided"] = False
+            card_data["back_link"] = back_card["code"]
+            back_card['hidden'] = True
+            return [card_data, back_card]
+        else:
+            # 默认情况，返回一个对象
+            return [card_data]
+
+    def _check_and_convert_back(self) -> Optional[Dict[str, Any]]:
+        """
+        检查背面是否需要生成独立对象
+
+        Returns:
+            背面卡牌数据，如果不需要独立对象则返回None
+        """
+        back = self.card_data.get("back")
+        if not back or not isinstance(back, dict):
+            return None
+
+        back_type = back.get("type", "")
+        front_type = self.card_data.get("type", "")
+
+        # 如果是默认卡背类型，不需要处理
+        if back_type in self.DEFAULT_BACK_TYPES:
+            return None
+
+        # 检查是否为预设的默认双面组合
+        if self._is_default_double_sided(front_type, back_type):
+            return None
+
+        # 需要生成独立背面对象
+        return self._convert_back_to_separate_card(back)
+
+    def _is_default_double_sided(self, front_type: str, back_type: str) -> bool:
+        """
+        检查是否为预设的默认双面卡组合
+
+        Args:
+            front_type: 正面类型
+            back_type: 背面类型
+
+        Returns:
+            是否为默认组合
+        """
+        # 调查员的默认情况
+        if front_type == "调查员" and back_type == "调查员背面":
+            return True
+
+        # 地点卡的特殊处理
+        if front_type == "地点卡" and back_type == "地点卡":
+            # 检查背面是否为"未揭示"
+            back = self.card_data.get("back", {})
+            location_type = back.get("location_type", "")
+            return location_type == "未揭示"
+
+        # 场景卡密谋卡的特殊处理
+        if front_type in ["场景卡", "密谋卡"]:
+            if back_type == front_type:
+                # 检查is_back标记
+                back = self.card_data.get("back", {})
+                is_back = back.get("is_back", False)
+                return is_back
+            elif back_type in ["密谋卡-大画", "场景卡-大画"]:
+                return True
+            return False
+
+        # 冒险参考卡
+        if front_type == "冒险参考卡" and back_type == "冒险参考卡":
+            return True
+
+        return False
+
+    def _convert_back_to_separate_card(self, back_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        将背面数据转换为独立的卡牌对象
+
+        Args:
+            back_data: 背面原始数据
+
+        Returns:
+            转换后的背面卡牌对象
+        """
+        # 创建背面转换器
+        back_converter = Card2ArkhamDBConverter(
+            card_data={"back": {}, **back_data},  # 将back_data作为主数据
+            card_meta=self.card_meta,
+            pack_code=self.pack_code,
+            workspace_manager=self.workspace_manager,
+            signature_to_investigator=self.signature_to_investigator
+        )
+
+        # 获取正面的code
+        front_code = self._extract_code_from_gmnotes()
+
+        # 转换背面
+        back_cards = back_converter.convert()
+        back_card = back_cards[0] if back_cards else {}
+
+        # 修改背面code，添加"b"后缀
+        back_card["code"] = f"{front_code}b"
+
+        # 交换图片URL：背面图片变为正面图片
+        # 因为独立背面对象在视图上显示为正面
+        if "back_image_url" in back_card:
+            back_card["image_url"] = back_card.pop("back_image_url")
+
+        if "back_thumbnail_url" in back_card:
+            back_card["thumbnail_url"] = back_card.pop("back_thumbnail_url")
+
+        # 移除背面相关的URL字段（独立对象不需要背面URL）
+        back_card.pop("back_image_url", None)
+        back_card.pop("back_thumbnail_url", None)
+
+        return back_card
 
     # ==================== 基础辅助方法 ====================
 
