@@ -443,7 +443,7 @@ class ContentPackageManager:
                 "types": meta_info.get("types", []),
                 "status": meta_info.get("status", "final"),
                 "date_updated": datetime.now().isoformat() + 'Z',
-                "generator": "Arkham Card Maker 3.0"
+                "generator": "Arkham Card Maker 3.0 beta"
             },
             "data": {
                 "cards": cards,
