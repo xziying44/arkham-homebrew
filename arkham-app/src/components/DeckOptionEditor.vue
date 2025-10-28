@@ -612,45 +612,63 @@
                                     <n-text strong>其他条件</n-text>
                                 </n-divider>
 
-                                <n-space vertical size="medium">
-                                    <!-- 否定条件 -->
-                                    <n-form-item>
-                                        <n-switch v-model:value="option.not" size="medium">
-                                            <template #checked>启用否定条件</template>
-                                            <template #unchecked>禁用否定条件</template>
-                                        </n-switch>
-                                    </n-form-item>
-
-                                    <!-- 至少条件 -->
-                                    <n-form-item :label="$t('deckOptionEditor.atLeast')">
-                                        <n-space vertical size="small" style="width: 100%">
-                                            <n-switch v-model:value="atLeastEnabled" size="medium">
-                                                <template #checked>启用至少条件</template>
-                                                <template #unchecked>禁用至少条件</template>
+                                <!-- 其他条件 -->
+                                <div class="other-conditions">
+                                    <!-- 条件开关组 -->
+                                    <div class="condition-switches">
+                                        <div class="switch-item">
+                                            <n-switch v-model:value="option.not" size="small" :class="option.not ? 'switch-on' : 'switch-off'">
+                                                <template #checked>否定条件</template>
+                                                <template #unchecked>否定条件</template>
                                             </n-switch>
+                                        </div>
+                                        <div class="switch-item">
+                                            <n-switch v-model:value="atLeastEnabled" size="small" :class="atLeastEnabled ? 'switch-on' : 'switch-off'">
+                                                <template #checked>至少条件</template>
+                                                <template #unchecked>至少条件</template>
+                                            </n-switch>
+                                        </div>
+                                    </div>
 
-                                            <div v-if="atLeastEnabled">
-                                                <n-space>
-                                                    <n-input-number
-                                                        v-model:value="option.atleast.min"
-                                                        :min="0"
-                                                        :max="50"
-                                                        :placeholder="$t('deckOptionEditor.minCount')"
-                                                        style="width: 120px"
-                                                    />
-                                                    <n-select
-                                                        v-model:value="option.atleast.types"
-                                                        :options="cardTypeOptions"
-                                                        multiple
-                                                        :placeholder="$t('deckOptionEditor.selectAtLeastTypes')"
-                                                        style="width: 200px"
-                                                        :render-tag="renderTag"
-                                                    />
-                                                </n-space>
-                                            </div>
-                                        </n-space>
-                                    </n-form-item>
-                                </n-space>
+                                    <!-- 至少条件配置 -->
+                                    <div v-if="atLeastEnabled" class="atleast-config">
+                                        <!-- 最少数量 -->
+                                        <div class="atleast-row">
+                                            <label class="atleast-label">最少数量</label>
+                                            <n-input-number
+                                                v-model:value="option.atleast.min"
+                                                :min="0"
+                                                :max="50"
+                                                placeholder="最少"
+                                                size="small"
+                                                style="width: 70px"
+                                            />
+                                        </div>
+
+                                        <!-- 条件类型 -->
+                                        <div class="atleast-row">
+                                            <label class="atleast-label">条件类型</label>
+                                            <n-radio-group v-model:value="atleastType" size="small" class="atleast-radio-group">
+                                                <n-radio value="factions" class="compact-radio">职阶</n-radio>
+                                                <n-radio value="types" class="compact-radio">类型</n-radio>
+                                            </n-radio-group>
+                                        </div>
+
+                                        <!-- 满足数量 -->
+                                        <div class="atleast-row">
+                                            <label class="atleast-label">满足数量</label>
+                                            <n-input-number
+                                                :value="getAtleastConditionValue()"
+                                                :min="0"
+                                                :max="atleastType === 'factions' ? 6 : 3"
+                                                placeholder="满足"
+                                                size="small"
+                                                style="width: 70px"
+                                                @update:value="setAtleastConditionValue"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
                             </n-form>
                         </div>
                     </div>
@@ -719,7 +737,8 @@ interface DeckOption {
     not?: boolean;
     atleast?: {
         min: number;
-        types: string[];
+        factions?: number;
+        types?: number;
     };
     selectionType?: 'none' | 'faction' | 'deckSize' | 'advanced';
     option_select?: OptionSelectItem[];
@@ -760,6 +779,7 @@ const shouldShowEditor = computed(() => {
 const deckOptions = ref<DeckOption[]>([]);
 const editingIndex = ref<number>(-1);
 const atLeastEnabled = ref(false);
+const atleastType = ref<'factions' | 'types'>('factions');
 const editingBackup = ref<DeckOption | null>(null);
 const isSavingFromEditor = ref(false); // 添加标志防止保存时触发重新加载
 
@@ -1031,6 +1051,35 @@ const toggleAdvancedOptionTag = (item: OptionSelectItem, itemIndex: number, opti
     advancedOptionTags.value[optionKey][valueType] = !advancedOptionTags.value[optionKey][valueType];
 };
 
+// 获取至少条件的值
+const getAtleastConditionValue = (): number => {
+    if (editingIndex.value >= 0) {
+        const option = deckOptions.value[editingIndex.value];
+        if (option.atleast) {
+            return atleastType.value === 'factions' ? (option.atleast.factions || 0) : (option.atleast.types || 0);
+        }
+    }
+    return 0;
+};
+
+// 设置至少条件的值
+const setAtleastConditionValue = (value: number) => {
+    if (editingIndex.value >= 0) {
+        const option = deckOptions.value[editingIndex.value];
+        if (!option.atleast) {
+            option.atleast = { min: 1 };
+        }
+
+        if (atleastType.value === 'factions') {
+            option.atleast.factions = value;
+            delete option.atleast.types; // 清除另一个字段
+        } else {
+            option.atleast.types = value;
+            delete option.atleast.factions; // 清除另一个字段
+        }
+    }
+};
+
 // 添加新的牌库选项
 const addDeckOption = () => {
     const newOption: DeckOption = {
@@ -1076,6 +1125,15 @@ const editOption = (index: number) => {
     // 创建当前选项的深拷贝作为备份
     editingBackup.value = JSON.parse(JSON.stringify(option));
     atLeastEnabled.value = !!option.atleast;
+
+    // 初始化至少条件类型
+    if (option.atleast) {
+        if (option.atleast.factions !== undefined) {
+            atleastType.value = 'factions';
+        } else if (option.atleast.types !== undefined) {
+            atleastType.value = 'types';
+        }
+    }
 };
 
 // 验证选项数据
@@ -1510,8 +1568,11 @@ watch(atLeastEnabled, (enabled) => {
         if (!option.atleast) {
             option.atleast = {
                 min: 1,
-                types: []
+                [atleastType.value]: 0
             };
+        } else if (!option.atleast[atleastType.value]) {
+            // 如果当前类型没有值，初始化为0
+            option.atleast[atleastType.value] = 0;
         }
     } else if (!enabled && editingIndex.value >= 0) {
         delete deckOptions.value[editingIndex.value].atleast;
@@ -1544,6 +1605,7 @@ watch(deckOptions, () => {
         updateTimer = null;
     }, 100);
 }, { deep: true });
+
 
 // 初始化
 if (shouldShowEditor.value) {
@@ -1812,17 +1874,113 @@ if (shouldShowEditor.value) {
     color: #667eea;
 }
 
-/* 开关样式优化 */
-.option-editor :deep(.n-switch) {
-    border-radius: 16px;
+/* 其他条件样式 */
+.other-conditions {
+    margin: 20px 0;
+    padding: 12px;
+    background: rgba(248, 250, 252, 0.6);
+    border-radius: 6px;
+    border: 1px solid rgba(226, 232, 240, 0.6);
+    width: 100%;
+    box-sizing: border-box;
 }
 
-.option-editor :deep(.n-switch__rail) {
-    background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e0 100%);
+/* 条件开关组样式 */
+.condition-switches {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.4);
+    width: 100%;
 }
 
-.option-editor :deep(.n-switch--checked .n-switch__rail) {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.switch-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.switch-item :deep(.n-switch) {
+    flex-shrink: 0;
+}
+
+.switch-item :deep(.n-switch__unchecked-text),
+.switch-item :deep(.n-switch__checked-text) {
+    font-size: 11px;
+    padding: 0 4px;
+}
+
+/* 至少条件配置样式 */
+.atleast-config {
+    margin-top: 12px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 4px;
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.atleast-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    width: 100%;
+    gap: 8px;
+}
+
+.atleast-row:last-child {
+    margin-bottom: 0;
+}
+
+.atleast-label {
+    font-size: 11px;
+    color: #64748b;
+    font-weight: 500;
+    margin: 0;
+    flex-shrink: 0;
+    min-width: 50px;
+}
+
+.atleast-radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 70px;
+    flex-shrink: 0;
+}
+
+.compact-radio {
+    display: flex;
+    align-items: center;
+    min-height: 16px;
+}
+
+.compact-radio :deep(.n-radio__dot) {
+    width: 12px;
+    height: 12px;
+    margin: 0;
+}
+
+.compact-radio :deep(.n-radio__label) {
+    font-size: 10px;
+    margin-left: 4px;
+    line-height: 1;
+}
+
+/* 开关样式 - 使用动态class控制 */
+.option-editor :deep(.switch-off .n-switch__rail) {
+    background-color: #cbd5e0 !important;
+    border: 1px solid #a0aec0;
+}
+
+.option-editor :deep(.switch-on .n-switch__rail) {
+    background-color: #3182ce !important;
+    border: 1px solid #2c5282;
 }
 
 /* 响应式设计 */
@@ -1957,6 +2115,40 @@ if (shouldShowEditor.value) {
     .option-items {
         padding: 12px;
         max-height: 300px;
+    }
+
+    /* 在窄屏下保持垂直布局 */
+    .condition-switches {
+        flex-direction: column;
+        gap: 6px;
+        padding: 6px 0;
+    }
+
+    .atleast-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        margin-bottom: 6px;
+    }
+
+    .atleast-label {
+        font-size: 10px;
+        min-width: auto;
+    }
+
+    .atleast-radio-group {
+        width: 100%;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 8px;
+    }
+
+    .other-conditions {
+        padding: 8px;
+    }
+
+    .atleast-config {
+        padding: 6px;
     }
 }
 </style>
