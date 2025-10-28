@@ -160,7 +160,7 @@ class Card2ArkhamDBConverter:
 
     def _get_quantity(self) -> int:
         """获取卡牌数量"""
-        return self.card_meta.get("quantity", 1)
+        return self.card_data.get("quantity", 1)
 
     def _check_is_unique(self) -> bool:
         """检查卡牌是否为独特卡"""
@@ -298,6 +298,10 @@ class Card2ArkhamDBConverter:
         """清理卡牌名称，移除特殊标记"""
         return name.replace("🏅", "").replace("<独特>", "").strip()
 
+    def _is_signature_card(self, card_id: str) -> bool:
+        """检查卡牌是否为签名卡"""
+        return card_id in self.signature_to_investigator
+
     # ==================== 各类型卡牌转换方法 ====================
 
     def _convert_investigator(self) -> Dict[str, Any]:
@@ -386,8 +390,12 @@ class Card2ArkhamDBConverter:
         flags = self._get_special_flags()
         faction_codes = self._convert_faction_codes()
 
+        # 判断是否为签名卡以设置正确的deck_limit
+        card_id = self._extract_code_from_gmnotes()
+        is_signature = self._is_signature_card(card_id)
+
         data = {
-            "code": self._extract_code_from_gmnotes(),
+            "code": card_id,
             "position": self._extract_position(),
             "quantity": self._get_quantity(),
             "name": self._clean_name(self.card_data.get("name", "")),
@@ -397,7 +405,7 @@ class Card2ArkhamDBConverter:
             "cost": self.card_data.get("cost", 0),
             "text": self._convert_text_format(self.card_data.get("body", "")),
             "flavor": self._convert_text_format(self.card_data.get("flavor", "")),
-            "deck_limit": 1 if flags["is_unique"] else 2,
+            "deck_limit": self._get_quantity() if is_signature else (1 if flags["is_unique"] else 2),
             "is_unique": flags["is_unique"],
             "illustrator": self.card_data.get("illustrator", ""),
             "pack_code": self.pack_code
@@ -450,8 +458,12 @@ class Card2ArkhamDBConverter:
         flags = self._get_special_flags()
         faction_codes = self._convert_faction_codes()
 
+        # 判断是否为签名卡以设置正确的deck_limit
+        card_id = self._extract_code_from_gmnotes()
+        is_signature = self._is_signature_card(card_id)
+
         data = {
-            "code": self._extract_code_from_gmnotes(),
+            "code": card_id,
             "position": self._extract_position(),
             "quantity": self._get_quantity(),
             "name": self._clean_name(self.card_data.get("name", "")),
@@ -460,7 +472,7 @@ class Card2ArkhamDBConverter:
             "cost": self.card_data.get("cost", 0),
             "text": self._convert_text_format(self.card_data.get("body", "")),
             "flavor": self._convert_text_format(self.card_data.get("flavor", "")),
-            "deck_limit": 1 if flags["is_unique"] else 2,
+            "deck_limit": self._get_quantity() if is_signature else (1 if flags["is_unique"] else 2),
             "is_unique": flags["is_unique"],
             "illustrator": self.card_data.get("illustrator", ""),
             "pack_code": self.pack_code
@@ -487,8 +499,12 @@ class Card2ArkhamDBConverter:
         flags = self._get_special_flags()
         faction_codes = self._convert_faction_codes()
 
+        # 判断是否为签名卡以设置正确的deck_limit
+        card_id = self._extract_code_from_gmnotes()
+        is_signature = self._is_signature_card(card_id)
+
         data = {
-            "code": self._extract_code_from_gmnotes(),
+            "code": card_id,
             "position": self._extract_position(),
             "quantity": self._get_quantity(),
             "name": self._clean_name(self.card_data.get("name", "")),
@@ -496,7 +512,7 @@ class Card2ArkhamDBConverter:
             "faction_code": faction_codes[0],
             "text": self._convert_text_format(self.card_data.get("body", "")),
             "flavor": self._convert_text_format(self.card_data.get("flavor", "")),
-            "deck_limit": 1 if flags["is_unique"] else 2,
+            "deck_limit": self._get_quantity() if is_signature else (1 if flags["is_unique"] else 2),
             "is_unique": flags["is_unique"],
             "illustrator": self.card_data.get("illustrator", ""),
             "pack_code": self.pack_code
