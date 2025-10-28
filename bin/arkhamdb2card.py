@@ -768,11 +768,25 @@ class ArkhamDBConverter:
             # 应用特殊卡牌处理
             card_data = self._apply_special_card_handling(card_data, is_back=True)
             return card_data
+
+        # 检查 linked_card 字段
         if 'linked_card' in self.data:
             back_data = ArkhamDBConverter(self.data['linked_card'])
             return back_data.convert_front(True)
 
-        # 查找连接面为自己的卡牌
+        # 检查 back_link 字段
+        if 'back_link' in self.data:
+            back_link_code = self.data['back_link']
+            if back_link_code and self._full_database:
+                # 在数据库中查找 back_link 指向的卡牌
+                for card in self._full_database:
+                    if card.get('code') == back_link_code:
+                        print(
+                            f"通过back_link找到背面对象: {self.data.get('code')} -> {back_link_code} ({card.get('name')})")
+                        back_data = ArkhamDBConverter(card)
+                        return back_data.convert_front(True)
+
+        # 查找连接面为自己的卡牌（linked_to_code）
         current_card_code = self.data.get('code')
         if current_card_code and self._full_database:
             linked_card = self.find_card_by_linked_to_code(current_card_code)

@@ -235,7 +235,7 @@ class ArkhamCardBuilder:
         return False
 
     def _build_card_index(self):
-        """构建卡牌索引，处理linked_card关系"""
+        """构建卡牌索引，处理linked_card和back_link关系"""
         if 'cards' not in self.content_pack.get('data', {}):
             self.logger.error("内容包中没有找到cards数据")
             return
@@ -254,6 +254,12 @@ class ArkhamCardBuilder:
                         self.linked_card_relations[card_code] = linked_code
                         self.linked_card_relations[linked_code] = card_code
 
+                # 记录back_link关系
+                back_link = card.get('back_link')
+                if back_link:
+                    self.linked_card_relations[card_code] = back_link
+                    self.linked_card_relations[back_link] = card_code
+
         # 标记双面卡对
         for card in self.content_pack['data']['cards']:
             card_code = card.get('code')
@@ -266,7 +272,7 @@ class ArkhamCardBuilder:
                 self.double_sided_pairs.add(card_code)
 
             elif card_code in self.linked_card_relations:
-                # 通过linked_card关联的双面卡
+                # 通过linked_card或back_link关联的双面卡
                 linked_code = self.linked_card_relations[card_code]
                 self.double_sided_pairs.add(card_code)
                 self.double_sided_pairs.add(linked_code)
@@ -668,11 +674,11 @@ class ArkhamCardBuilder:
 # 使用示例
 def main():
     # 读取JSON文件
-    with open(r"C:\Users\xziyi\Downloads\ordinary_citizens (2).json", 'r', encoding='utf-8') as f:
+    with open(r"D:\汉化文件夹\测试暗物质\dark_matter.json", 'r', encoding='utf-8') as f:
         content_pack = json.load(f)
 
     # 创建构建器实例
-    builder = ArkhamCardBuilder(content_pack, r'D:\汉化文件夹\测试导出空间')
+    builder = ArkhamCardBuilder(content_pack, r'D:\汉化文件夹\测试暗物质')
 
     # 处理内容包
     saved_count, _, is_valid, errors = builder.process_content_pack()
