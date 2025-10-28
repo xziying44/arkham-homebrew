@@ -14,6 +14,8 @@ export default {
   // Option configuration
   optionId: 'Option ID',
   optionIdPlaceholder: 'Enter option ID (optional)',
+  optionName: 'Option Name',
+  optionNamePlaceholder: 'Name usually matches ID, can be modified manually',
 
   // Basic filters
   basicFilters: '📊 Basic Filters',
@@ -56,6 +58,7 @@ export default {
   deckSizeSelect: 'Deck Size Select',
   selectDeckSizes: 'Select selectable deck sizes',
   advancedSelect: 'Advanced Attribute Select',
+  selectionMechanismLabel: 'Selection Mechanism',
   selectionTypeNames: {
     faction: 'Class Choice',
     deckSize: 'Deck Size',
@@ -74,6 +77,77 @@ export default {
   atLeastDisabled: 'Disable at least condition',
   minCount: 'Min count',
   selectAtLeastTypes: 'Select at least card types',
+
+  // Other conditions
+  otherConditions: 'Other Conditions',
+  negativeCondition: 'Negative Condition',
+  atLeastCondition: 'At Least Condition',
+  minimumCount: 'Minimum Count',
+  conditionType: 'Condition Type',
+  factionCount: 'Faction',
+  typeCount: 'Type',
+  satisfiedCount: 'Satisfied Count',
+
+  // Optional attributes list
+  optionalAttributes: 'Optional Attributes List',
+  addItemOption: 'Add Option',
+  noOptionalAttributes: 'No optional attributes available',
+  removeItem: 'Delete',
+  itemId: 'ID',
+  itemName: 'Name',
+  itemNameRequired: 'Name (required)',
+  items: ' items',
+
+  // Card type options
+  cardTypes: {
+    asset: 'Asset',
+    event: 'Event',
+    skill: 'Skill'
+  },
+
+  // Faction options
+  factions: {
+    guardian: 'Guardian',
+    seeker: 'Seeker',
+    rogue: 'Rogue',
+    mystic: 'Mystic',
+    survivor: 'Survivor',
+    neutral: 'Neutral'
+  },
+
+  // Slot options
+  slotOptions: {
+    hand: 'Hand',
+    arcane: 'Arcane',
+    accessory: 'Accessory',
+    body: 'Body',
+    ally: 'Ally',
+    tarot: 'Tarot',
+    sanity: 'Sanity',
+    health: 'Health'
+  },
+
+  // Uses options
+  usesOptions: {
+    charge: 'Charge',
+    ammo: 'Ammo',
+    supply: 'Supply',
+    secret: 'Secret',
+    resource: 'Resource',
+    evidence: 'Evidence',
+    offering: 'Offering'
+  },
+
+  // Deck size options
+  deckSizes: {
+    20: '20 cards',
+    25: '25 cards',
+    30: '30 cards',
+    35: '35 cards',
+    40: '40 cards',
+    50: '50 cards',
+    unit: ' cards'
+  },
 
   // JSON preview
   finalPreview: '📋 Final Configuration Preview',

@@ -68,19 +68,19 @@
                                     {{ $t('deckOptionEditor.traits') }}: {{ option.trait.join(', ') }}
                                 </n-tag>
                                 <n-tag v-if="option.slot && option.slot.length > 0" size="tiny" type="info">
-                                    槽位: {{ formatSlotDisplay(option.slot) }}
+                                    {{ $t('deckOptionEditor.slots') }}: {{ formatSlotDisplay(option.slot) }}
                                 </n-tag>
                                 <n-tag v-if="option.uses && option.uses.length > 0" size="tiny" type="info">
-                                    使用: {{ formatUsesDisplay(option.uses) }}
+                                    {{ $t('deckOptionEditor.uses') }}: {{ formatUsesDisplay(option.uses) }}
                                 </n-tag>
                                 <n-tag v-if="option.faction_select && option.faction_select.length > 0" size="tiny" type="warning">
-                                    职阶选择: {{ formatFactionDisplay(option.faction_select) }}
+                                    {{ $t('deckOptionEditor.factionSelect') }}: {{ formatFactionDisplay(option.faction_select) }}
                                 </n-tag>
                                 <n-tag v-if="option.deck_size_select && option.deck_size_select.length > 0" size="tiny" type="warning">
-                                    牌库大小: {{ option.deck_size_select.join(', ') }}张
+                                    {{ $t('deckOptionEditor.deckSizeSelect') }}: {{ option.deck_size_select.join(', ') }}{{ $t('deckOptionEditor.deckSizes.unit') }}
                                 </n-tag>
                                 <n-tag v-if="option.option_select && option.option_select.length > 0" size="tiny" type="warning">
-                                    高级属性选择 ({{ option.option_select.length }}项)
+                                    {{ $t('deckOptionEditor.advancedSelect') }} ({{ option.option_select.length }}{{ $t('deckOptionEditor.items') }})
                                 </n-tag>
                             </n-space>
                         </div>
@@ -89,15 +89,15 @@
                         <div v-else class="option-editor" :key="`editing-${index}`">
                             <n-form :model="option" label-placement="left" size="small">
                                 <!-- ID和名称设置 -->
-                                <n-form-item label="选项ID">
-                                    <n-input v-model:value="option.id" placeholder="自动生成或手动输入ID" @blur="syncNameFromId(option)" />
+                                <n-form-item :label="$t('deckOptionEditor.optionId')">
+                                    <n-input v-model:value="option.id" :placeholder="$t('deckOptionEditor.optionIdPlaceholder')" @blur="syncNameFromId(option)" />
                                 </n-form-item>
-                                <n-form-item label="选项名称">
-                                    <n-input v-model:value="option.name" placeholder="名称通常与ID一致，可手动修改" />
+                                <n-form-item :label="$t('deckOptionEditor.optionName')">
+                                    <n-input v-model:value="option.name" :placeholder="$t('deckOptionEditor.optionNamePlaceholder')" />
                                 </n-form-item>
 
                                 <!-- 选择机制 -->
-                                <n-form-item label="选择机制">
+                                <n-form-item :label="$t('deckOptionEditor.selectionMechanismLabel')">
                                     <n-select
                                         v-model:value="option.selectionType"
                                         :options="selectionTypeOptions"
@@ -110,22 +110,22 @@
                                 <div v-if="option.selectionType && option.selectionType !== 'none'" class="selection-config">
                                     <!-- 职阶选择配置 -->
                                     <div v-if="option.selectionType === 'faction'" class="config-section">
-                                        <n-form-item label="可选职阶">
+                                        <n-form-item :label="$t('deckOptionEditor.selectFactionForSelection')">
                                             <n-select
                                                 v-model:value="option.faction_select"
                                                 :options="factionOptions"
                                                 multiple
-                                                placeholder="选择允许的职阶"
+                                                :placeholder="$t('deckOptionEditor.selectFactions')"
                                                 :render-tag="renderTag"
                                             />
                                         </n-form-item>
-                                        <n-form-item label="等级范围">
+                                        <n-form-item :label="$t('deckOptionEditor.levelRange')">
                                             <n-space>
                                                 <n-input-number
                                                     v-model:value="option.level.min"
                                                     :min="0"
                                                     :max="10"
-                                                    placeholder="最低等级"
+                                                    :placeholder="$t('deckOptionEditor.minLevel')"
                                                     style="width: 100px"
                                                 />
                                                 <n-text>-</n-text>
@@ -133,7 +133,7 @@
                                                     v-model:value="option.level.max"
                                                     :min="0"
                                                     :max="10"
-                                                    placeholder="最高等级"
+                                                    :placeholder="$t('deckOptionEditor.maxLevel')"
                                                     style="width: 100px"
                                                 />
                                             </n-space>
@@ -142,12 +142,12 @@
 
                                     <!-- 牌库大小选择配置 -->
                                     <div v-if="option.selectionType === 'deckSize'" class="config-section">
-                                        <n-form-item label="可选牌库大小">
+                                        <n-form-item :label="$t('deckOptionEditor.selectDeckSizes')">
                                             <n-select
                                                 v-model:value="option.deck_size_select"
                                                 :options="deckSizeOptions"
                                                 multiple
-                                                placeholder="选择允许的牌库大小"
+                                                :placeholder="$t('deckOptionEditor.selectDeckSizes')"
                                                 :render-tag="renderTag"
                                             />
                                         </n-form-item>
@@ -157,23 +157,23 @@
                                     <div v-if="option.selectionType === 'advanced'" class="config-section">
                                         <div class="option-select-list">
                                             <div class="list-header">
-                                                <n-text strong>可选属性列表</n-text>
+                                                <n-text strong>{{ $t('deckOptionEditor.optionalAttributes') }}</n-text>
                                                 <n-button size="tiny" type="primary" @click="addOptionSelectItem(option)">
                                                     <template #icon><span>➕</span></template>
-                                                    添加选项
+                                                    {{ $t('deckOptionEditor.addItemOption') }}
                                                 </n-button>
                                             </div>
                                             <div v-if="!option.option_select || option.option_select.length === 0" class="empty-list">
-                                                <n-empty description="暂无可选属性" size="small" />
+                                                <n-empty :description="$t('deckOptionEditor.noOptionalAttributes')" size="small" />
                                             </div>
                                             <div v-else class="option-items">
                                                 <div v-for="(item, itemIndex) in option.option_select" :key="itemIndex" class="option-item">
                                                     <n-card size="small" class="item-card">
                                                         <template #header>
                                                             <div class="item-header">
-                                                                <n-input v-model:value="item.id" placeholder="ID" size="tiny" style="width: 100px" @blur="syncItemNameFromId(item)" />
-                                                                <n-input v-model:value="item.name" placeholder="名称（必填）" size="tiny" style="width: 140px" />
-                                                                <n-button size="tiny" type="error" @click="removeOptionSelectItem(option, itemIndex)">删除</n-button>
+                                                                <n-input v-model:value="item.id" :placeholder="$t('deckOptionEditor.itemId')" size="tiny" style="width: 100px" @blur="syncItemNameFromId(item)" />
+                                                                <n-input v-model:value="item.name" :placeholder="$t('deckOptionEditor.itemNameRequired')" size="tiny" style="width: 140px" />
+                                                                <n-button size="tiny" type="error" @click="removeOptionSelectItem(option, itemIndex)">{{ $t('deckOptionEditor.removeItem') }}</n-button>
                                                             </div>
                                                         </template>
                                                         <div class="item-content">
@@ -189,7 +189,7 @@
                                                                         @update:checked="() => toggleAdvancedOptionTag(item, itemIndex, option, 'type')"
                                                                         style="cursor: pointer;"
                                                                     >
-                                                                        类型
+                                                                        {{ $t('deckOptionEditor.cardType') }}
                                                                         <n-text v-if="hasAdvancedOptionValue(item, 'type')" depth="1" style="font-size: 10px; margin-left: 4px; font-weight: 500;">
                                                                             ({{ item.type?.length || 0 }})
                                                                         </n-text>
@@ -204,7 +204,7 @@
                                                                         @update:checked="() => toggleAdvancedOptionTag(item, itemIndex, option, 'faction')"
                                                                         style="cursor: pointer;"
                                                                     >
-                                                                        职阶
+                                                                        {{ $t('deckOptionEditor.faction') }}
                                                                         <n-text v-if="hasAdvancedOptionValue(item, 'faction')" depth="1" style="font-size: 10px; margin-left: 4px; font-weight: 500;">
                                                                             ({{ item.faction?.length || 0 }})
                                                                         </n-text>
@@ -219,7 +219,7 @@
                                                                         @update:checked="() => toggleAdvancedOptionTag(item, itemIndex, option, 'trait')"
                                                                         style="cursor: pointer;"
                                                                     >
-                                                                        特性
+                                                                        {{ $t('deckOptionEditor.traits') }}
                                                                         <n-text v-if="hasAdvancedOptionValue(item, 'trait')" depth="1" style="font-size: 10px; margin-left: 4px; font-weight: 500;">
                                                                             ({{ item.trait?.length || 0 }})
                                                                         </n-text>
@@ -234,7 +234,7 @@
                                                                         @update:checked="() => toggleAdvancedOptionTag(item, itemIndex, option, 'slot')"
                                                                         style="cursor: pointer;"
                                                                     >
-                                                                        槽位
+                                                                        {{ $t('deckOptionEditor.slots') }}
                                                                         <n-text v-if="hasAdvancedOptionValue(item, 'slot')" depth="1" style="font-size: 10px; margin-left: 4px; font-weight: 500;">
                                                                             ({{ item.slot?.length || 0 }})
                                                                         </n-text>
@@ -249,7 +249,7 @@
                                                                         @update:checked="() => toggleAdvancedOptionTag(item, itemIndex, option, 'uses')"
                                                                         style="cursor: pointer;"
                                                                     >
-                                                                        使用
+                                                                        {{ $t('deckOptionEditor.uses') }}
                                                                         <n-text v-if="hasAdvancedOptionValue(item, 'uses')" depth="1" style="font-size: 10px; margin-left: 4px; font-weight: 500;">
                                                                             ({{ item.uses?.length || 0 }})
                                                                         </n-text>
@@ -264,7 +264,7 @@
                                                                         @update:checked="() => toggleAdvancedOptionTag(item, itemIndex, option, 'level')"
                                                                         style="cursor: pointer;"
                                                                     >
-                                                                        等级
+                                                                        {{ $t('deckOptionEditor.level') }}
                                                                         <n-text v-if="hasAdvancedOptionValue(item, 'level')" depth="1" style="font-size: 10px; margin-left: 4px; font-weight: 500;">
                                                                             ({{ item.level?.min || 0 }}-{{ item.level?.max || 5 }})
                                                                         </n-text>
@@ -276,12 +276,12 @@
                                                             <div v-if="advancedOptionTags[`${option.id || 'new'}_advanced_${itemIndex}`]" class="expanded-advanced-options">
                                                                 <!-- 卡牌类型 -->
                                                                 <div v-show="advancedOptionTags[`${option.id || 'new'}_advanced_${itemIndex}`]?.type" class="advanced-option-config">
-                                                                    <n-form-item label="类型">
+                                                                    <n-form-item :label="$t('deckOptionEditor.cardType')">
                                                                         <n-select
                                                                             v-model:value="item.type"
                                                                             :options="cardTypeOptions"
                                                                             multiple
-                                                                            placeholder="选择卡牌类型"
+                                                                            :placeholder="$t('deckOptionEditor.selectCardTypes')"
                                                                             size="tiny"
                                                                             :render-tag="renderTag"
                                                                         />
@@ -290,12 +290,12 @@
 
                                                                 <!-- 职阶 -->
                                                                 <div v-show="advancedOptionTags[`${option.id || 'new'}_advanced_${itemIndex}`]?.faction" class="advanced-option-config">
-                                                                    <n-form-item label="职阶">
+                                                                    <n-form-item :label="$t('deckOptionEditor.faction')">
                                                                         <n-select
                                                                             v-model:value="item.faction"
                                                                             :options="factionOptions"
                                                                             multiple
-                                                                            placeholder="选择职阶"
+                                                                            :placeholder="$t('deckOptionEditor.selectFactions')"
                                                                             size="tiny"
                                                                             :render-tag="renderTag"
                                                                         />
@@ -304,19 +304,19 @@
 
                                                                 <!-- 特性 -->
                                                                 <div v-show="advancedOptionTags[`${option.id || 'new'}_advanced_${itemIndex}`]?.trait" class="advanced-option-config">
-                                                                    <n-form-item label="特性">
-                                                                        <n-dynamic-tags v-model:value="item.trait" placeholder="添加特性" size="tiny" />
+                                                                    <n-form-item :label="$t('deckOptionEditor.traits')">
+                                                                        <n-dynamic-tags v-model:value="item.trait" :placeholder="$t('deckOptionEditor.addTrait')" size="tiny" />
                                                                     </n-form-item>
                                                                 </div>
 
                                                                 <!-- 槽位 -->
                                                                 <div v-show="advancedOptionTags[`${option.id || 'new'}_advanced_${itemIndex}`]?.slot" class="advanced-option-config">
-                                                                    <n-form-item label="槽位">
+                                                                    <n-form-item :label="$t('deckOptionEditor.slots')">
                                                                         <n-select
                                                                             v-model:value="item.slot"
                                                                             :options="slotOptions"
                                                                             multiple
-                                                                            placeholder="选择槽位"
+                                                                            :placeholder="$t('deckOptionEditor.selectSlots')"
                                                                             size="tiny"
                                                                             :render-tag="renderTag"
                                                                         />
@@ -325,12 +325,12 @@
 
                                                                 <!-- 使用标记 -->
                                                                 <div v-show="advancedOptionTags[`${option.id || 'new'}_advanced_${itemIndex}`]?.uses" class="advanced-option-config">
-                                                                    <n-form-item label="使用">
+                                                                    <n-form-item :label="$t('deckOptionEditor.uses')">
                                                                         <n-select
                                                                             v-model:value="item.uses"
                                                                             :options="usesOptions"
                                                                             multiple
-                                                                            placeholder="选择使用标记"
+                                                                            :placeholder="$t('deckOptionEditor.selectUses')"
                                                                             size="tiny"
                                                                             :render-tag="renderTag"
                                                                         />
@@ -339,13 +339,13 @@
 
                                                                 <!-- 等级范围 -->
                                                                 <div v-show="advancedOptionTags[`${option.id || 'new'}_advanced_${itemIndex}`]?.level" class="advanced-option-config">
-                                                                    <n-form-item label="等级">
+                                                                    <n-form-item :label="$t('deckOptionEditor.level')">
                                                                         <n-space>
                                                                             <n-input-number
                                                                                 v-model:value="item.level.min"
                                                                                 :min="0"
                                                                                 :max="10"
-                                                                                placeholder="最低"
+                                                                                :placeholder="$t('deckOptionEditor.minLevel')"
                                                                                 size="tiny"
                                                                                 style="width: 80px"
                                                                             />
@@ -354,7 +354,7 @@
                                                                                 v-model:value="item.level.max"
                                                                                 :min="0"
                                                                                 :max="10"
-                                                                                placeholder="最高"
+                                                                                :placeholder="$t('deckOptionEditor.maxLevel')"
                                                                                 size="tiny"
                                                                                 style="width: 80px"
                                                                             />
@@ -373,7 +373,7 @@
                                 <!-- 基础条件（仅在无选择机制时显示） -->
                                 <div v-show="!option.selectionType || option.selectionType === 'none'" class="basic-conditions">
                                     <n-divider class="section-divider">
-                                        <n-text strong>基础条件</n-text>
+                                        <n-text strong>{{ $t('deckOptionEditor.basicFilters') }}</n-text>
                                     </n-divider>
 
                                     <!-- 基础条件标签 -->
@@ -609,7 +609,7 @@
 
                                 <!-- 其他条件 -->
                                 <n-divider class="section-divider">
-                                    <n-text strong>其他条件</n-text>
+                                    <n-text strong>{{ $t('deckOptionEditor.otherConditions') }}</n-text>
                                 </n-divider>
 
                                 <!-- 其他条件 -->
@@ -618,14 +618,14 @@
                                     <div class="condition-switches">
                                         <div class="switch-item">
                                             <n-switch v-model:value="option.not" size="small" :class="option.not ? 'switch-on' : 'switch-off'">
-                                                <template #checked>否定条件</template>
-                                                <template #unchecked>否定条件</template>
+                                                <template #checked>{{ $t('deckOptionEditor.negativeCondition') }}</template>
+                                                <template #unchecked>{{ $t('deckOptionEditor.negativeCondition') }}</template>
                                             </n-switch>
                                         </div>
                                         <div class="switch-item">
                                             <n-switch v-model:value="atLeastEnabled" size="small" :class="atLeastEnabled ? 'switch-on' : 'switch-off'">
-                                                <template #checked>至少条件</template>
-                                                <template #unchecked>至少条件</template>
+                                                <template #checked>{{ $t('deckOptionEditor.atLeastCondition') }}</template>
+                                                <template #unchecked>{{ $t('deckOptionEditor.atLeastCondition') }}</template>
                                             </n-switch>
                                         </div>
                                     </div>
@@ -634,12 +634,12 @@
                                     <div v-if="atLeastEnabled" class="atleast-config">
                                         <!-- 最少数量 -->
                                         <div class="atleast-row">
-                                            <label class="atleast-label">最少数量</label>
+                                            <label class="atleast-label">{{ $t('deckOptionEditor.minimumCount') }}</label>
                                             <n-input-number
                                                 v-model:value="option.atleast.min"
                                                 :min="0"
                                                 :max="50"
-                                                placeholder="最少"
+                                                :placeholder="$t('deckOptionEditor.minimumCount')"
                                                 size="small"
                                                 style="width: 70px"
                                             />
@@ -647,21 +647,21 @@
 
                                         <!-- 条件类型 -->
                                         <div class="atleast-row">
-                                            <label class="atleast-label">条件类型</label>
+                                            <label class="atleast-label">{{ $t('deckOptionEditor.conditionType') }}</label>
                                             <n-radio-group v-model:value="atleastType" size="small" class="atleast-radio-group">
-                                                <n-radio value="factions" class="compact-radio">职阶</n-radio>
-                                                <n-radio value="types" class="compact-radio">类型</n-radio>
+                                                <n-radio value="factions" class="compact-radio">{{ $t('deckOptionEditor.factionCount') }}</n-radio>
+                                                <n-radio value="types" class="compact-radio">{{ $t('deckOptionEditor.typeCount') }}</n-radio>
                                             </n-radio-group>
                                         </div>
 
                                         <!-- 满足数量 -->
                                         <div class="atleast-row">
-                                            <label class="atleast-label">满足数量</label>
+                                            <label class="atleast-label">{{ $t('deckOptionEditor.satisfiedCount') }}</label>
                                             <n-input-number
                                                 :value="getAtleastConditionValue()"
                                                 :min="0"
                                                 :max="atleastType === 'factions' ? 6 : 3"
-                                                placeholder="满足"
+                                                :placeholder="$t('deckOptionEditor.satisfiedCount')"
                                                 size="small"
                                                 style="width: 70px"
                                                 @update:value="setAtleastConditionValue"
@@ -795,51 +795,51 @@ const advancedOptionTags = ref<Record<string, boolean>>({});
 // JSON预览相关
 const finalJsonPreview = ref('');
 
-// 选项配置
-const cardTypeOptions = [
-    { label: '支援卡 (asset)', value: 'asset' },
-    { label: '事件卡 (event)', value: 'event' },
-    { label: '技能卡 (skill)', value: 'skill' }
-];
+// 选项配置 - 使用多语言
+const cardTypeOptions = computed(() => [
+    { label: t('deckOptionEditor.cardTypes.asset'), value: 'asset' },
+    { label: t('deckOptionEditor.cardTypes.event'), value: 'event' },
+    { label: t('deckOptionEditor.cardTypes.skill'), value: 'skill' }
+]);
 
-const factionOptions = [
-    { label: '守护者 (guardian)', value: 'guardian' },
-    { label: '探求者 (seeker)', value: 'seeker' },
-    { label: '流浪者 (rogue)', value: 'rogue' },
-    { label: '潜修者 (mystic)', value: 'mystic' },
-    { label: '生存者 (survivor)', value: 'survivor' },
-    { label: '中立 (neutral)', value: 'neutral' }
-];
+const factionOptions = computed(() => [
+    { label: t('deckOptionEditor.factions.guardian'), value: 'guardian' },
+    { label: t('deckOptionEditor.factions.seeker'), value: 'seeker' },
+    { label: t('deckOptionEditor.factions.rogue'), value: 'rogue' },
+    { label: t('deckOptionEditor.factions.mystic'), value: 'mystic' },
+    { label: t('deckOptionEditor.factions.survivor'), value: 'survivor' },
+    { label: t('deckOptionEditor.factions.neutral'), value: 'neutral' }
+]);
 
-const slotOptions = [
-    { label: '手部 (hand)', value: 'hand' },
-    { label: '奥术 (arcane)', value: 'arcane' },
-    { label: '饰品 (accessory)', value: 'accessory' },
-    { label: '身体 (body)', value: 'body' },
-    { label: '盟友 (ally)', value: 'ally' },
-    { label: '塔罗 (tarot)', value: 'tarot' },
-    { label: '理智 (sanity)', value: 'sanity' },
-    { label: '生命 (health)', value: 'health' }
-];
+const slotOptions = computed(() => [
+    { label: t('deckOptionEditor.slotOptions.hand'), value: 'hand' },
+    { label: t('deckOptionEditor.slotOptions.arcane'), value: 'arcane' },
+    { label: t('deckOptionEditor.slotOptions.accessory'), value: 'accessory' },
+    { label: t('deckOptionEditor.slotOptions.body'), value: 'body' },
+    { label: t('deckOptionEditor.slotOptions.ally'), value: 'ally' },
+    { label: t('deckOptionEditor.slotOptions.tarot'), value: 'tarot' },
+    { label: t('deckOptionEditor.slotOptions.sanity'), value: 'sanity' },
+    { label: t('deckOptionEditor.slotOptions.health'), value: 'health' }
+]);
 
-const usesOptions = [
-    { label: '充能 (charge)', value: 'charge' },
-    { label: '弹药 (ammo)', value: 'ammo' },
-    { label: '补给 (supply)', value: 'supply' },
-    { label: '秘密 (secret)', value: 'secret' },
-    { label: '资源 (resource)', value: 'resource' },
-    { label: '证据 (evidence)', value: 'evidence' },
-    { label: '供品 (offering)', value: 'offering' }
-];
+const usesOptions = computed(() => [
+    { label: t('deckOptionEditor.usesOptions.charge'), value: 'charge' },
+    { label: t('deckOptionEditor.usesOptions.ammo'), value: 'ammo' },
+    { label: t('deckOptionEditor.usesOptions.supply'), value: 'supply' },
+    { label: t('deckOptionEditor.usesOptions.secret'), value: 'secret' },
+    { label: t('deckOptionEditor.usesOptions.resource'), value: 'resource' },
+    { label: t('deckOptionEditor.usesOptions.evidence'), value: 'evidence' },
+    { label: t('deckOptionEditor.usesOptions.offering'), value: 'offering' }
+]);
 
-const deckSizeOptions = [
-    { label: '20张', value: '20' },
-    { label: '25张', value: '25' },
-    { label: '30张', value: '30' },
-    { label: '35张', value: '35' },
-    { label: '40张', value: '40' },
-    { label: '50张', value: '50' }
-];
+const deckSizeOptions = computed(() => [
+    { label: t('deckOptionEditor.deckSizes.20'), value: '20' },
+    { label: t('deckOptionEditor.deckSizes.25'), value: '25' },
+    { label: t('deckOptionEditor.deckSizes.30'), value: '30' },
+    { label: t('deckOptionEditor.deckSizes.35'), value: '35' },
+    { label: t('deckOptionEditor.deckSizes.40'), value: '40' },
+    { label: t('deckOptionEditor.deckSizes.50'), value: '50' }
+]);
 
 const selectionTypeOptions = computed(() => [
     { label: t('deckOptionEditor.noneSelection'), value: 'none' },
@@ -944,7 +944,7 @@ const removeOptionSelectItem = (option: DeckOption, index: number) => {
 // 格式化槽位显示
 const formatSlotDisplay = (slots: string[]) => {
     return slots.map(slot => {
-        const slotOption = slotOptions.find(opt => opt.value === slot);
+        const slotOption = slotOptions.value.find(opt => opt.value === slot);
         return slotOption ? slotOption.label.split(' ')[0] : slot;
     }).join(', ');
 };
@@ -952,7 +952,7 @@ const formatSlotDisplay = (slots: string[]) => {
 // 格式化使用标记显示
 const formatUsesDisplay = (uses: string[]) => {
     return uses.map(use => {
-        const useOption = usesOptions.find(opt => opt.value === use);
+        const useOption = usesOptions.value.find(opt => opt.value === use);
         return useOption ? useOption.label.split(' ')[0] : use;
     }).join(', ');
 };
@@ -1368,7 +1368,7 @@ const generateJsonPreview = () => {
 // 格式化职阶显示
 const formatFactionDisplay = (factions: string[]) => {
     return factions.map(faction => {
-        const factionOption = factionOptions.find(opt => opt.value === faction);
+        const factionOption = factionOptions.value.find(opt => opt.value === faction);
         return factionOption ? factionOption.label : faction;
     }).join(', ');
 };
@@ -1376,7 +1376,7 @@ const formatFactionDisplay = (factions: string[]) => {
 // 格式化类型显示
 const formatTypeDisplay = (types: string[]) => {
     return types.map(type => {
-        const typeOption = cardTypeOptions.find(opt => opt.value === type);
+        const typeOption = cardTypeOptions.value.find(opt => opt.value === type);
         return typeOption ? typeOption.label : type;
     }).join(', ');
 };
