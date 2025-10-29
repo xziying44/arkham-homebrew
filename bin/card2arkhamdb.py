@@ -69,8 +69,15 @@ class Card2ArkhamDBConverter:
         "敌库卡背"
     }
 
-    def __init__(self, card_data: Dict[str, Any], card_meta: Dict[str, Any], pack_code: str,
-                 workspace_manager, signature_to_investigator: Dict[str, str] = None) -> None:
+    def __init__(
+            self,
+            card_data: Dict[str, Any],
+            card_meta: Dict[str, Any],
+            pack_code: str,
+            encounter_sets: List[Dict[str, Any]],
+            workspace_manager,
+            signature_to_investigator: Dict[str, str] = None
+    ) -> None:
         """
         初始化转换器
         Args:
@@ -80,6 +87,7 @@ class Card2ArkhamDBConverter:
             workspace_manager: 工作空间管理器
             signature_to_investigator: 签名卡ID到调查员ID的映射字典
         """
+        self.encounter_sets = encounter_sets
         adapter = CardAdapter(card_data, workspace_manager.font_manager)
         self.card_data = adapter.convert(True)
         card_data_back = card_data.get('back', {})
@@ -1035,5 +1043,16 @@ class Card2ArkhamDBConverter:
                 card_data["subtype_code"] = "basicweakness"
             else:
                 card_data["subtype_code"] = "weakness"
+
+        # 遭遇组检测
+        encounter_group = self.card_data.get("encounter_group")
+        if encounter_group:
+            # 在encounter_sets中查找匹配的name
+            for encounter_set in self.encounter_sets:
+                if encounter_set.get("name") == encounter_group:
+                    encounter_code = encounter_set.get("code")
+                    if encounter_code:
+                        card_data["encounter_code"] = encounter_code
+                    break
 
         return card_data

@@ -312,6 +312,7 @@ class ContentPackageManager:
             # 转换卡牌
             converted_cards = []
             cards = self.content_package.get("cards", [])
+            encounter_sets = self.content_package.get("encounter_sets", [])
 
             self._add_log(f"开始处理 {len(cards)} 张卡牌...")
 
@@ -333,6 +334,7 @@ class ContentPackageManager:
                         card_data=card_data,
                         card_meta=card_meta,
                         pack_code=pack_code,
+                        encounter_sets=encounter_sets,
                         workspace_manager=self.workspace_manager,
                         signature_to_investigator=signature_to_investigator
                     )
@@ -431,7 +433,7 @@ class ContentPackageManager:
         """构建ArkhamDB格式数据"""
         meta_info = self.content_package.get("meta", {})
 
-        return {
+        arkhamdb_result = {
             "meta": {
                 "code": pack_code,
                 "name": meta_info.get("name", "Unknown"),
@@ -456,6 +458,28 @@ class ContentPackageManager:
                 }]
             }
         }
+
+        # 构建遭遇组数据
+        encounter_sets = self.content_package.get("encounter_sets", [])
+        arkhamdb_encounter_sets = []
+
+        for encounter_set in encounter_sets:
+            encounter_data = {
+                "code": encounter_set.get("code"),
+                "name": encounter_set.get("name")
+            }
+
+            # 如果存在icon_url，添加到数据中
+            if encounter_set.get("icon_url"):
+                encounter_data["icon_url"] = encounter_set["icon_url"]
+
+            arkhamdb_encounter_sets.append(encounter_data)
+
+        # 设置encounter_sets到两个位置（保持与原结构一致）
+        arkhamdb_result["data"]["encounter_sets"] = arkhamdb_encounter_sets
+        arkhamdb_result["encounter_sets"] = arkhamdb_encounter_sets
+
+        return arkhamdb_result
 
     def _generate_output_path(self) -> str:
         """生成输出文件路径"""
