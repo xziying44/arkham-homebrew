@@ -1063,6 +1063,9 @@ class Card2ArkhamDBConverter:
                     if encounter_code:
                         card_data["encounter_code"] = encounter_code
                     break
+            # 设置遭遇组位置
+            s = self.card_data.get("encounter_group_number", "")
+            card_data["encounter_position"] = int(re.search(r'\d+', s).group() if re.search(r'\d+', s) else 1)
         else:
             # 设置deck_limit
             flags = self._get_special_flags()
