@@ -361,6 +361,7 @@ class Card2ArkhamDBConverter:
             '🧘': '[mystic]',
             '🏕️': '[survivor]',
             '🔵': '-',
+            '<nbsp>': ' ',
         }
 
         result = text
@@ -542,6 +543,9 @@ class Card2ArkhamDBConverter:
             "illustrator": self.card_data.get("illustrator", ""),
             "pack_code": self.pack_code
         }
+        # 处理多职介
+        if len(faction_codes) > 1:
+            data.update({f"faction{i + 2}_code": code for i, code in enumerate(faction_codes[1:])})
 
         # 技能图标
         data.update(self._parse_skill_icons())
@@ -609,6 +613,9 @@ class Card2ArkhamDBConverter:
             "illustrator": self.card_data.get("illustrator", ""),
             "pack_code": self.pack_code
         }
+        # 处理多职介
+        if len(faction_codes) > 1:
+            data.update({f"faction{i + 2}_code": code for i, code in enumerate(faction_codes[1:])})
 
         # 技能图标
         data.update(self._parse_skill_icons())
@@ -649,6 +656,9 @@ class Card2ArkhamDBConverter:
             "illustrator": self.card_data.get("illustrator", ""),
             "pack_code": self.pack_code
         }
+        # 处理多职介
+        if len(faction_codes) > 1:
+            data.update({f"faction{i + 2}_code": code for i, code in enumerate(faction_codes[1:])})
 
         # 技能图标
         data.update(self._parse_skill_icons())
@@ -873,7 +883,6 @@ class Card2ArkhamDBConverter:
             "type_code": "scenario",
             "type_name": "剧本",
             "faction_code": "mythos",
-            "faction_name": "神话",
             "text": self._build_scenario_text(),
             "deck_limit": 1,
             "is_unique": flags["is_unique"],
