@@ -64,8 +64,11 @@ class CardAdapter:
         "name",  # 顶层字段
         "body",  # 顶层字段
         "flavor",  # 顶层字段
-        "card_back.other",  # 嵌套字段
-        "card_back.option",  # 嵌套字段
+        "back.card_back.other",  # 嵌套字段
+        "back.card_back.option",  # 嵌套字段
+        "back.name",
+        "back.body",
+        "back.flavor",
     ]
 
     def __init__(self, card_data: Dict[str, Any], font_manager: 'FontManager'):
