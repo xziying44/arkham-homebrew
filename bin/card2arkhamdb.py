@@ -81,7 +81,11 @@ class Card2ArkhamDBConverter:
             signature_to_investigator: 签名卡ID到调查员ID的映射字典
         """
         adapter = CardAdapter(card_data, workspace_manager.font_manager)
-        self.card_data = adapter.convert()
+        self.card_data = adapter.convert(True)
+        card_data_back = card_data.get('back', {})
+        if card_data_back and isinstance(card_data_back, dict):
+            adapter = CardAdapter(card_data_back, workspace_manager.font_manager)
+            self.card_data['back'] = adapter.convert(True)
         self.card_meta = card_meta
         self.pack_code = pack_code
         self.workspace_manager = workspace_manager
@@ -360,6 +364,7 @@ class Card2ArkhamDBConverter:
             '🚶': '[rogue]',
             '🧘': '[mystic]',
             '🏕️': '[survivor]',
+            '🕵️': '[per_investigator]',
             '🔵': '-',
             '<nbsp>': ' ',
         }
@@ -695,6 +700,12 @@ class Card2ArkhamDBConverter:
             "pack_code": self.pack_code
         }
 
+        # 敌人类型
+        if self.card_data.get("class", "") == "弱点":
+            data['faction_code'] = 'neutral'
+        else:
+            data['faction_code'] = 'mythos'
+
         # 敌人属性
         if fight := self._parse_enemy_stat(self.card_data.get("attack", "")):
             data.update(fight)
@@ -747,6 +758,7 @@ class Card2ArkhamDBConverter:
             "name": self._clean_name(self.card_data.get("name", "")),
             "subname": self.card_data.get("subtitle", ""),
             "type_code": "location",
+            "faction_code": "mythos",
             "text": self._convert_text_format(self.card_data.get("body", "")),
             "flavor": self._convert_text_format(self.card_data.get("flavor", "")),
             "deck_limit": 1,
@@ -805,6 +817,7 @@ class Card2ArkhamDBConverter:
             "name": self._clean_name(self.card_data.get("name", "")),
             "subname": self.card_data.get("subtitle", ""),
             "type_code": type_code,
+            "faction_code": "mythos",
             "text": self._convert_text_format(self.card_data.get("body", "")),
             "flavor": self._convert_text_format(self.card_data.get("flavor", "")),
             "deck_limit": 1,
@@ -847,6 +860,7 @@ class Card2ArkhamDBConverter:
             "quantity": self._get_quantity(),
             "name": self._clean_name(self.card_data.get("name", "")),
             "type_code": "treachery",
+            "faction_code": "mythos",
             "text": self._convert_text_format(self.card_data.get("body", "")),
             "flavor": self._convert_text_format(self.card_data.get("flavor", "")),
             "deck_limit": 1,
@@ -858,13 +872,6 @@ class Card2ArkhamDBConverter:
         # 特性
         if traits := self._get_traits():
             data["traits"] = traits
-
-        # 弱点标记
-        if self.card_data.get("class") == "弱点":
-            if self.card_data.get("weakness_type") == '基础弱点':
-                data["subtype_code"] = "basicweakness"
-            else:
-                data["subtype_code"] = "weakness"
 
         # 图片
         data.update(self._get_image_urls())
@@ -974,5 +981,13 @@ class Card2ArkhamDBConverter:
         for field, default in required_defaults.items():
             if field not in card_data or not card_data[field]:
                 card_data[field] = default
+
+        # 弱点标记
+        if self.card_data.get("class") == "弱点":
+            card_data['faction_code'] = 'neutral'
+            if self.card_data.get("weakness_type") == '基础弱点':
+                card_data["subtype_code"] = "basicweakness"
+            else:
+                card_data["subtype_code"] = "weakness"
 
         return card_data

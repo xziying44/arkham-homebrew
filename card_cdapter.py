@@ -66,11 +66,6 @@ class CardAdapter:
         "flavor",  # 顶层字段
         "card_back.other",  # 嵌套字段
         "card_back.other",  # 嵌套字段
-        "back.card_back.other",  # 嵌套字段
-        "back.card_back.option",  # 嵌套字段
-        "back.name",
-        "back.body",
-        "back.flavor",
     ]
 
     def __init__(self, card_data: Dict[str, Any], font_manager: 'FontManager'):
@@ -124,7 +119,7 @@ class CardAdapter:
         """清理卡牌名称，移除特殊标记"""
         return re.sub(r"(🏅|<独特>|<uni>)", "", name)
 
-    def convert(self) -> Dict[str, Any]:
+    def convert(self, is_arkhamdb: bool = False) -> Dict[str, Any]:
         """
         转化卡牌数据
 
@@ -133,10 +128,17 @@ class CardAdapter:
         """
         converted_data = self.original_data
 
-        body_text = converted_data.get('body', '')
-        if body_text:
-            def replace_bracketed_content(match):
-                content = match.group(1)
+        def replace_bracketed_content(match):
+            content = match.group(1)
+            if is_arkhamdb:
+                # arkhamdb特殊格式
+                if converted_data.get('type', '') in ['密谋卡', '场景卡'] and converted_data.get('is_back', False):
+                    return f'<blockquote><i>{content}</i></blockquote>'
+                elif converted_data.get('type', '') in ['故事卡']:
+                    return f'<blockquote><i>{content}</i></blockquote>'
+                else:
+                    return f'<i>{content}</i>'
+            else:
                 tag_name = 'flavor'
                 if converted_data.get('type', '') in ['密谋卡', '场景卡'] and converted_data.get('is_back', False):
                     tag_name += ' align="left" flex="false" quote="true" padding="20"'
@@ -146,6 +148,8 @@ class CardAdapter:
                     tag_name += ' align="left" flex="false" quote="true" padding="20"'
                 return f'<{tag_name}>{content}</flavor>'
 
+        body_text = converted_data.get('body', '')
+        if body_text:
             body_text = re.sub(r'(?<!\\)\[([^]]+)]', replace_bracketed_content, body_text, flags=re.DOTALL)
             converted_data['body'] = body_text
 
