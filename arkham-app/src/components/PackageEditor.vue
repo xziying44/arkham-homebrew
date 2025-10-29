@@ -1537,9 +1537,6 @@ const handleBatchUpload = (updatedPackage: any) => {
   // 直接触发保存到文件
   emit('save', true);
 
-  // 使用v2CardsWithoutCloudUrls的长度作为计数
-  const uploadedCount = v2CardsWithoutCloudUrls.value.length;
-  message.success(t('contentPackage.messages.batchUploadSuccess', { count: uploadedCount }));
 };
 
 // 打开标签编辑对话框
@@ -2216,10 +2213,6 @@ const handleBatchEncounterUpload = (updatedPackage: any) => {
 
   // 直接触发保存到文件
   emit('save', true);
-
-  // 计算成功上传的数量
-  const uploadedCount = encountersWithoutCloudUrls.value.length;
-  message.success(t('contentPackage.encounters.success.batchUploadSuccess', { count: uploadedCount }));
 };
 
 
@@ -2328,7 +2321,6 @@ const startBatchEncounterUpload = async () => {
     });
 
     if (failureCount === 0) {
-      message.success(t('contentPackage.encounters.success.batchUploadSuccess', { count: successCount }));
       setTimeout(() => {
         showBatchEncounterUploadDialog.value = false;
       }, 2000);
