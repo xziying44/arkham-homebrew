@@ -336,17 +336,13 @@ const loadPackages = async () => {
           const content = await WorkspaceService.getFileContent(file.path);
           const packageData: ContentPackage = JSON.parse(content);
 
-          console.log(`加载内容包 ${file.path}:`, {
-            cards: packageData.cards?.length || 0,
-            cardFiles: packageData.cards?.map(c => c.filename) || []
-          });
-
           packages.push({
             name: packageData.meta.name,
             path: file.path,
             meta: packageData.meta,
             banner_base64: packageData.banner_base64,
-            cards: packageData.cards || []
+            cards: packageData.cards || [],
+            encounter_sets: packageData.encounter_sets || []  // ✅ 添加这行
           });
         } catch (error) {
           console.error(`加载内容包文件失败: ${file.path}`, error);
@@ -527,7 +523,8 @@ const savePackage = async () => {
     const packageData: ContentPackage = {
       meta: selectedPackage.value.meta,
       banner_base64: selectedPackage.value.banner_base64,
-      cards: selectedPackage.value.cards || []
+      cards: selectedPackage.value.cards || [],
+      encounter_sets: selectedPackage.value.encounter_sets || []  // ✅ 添加这行
     };
 
     await WorkspaceService.saveFileContent(

@@ -736,7 +736,7 @@
       </template>
     </n-modal>
 
-    
+
     <!-- 遭遇组上传对话框 -->
     <n-modal v-model:show="showUploadEncounterDialog" preset="dialog"
       :title="t('contentPackage.upload.title.uploadEncounterToCloud')" style="width: 600px;">
@@ -1845,6 +1845,9 @@ const refreshEncounterGroups = async () => {
       encounter_sets: mergedEncounters
     };
     emit('update:package', updatedPackage);
+
+    // 触发保存到文件
+    emit('save');
 
     message.success(t('contentPackage.encounters.success.refreshSuccess', { count: mergedEncounters.length }));
   } catch (error: any) {
