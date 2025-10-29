@@ -125,6 +125,7 @@ class Card2ArkhamDBConverter:
             "密谋卡": self._convert_act_agenda,
             "密谋卡-大画": self._convert_act_agenda,
             "诡计卡": self._convert_treachery,
+            "故事卡": self._convert_story,
             "冒险参考卡": self._convert_scenario,
         }
 
@@ -748,7 +749,6 @@ class Card2ArkhamDBConverter:
             "type_code": "enemy",
             "text": self._convert_text_format(self.card_data.get("body", "")),
             "flavor": self._convert_text_format(self.card_data.get("flavor", "")),
-            "deck_limit": 1,
             "is_unique": flags["is_unique"],
             "illustrator": self.card_data.get("illustrator", ""),
             "pack_code": self.pack_code
@@ -815,7 +815,6 @@ class Card2ArkhamDBConverter:
             "faction_code": "mythos",
             "text": self._convert_text_format(self.card_data.get("body", "")),
             "flavor": self._convert_text_format(self.card_data.get("flavor", "")),
-            "deck_limit": 1,
             "is_unique": flags["is_unique"],
             "illustrator": self.card_data.get("illustrator", ""),
             "pack_code": self.pack_code
@@ -874,7 +873,6 @@ class Card2ArkhamDBConverter:
             "faction_code": "mythos",
             "text": self._convert_text_format(self.card_data.get("body", "")),
             "flavor": self._convert_text_format(self.card_data.get("flavor", "")),
-            "deck_limit": 1,
             "is_unique": flags["is_unique"],
             "illustrator": self.card_data.get("illustrator", ""),
             "pack_code": self.pack_code,
@@ -917,7 +915,34 @@ class Card2ArkhamDBConverter:
             "faction_code": "mythos",
             "text": self._convert_text_format(self.card_data.get("body", "")),
             "flavor": self._convert_text_format(self.card_data.get("flavor", "")),
-            "deck_limit": 1,
+            "is_unique": flags["is_unique"],
+            "illustrator": self.card_data.get("illustrator", ""),
+            "pack_code": self.pack_code
+        }
+
+        # 特性
+        if traits := self._get_traits():
+            data["traits"] = traits
+
+        # 图片
+        data.update(self._get_image_urls())
+
+        return data
+
+    def _convert_story(self) -> Dict[str, Any]:
+        """转换故事卡"""
+        flags = self._get_special_flags()
+
+        data = {
+            "code": self._extract_code_from_gmnotes(),
+            "position": self._extract_position(),
+            "quantity": self._get_quantity(),
+            "name": self._clean_name(self.card_data.get("name", "")),
+            "subname": self.card_data.get("subtitle", ""),
+            "type_code": "story",
+            "faction_code": "mythos",
+            "text": self._convert_text_format(self.card_data.get("body", "")),
+            "flavor": self._convert_text_format(self.card_data.get("flavor", "")),
             "is_unique": flags["is_unique"],
             "illustrator": self.card_data.get("illustrator", ""),
             "pack_code": self.pack_code
@@ -945,20 +970,11 @@ class Card2ArkhamDBConverter:
             "type_name": "剧本",
             "faction_code": "mythos",
             "text": self._build_scenario_text(),
-            "deck_limit": 1,
             "is_unique": flags["is_unique"],
             "illustrator": self.card_data.get("illustrator", ""),
             "pack_code": self.pack_code,
             "double_sided": True
         }
-
-        # 遭遇位置
-        encounter_position = self.card_data.get("encounter_group_number", "")
-        if encounter_position:
-            # 解析 "1/21" 格式
-            match = re.search(r'(\d+)/(\d+)', encounter_position)
-            if match:
-                data["encounter_position"] = int(match.group(1))
 
         # 背面数据
         if "back" in self.card_data:
