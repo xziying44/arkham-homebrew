@@ -13,6 +13,9 @@ declare module 'vue' {
     CloudUploadDialog: typeof import('./src/components/CloudUploadDialog.vue')['default']
     DeckEditor: typeof import('./src/components/DeckEditor.vue')['default']
     DeckOptionEditor: typeof import('./src/components/DeckOptionEditor.vue')['default']
+    EncounterBatchUploadDialog: typeof import('./src/components/EncounterBatchUploadDialog.vue')['default']
+    EncounterGroupsExample: typeof import('./src/components/EncounterGroupsExample.vue')['default']
+    EncounterUploadDialog: typeof import('./src/components/EncounterUploadDialog.vue')['default']
     FileTreePanel: typeof import('./src/components/FileTreePanel.vue')['default']
     FormEditPanel: typeof import('./src/components/FormEditPanel.vue')['default']
     FormField: typeof import('./src/components/FormField.vue')['default']
@@ -70,6 +73,7 @@ declare module 'vue' {
     ResizeSplitter: typeof import('./src/components/ResizeSplitter.vue')['default']
     TTSExportGuide: typeof import('./src/components/TTSExportGuide.vue')['default']
     TtsScriptEditor: typeof import('./src/components/TtsScriptEditor.vue')['default']
+    UniversalUploadDialog: typeof import('./src/components/UniversalUploadDialog.vue')['default']
     WorkspaceSidebar: typeof import('./src/components/WorkspaceSidebar.vue')['default']
   }
 }

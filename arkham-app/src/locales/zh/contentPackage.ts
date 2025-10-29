@@ -20,12 +20,14 @@ export default {
     tabs: {
       info: '基础信息',
       cards: '卡牌管理',
+      encounters: '遭遇组',
       export: '导出设置'
     },
     sections: {
       banner: '封面预览',
       basicInfo: '基础信息',
       cards: '卡牌管理',
+      encounters: '遭遇组管理',
       export: '导出设置'
     },
     fields: {
@@ -229,6 +231,30 @@ export default {
       cancel: '取消'
     }
   },
+  encounters: {
+    empty: {
+      title: '还没有遭遇组',
+      description: '点击刷新按钮加载遭遇组'
+    },
+    error: {
+      noPackagePath: '内容包路径无效',
+      refreshFailed: '刷新遭遇组失败: {message}',
+      noEncountersToUpload: '没有需要上传的遭遇组',
+      noIconData: '没有找到遭遇组图标数据',
+      batchUploadFailed: '批量上传失败: {message}'
+    },
+    success: {
+      refreshSuccess: '成功刷新 {count} 个遭遇组',
+      uploadSuccess: '遭遇组上传成功',
+      batchUploadSuccess: '批量上传成功！共上传 {count} 个遭遇组'
+    },
+    messages: {
+      batchPreparing: '准备批量上传...',
+      batchStarting: '开始批量上传...',
+      batchUploading: '正在上传: {name} ({index}/{total})',
+      batchUploadCompleted: '批量上传完成，成功 {success} 个，失败 {failure} 个'
+    }
+  },
   upload: {
     button: {
       uploadToCloud: '上传云端',
@@ -262,6 +288,14 @@ export default {
       preparingBatchConfig: '准备批量上传配置...',
       preparingBatchUpload: '准备批量上传...',
       batchUploadComplete: '批量上传完成',
+      bannerInfo: '封面信息',
+      cardInfo: '卡牌信息',
+      encounterInfo: '遭遇组信息',
+      encounterName: '遭遇组名称',
+      encounterCode: '遭遇组代码',
+      currentStatus: '当前状态',
+      noIcon: '无图标',
+      uploadInfo: '上传信息',
       imageUploadSuccess: '图片上传成功: {filename}',
       imageUploadFailed: '图片上传失败: {filename} - {error}',
       bannerUploadComplete: '封面上传完成',
@@ -306,7 +340,9 @@ export default {
     title: {
       uploadBannerToCloud: '上传封面到云端',
       uploadCardToCloud: '上传卡牌到云端',
+      uploadEncounterToCloud: '上传遭遇组到云端',
       batchUploadToCloud: '批量上传卡牌到云端',
+      batchUploadEncountersToCloud: '批量上传遭遇组到云端',
       configureBatchUpload: '配置批量上传'
     },
     info: {
@@ -314,11 +350,14 @@ export default {
       cloudUploaded: '已上传云端',
       v2CardList: 'v2.0卡牌列表',
       uploadProgress: '上传进度',
-      batchUploadCompleted: '批量上传完成: 成功 {success} 张，失败 {failure} 张'
+      batchUploadCompleted: '批量上传完成: 成功 {success} 张，失败 {failure} 张',
+      totalEncounters: '遭遇组总数',
+      totalItems: '项目总数'
     },
     action: {
       startConfiguration: '开始配置 ({count} 张)',
-      startUpload: '开始上传'
+      startUpload: '开始上传',
+      uploadToCloud: '上传云端'
     }
   },
   common: {
@@ -341,6 +380,7 @@ export default {
     uploadToCloud: '上传云端',
     close: '关闭',
     openFolder: '打开文件夹',
-    cardTagsSaved: '卡牌标签保存成功'
+    cardTagsSaved: '卡牌标签保存成功',
+    refresh: '刷新'
   }
 }

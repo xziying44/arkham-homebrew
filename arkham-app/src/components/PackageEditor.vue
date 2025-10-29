@@ -247,6 +247,88 @@
           </div>
         </n-tab-pane>
 
+        <!-- 遭遇组管理标签页 -->
+        <n-tab-pane name="encounters" :tab="$t('contentPackage.editor.tabs.encounters')">
+          <div class="encounters-panel">
+            <div class="encounters-header">
+              <h4>{{ $t('contentPackage.editor.sections.encounters') }}</h4>
+              <n-space>
+                <n-button
+                  v-if="encounters.length > 0"
+                  type="warning"
+                  @click="showBatchEncounterUploadDialog = true"
+                  size="small"
+                >
+                  <template #icon>
+                    <n-icon :component="CloudUploadOutline" />
+                  </template>
+                  {{ t('contentPackage.common.batchUpload') }} ({{ encountersWithCloudUrls.length }}/{{ encounters.length }})
+                </n-button>
+                <n-button type="primary" @click="refreshEncounterGroups" size="small" :loading="refreshingEncounters">
+                  <template #icon>
+                    <n-icon :component="RefreshOutline" />
+                  </template>
+                  {{ t('contentPackage.common.refresh') }}
+                </n-button>
+              </n-space>
+            </div>
+
+            <!-- 遭遇组列表 -->
+            <div class="encounters-content">
+              <div v-if="!encounters || encounters.length === 0" class="empty-encounters">
+                <n-empty :description="t('contentPackage.encounters.empty.title')">
+                  <template #icon>
+                    <n-icon :component="ImagesOutline" />
+                  </template>
+                  <template #extra>
+                    <n-text depth="3">{{ t('contentPackage.encounters.empty.description') }}</n-text>
+                  </template>
+                </n-empty>
+              </div>
+              <div v-else class="encounters-grid">
+                <div v-for="encounter in encounters" :key="encounter.code" class="encounter-item">
+                  <!-- 状态图标 - 左上角 -->
+                  <div v-if="hasCloudUrl(encounter)" class="status-icon">
+                    <n-icon :component="CloudOutline" size="18"
+                      :title="t('contentPackage.upload.status.uploadedToCloud')"
+                      class="cloud-status-icon" />
+                  </div>
+                  <div v-else-if="hasLocalUrl(encounter)" class="status-icon">
+                    <n-icon :component="FolderOutline" size="18"
+                      :title="t('contentPackage.upload.status.savedToLocal')"
+                      class="local-status-icon" />
+                  </div>
+
+                  <div class="encounter-icon">
+                    <div v-if="encounter.base64" class="icon-preview">
+                      <img :src="encounter.base64" :alt="encounter.name" />
+                    </div>
+                    <div v-else class="icon-placeholder">
+                      <n-icon :component="ImagesOutline" size="24" />
+                    </div>
+                  </div>
+                  <div class="encounter-info">
+                    <div class="encounter-name">
+                      {{ encounter.name }}
+                    </div>
+                    <div class="encounter-code">
+                      <n-text depth="3" style="font-size: 0.75rem;">{{ encounter.code.substring(0, 8) }}...</n-text>
+                    </div>
+                  </div>
+                  <div class="encounter-actions">
+                    <n-button circle size="tiny" type="info" @click="openUploadEncounterDialog(encounter)"
+                      :loading="isEncounterUploading && uploadingEncounter?.code === encounter.code">
+                      <template #icon>
+                        <n-icon :component="CloudUploadOutline" />
+                      </template>
+                    </n-button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </n-tab-pane>
+
         <!-- 导出设置标签页 -->
         <n-tab-pane name="export" :tab="$t('contentPackage.editor.tabs.export')">
           <div class="export-panel">
@@ -514,13 +596,18 @@
     <!-- 上传云端对话框 -->
     <n-modal v-model:show="showUploadBannerDialog" preset="dialog"
       :title="t('contentPackage.upload.title.uploadBannerToCloud')" style="width: 600px;">
-      <CloudUploadDialog ref="bannerUploadDialogRef" :is-banner="true" :config="uploadConfig"
-        @confirm="handleUploadBanner" @cancel="showUploadBannerDialog = false" />
+      <UniversalUploadDialog
+        ref="bannerUploadDialogRef"
+        upload-type="banner"
+        :current-item="{ banner_base64: packageData.banner_base64, meta: packageData.meta }"
+        :config="packageData"
+        @confirm="handleUploadBanner"
+        @cancel="showUploadBannerDialog = false" />
       <template #action>
         <n-space>
-          <n-button @click="showUploadBannerDialog = false">取消</n-button>
+          <n-button @click="showUploadBannerDialog = false">{{ t('contentPackage.actions.cancel') }}</n-button>
           <n-button type="primary" @click="triggerBannerUpload" :loading="isBannerUploading">
-            上传云端
+            {{ t('contentPackage.upload.action.startUpload') }}
           </n-button>
         </n-space>
       </template>
@@ -528,13 +615,18 @@
 
     <n-modal v-model:show="showUploadCardDialog" preset="dialog"
       :title="t('contentPackage.upload.title.uploadCardToCloud')" style="width: 600px;">
-      <CloudUploadDialog ref="cardUploadDialogRef" :is-banner="false" :card="uploadingCard" :config="uploadConfig"
-        @confirm="handleUploadCard" @cancel="showUploadCardDialog = false; uploadingCard = null" />
+      <UniversalUploadDialog
+        ref="cardUploadDialogRef"
+        upload-type="card"
+        :current-item="uploadingCard"
+        :config="packageData"
+        @confirm="handleUploadCard"
+        @cancel="showUploadCardDialog = false; uploadingCard = null" />
       <template #action>
         <n-space>
-          <n-button @click="showUploadCardDialog = false; uploadingCard = null">取消</n-button>
+          <n-button @click="showUploadCardDialog = false; uploadingCard = null">{{ t('contentPackage.actions.cancel') }}</n-button>
           <n-button type="primary" @click="triggerCardUpload" :loading="isCardUploading">
-            上传云端
+            {{ t('contentPackage.upload.action.startUpload') }}
           </n-button>
         </n-space>
       </template>
@@ -542,67 +634,21 @@
 
     <!-- 批量上传对话框 -->
     <n-modal v-model:show="showBatchUploadDialog" preset="dialog"
-      :title="t('contentPackage.upload.title.batchUploadToCloud')" style="width: 600px;">
-      <div class="batch-upload-container">
-        <div class="batch-upload-info">
-          <n-alert type="info" style="margin-bottom: 1rem;">
-            <template #icon>
-              <n-icon :component="CloudUploadOutline" />
-            </template>
-            {{ v2CardsWithoutCloudUrls.length > 0
-              ? `将上传 ${v2CardsWithoutCloudUrls.length} 张新卡牌，重新上传 ${v2CardsWithCloudUrls.length} 张已有卡牌`
-              : `将重新上传 ${v2CardsWithCloudUrls.length} 张卡牌到云端` }}
-          </n-alert>
-
-          <n-descriptions :column="2" bordered>
-            <n-descriptions-item :label="t('contentPackage.upload.info.v2CardCount')">
-              <n-tag type="info" size="small">{{ v2Cards.length }}</n-tag>
-            </n-descriptions-item>
-            <n-descriptions-item :label="t('contentPackage.upload.info.cloudUploaded')">
-              <n-tag type="success" size="small">{{ v2CardsWithCloudUrls.length }}</n-tag>
-            </n-descriptions-item>
-            <n-descriptions-item label="待上传">
-              <n-tag type="warning" size="small">{{ v2CardsWithoutCloudUrls.length }}</n-tag>
-            </n-descriptions-item>
-          </n-descriptions>
-        </div>
-
-        <div class="batch-upload-cards" v-if="v2Cards.length > 0">
-          <h5>{{ t('contentPackage.upload.info.v2CardList') }}</h5>
-          <n-scrollbar style="max-height: 300px;">
-            <div class="batch-card-list">
-              <div v-for="card in v2Cards" :key="card.filename" class="batch-card-item">
-                <div class="batch-card-info">
-                  <n-text strong>{{ card.filename }}</n-text>
-                  <n-space size="small">
-                    <n-text depth="3" style="font-size: 0.875rem;">{{ getCardStatus(card.filename).version }}</n-text>
-                    <n-tag v-if="hasCloudUrls(card)" type="success" size="tiny">已上传</n-tag>
-                    <n-tag v-else type="warning" size="tiny">待上传</n-tag>
-                  </n-space>
-                </div>
-                <div v-if="getCardStatus(card.filename).previewImage" class="batch-card-preview">
-                  <img :src="getCardStatus(card.filename).previewImage" :alt="card.filename" />
-                </div>
-              </div>
-            </div>
-          </n-scrollbar>
-        </div>
-
-        <div class="batch-upload-progress" v-if="batchUploading">
-          <h5>{{ t('contentPackage.upload.info.uploadProgress') }}</h5>
-          <n-progress :percentage="batchUploadProgress" :status="batchUploadProgress === 100 ? 'success' : 'default'"
-            :indicator-placement="'inside'" />
-          <div class="batch-upload-status">
-            <n-text depth="3">{{ batchUploadStatus }}</n-text>
-          </div>
-        </div>
-      </div>
+      :title="t('contentPackage.upload.title.batchUploadToCloud')" style="width: 700px;">
+      <UniversalUploadDialog
+        ref="batchUploadDialogRef"
+        upload-type="card"
+        :upload-items="v2Cards"
+        :config="packageData"
+        :is-batch="true"
+        @confirm="handleBatchUpload"
+        @cancel="showBatchUploadDialog = false" />
       <template #action>
         <n-space>
           <n-button @click="showBatchUploadDialog = false">{{ t('contentPackage.actions.cancel') }}</n-button>
           <n-button
             type="primary"
-            @click="startBatchUploadWithDialog"
+            @click="triggerBatchUpload"
             :loading="batchUploading"
             :disabled="v2Cards.length === 0"
           >
@@ -690,15 +736,42 @@
       </template>
     </n-modal>
 
-    <!-- 批量上传配置对话框 -->
-    <n-modal v-model:show="showBatchUploadConfigDialog" preset="dialog"
-      :title="t('contentPackage.upload.title.configureBatchUpload')" style="width: 600px;">
-      <CloudUploadDialog ref="batchUploadDialogRef" :is-banner="false" :is-batch-upload="true" :config="uploadConfig"
-        @confirm="handleBatchUpload" @cancel="showBatchUploadConfigDialog = false" />
+    
+    <!-- 遭遇组上传对话框 -->
+    <n-modal v-model:show="showUploadEncounterDialog" preset="dialog"
+      :title="t('contentPackage.upload.title.uploadEncounterToCloud')" style="width: 600px;">
+      <UniversalUploadDialog
+        ref="encounterUploadDialogRef"
+        upload-type="encounter"
+        :current-item="uploadingEncounter"
+        :config="packageData"
+        @confirm="handleUploadEncounter"
+        @cancel="showUploadEncounterDialog = false; uploadingEncounter = null" />
       <template #action>
         <n-space>
-          <n-button @click="showBatchUploadConfigDialog = false">{{ t('contentPackage.actions.cancel') }}</n-button>
-          <n-button type="primary" @click="triggerBatchUpload" :loading="isBatchUploading">
+          <n-button @click="showUploadEncounterDialog = false; uploadingEncounter = null">{{ t('contentPackage.actions.cancel') }}</n-button>
+          <n-button type="primary" @click="triggerEncounterUpload" :loading="isEncounterUploading">
+            {{ t('contentPackage.upload.action.uploadToCloud') }}
+          </n-button>
+        </n-space>
+      </template>
+    </n-modal>
+
+    <!-- 遭遇组批量上传对话框 -->
+    <n-modal v-model:show="showBatchEncounterUploadDialog" preset="dialog"
+      :title="t('contentPackage.upload.title.batchUploadEncountersToCloud')" style="width: 700px;">
+      <UniversalUploadDialog
+        ref="batchEncounterUploadDialogRef"
+        upload-type="encounter"
+        :upload-items="encounters"
+        :config="packageData"
+        :is-batch="true"
+        @confirm="handleBatchEncounterUpload"
+        @cancel="showBatchEncounterUploadDialog = false" />
+      <template #action>
+        <n-space>
+          <n-button @click="showBatchEncounterUploadDialog = false">{{ t('contentPackage.actions.cancel') }}</n-button>
+          <n-button type="primary" @click="triggerBatchEncounterUpload" :loading="batchEncounterUploading">
             {{ t('contentPackage.upload.action.startUpload') }}
           </n-button>
         </n-space>
@@ -730,17 +803,20 @@ import {
   DocumentTextOutline,
   WarningOutline,
   AddOutline,
-  InformationCircleOutline
+  InformationCircleOutline,
+  ImagesOutline,
+  RefreshOutline
 } from '@vicons/ionicons5';
-import type { ContentPackageFile, PackageType, ContentPackageCard } from '@/types/content-package';
+import type { ContentPackageFile, PackageType, ContentPackageCard, EncounterSet } from '@/types/content-package';
 import { getPackageTypeOptions, getLanguageOptions, getStatusOptions } from '@/types/content-package';
 import { WorkspaceService } from '@/api';
 import { CardService } from '@/api/card-service';
 import { ConfigService } from '@/api/config-service';
 import { ImageHostService } from '@/api/image-host-service';
 import { ContentPackageService } from '@/api/content-package-service';
+import { v4 as uuidv4 } from 'uuid';
 import CardFileBrowser from '@/components/CardFileBrowser.vue';
-import CloudUploadDialog from './CloudUploadDialog.vue';
+import UniversalUploadDialog from './UniversalUploadDialog.vue';
 
 interface Props {
   package: ContentPackageFile;
@@ -786,10 +862,22 @@ const editFileInputRef = ref<HTMLInputElement | null>(null);
 const bannerUploadDialogRef = ref<any>(null);
 const cardUploadDialogRef = ref<any>(null);
 const batchUploadDialogRef = ref<any>(null);
+const encounterUploadDialogRef = ref<any>(null);
+const batchEncounterUploadDialogRef = ref<any>(null);
 
-// 批量上传配置对话框状态
-const showBatchUploadConfigDialog = ref(false);
-const isBatchUploading = ref(false);
+
+// 遭遇组相关状态
+const encounters = ref<EncounterSet[]>([]);
+const refreshingEncounters = ref(false);
+const showUploadEncounterDialog = ref(false);
+const showBatchEncounterUploadDialog = ref(false);
+const uploadingEncounter = ref<EncounterSet | null>(null);
+const isEncounterUploading = ref(false);
+
+// 遭遇组批量上传状态
+const batchEncounterUploading = ref(false);
+const batchEncounterUploadProgress = ref(0);
+const batchEncounterUploadStatus = ref('');
 
 // 标签编辑对话框状态
 const showEditTagsDialog = ref(false);
@@ -1249,6 +1337,17 @@ const hasAnyFormTags = (): boolean => {
            editTagsForm.value.myriad || editTagsForm.value.exile);
 };
 
+// 遭遇组相关方法
+// 检查遭遇组是否有云端URL
+const hasCloudUrl = (encounter: EncounterSet): boolean => {
+  return !!(encounter.icon_url?.startsWith('http://') || encounter.icon_url?.startsWith('https://'));
+};
+
+// 检查遭遇组是否有本地URL
+const hasLocalUrl = (encounter: EncounterSet): boolean => {
+  return !!(encounter.icon_url?.startsWith('file:///'));
+};
+
 // 计算属性：检查是否可以导出到TTS
 const canExportToTts = computed(() => {
   return cardsWithAnyUrls.value.length > 0;
@@ -1344,6 +1443,19 @@ const hasV2CardsWithoutCloudUrls = computed(() => {
   return v2CardsWithoutCloudUrls.value.length > 0;
 });
 
+// 遭遇组相关计算属性
+// 计算属性：已上传云端的遭遇组
+const encountersWithCloudUrls = computed(() => {
+  if (!encounters.value) return [];
+  return encounters.value.filter(encounter => hasCloudUrl(encounter));
+});
+
+// 计算属性：未上传云端的遭遇组
+const encountersWithoutCloudUrls = computed(() => {
+  if (!encounters.value) return [];
+  return encounters.value.filter(encounter => !hasCloudUrl(encounter));
+});
+
 // 上传配置
 const uploadConfig = computed(() => {
   return {
@@ -1406,15 +1518,9 @@ const handleUploadCard = (updatedPackage: any) => {
   message.success(t('contentPackage.messages.cardUploadSuccess'));
 };
 
-// 开始批量上传配置
-const startBatchUploadWithDialog = () => {
-  showBatchUploadDialog.value = false;
-  showBatchUploadConfigDialog.value = true;
-};
-
 // 触发批量上传
 const triggerBatchUpload = () => {
-  isBatchUploading.value = true;
+  batchUploading.value = true;
   if (batchUploadDialogRef.value) {
     batchUploadDialogRef.value.handleConfirm();
   }
@@ -1422,8 +1528,8 @@ const triggerBatchUpload = () => {
 
 // 处理批量上传
 const handleBatchUpload = (updatedPackage: any) => {
-  isBatchUploading.value = false;
-  showBatchUploadConfigDialog.value = false;
+  batchUploading.value = false;
+  showBatchUploadDialog.value = false;
 
   // 更新包数据
   emit('update:package', updatedPackage);
@@ -1691,6 +1797,61 @@ const refreshCardVersions = async () => {
   // 为所有v2.0的卡牌启动预览生成
   if (v2Cards.length > 0) {
     startPreviewGeneration(v2Cards);
+  }
+};
+
+// 遭遇组管理方法
+// 刷新遭遇组信息
+const refreshEncounterGroups = async () => {
+  if (!packageData.value?.path) {
+    message.error(t('contentPackage.encounters.error.noPackagePath'));
+    return;
+  }
+
+  refreshingEncounters.value = true;
+  try {
+    const result = await ContentPackageService.getEncounterGroups(packageData.value.path);
+
+    // 转换API返回的数据为我们的格式
+    const apiEncounters = result.encounter_groups || [];
+    const existingEncounters = packageData.value.encounter_sets || [];
+
+    // 合并数据，优先使用现有的icon_url，补充base64和relative_path
+    const mergedEncounters: EncounterSet[] = apiEncounters.map((apiEncounter: any) => {
+      const existing = existingEncounters.find(e => e.name === apiEncounter.name);
+      if (existing) {
+        return {
+          ...existing,
+          base64: apiEncounter.base64,
+          relative_path: apiEncounter.relative_path
+        };
+      } else {
+        // 生成新的UUID code
+        return {
+          code: uuidv4(),
+          name: apiEncounter.name,
+          base64: apiEncounter.base64,
+          relative_path: apiEncounter.relative_path
+        };
+      }
+    });
+
+    // 更新本地状态
+    encounters.value = mergedEncounters;
+
+    // 更新包数据
+    const updatedPackage = {
+      ...packageData.value,
+      encounter_sets: mergedEncounters
+    };
+    emit('update:package', updatedPackage);
+
+    message.success(t('contentPackage.encounters.success.refreshSuccess', { count: mergedEncounters.length }));
+  } catch (error: any) {
+    console.error('刷新遭遇组失败:', error);
+    message.error(t('contentPackage.encounters.error.refreshFailed', { message: error.message }));
+  } finally {
+    refreshingEncounters.value = false;
   }
 };
 
@@ -1998,9 +2159,195 @@ const openArkhamdbFileLocation = () => {
   }
 };
 
+// 遭遇组上传相关方法
+// 打开遭遇组上传对话框
+const openUploadEncounterDialog = (encounter: EncounterSet) => {
+  uploadingEncounter.value = encounter;
+  showUploadEncounterDialog.value = true;
+};
+
+// 触发遭遇组上传
+const triggerEncounterUpload = () => {
+  isEncounterUploading.value = true;
+  if (encounterUploadDialogRef.value) {
+    encounterUploadDialogRef.value.handleConfirm();
+  }
+};
+
+// 触发遭遇组批量上传
+const triggerBatchEncounterUpload = () => {
+  batchEncounterUploading.value = true;
+  if (batchEncounterUploadDialogRef.value) {
+    batchEncounterUploadDialogRef.value.handleConfirm();
+  }
+};
+
+// 处理遭遇组上传
+const handleUploadEncounter = (updatedPackage: any) => {
+  isEncounterUploading.value = false;
+  showUploadEncounterDialog.value = false;
+  uploadingEncounter.value = null;
+
+  // 更新包数据
+  emit('update:package', updatedPackage);
+
+  // 更新本地遭遇组状态
+  encounters.value = updatedPackage.encounter_sets || [];
+
+  // 直接触发保存到文件
+  emit('save');
+
+  message.success(t('contentPackage.encounters.success.uploadSuccess'));
+};
+
+// 处理遭遇组批量上传
+const handleBatchEncounterUpload = (updatedPackage: any) => {
+  batchEncounterUploading.value = false;
+  showBatchEncounterUploadDialog.value = false;
+
+  // 更新包数据
+  emit('update:package', updatedPackage);
+
+  // 更新本地遭遇组状态
+  encounters.value = updatedPackage.encounter_sets || [];
+
+  // 直接触发保存到文件
+  emit('save');
+
+  // 计算成功上传的数量
+  const uploadedCount = encountersWithoutCloudUrls.value.length;
+  message.success(t('contentPackage.encounters.success.batchUploadSuccess', { count: uploadedCount }));
+};
+
+
+// 开始遭遇组批量上传
+const startBatchEncounterUpload = async () => {
+  if (encounters.value.length === 0) {
+    message.warning(t('contentPackage.encounters.error.noEncountersToUpload'));
+    return;
+  }
+
+  batchEncounterUploading.value = true;
+  batchEncounterUploadProgress.value = 0;
+  batchEncounterUploadStatus.value = t('contentPackage.encounters.messages.batchPreparing');
+
+  const encountersToUpload = encounters.value;
+  const totalEncounters = encountersToUpload.length;
+  let successCount = 0;
+  let failureCount = 0;
+
+  try {
+    // 获取图床配置
+    const config = await ConfigService.getConfig();
+    const selectedHost = config.cloud_name ? 'cloudinary' : 'imgbb';
+
+    batchEncounterUploadStatus.value = t('contentPackage.encounters.messages.batchStarting');
+
+    // 逐个上传遭遇组图标
+    for (let i = 0; i < encountersToUpload.length; i++) {
+      const encounter = encountersToUpload[i];
+
+      try {
+        batchEncounterUploadStatus.value = t('contentPackage.encounters.messages.batchUploading', {
+          name: encounter.name,
+          index: i + 1,
+          total: totalEncounters
+        });
+
+        // 检查是否有图标数据
+        if (!encounter.base64 && !encounter.relative_path) {
+          console.warn(`遭遇组 ${encounter.name} 没有图标数据，跳过上传`);
+          continue;
+        }
+
+        // 创建临时文件用于上传
+        const onlineName = `${encounter.name.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_')}_icon`;
+
+        let imagePath: string;
+        // 优先使用relative_path，如果没有则使用base64
+        if (encounter.relative_path) {
+          imagePath = encounter.relative_path;
+        } else if (encounter.base64) {
+          imagePath = encounter.base64;
+        } else {
+          console.warn(`遭遇组 ${encounter.name} 没有可用的图标数据，跳过上传`);
+          continue;
+        }
+
+        // 上传图片
+        const result = await ImageHostService.smartUpload(
+          imagePath,
+          selectedHost,
+          onlineName
+        );
+
+        if (result.code === 0 && result.data?.url) {
+          // 更新遭遇组的icon_url
+          const updatedPackage = { ...packageData.value };
+          const encounterIndex = updatedPackage.encounter_sets?.findIndex(e => e.code === encounter.code);
+          if (encounterIndex !== undefined && encounterIndex >= 0) {
+            updatedPackage.encounter_sets![encounterIndex] = {
+              ...updatedPackage.encounter_sets![encounterIndex],
+              icon_url: result.data.url
+            };
+          }
+
+          // 更新本地状态
+          const localEncounterIndex = encounters.value.findIndex(e => e.code === encounter.code);
+          if (localEncounterIndex >= 0) {
+            encounters.value[localEncounterIndex].icon_url = result.data.url;
+          }
+
+          successCount++;
+        } else {
+          throw new Error(result.msg || '上传失败');
+        }
+
+        // 更新进度
+        batchEncounterUploadProgress.value = Math.round(((i + 1) / totalEncounters) * 100);
+
+      } catch (error) {
+        console.error(`上传遭遇组失败: ${encounter.name}`, error);
+        failureCount++;
+      }
+
+      // 短暂延迟避免过于频繁的请求
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    // 保存最终结果
+    emit('save');
+
+    // 显示结果
+    batchEncounterUploadStatus.value = t('contentPackage.encounters.messages.batchUploadCompleted', {
+      success: successCount,
+      failure: failureCount
+    });
+
+    if (failureCount === 0) {
+      message.success(t('contentPackage.encounters.success.batchUploadSuccess', { count: successCount }));
+      setTimeout(() => {
+        showBatchEncounterUploadDialog.value = false;
+      }, 2000);
+    } else {
+      message.warning(t('contentPackage.encounters.messages.batchUploadCompleted', { success: successCount, failure: failureCount }));
+    }
+
+  } catch (error) {
+    console.error('批量上传遭遇组失败:', error);
+    message.error(t('contentPackage.encounters.error.batchUploadFailed'));
+    batchEncounterUploadStatus.value = t('contentPackage.encounters.error.batchUploadFailed');
+  } finally {
+    batchEncounterUploading.value = false;
+  }
+};
+
 // 监听内容包变化，自动刷新版本信息
 watch(() => packageData.value, async (newPackage, oldPackage) => {
-  if (newPackage && (!oldPackage || newPackage.path !== oldPackage.path || JSON.stringify(newPackage?.cards) !== JSON.stringify(oldPackage?.cards))) {
+  if (newPackage && (!oldPackage ||
+    newPackage.path !== oldPackage.path ||
+    JSON.stringify(newPackage?.cards) !== JSON.stringify(oldPackage?.cards) ||
+    JSON.stringify(newPackage?.encounter_sets) !== JSON.stringify(oldPackage?.encounter_sets))) {
     // 中止正在进行的预览生成队列
     abortPreviewGeneration();
 
@@ -2009,6 +2356,14 @@ watch(() => packageData.value, async (newPackage, oldPackage) => {
 
     // 刷新版本信息
     await refreshCardVersions();
+
+    // 刷新遭遇组信息
+    if (newPackage.encounter_sets && newPackage.encounter_sets.length > 0) {
+      encounters.value = newPackage.encounter_sets;
+    } else {
+      // 如果没有遭遇组数据，尝试从API获取
+      await refreshEncounterGroups();
+    }
   }
 }, { immediate: true, deep: true });
 
@@ -2750,6 +3105,133 @@ watch(() => packageData.value, async (newPackage, oldPackage) => {
 .card-actions .n-button {
   width: 24px;
   height: 24px;
+}
+
+/* 遭遇组管理样式 */
+.encounters-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 400px;
+}
+
+.encounters-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.encounters-header h4 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.1rem;
+}
+
+.encounters-content {
+  flex: 1;
+  min-height: 400px;
+}
+
+.empty-encounters {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 300px;
+}
+
+.encounters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.encounter-item {
+  position: relative;
+  background: white;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.encounter-item:hover {
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.encounter-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e9ecef;
+}
+
+.icon-preview {
+  width: 100%;
+  height: 100%;
+}
+
+.icon-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.icon-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #6c757d;
+}
+
+.encounter-info {
+  text-align: center;
+  flex: 1;
+  width: 100%;
+}
+
+.encounter-name {
+  font-weight: 500;
+  color: #2c3e50;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+  word-break: break-word;
+  line-height: 1.2;
+}
+
+.encounter-code {
+  color: #6c757d;
+  font-size: 0.75rem;
+}
+
+.encounter-actions {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.encounter-item:hover .encounter-actions {
+  opacity: 1;
 }
 
 /* 响应式设计 */

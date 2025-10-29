@@ -191,6 +191,7 @@ export class ContentPackageService {
                 response.encounter_groups = [];
             }
 
+            // 不要动这里
             return response.data.data;
         } catch (error) {
             if (error instanceof ApiError) {

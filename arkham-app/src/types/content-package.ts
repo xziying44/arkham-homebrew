@@ -36,12 +36,24 @@ export interface ContentPackageCard {
 }
 
 /**
+ * 遭遇组信息
+ */
+export interface EncounterSet {
+  code: string;        // UUID生成的唯一标识ID
+  name: string;        // 遭遇组名称（唯一）
+  icon_url?: string;   // 遭遇组图标URL（本地file://或远程http://）
+  base64?: string;     // 遭遇组图标base64数据
+  relative_path?: string; // 图标相对路径
+}
+
+/**
  * 内容包数据结构
  */
 export interface ContentPackage {
   meta: ContentPackageMeta;
   banner_base64: string;  // 封面base64数据
   cards?: ContentPackageCard[]; // 卡牌列表
+  encounter_sets?: EncounterSet[]; // 遭遇组列表
 }
 
 /**
@@ -58,6 +70,7 @@ export interface ContentPackageFile {
   meta: ContentPackageMeta;
   banner_base64: string;
   cards?: ContentPackageCard[]; // 卡牌列表
+  encounter_sets?: EncounterSet[]; // 遭遇组列表
 }
 
 /**
@@ -107,7 +120,8 @@ export const createDefaultMeta = (): ContentPackageMeta => ({
 export const createDefaultPackage = (): ContentPackage => ({
   meta: createDefaultMeta(),
   banner_base64: '',
-  cards: []
+  cards: [],
+  encounter_sets: []
 });
 
 /**

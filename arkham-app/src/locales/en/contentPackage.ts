@@ -20,12 +20,14 @@ export default {
     tabs: {
       info: 'Basic Info',
       cards: 'Card Management',
+      encounters: 'Encounter Sets',
       export: 'Export Settings'
     },
     sections: {
       banner: 'Banner Preview',
       basicInfo: 'Basic Info',
       cards: 'Card Management',
+      encounters: 'Encounter Sets Management',
       export: 'Export Settings'
     },
     fields: {
@@ -224,6 +226,30 @@ export default {
       cancel: 'Cancel'
     }
   },
+  encounters: {
+    empty: {
+      title: 'No encounter sets yet',
+      description: 'Click refresh button to load encounter sets'
+    },
+    error: {
+      noPackagePath: 'Content package path invalid',
+      refreshFailed: 'Failed to refresh encounter sets: {message}',
+      noEncountersToUpload: 'No encounter sets to upload',
+      noIconData: 'No encounter set icon data found',
+      batchUploadFailed: 'Batch upload failed: {message}'
+    },
+    success: {
+      refreshSuccess: 'Successfully refreshed {count} encounter sets',
+      uploadSuccess: 'Encounter set uploaded successfully',
+      batchUploadSuccess: 'Batch upload successful! Total {count} encounter sets uploaded'
+    },
+    messages: {
+      batchPreparing: 'Preparing batch upload...',
+      batchStarting: 'Starting batch upload...',
+      batchUploading: 'Uploading: {name} ({index}/{total})',
+      batchUploadCompleted: 'Batch upload completed: {success} successful, {failure} failed'
+    }
+  },
   upload: {
     button: {
       uploadToCloud: 'Upload to Cloud',
@@ -257,6 +283,14 @@ export default {
       preparingBatchConfig: 'Preparing batch upload configuration...',
       preparingBatchUpload: 'Preparing batch upload...',
       batchUploadComplete: 'Batch upload complete',
+      bannerInfo: 'Banner Information',
+      cardInfo: 'Card Information',
+      encounterInfo: 'Encounter Set Info',
+      encounterName: 'Encounter Set Name',
+      encounterCode: 'Encounter Set Code',
+      currentStatus: 'Current Status',
+      noIcon: 'No Icon',
+      uploadInfo: 'Upload Information',
       imageUploadSuccess: 'Image uploaded successfully: {filename}',
       imageUploadFailed: 'Image upload failed: {filename} - {error}',
       bannerUploadComplete: 'Banner upload complete',
@@ -301,7 +335,9 @@ export default {
     title: {
       uploadBannerToCloud: 'Upload Banner to Cloud',
       uploadCardToCloud: 'Upload Card to Cloud',
+      uploadEncounterToCloud: 'Upload Encounter Set to Cloud',
       batchUploadToCloud: 'Batch Upload Cards to Cloud',
+      batchUploadEncountersToCloud: 'Batch Upload Encounter Sets to Cloud',
       configureBatchUpload: 'Configure Batch Upload'
     },
     info: {
@@ -309,11 +345,14 @@ export default {
       cloudUploaded: 'Cloud Uploaded',
       v2CardList: 'v2.0 Card List',
       uploadProgress: 'Upload Progress',
-      batchUploadCompleted: 'Batch upload completed: {success} successful, {failure} failed'
+      batchUploadCompleted: 'Batch upload completed: {success} successful, {failure} failed',
+      totalEncounters: 'Total Encounter Sets',
+      totalItems: 'Total Items'
     },
     action: {
       startConfiguration: 'Start Configuration ({count} cards)',
-      startUpload: 'Start Upload'
+      startUpload: 'Start Upload',
+      uploadToCloud: 'Upload to Cloud'
     }
   },
   common: {
@@ -336,6 +375,7 @@ export default {
     uploadToCloud: 'Upload to Cloud',
     close: 'Close',
     openFolder: 'Open Folder',
-    cardTagsSaved: 'Card tags saved successfully'
+    cardTagsSaved: 'Card tags saved successfully',
+    refresh: 'Refresh'
   }
 }
