@@ -469,16 +469,119 @@ class ContentPackageManager:
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
+    def get_encounter_groups_from_package(self) -> List[Dict[str, Any]]:
+        """
+        从内容包中获取所有遭遇组图片
+
+        Returns:
+            List[Dict]: 遭遇组列表，每个元素包含 name、base64 和 relative_path 字段
+        """
+        try:
+            self._add_log("开始获取内容包中的遭遇组...")
+
+            encounter_groups = {}  # 使用字典来去重，key为遭遇组名称
+            encounter_groups_dir = self.workspace_manager.config.get('encounter_groups_dir', 'encounter_groups')
+
+            # 遍历内容包中的所有卡牌
+            cards = self.content_package.get("cards", [])
+            self._add_log(f"扫描 {len(cards)} 张卡牌以查找遭遇组...")
+
+            for i, card_info in enumerate(cards):
+                try:
+                    # 读取卡牌JSON数据
+                    card_filename = card_info.get("filename", "")
+                    if not card_filename:
+                        continue
+
+                    card_data = self._read_card_json(card_filename)
+                    if not card_data:
+                        continue
+
+                    # 获取遭遇组名称
+                    encounter_group = card_data.get("encounter_group", "")
+                    if not encounter_group:
+                        continue
+
+                    # 如果这个遭遇组已经处理过，跳过
+                    if encounter_group in encounter_groups:
+                        continue
+
+                    # 获取遭遇组图片的base64数据
+                    encounter_group_base64 = self._get_encounter_group_base64(encounter_group)
+
+                    # 添加到结果中
+                    encounter_groups[encounter_group] = {
+                        "name": encounter_group,
+                        "base64": encounter_group_base64,
+                        "relative_path": os.path.join(encounter_groups_dir, encounter_group + '.png')
+                    }
+
+                    self._add_log(f"找到遭遇组: {encounter_group}")
+
+                except Exception as e:
+                    self._add_log(f"处理卡牌 {i + 1} 时出错: {e}")
+                    continue
+
+            # 转换为列表
+            result = list(encounter_groups.values())
+            self._add_log(f"成功获取 {len(result)} 个遭遇组")
+
+            return result
+
+        except Exception as e:
+            self._add_log(f"获取遭遇组失败: {e}")
+            return []
+
+    def _get_encounter_group_base64(self, encounter_group: str) -> str:
+        """
+        获取遭遇组图片的base64数据
+
+        Args:
+            encounter_group: 遭遇组名称
+
+        Returns:
+            str: base64图片数据，失败时返回空字符串
+        """
+        try:
+            # 获取遭遇组图片路径（参考workspace_manager.py中的逻辑）
+            encounter_groups_dir = self.workspace_manager.config.get('encounter_groups_dir', 'encounter_groups')
+            encounter_group_picture_path = self.workspace_manager._get_absolute_path(
+                os.path.join(encounter_groups_dir, encounter_group + '.png')
+            )
+
+            self._add_log(f"查找遭遇组图片: {encounter_group_picture_path}")
+
+            # 检查文件是否存在
+            if not os.path.exists(encounter_group_picture_path):
+                self._add_log(f"遭遇组图片不存在: {encounter_group}")
+                return ""
+
+            # 读取图片并转换为base64
+            image_data = self.workspace_manager.get_image_as_base64(
+                os.path.join(encounter_groups_dir, encounter_group + '.png')
+            )
+
+            if image_data:
+                self._add_log(f"成功读取遭遇组图片: {encounter_group}")
+            else:
+                self._add_log(f"读取遭遇组图片失败: {encounter_group}")
+
+            return image_data or ""
+
+        except Exception as e:
+            self._add_log(f"获取遭遇组图片base64失败 {encounter_group}: {e}")
+            return ""
+
 
 if __name__ == '__main__':
     from bin.workspace_manager import WorkspaceManager
 
     os.chdir("../")
 
-    workspace_manager = WorkspaceManager(r'D:\汉化文件夹\测试工作空间v2')
+    workspace_manager = WorkspaceManager(r'C:\Users\xziyi\Desktop\arkham-homebrew-projects\EdgeOfTheEarth')
 
     content_package_manager = ContentPackageManager(
-        content_package_data=json.loads(workspace_manager.get_file_content("ContentPackage/Test Pack.pack")),
+        content_package_data=json.loads(workspace_manager.get_file_content("ContentPackage/本地测试遭遇卡.pack")),
         workspace_manager=workspace_manager,
     )
 
@@ -503,4 +606,8 @@ if __name__ == '__main__':
     else:
         print("ArkhamDB导出失败！")
         print(f"错误: {arkhamdb_result.get('error')}")
+    print("=" * 50)
+
+    # 测试获取所有遭遇组
+    print(content_package_manager.get_encounter_groups_from_package())
     print("=" * 50)

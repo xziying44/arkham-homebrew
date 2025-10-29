@@ -922,6 +922,169 @@ def get_encounter_groups():
     ))
 
 
+@app.route('/api/content-package/encounter-groups', methods=['POST'])
+@handle_api_error
+def get_content_package_encounter_groups():
+    """获取内容包中的遭遇组图片"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    data = request.get_json()
+    if not data or 'package_path' not in data:
+        return jsonify(create_response(
+            code=16001,
+            msg="请提供内容包文件路径"
+        )), 400
+
+    package_path = data['package_path']
+    workspace_path = current_workspace.workspace_path
+
+    logger_manager.info(f"获取内容包遭遇组: {package_path}")
+
+    # 验证内容包文件路径
+    if not current_workspace._is_path_in_workspace(package_path):
+        logger_manager.warning(f"内容包路径不在工作空间内: {package_path}")
+        return jsonify(create_response(
+            code=16002,
+            msg="内容包路径不在工作空间内"
+        )), 400
+
+    abs_package_path = current_workspace._get_absolute_path(package_path)
+    if not os.path.exists(abs_package_path):
+        logger_manager.warning(f"内容包文件不存在: {package_path}")
+        return jsonify(create_response(
+            code=16003,
+            msg="内容包文件不存在"
+        )), 404
+
+    try:
+        # 读取内容包文件
+        with open(abs_package_path, 'r', encoding='utf-8') as f:
+            package_data = json.load(f)
+
+        # 创建内容包管理器
+        from bin.content_package_manager import ContentPackageManager
+        package_manager = ContentPackageManager(package_data, current_workspace)
+
+        # 获取遭遇组
+        encounter_groups = package_manager.get_encounter_groups_from_package()
+
+        logger_manager.info(f"内容包 {package_path} 找到 {len(encounter_groups)} 个遭遇组")
+
+        return jsonify(create_response(
+            msg="获取内容包遭遇组成功",
+            data={
+                "workspace_path": workspace_path,
+                "package_path": package_path,
+                "encounter_groups_count": len(encounter_groups),
+                "encounter_groups": encounter_groups,
+                "logs": package_manager.logs.copy()
+            }
+        ))
+
+    except Exception as e:
+        logger_manager.exception(f"获取内容包遭遇组失败: {e}")
+        return jsonify(create_response(
+            code=16004,
+            msg=f"获取遭遇组失败: {type(e).__name__}: {str(e)}"
+        )), 500
+
+
+@app.route('/api/content-package/all-encounter-groups', methods=['GET'])
+@handle_api_error
+def get_all_content_package_encounter_groups():
+    """获取工作空间中所有内容包的遭遇组图片"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    workspace_path = current_workspace.workspace_path
+    logger_manager.info(f"获取工作空间中所有内容包的遭遇组: {workspace_path}")
+
+    try:
+        # 查找所有.pack文件
+        content_packages = []
+        for root, dirs, files in os.walk(workspace_path):
+            for file in files:
+                if file.endswith('.pack'):
+                    relative_path = os.path.relpath(os.path.join(root, file), workspace_path)
+                    content_packages.append(relative_path)
+
+        if not content_packages:
+            logger_manager.warning("未找到任何内容包文件")
+            return jsonify(create_response(
+                code=16005,
+                msg="未找到任何内容包文件"
+            )), 404
+
+        logger_manager.info(f"找到 {len(content_packages)} 个内容包文件")
+
+        # 合并所有遭遇组
+        all_encounter_groups = {}
+        package_results = []
+
+        for pack_file in content_packages:
+            try:
+                # 读取内容包文件
+                pack_path = current_workspace._get_absolute_path(pack_file)
+                with open(pack_path, 'r', encoding='utf-8') as f:
+                    package_data = json.load(f)
+
+                # 创建内容包管理器
+                from bin.content_package_manager import ContentPackageManager
+                package_manager = ContentPackageManager(package_data, current_workspace)
+
+                # 获取遭遇组
+                encounter_groups = package_manager.get_encounter_groups_from_package()
+
+                # 合并到总结果中（去重）
+                for group in encounter_groups:
+                    group_name = group['name']
+                    if group_name not in all_encounter_groups:
+                        all_encounter_groups[group_name] = group
+
+                package_results.append({
+                    "package": pack_file,
+                    "encounter_groups_count": len(encounter_groups),
+                    "logs": package_manager.logs.copy()
+                })
+
+                logger_manager.info(f"内容包 {pack_file} 找到 {len(encounter_groups)} 个遭遇组")
+
+            except Exception as e:
+                logger_manager.error(f"处理内容包 {pack_file} 时出错: {e}")
+                package_results.append({
+                    "package": pack_file,
+                    "encounter_groups_count": 0,
+                    "error": str(e)
+                })
+                continue
+
+        # 转换为列表
+        result_encounter_groups = list(all_encounter_groups.values())
+
+        logger_manager.info(f"总共获取到 {len(result_encounter_groups)} 个唯一遭遇组")
+
+        return jsonify(create_response(
+            msg="获取所有内容包遭遇组成功",
+            data={
+                "workspace_path": workspace_path,
+                "total_encounter_groups": len(result_encounter_groups),
+                "encounter_groups": result_encounter_groups,
+                "package_results": package_results,
+                "packages_processed": len(content_packages)
+            }
+        ))
+
+    except Exception as e:
+        logger_manager.exception(f"获取所有内容包遭遇组失败: {e}")
+        return jsonify(create_response(
+            code=16006,
+            msg=f"获取遭遇组失败: {type(e).__name__}: {str(e)}"
+        )), 500
+
+
 # ================= 牌库导出相关接口 =================
 
 @app.route('/api/export-deck-image', methods=['POST'])
