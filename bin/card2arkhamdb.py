@@ -523,6 +523,43 @@ class Card2ArkhamDBConverter:
         deck_options = self.card_data.get("deck_options", [])
         return deck_options
 
+    def _convert_cost(self) -> Optional[int]:
+        """
+        转换费用值，将Card格式转换为ArkhamDB格式
+
+        Card格式:
+            -1: 无费用（-）
+            -2: X费用
+            ≥0: 具体数值
+
+        ArkhamDB格式:
+            null: 无费用（-）
+            -2: X费用
+            -3: *费用
+            -4: ?费用
+            ≥0: 具体数值
+        """
+        cost = self.card_data.get("cost")
+
+        # 如果cost不存在或为None，返回None
+        if cost is None:
+            return None
+
+        # 转换逻辑
+        if cost == -1:
+            # 无费用用null表示
+            return None
+        elif cost == -2:
+            # X费用保持-2
+            return -2
+        elif cost >= 0:
+            # 具体数值保持不变
+            return cost
+        else:
+            # 其他负数（如果有-3、-4等）保持原值
+            # 这是为了未来支持*费用(-3)和?费用(-4)
+            return cost
+
     def _convert_asset(self) -> Dict[str, Any]:
         """转换支援卡"""
         flags = self._get_special_flags()
@@ -540,7 +577,6 @@ class Card2ArkhamDBConverter:
             "subname": self.card_data.get("subtitle", ""),
             "type_code": "asset",
             "faction_code": faction_codes[0],
-            "cost": self.card_data.get("cost", 0),
             "text": self._convert_text_format(self.card_data.get("body", "")),
             "flavor": self._convert_text_format(self.card_data.get("flavor", "")),
             "deck_limit": self._get_quantity() if is_signature else (1 if flags["is_unique"] else 2),
@@ -548,6 +584,11 @@ class Card2ArkhamDBConverter:
             "illustrator": self.card_data.get("illustrator", ""),
             "pack_code": self.pack_code
         }
+        # 添加费用字段（如果有）
+        cost = self._convert_cost()
+        if cost is not None:
+            data["cost"] = cost
+
         # 处理多职介
         if len(faction_codes) > 1:
             data.update({f"faction{i + 2}_code": code for i, code in enumerate(faction_codes[1:])})
@@ -610,7 +651,6 @@ class Card2ArkhamDBConverter:
             "name": self._clean_name(self.card_data.get("name", "")),
             "type_code": "event",
             "faction_code": faction_codes[0],
-            "cost": self.card_data.get("cost", 0),
             "text": self._convert_text_format(self.card_data.get("body", "")),
             "flavor": self._convert_text_format(self.card_data.get("flavor", "")),
             "deck_limit": self._get_quantity() if is_signature else (1 if flags["is_unique"] else 2),
@@ -618,6 +658,12 @@ class Card2ArkhamDBConverter:
             "illustrator": self.card_data.get("illustrator", ""),
             "pack_code": self.pack_code
         }
+
+        # 添加费用字段（如果有）
+        cost = self._convert_cost()
+        if cost is not None:
+            data["cost"] = cost
+
         # 处理多职介
         if len(faction_codes) > 1:
             data.update({f"faction{i + 2}_code": code for i, code in enumerate(faction_codes[1:])})
