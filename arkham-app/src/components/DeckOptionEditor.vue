@@ -1022,7 +1022,7 @@ const hasBasicConditionValue = (option: DeckOption, conditionType: string): bool
         case 'text':
             return option.text && option.text.length > 0;
         case 'level':
-            return option.level && (option.level.min !== 0 || option.level.max !== 5);
+            return option.level !== undefined && option.level !== null;
         case 'limit':
             return option.limit !== null && option.limit !== undefined;
         default:
@@ -1070,7 +1070,7 @@ const hasAdvancedOptionValue = (item: OptionSelectItem, valueType: string): bool
         case 'uses':
             return item.uses && item.uses.length > 0;
         case 'level':
-            return item.level && (item.level.min !== 0 || item.level.max !== 5);
+            return item.level !== undefined && item.level !== null;
         default:
             return false;
     }
@@ -1286,7 +1286,7 @@ const autoSaveOptions = () => {
             if (option.faction_select && option.faction_select.length > 0) {
                 cleaned.faction_select = option.faction_select;
             }
-            if (option.level && (option.level.min !== 0 || option.level.max !== 5)) {
+            if (option.level !== undefined && option.level !== null) {
                 cleaned.level = { ...option.level };
             }
         } else if (option.selectionType === 'deckSize') {
@@ -1307,7 +1307,7 @@ const autoSaveOptions = () => {
                     if (item.trait && item.trait.length > 0) cleanedItem.trait = item.trait;
                     if (item.slot && item.slot.length > 0) cleanedItem.slot = item.slot;
                     if (item.uses && item.uses.length > 0) cleanedItem.uses = item.uses;
-                    if (item.level && (item.level.min !== 0 || item.level.max !== 5)) {
+                    if (item.level !== undefined && item.level !== null) {
                         cleanedItem.level = { ...item.level };
                     }
                     return cleanedItem;
@@ -1321,7 +1321,7 @@ const autoSaveOptions = () => {
             if (option.slot && option.slot.length > 0) cleaned.slot = option.slot;
             if (option.uses && option.uses.length > 0) cleaned.uses = option.uses;
             if (option.text && option.text.length > 0) cleaned.text = option.text;
-            if (option.level && (option.level.min !== 0 || option.level.max !== 5)) {
+            if (option.level !== undefined && option.level !== null) {
                 cleaned.level = { ...option.level };
             }
             if (option.limit) cleaned.limit = option.limit;
@@ -1356,7 +1356,7 @@ const generateJsonPreview = () => {
             if (option.faction_select && option.faction_select.length > 0) {
                 cleaned.faction_select = option.faction_select;
             }
-            if (option.level && (option.level.min !== 0 || option.level.max !== 5)) {
+            if (option.level !== undefined && option.level !== null) {
                 cleaned.level = { ...option.level };
             }
         } else if (option.selectionType === 'deckSize') {
@@ -1377,7 +1377,7 @@ const generateJsonPreview = () => {
                     if (item.trait && item.trait.length > 0) cleanedItem.trait = item.trait;
                     if (item.slot && item.slot.length > 0) cleanedItem.slot = item.slot;
                     if (item.uses && item.uses.length > 0) cleanedItem.uses = item.uses;
-                    if (item.level && (item.level.min !== 0 || item.level.max !== 5)) {
+                    if (item.level !== undefined && item.level !== null) {
                         cleanedItem.level = { ...item.level };
                     }
                     return cleanedItem;
@@ -1391,7 +1391,7 @@ const generateJsonPreview = () => {
             if (option.slot && option.slot.length > 0) cleaned.slot = option.slot;
             if (option.uses && option.uses.length > 0) cleaned.uses = option.uses;
             if (option.text && option.text.length > 0) cleaned.text = option.text;
-            if (option.level && (option.level.min !== 0 || option.level.max !== 5)) {
+            if (option.level !== undefined && option.level !== null) {
                 cleaned.level = { ...option.level };
             }
             if (option.limit) cleaned.limit = option.limit;
