@@ -1042,7 +1042,7 @@ const openExternalLink = () => {
 
 // 处理保存
 const handleSave = () => {
-  emit('save');
+  emit('save', false);
 };
 
 // 处理编辑封面上传
@@ -1118,7 +1118,7 @@ const saveMetaChanges = () => {
       message.success(t('contentPackage.editor.editMeta.saveSuccess'));
 
       // 直接触发保存到文件，避免用户需要再次点击保存按钮
-      emit('save');
+      emit('save', true);
     }
   });
 };
@@ -1498,7 +1498,7 @@ const handleUploadBanner = (updatedPackage: any) => {
   emit('update:package', updatedPackage);
 
   // 直接触发保存到文件
-  emit('save');
+  emit('save', true);
 
   message.success(t('contentPackage.messages.bannerUploadSuccess'));
 };
@@ -1513,7 +1513,7 @@ const handleUploadCard = (updatedPackage: any) => {
   emit('update:package', updatedPackage);
 
   // 直接触发保存到文件
-  emit('save');
+  emit('save', true);
 
   message.success(t('contentPackage.messages.cardUploadSuccess'));
 };
@@ -1535,7 +1535,7 @@ const handleBatchUpload = (updatedPackage: any) => {
   emit('update:package', updatedPackage);
 
   // 直接触发保存到文件
-  emit('save');
+  emit('save', true);
 
   // 使用v2CardsWithoutCloudUrls的长度作为计数
   const uploadedCount = v2CardsWithoutCloudUrls.value.length;
@@ -1582,7 +1582,7 @@ const saveTagsChanges = () => {
     emit('update:package', updatedPackage);
 
     // 直接触发保存到文件
-    emit('save');
+    emit('save', true);
 
     closeEditTagsDialog();
     message.success(t('contentPackage.common.cardTagsSaved'));
@@ -1708,7 +1708,7 @@ const startBatchUpload = async () => {
     }
 
     // 保存最终结果
-    emit('save');
+    emit('save', true);
 
     // 显示结果
     batchUploadStatus.value = t('contentPackage.messages.batchUploadCompleted', { success: successCount, failure: failureCount });
@@ -1847,7 +1847,7 @@ const refreshEncounterGroups = async () => {
     emit('update:package', updatedPackage);
 
     // 触发保存到文件
-    emit('save');
+    emit('save', true);
 
     message.success(t('contentPackage.encounters.success.refreshSuccess', { count: mergedEncounters.length }));
   } catch (error: any) {
@@ -2198,7 +2198,7 @@ const handleUploadEncounter = (updatedPackage: any) => {
   encounters.value = updatedPackage.encounter_sets || [];
 
   // 直接触发保存到文件
-  emit('save');
+  emit('save', true);
 
   message.success(t('contentPackage.encounters.success.uploadSuccess'));
 };
@@ -2215,7 +2215,7 @@ const handleBatchEncounterUpload = (updatedPackage: any) => {
   encounters.value = updatedPackage.encounter_sets || [];
 
   // 直接触发保存到文件
-  emit('save');
+  emit('save', true);
 
   // 计算成功上传的数量
   const uploadedCount = encountersWithoutCloudUrls.value.length;
@@ -2319,7 +2319,7 @@ const startBatchEncounterUpload = async () => {
     }
 
     // 保存最终结果
-    emit('save');
+    emit('save', true);
 
     // 显示结果
     batchEncounterUploadStatus.value = t('contentPackage.encounters.messages.batchUploadCompleted', {

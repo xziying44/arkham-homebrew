@@ -515,24 +515,24 @@ const closeCreateDialog = () => {
 };
 
 // 保存内容包
-const savePackage = async () => {
+const savePackage = async (silent: boolean = false) => {
   if (!selectedPackage.value) return;
-
   saving.value = true;
   try {
     const packageData: ContentPackage = {
       meta: selectedPackage.value.meta,
       banner_base64: selectedPackage.value.banner_base64,
       cards: selectedPackage.value.cards || [],
-      encounter_sets: selectedPackage.value.encounter_sets || []  // ✅ 添加这行
+      encounter_sets: selectedPackage.value.encounter_sets || []
     };
-
     await WorkspaceService.saveFileContent(
       selectedPackage.value.path,
       JSON.stringify(packageData, null, 2)
     );
-
-    message.success(t('contentPackage.messages.saveSuccess'));
+    // 只有非静默模式才显示提示
+    if (!silent) {
+      message.success(t('contentPackage.messages.saveSuccess'));
+    }
   } catch (error) {
     console.error('保存内容包失败:', error);
     message.error(t('contentPackage.messages.saveFailed'));
@@ -580,7 +580,7 @@ const handleKeydown = (event: KeyboardEvent) => {
   if ((event.ctrlKey || event.metaKey) && event.code === 'KeyS') {
     event.preventDefault();
     if (selectedPackage.value && !saving.value) {
-      savePackage();
+      savePackage(false); // 手动保存，显示提示
     }
   }
 };
