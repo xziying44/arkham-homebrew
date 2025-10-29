@@ -576,7 +576,6 @@ class Card2ArkhamDBConverter:
 
         # 判断是否为签名卡以设置正确的deck_limit
         card_id = self._extract_code_from_gmnotes()
-        is_signature = self._is_signature_card(card_id)
 
         data = {
             "code": card_id,
@@ -588,7 +587,6 @@ class Card2ArkhamDBConverter:
             "faction_code": faction_codes[0],
             "text": self._convert_text_format(self.card_data.get("body", "")),
             "flavor": self._convert_text_format(self.card_data.get("flavor", "")),
-            "deck_limit": self._get_quantity() if is_signature else (1 if flags["is_unique"] else 2),
             "is_unique": flags["is_unique"],
             "illustrator": self.card_data.get("illustrator", ""),
             "pack_code": self.pack_code
@@ -651,7 +649,6 @@ class Card2ArkhamDBConverter:
 
         # 判断是否为签名卡以设置正确的deck_limit
         card_id = self._extract_code_from_gmnotes()
-        is_signature = self._is_signature_card(card_id)
 
         data = {
             "code": card_id,
@@ -662,7 +659,6 @@ class Card2ArkhamDBConverter:
             "faction_code": faction_codes[0],
             "text": self._convert_text_format(self.card_data.get("body", "")),
             "flavor": self._convert_text_format(self.card_data.get("flavor", "")),
-            "deck_limit": self._get_quantity() if is_signature else (1 if flags["is_unique"] else 2),
             "is_unique": flags["is_unique"],
             "illustrator": self.card_data.get("illustrator", ""),
             "pack_code": self.pack_code
@@ -700,7 +696,6 @@ class Card2ArkhamDBConverter:
 
         # 判断是否为签名卡以设置正确的deck_limit
         card_id = self._extract_code_from_gmnotes()
-        is_signature = self._is_signature_card(card_id)
 
         data = {
             "code": card_id,
@@ -711,7 +706,6 @@ class Card2ArkhamDBConverter:
             "faction_code": faction_codes[0],
             "text": self._convert_text_format(self.card_data.get("body", "")),
             "flavor": self._convert_text_format(self.card_data.get("flavor", "")),
-            "deck_limit": self._get_quantity() if is_signature else (1 if flags["is_unique"] else 2),
             "is_unique": flags["is_unique"],
             "illustrator": self.card_data.get("illustrator", ""),
             "pack_code": self.pack_code
@@ -1044,8 +1038,7 @@ class Card2ArkhamDBConverter:
             "name": "Unknown Card",
             "type_code": "skill",
             "faction_code": "neutral",
-            "pack_code": self.pack_code,
-            "deck_limit": 2
+            "pack_code": self.pack_code
         }
 
         for field, default in required_defaults.items():
@@ -1070,5 +1063,11 @@ class Card2ArkhamDBConverter:
                     if encounter_code:
                         card_data["encounter_code"] = encounter_code
                     break
+        else:
+            # 设置deck_limit
+            flags = self._get_special_flags()
+            card_id = self._extract_code_from_gmnotes()
+            is_signature = self._is_signature_card(card_id)
+            card_data["deck_limit"] = self._get_quantity() if is_signature else (1 if flags["is_unique"] else 2)
 
         return card_data
