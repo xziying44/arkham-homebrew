@@ -10,12 +10,8 @@ declare module 'vue' {
   export interface GlobalComponents {
     CardFileBrowser: typeof import('./src/components/CardFileBrowser.vue')['default']
     CardSideEditor: typeof import('./src/components/CardSideEditor.vue')['default']
-    CloudUploadDialog: typeof import('./src/components/CloudUploadDialog.vue')['default']
     DeckEditor: typeof import('./src/components/DeckEditor.vue')['default']
     DeckOptionEditor: typeof import('./src/components/DeckOptionEditor.vue')['default']
-    EncounterBatchUploadDialog: typeof import('./src/components/EncounterBatchUploadDialog.vue')['default']
-    EncounterGroupsExample: typeof import('./src/components/EncounterGroupsExample.vue')['default']
-    EncounterUploadDialog: typeof import('./src/components/EncounterUploadDialog.vue')['default']
     FileTreePanel: typeof import('./src/components/FileTreePanel.vue')['default']
     FormEditPanel: typeof import('./src/components/FormEditPanel.vue')['default']
     FormField: typeof import('./src/components/FormField.vue')['default']
