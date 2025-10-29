@@ -939,16 +939,40 @@ const uploadCardInBatch = async (card: ContentPackageCard, updatedPackage: any, 
     fixedBackUrl = "https://steamusercontent-a.akamaihd.net/ugc/2342503777940351785/F64D8EFB75A9E15446D24343DA0A6EEF5B3E43DB/";
   }
 
-  // 收集需要上传的文件
+  // 收集需要上传的文件 - 修复：添加所有6个文件
   const filesToUpload = new Map();
-  const cleanCardName = card.filename.replace(/.*[\\/\\\\]/, '').replace('.card', '');
+  const cleanCardName = card.filename.replace(/.*[\/\\]/, '').replace('.card', '');
 
+  // 正面图片
   if (savedFiles.front_url) {
     filesToUpload.set(savedFiles.front_url, `${cleanCardName}_front`);
   }
 
-  if (savedFiles.back_url && !useFixedBackUrl) {
-    filesToUpload.set(savedFiles.back_url, `${cleanCardName}_back`);
+  // ✅ 添加：正面原始图片
+  if (savedFiles.original_front_url && savedFiles.original_front_url !== savedFiles.front_url) {
+    filesToUpload.set(savedFiles.original_front_url, `${cleanCardName}_front_original`);
+  }
+
+  // ✅ 添加：正面缩略图
+  if (savedFiles.front_thumbnail_url) {
+    filesToUpload.set(savedFiles.front_thumbnail_url, `${cleanCardName}_front_thumbnail`);
+  }
+
+  // 背面图片 - 只有非固定卡背才上传
+  if (!useFixedBackUrl) {
+    if (savedFiles.back_url) {
+      filesToUpload.set(savedFiles.back_url, `${cleanCardName}_back`);
+    }
+
+    // ✅ 添加：背面原始图片
+    if (savedFiles.original_back_url && savedFiles.original_back_url !== savedFiles.back_url) {
+      filesToUpload.set(savedFiles.original_back_url, `${cleanCardName}_back_original`);
+    }
+
+    // ✅ 添加：背面缩略图
+    if (savedFiles.back_thumbnail_url) {
+      filesToUpload.set(savedFiles.back_thumbnail_url, `${cleanCardName}_back_thumbnail`);
+    }
   }
 
   // 上传所有文件
@@ -957,45 +981,52 @@ const uploadCardInBatch = async (card: ContentPackageCard, updatedPackage: any, 
   if (useFixedBackUrl) {
     uploadedUrls.back_url = fixedBackUrl;
     uploadedUrls.original_back_url = fixedBackUrl;
+    uploadedUrls.back_thumbnail_url = fixedBackUrl;
   }
 
   for (const [filePath, onlineName] of filesToUpload.entries()) {
-    let imagePath: string;
-    if (selectedHostType === 'local') {
-      const workspacePath = await getWorkspaceAbsolutePath();
-      const fullPath = filePath.startsWith('/') || filePath.includes(':')
-        ? filePath
-        : `${workspacePath}/${filePath}`;
-      imagePath = fullPath;
-    } else {
-      imagePath = filePath;
-    }
+    try {
+      let url: string;
 
-    let url: string;
-
-    if (selectedHostType === 'local') {
-      const fileName = `${onlineName}.png`;
-      const fullPath = `${workspacePath}/.cards/${fileName}`;
-      url = fullPath.includes(':')
-        ? `file:///${fullPath.replace(/\\\\/g, '/')}`
-        : `file://${fullPath}`;
-    } else {
-      const result = await ImageHostService.smartUpload(
-        imagePath,
-        selectedHostType,
-        onlineName
-      );
-      if (result.code === 0 && result.data?.url) {
-        url = result.data.url;
+      if (selectedHostType === 'local') {
+        const workspacePath = await getWorkspaceAbsolutePath();
+        const fullPath = filePath.startsWith('/') || filePath.includes(':')
+          ? filePath
+          : `${workspacePath}/${filePath}`;
+        url = fullPath.includes(':')
+          ? `file:///${fullPath.replace(/\\/g, '/')}`
+          : `file://${fullPath}`;
       } else {
-        throw new Error(result.msg || '上传失败');
+        const uploadResult = await ImageHostService.smartUpload(
+          filePath,
+          selectedHostType,
+          onlineName
+        );
+        if (uploadResult.code === 0 && uploadResult.data?.url) {
+          url = uploadResult.data.url;
+        } else {
+          throw new Error(uploadResult.msg || '上传失败');
+        }
       }
-    }
 
-    if (onlineName.includes('_front')) {
-      uploadedUrls.front_url = url;
-    } else if (onlineName.includes('_back')) {
-      uploadedUrls.back_url = url;
+      // ✅ 修复：根据在线文件名存储所有6个URL
+      if (onlineName.includes('_front_original')) {
+        uploadedUrls.original_front_url = url;
+      } else if (onlineName.includes('_front_thumbnail')) {
+        uploadedUrls.front_thumbnail_url = url;
+      } else if (onlineName.includes('_front')) {
+        uploadedUrls.front_url = url;
+      } else if (onlineName.includes('_back_original')) {
+        uploadedUrls.original_back_url = url;
+      } else if (onlineName.includes('_back_thumbnail')) {
+        uploadedUrls.back_thumbnail_url = url;
+      } else if (onlineName.includes('_back')) {
+        uploadedUrls.back_url = url;
+      }
+
+      addLog(`图片上传成功: ${onlineName}`, 'info');
+    } catch (error) {
+      addLog(`图片上传失败: ${onlineName} - ${error.message}`, 'error');
     }
   }
 
