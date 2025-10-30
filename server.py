@@ -1,4 +1,5 @@
 import json
+import mimetypes
 import os
 import platform
 import queue
@@ -2105,12 +2106,21 @@ def index():
 @app.route('/<path:path>')
 def serve_static_files(path):
     """服务Vue应用的静态文件"""
-    # 首先尝试提供静态文件
     try:
-        return send_from_directory(app.static_folder, path)
+        # 获取文件的 MIME 类型
+        mimetype = mimetypes.guess_type(path)[0]
+
+        # 使用 send_from_directory 并显式设置 mimetype
+        response = send_from_directory(app.static_folder, path, mimetype=mimetype)
+
+        # 确保 Content-Type 总是被设置
+        if not response.content_type and mimetype:
+            response.content_type = mimetype
+
+        return response
     except:
         # 如果文件不存在，返回index.html（用于Vue Router的history模式）
-        return send_from_directory(app.static_folder, 'index.html')
+        return send_from_directory(app.static_folder, 'index.html', mimetype='text/html')
 
 
 # ================= 全局错误处理 =================
