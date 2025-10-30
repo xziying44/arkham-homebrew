@@ -22,7 +22,8 @@ export default {
       cards: 'Card Management',
       encounters: 'Encounter Sets',
       export: 'Export Settings',
-      numbering: 'Auto Numbering'
+      numbering: 'Auto Numbering',
+      onlineExport: 'Online Export'
     },
     sections: {
       banner: 'Banner Preview',
@@ -427,5 +428,72 @@ export default {
     openFolder: 'Open Folder',
     cardTagsSaved: 'Card tags saved successfully',
     refresh: 'Refresh'
+  },
+  pnp: {
+    title: 'PNP Export',
+    exportStatus: {
+      title: 'Export Status',
+      packageName: 'Package Name',
+      cardCount: 'Card Count',
+      doubleSidedCards: 'Double-sided Cards',
+      exportStatus: 'Export Status',
+      canExport: 'Can Export',
+      needDoubleSidedCards: 'Need Double-sided Cards'
+    },
+    description: {
+      title: 'Export Instructions',
+      singleCardMode: 'Single Card Mode: One card per page, exported at actual image size, front and back in sequence',
+      printSheetMode: 'Print Sheet Mode: Laid out according to paper size, with cut guide lines, front and back pages corresponding',
+      landscapeNote: 'Note: Landscape cards will be automatically rotated to portrait for printing'
+    },
+    exportParams: {
+      title: 'Export Parameters',
+      exportMode: 'Export Mode',
+      singleCard: 'Single Card Mode',
+      printSheet: 'Print Sheet Mode',
+      paperSize: 'Paper Size',
+      imageParams: 'Image Parameters',
+      dpi: 'DPI',
+      dpiRecommendation: 'Recommend 300 or higher',
+      cardSize: 'Card Size',
+      bleedSize: 'Bleed Size',
+      noBleed: 'No Bleed',
+      bleedMode: 'Bleed Mode',
+      crop: 'Crop',
+      stretch: 'Stretch',
+      bleedModel: 'Bleed Model',
+      mirror: 'Mirror Bleed',
+      lama: 'LaMa Model Bleed',
+      exportFormat: 'Export Format',
+      imageQuality: 'Image Quality',
+      outputSettings: 'Output Settings',
+      outputFilename: 'Output Filename',
+      pdfExtension: '.pdf',
+      startExport: 'Start Export PNP PDF',
+      exporting: 'Exporting...'
+    },
+    paperSizes: {
+      a4: 'A4 (210mm × 297mm)',
+      a3: 'A3 (297mm × 420mm)',
+      letter: 'Letter (215.9mm × 279.4mm)'
+    },
+    cardSizes: {
+      size61x88: '61mm × 88mm',
+      size61_5x88: '61.5mm × 88mm',
+      size62x88: '62mm × 88mm',
+      poker: 'Poker Size (63.5mm × 88.9mm)'
+    },
+    exportLogs: {
+      title: 'Export Logs',
+      exporting: 'Exporting',
+      exportComplete: 'Export Complete',
+      openFileLocation: 'Open File Location'
+    },
+    messages: {
+      exportSuccess: 'PNP PDF export successful!',
+      exportFailed: 'Export Failed',
+      invalidPackagePath: 'Content package path invalid',
+      checkDataIntegrity: 'Please check card data integrity or retry export'
+    }
   }
 }

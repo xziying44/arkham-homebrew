@@ -22,7 +22,8 @@ export default {
       cards: '卡牌管理',
       encounters: '遭遇组',
       export: '导出设置',
-      numbering: '自动编号'
+      numbering: '自动编号',
+      onlineExport: '线上导出'
     },
     sections: {
       banner: '封面预览',
@@ -432,5 +433,72 @@ export default {
     openFolder: '打开文件夹',
     cardTagsSaved: '卡牌标签保存成功',
     refresh: '刷新'
+  },
+  pnp: {
+    title: 'PNP导出',
+    exportStatus: {
+      title: '导出状态',
+      packageName: '内容包名称',
+      cardCount: '卡牌数量',
+      doubleSidedCards: '双面卡牌',
+      exportStatus: '导出状态',
+      canExport: '可以导出',
+      needDoubleSidedCards: '需要双面卡牌'
+    },
+    description: {
+      title: '导出说明',
+      singleCardMode: '单卡模式：一张卡一页，按图片实际尺寸导出，正反面顺序排列',
+      printSheetMode: '打印纸模式：按纸张规格排版，带切割辅助线，正反面页对应',
+      landscapeNote: '注意：横向卡牌会自动旋转为纵向以便打印'
+    },
+    exportParams: {
+      title: '导出参数',
+      exportMode: '导出模式',
+      singleCard: '单卡模式',
+      printSheet: '打印纸模式',
+      paperSize: '纸张规格',
+      imageParams: '图片参数',
+      dpi: 'DPI',
+      dpiRecommendation: '建议300或更高',
+      cardSize: '卡牌规格',
+      bleedSize: '出血尺寸',
+      noBleed: '无出血',
+      bleedMode: '出血模式',
+      crop: '裁剪',
+      stretch: '拉伸',
+      bleedModel: '出血模型',
+      mirror: '镜像出血',
+      lama: 'LaMa模型出血',
+      exportFormat: '导出格式',
+      imageQuality: '图片质量',
+      outputSettings: '输出设置',
+      outputFilename: '输出文件名',
+      pdfExtension: '.pdf',
+      startExport: '开始导出 PNP PDF',
+      exporting: '正在导出...'
+    },
+    paperSizes: {
+      a4: 'A4 (210mm × 297mm)',
+      a3: 'A3 (297mm × 420mm)',
+      letter: 'Letter (215.9mm × 279.4mm)'
+    },
+    cardSizes: {
+      size61x88: '61mm × 88mm',
+      size61_5x88: '61.5mm × 88mm',
+      size62x88: '62mm × 88mm',
+      poker: '扑克牌尺寸 (63.5mm × 88.9mm)'
+    },
+    exportLogs: {
+      title: '导出日志',
+      exporting: '导出中',
+      exportComplete: '导出完成',
+      openFileLocation: '打开文件位置'
+    },
+    messages: {
+      exportSuccess: 'PNP PDF导出成功！',
+      exportFailed: '导出失败',
+      invalidPackagePath: '内容包路径无效',
+      checkDataIntegrity: '请检查卡牌数据完整性或重试导出'
+    }
   }
 }

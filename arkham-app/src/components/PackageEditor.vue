@@ -346,9 +346,9 @@
         </n-tab-pane>
 
         <!-- 线上导出标签页 -->
-        <n-tab-pane name="export-online" tab="线上导出">
+        <n-tab-pane name="export-online" :tab="$t('contentPackage.editor.tabs.onlineExport')">
           <div class="export-panel">
-            <h4>线上导出</h4>
+            <h4>{{$t('contentPackage.editor.tabs.onlineExport')}}</h4>
 
             <!-- TTS导出区域 -->
             <div class="export-content">
@@ -513,25 +513,25 @@
         </n-tab-pane>
 
         <!-- 实体导出标签页 -->
-        <n-tab-pane name="export-physical" tab="实体导出">
+        <n-tab-pane name="export-physical" :tab="$t('contentPackage.pnp.title')">
           <div class="physical-export-panel">
-            <h4>PNP (打印即玩) PDF导出</h4>
+            <h4>{{ $t('contentPackage.pnp.title') }}</h4>
 
             <!-- 导出信息卡片 -->
-            <n-card title="导出状态" :bordered="false" style="margin-bottom: 1.5rem;">
+            <n-card :title="$t('contentPackage.pnp.exportStatus.title')" :bordered="false" style="margin-bottom: 1.5rem;">
               <n-descriptions :column="2" bordered>
-                <n-descriptions-item label="内容包名称">
+                <n-descriptions-item :label="$t('contentPackage.pnp.exportStatus.packageName')">
                   <n-text strong>{{ packageData.meta?.name || t('contentPackage.common.unnamedPackage') }}</n-text>
                 </n-descriptions-item>
-                <n-descriptions-item label="卡牌数量">
-                  <n-tag type="info" size="small">{{ packageData.cards?.length || 0 }} 张</n-tag>
+                <n-descriptions-item :label="$t('contentPackage.pnp.exportStatus.cardCount')">
+                  <n-tag type="info" size="small">{{ packageData.cards?.length || 0 }} {{ $t('contentPackage.pnp.exportStatus.cardCount') }}</n-tag>
                 </n-descriptions-item>
-                <n-descriptions-item label="双面卡牌">
-                  <n-tag type="success" size="small">{{ v2Cards.length }} 张</n-tag>
+                <n-descriptions-item :label="$t('contentPackage.pnp.exportStatus.doubleSidedCards')">
+                  <n-tag type="success" size="small">{{ v2Cards.length }} {{ $t('contentPackage.pnp.exportStatus.doubleSidedCards') }}</n-tag>
                 </n-descriptions-item>
-                <n-descriptions-item label="导出状态">
+                <n-descriptions-item :label="$t('contentPackage.pnp.exportStatus.exportStatus')">
                   <n-tag :type="v2Cards.length > 0 ? 'success' : 'warning'" size="small">
-                    {{ v2Cards.length > 0 ? '可以导出' : '需要双面卡牌' }}
+                    {{ v2Cards.length > 0 ? $t('contentPackage.pnp.exportStatus.canExport') : $t('contentPackage.pnp.exportStatus.needDoubleSidedCards') }}
                   </n-tag>
                 </n-descriptions-item>
               </n-descriptions>
@@ -543,75 +543,75 @@
                 <n-icon :component="InformationCircleOutline" />
               </template>
               <div>
-                <p><strong>单卡模式：</strong>一张卡一页，按图片实际尺寸导出，正反面顺序排列</p>
-                <p><strong>打印纸模式：</strong>按纸张规格排版，带切割辅助线，正反面页对应</p>
-                <p><strong>注意：</strong>横向卡牌会自动旋转为纵向以便打印</p>
+                <p><strong>{{ $t('contentPackage.pnp.exportParams.singleCard') }}：</strong>{{ $t('contentPackage.pnp.description.singleCardMode') }}</p>
+                <p><strong>{{ $t('contentPackage.pnp.exportParams.printSheet') }}：</strong>{{ $t('contentPackage.pnp.description.printSheetMode') }}</p>
+                <p><strong>{{ $t('contentPackage.pnp.description.landscapeNote') }}</strong></p>
               </div>
             </n-alert>
 
             <!-- 导出参数配置 -->
-            <n-card title="导出参数" :bordered="false" style="margin-bottom: 1.5rem;">
+            <n-card :title="$t('contentPackage.pnp.exportParams.title')" :bordered="false" style="margin-bottom: 1.5rem;">
               <n-form :label-width="120">
                 <!-- 导出模式 -->
-                <n-form-item label="导出模式">
+                <n-form-item :label="$t('contentPackage.pnp.exportParams.exportMode')">
                   <n-radio-group v-model:value="pnpExportMode">
                     <n-space>
-                      <n-radio value="single_card">单卡模式</n-radio>
-                      <n-radio value="print_sheet">打印纸模式</n-radio>
+                      <n-radio value="single_card">{{ $t('contentPackage.pnp.exportParams.singleCard') }}</n-radio>
+                      <n-radio value="print_sheet">{{ $t('contentPackage.pnp.exportParams.printSheet') }}</n-radio>
                     </n-space>
                   </n-radio-group>
                 </n-form-item>
 
                 <!-- 纸张规格（仅打印纸模式） -->
-                <n-form-item v-if="pnpExportMode === 'print_sheet'" label="纸张规格">
+                <n-form-item v-if="pnpExportMode === 'print_sheet'" :label="$t('contentPackage.pnp.exportParams.paperSize')">
                   <n-select v-model:value="pnpPaperSize" :options="paperSizeOptions" style="width: 300px;" />
                 </n-form-item>
 
-                <n-divider>图片参数</n-divider>
+                <n-divider>{{ $t('contentPackage.pnp.exportParams.imageParams') }}</n-divider>
 
                 <!-- DPI -->
-                <n-form-item label="DPI">
+                <n-form-item :label="$t('contentPackage.pnp.exportParams.dpi')">
                   <n-input-number v-model:value="pnpExportParams.dpi" :min="150" :max="600" :step="50" style="width: 200px;" />
-                  <n-text depth="3" style="margin-left: 1rem;">建议300或更高</n-text>
+                  <n-text depth="3" style="margin-left: 1rem;">{{ $t('contentPackage.pnp.exportParams.dpiRecommendation') }}</n-text>
                 </n-form-item>
 
                 <!-- 卡牌规格 -->
-                <n-form-item label="卡牌规格">
+                <n-form-item :label="$t('contentPackage.pnp.exportParams.cardSize')">
                   <n-select v-model:value="pnpExportParams.size" :options="cardSizeOptions" style="width: 300px;" />
                 </n-form-item>
 
                 <!-- 出血尺寸 -->
-                <n-form-item label="出血尺寸">
+                <n-form-item :label="$t('contentPackage.pnp.exportParams.bleedSize')">
                   <n-select v-model:value="pnpExportParams.bleed" :options="bleedOptions" style="width: 200px;" />
                 </n-form-item>
 
                 <!-- 出血模式 -->
-                <n-form-item label="出血模式">
+                <n-form-item :label="$t('contentPackage.pnp.exportParams.bleedMode')">
                   <n-select v-model:value="pnpExportParams.bleed_mode" :options="bleedModeOptions" style="width: 200px;" />
                 </n-form-item>
 
                 <!-- 出血模型 -->
-                <n-form-item label="出血模型">
+                <n-form-item :label="$t('contentPackage.pnp.exportParams.bleedModel')">
                   <n-select v-model:value="pnpExportParams.bleed_model" :options="bleedModelOptions" style="width: 200px;" />
                 </n-form-item>
 
                 <!-- 导出格式 -->
-                <n-form-item label="导出格式">
+                <n-form-item :label="$t('contentPackage.pnp.exportParams.exportFormat')">
                   <n-select v-model:value="pnpExportParams.format" :options="formatOptions" style="width: 200px;" />
                 </n-form-item>
 
                 <!-- 图片质量（仅JPG） -->
-                <n-form-item v-if="pnpExportParams.format === 'JPG'" label="图片质量">
+                <n-form-item v-if="pnpExportParams.format === 'JPG'" :label="$t('contentPackage.pnp.exportParams.imageQuality')">
                   <n-slider v-model:value="pnpExportParams.quality" :min="50" :max="100" :step="5"
                     :marks="{ 50: '50', 75: '75', 90: '90', 100: '100' }" style="width: 300px;" />
                 </n-form-item>
 
-                <n-divider>输出设置</n-divider>
+                <n-divider>{{ $t('contentPackage.pnp.exportParams.outputSettings') }}</n-divider>
 
                 <!-- 输出文件名 -->
-                <n-form-item label="输出文件名">
+                <n-form-item :label="$t('contentPackage.pnp.exportParams.outputFilename')">
                   <n-input v-model:value="pnpOutputFilename" placeholder="pnp_export.pdf" style="width: 300px;">
-                    <template #suffix>.pdf</template>
+                    <template #suffix>{{ $t('contentPackage.pnp.exportParams.pdfExtension') }}</template>
                   </n-input>
                 </n-form-item>
 
@@ -621,28 +621,28 @@
                     <template #icon>
                       <n-icon :component="PrintOutline" />
                     </template>
-                    {{ exportingToPnp ? '正在导出...' : '开始导出 PNP PDF' }}
+                    {{ exportingToPnp ? $t('contentPackage.pnp.exportParams.exporting') : $t('contentPackage.pnp.exportParams.startExport') }}
                   </n-button>
                 </n-form-item>
               </n-form>
             </n-card>
 
             <!-- 实时导出日志 -->
-            <n-card v-if="pnpExportLogs.length > 0" title="导出日志" :bordered="false">
+            <n-card v-if="pnpExportLogs.length > 0" :title="$t('contentPackage.pnp.exportLogs.title')" :bordered="false">
               <template #header-extra>
                 <n-space>
                   <n-tag v-if="exportingToPnp" type="warning">
                     <template #icon>
                       <n-spin :size="14" />
                     </template>
-                    导出中
+                    {{ $t('contentPackage.pnp.exportLogs.exporting') }}
                   </n-tag>
-                  <n-tag v-else-if="pnpExportResult?.output_path" type="success">导出完成</n-tag>
+                  <n-tag v-else-if="pnpExportResult?.output_path" type="success">{{ $t('contentPackage.pnp.exportLogs.exportComplete') }}</n-tag>
                   <n-button v-if="pnpExportResult?.output_path && !exportingToPnp" type="warning" size="small" @click="openPnpFileLocation">
                     <template #icon>
                       <n-icon :component="FolderOutline" />
                     </template>
-                    打开文件位置
+                    {{ $t('contentPackage.pnp.exportLogs.openFileLocation') }}
                   </n-button>
                 </n-space>
               </template>
@@ -655,7 +655,7 @@
                   <!-- 导出中的加载动画 -->
                   <div v-if="exportingToPnp" class="log-item log-loading">
                     <n-spin size="small" />
-                    <n-text style="margin-left: 0.5rem;">正在处理中，请稍候...</n-text>
+                    <n-text style="margin-left: 0.5rem;">{{ $t('contentPackage.pnp.exportParams.exporting') }}</n-text>
                   </div>
                 </div>
               </n-scrollbar>
@@ -1206,34 +1206,34 @@ const pnpExportParams = ref({
 });
 
 // PNP导出选项
-const paperSizeOptions = [
-  { label: 'A4 (210mm × 297mm)', value: 'A4' },
-  { label: 'A3 (297mm × 420mm)', value: 'A3' },
-  { label: 'Letter (215.9mm × 279.4mm)', value: 'Letter' }
-];
+const paperSizeOptions = computed(() => [
+  { label: t('contentPackage.pnp.paperSizes.a4'), value: 'A4' },
+  { label: t('contentPackage.pnp.paperSizes.a3'), value: 'A3' },
+  { label: t('contentPackage.pnp.paperSizes.letter'), value: 'Letter' }
+]);
 
-const cardSizeOptions = [
-  { label: '61mm × 88mm', value: '61mm × 88mm' },
-  { label: '61.5mm × 88mm', value: '61.5mm × 88mm' },
-  { label: '62mm × 88mm', value: '62mm × 88mm' },
-  { label: '扑克牌尺寸 (63.5mm × 88.9mm)', value: '63.5mm × 88.9mm (2.5″ × 3.5″)' }
-];
+const cardSizeOptions = computed(() => [
+  { label: t('contentPackage.pnp.cardSizes.size61x88'), value: '61mm × 88mm' },
+  { label: t('contentPackage.pnp.cardSizes.size61_5x88'), value: '61.5mm × 88mm' },
+  { label: t('contentPackage.pnp.cardSizes.size62x88'), value: '62mm × 88mm' },
+  { label: t('contentPackage.pnp.cardSizes.poker'), value: '63.5mm × 88.9mm (2.5″ × 3.5″)' }
+]);
 
-const bleedOptions = [
-  { label: '无出血', value: 0 },
+const bleedOptions = computed(() => [
+  { label: t('contentPackage.pnp.exportParams.noBleed'), value: 0 },
   { label: '2mm', value: 2 },
   { label: '3mm', value: 3 }
-];
+]);
 
-const bleedModeOptions = [
-  { label: '裁剪', value: '裁剪' },
-  { label: '拉伸', value: '拉伸' }
-];
+const bleedModeOptions = computed(() => [
+  { label: t('contentPackage.pnp.exportParams.crop'), value: '裁剪' },
+  { label: t('contentPackage.pnp.exportParams.stretch'), value: '拉伸' }
+]);
 
-const bleedModelOptions = [
-  { label: '镜像出血', value: '镜像出血' },
-  { label: 'LaMa模型出血', value: 'LaMa模型出血' }
-];
+const bleedModelOptions = computed(() => [
+  { label: t('contentPackage.pnp.exportParams.mirror'), value: '镜像出血' },
+  { label: t('contentPackage.pnp.exportParams.lama'), value: 'LaMa模型出血' }
+]);
 
 const formatOptions = [
   { label: 'PNG', value: 'PNG' },
@@ -2637,7 +2637,7 @@ const openArkhamdbFileLocation = () => {
 // PNP导出方法
 const exportToPnp = async () => {
   if (!packageData.value?.path) {
-    message.error('内容包路径无效');
+    message.error(t('contentPackage.pnp.messages.invalidPackagePath'));
     return;
   }
 
@@ -2654,17 +2654,21 @@ const exportToPnp = async () => {
   }
 
   try {
+    const modeText = pnpExportMode.value === 'single_card'
+      ? t('contentPackage.pnp.exportParams.singleCard')
+      : t('contentPackage.pnp.exportParams.printSheet');
+
     // 添加初始日志
-    pnpExportLogs.value.push('🚀 开始导出PNP PDF...');
-    pnpExportLogs.value.push(`📦 内容包: ${packageData.value?.meta?.name || '未知内容包'}`);
-    pnpExportLogs.value.push(`📊 总卡牌数: ${packageData.value?.cards?.length || 0} 张`);
-    pnpExportLogs.value.push(`🎨 导出模式: ${pnpExportMode.value === 'single_card' ? '单卡模式' : '打印纸模式'}`);
+    pnpExportLogs.value.push('🚀 ' + t('contentPackage.pnp.exportParams.startExport') + '...');
+    pnpExportLogs.value.push(`📦 ${t('contentPackage.pnp.exportStatus.packageName')}: ${packageData.value?.meta?.name || t('contentPackage.common.unnamedPackage')}`);
+    pnpExportLogs.value.push(`📊 ${t('contentPackage.pnp.exportStatus.cardCount')}: ${packageData.value?.cards?.length || 0}`);
+    pnpExportLogs.value.push(`🎨 ${t('contentPackage.pnp.exportParams.exportMode')}: ${modeText}`);
     if (pnpExportMode.value === 'print_sheet') {
-      pnpExportLogs.value.push(`📄 纸张规格: ${pnpPaperSize.value}`);
+      pnpExportLogs.value.push(`📄 ${t('contentPackage.pnp.exportParams.paperSize')}: ${pnpPaperSize.value}`);
     }
-    pnpExportLogs.value.push(`📐 DPI: ${pnpExportParams.value.dpi}`);
-    pnpExportLogs.value.push(`📏 卡牌规格: ${pnpExportParams.value.size}`);
-    pnpExportLogs.value.push('⏳ 正在准备导出...');
+    pnpExportLogs.value.push(`📐 ${t('contentPackage.pnp.exportParams.dpi')}: ${pnpExportParams.value.dpi}`);
+    pnpExportLogs.value.push(`📏 ${t('contentPackage.pnp.exportParams.cardSize')}: ${pnpExportParams.value.size}`);
+    pnpExportLogs.value.push('⏳ ' + t('contentPackage.pnp.exportParams.exporting'));
 
     // 等待一下让用户看到初始日志
     await new Promise(resolve => setTimeout(resolve, 300));
@@ -2694,7 +2698,7 @@ const exportToPnp = async () => {
     // 添加成功信息
     if (result.output_path) {
       pnpExportLogs.value.push('');
-      pnpExportLogs.value.push('✅ PNP PDF导出成功！');
+      pnpExportLogs.value.push('✅ ' + t('contentPackage.pnp.messages.exportSuccess'));
       pnpExportLogs.value.push(`📂 PDF文件已保存到: ${result.output_path}`);
       pnpExportLogs.value.push(`📊 成功导出 ${result.cards_exported} 张卡牌`);
       pnpExportLogs.value.push('');
@@ -2703,18 +2707,16 @@ const exportToPnp = async () => {
     }
 
     pnpExportResult.value = result;
-    message.success('PNP PDF导出成功！');
+    message.success(t('contentPackage.pnp.messages.exportSuccess'));
 
   } catch (error: any) {
-    console.error('导出PNP PDF失败:', error);
-
     // 添加错误信息
     pnpExportLogs.value.push('');
-    pnpExportLogs.value.push('❌ 导出失败！');
+    pnpExportLogs.value.push('❌ ' + t('contentPackage.pnp.messages.exportFailed') + '！');
     pnpExportLogs.value.push(`💡 错误原因: ${error.message || '未知错误'}`);
-    pnpExportLogs.value.push('💡 建议：请检查卡牌数据完整性或重试导出');
+    pnpExportLogs.value.push('💡 ' + t('contentPackage.pnp.messages.checkDataIntegrity'));
 
-    message.error('PNP PDF导出失败，请查看日志了解详情');
+    message.error(t('contentPackage.pnp.messages.exportFailed') + '，请查看日志了解详情');
   } finally {
     exportingToPnp.value = false;
 
