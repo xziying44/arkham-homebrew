@@ -326,16 +326,17 @@ class PNPExporter:
         card_width_mm = (card_width_px / dpi) * 25.4
         card_height_mm = (card_height_px / dpi) * 25.4
 
-        # 计算每页可以放置多少张卡牌
+        # 计算每页可以放置多少张卡牌（无间隙）
         margin_mm = 5  # 边距
-        card_gap_mm = 2  # 卡牌间距
+        card_gap_mm = 0  # 卡牌间距设为0
 
-        cards_per_row = int((paper_width_mm - 2 * margin_mm + card_gap_mm) / (card_width_mm + card_gap_mm))
-        cards_per_col = int((paper_height_mm - 2 * margin_mm + card_gap_mm) / (card_height_mm + card_gap_mm))
+        cards_per_row = int((paper_width_mm - 2 * margin_mm) / card_width_mm)
+        cards_per_col = int((paper_height_mm - 2 * margin_mm) / card_height_mm)
         cards_per_page = cards_per_row * cards_per_col
 
         if cards_per_page == 0:
-            raise ValueError(f"卡牌尺寸 ({card_width_mm}x{card_height_mm}mm) 超过纸张尺寸 ({paper_width_mm}x{paper_height_mm}mm)")
+            raise ValueError(
+                f"卡牌尺寸 ({card_width_mm}x{card_height_mm}mm) 超过纸张尺寸 ({paper_width_mm}x{paper_height_mm}mm)")
 
         self._add_log(f"每页可放置: {cards_per_row}x{cards_per_col} = {cards_per_page} 张卡牌")
 
@@ -420,17 +421,31 @@ class PNPExporter:
             card_gap_mm: 卡牌间距(mm)
             mirror: 是否水平镜像（用于背面）
         """
+        # 计算本页实际卡牌的行列数
+        actual_cards = len(cards)
+        actual_rows = (actual_cards + cards_per_row - 1) // cards_per_row
+        actual_cols = min(actual_cards, cards_per_row)
+
+        # 计算实际使用的总宽度和总高度
+        total_content_width = actual_cols * card_width_mm + (actual_cols - 1) * card_gap_mm
+        total_content_height = actual_rows * card_height_mm + (actual_rows - 1) * card_gap_mm
+
+        # 计算起始偏移量，使内容居中
+        start_x = (paper_width_mm - total_content_width) / 2
+        start_y = (paper_height_mm - total_content_height) / 2
+
         for idx, card_info in enumerate(cards):
             row = idx // cards_per_row
             col = idx % cards_per_row
 
-            # 如果是背面且需要镜像，则从右往左排列
+            # 如果是背面且需要镜像，则水平翻转列号
             if mirror:
                 col = cards_per_row - 1 - col
 
-            # 计算卡牌位置（从左下角开始）
-            x = margin_mm + col * (card_width_mm + card_gap_mm)
-            y = paper_height_mm - margin_mm - (row + 1) * card_height_mm - row * card_gap_mm
+            # 计算卡牌位置（居中排列）
+            x = start_x + col * (card_width_mm + card_gap_mm)
+            # 注意：PDF坐标系是左下角为原点，所以y坐标需要从下往上计算
+            y = paper_height_mm - start_y - (row + 1) * card_height_mm - row * card_gap_mm
 
             # 获取图片路径
             image_path = card_info['front_path'] if side == 'front' else card_info['back_path']
@@ -438,8 +453,19 @@ class PNPExporter:
             # 绘制卡牌
             c.drawImage(image_path, x * mm, y * mm, width=card_width_mm * mm, height=card_height_mm * mm)
 
-            # 绘制切割辅助线（8条线，每个角落2条）
-            self._draw_cut_marks(c, x, y, card_width_mm, card_height_mm)
+            # 判断是否在边缘，只在边缘卡牌绘制外侧裁剪线
+            is_left_edge = (col == 0)
+            is_right_edge = (col == actual_cols - 1)
+            is_top_edge = (row == 0)
+            is_bottom_edge = (row == actual_rows - 1)
+
+            self._draw_cut_marks(
+                c, x, y, card_width_mm, card_height_mm,
+                draw_left=is_left_edge,
+                draw_right=is_right_edge,
+                draw_top=is_top_edge,
+                draw_bottom=is_bottom_edge
+            )
 
     def _draw_cut_marks(
             self,
@@ -449,7 +475,11 @@ class PNPExporter:
             width_mm: float,
             height_mm: float,
             mark_length_mm: float = 3,
-            mark_offset_mm: float = 0.5
+            mark_offset_mm: float = 0.5,
+            draw_left: bool = True,
+            draw_right: bool = True,
+            draw_top: bool = True,
+            draw_bottom: bool = True
     ) -> None:
         """
         绘制切割辅助线（每个角落2条线）
@@ -462,42 +492,48 @@ class PNPExporter:
             height_mm: 卡牌高度(mm)
             mark_length_mm: 辅助线长度(mm)
             mark_offset_mm: 辅助线与卡牌边缘的距离(mm)
+            draw_left: 是否绘制左侧裁剪线
+            draw_right: 是否绘制右侧裁剪线
+            draw_top: 是否绘制顶部裁剪线
+            draw_bottom: 是否绘制底部裁剪线
         """
         c.setStrokeColorRGB(0.5, 0.5, 0.5)  # 灰色
         c.setLineWidth(0.25)
 
-        # 四个角的坐标
+        # 四个角的坐标及其对应的边缘
         corners = [
-            (x_mm, y_mm),  # 左下
-            (x_mm + width_mm, y_mm),  # 右下
-            (x_mm, y_mm + height_mm),  # 左上
-            (x_mm + width_mm, y_mm + height_mm),  # 右上
+            (x_mm, y_mm, draw_left, draw_bottom),  # 左下
+            (x_mm + width_mm, y_mm, draw_right, draw_bottom),  # 右下
+            (x_mm, y_mm + height_mm, draw_left, draw_top),  # 左上
+            (x_mm + width_mm, y_mm + height_mm, draw_right, draw_top),  # 右上
         ]
 
-        for corner_x, corner_y in corners:
+        for corner_x, corner_y, draw_horizontal_side, draw_vertical_side in corners:
             # 水平线
-            if corner_x == x_mm:  # 左侧
-                c.line(
-                    (corner_x - mark_offset_mm - mark_length_mm) * mm, corner_y * mm,
-                    (corner_x - mark_offset_mm) * mm, corner_y * mm
-                )
-            else:  # 右侧
-                c.line(
-                    (corner_x + mark_offset_mm) * mm, corner_y * mm,
-                    (corner_x + mark_offset_mm + mark_length_mm) * mm, corner_y * mm
-                )
+            if draw_horizontal_side:
+                if corner_x == x_mm:  # 左侧
+                    c.line(
+                        (corner_x - mark_offset_mm - mark_length_mm) * mm, corner_y * mm,
+                        (corner_x - mark_offset_mm) * mm, corner_y * mm
+                    )
+                else:  # 右侧
+                    c.line(
+                        (corner_x + mark_offset_mm) * mm, corner_y * mm,
+                        (corner_x + mark_offset_mm + mark_length_mm) * mm, corner_y * mm
+                    )
 
             # 垂直线
-            if corner_y == y_mm:  # 下侧
-                c.line(
-                    corner_x * mm, (corner_y - mark_offset_mm - mark_length_mm) * mm,
-                    corner_x * mm, (corner_y - mark_offset_mm) * mm
-                )
-            else:  # 上侧
-                c.line(
-                    corner_x * mm, (corner_y + mark_offset_mm) * mm,
-                    corner_x * mm, (corner_y + mark_offset_mm + mark_length_mm) * mm
-                )
+            if draw_vertical_side:
+                if corner_y == y_mm:  # 下侧
+                    c.line(
+                        corner_x * mm, (corner_y - mark_offset_mm - mark_length_mm) * mm,
+                        corner_x * mm, (corner_y - mark_offset_mm) * mm
+                    )
+                else:  # 上侧
+                    c.line(
+                        corner_x * mm, (corner_y + mark_offset_mm) * mm,
+                        corner_x * mm, (corner_y + mark_offset_mm + mark_length_mm) * mm
+                    )
 
     def export_pnp(
             self,
