@@ -345,6 +345,108 @@
           </div>
         </n-tab-pane>
 
+                <!-- 自动编号标签页 -->
+        <n-tab-pane name="numbering" :tab="$t('contentPackage.editor.tabs.numbering')">
+          <div class="numbering-panel">
+            <h4>{{ $t('contentPackage.numbering.title') }}</h4>
+
+            <!-- 编号配置区域 -->
+            <div class="numbering-config">
+              <n-card :title="$t('contentPackage.numbering.config.title')" :bordered="false">
+                <n-form :label-width="140">
+                  <n-form-item :label="$t('contentPackage.numbering.config.startNumber')">
+                    <n-input-number v-model:value="numberingStartNumber" :min="1" :step="1" style="width: 200px;" />
+                  </n-form-item>
+                  <n-form-item :label="$t('contentPackage.numbering.config.noEncounterPosition')">
+                    <n-radio-group v-model:value="numberingNoEncounterPosition">
+                      <n-radio-button value="before">
+                        {{ $t('contentPackage.numbering.config.positionBefore') }}
+                      </n-radio-button>
+                      <n-radio-button value="after">
+                        {{ $t('contentPackage.numbering.config.positionAfter') }}
+                      </n-radio-button>
+                    </n-radio-group>
+                  </n-form-item>
+                </n-form>
+
+                <template #action>
+                  <n-space>
+                    <n-button type="primary" @click="generateNumberingPlan" :loading="generatingPlan">
+                      <template #icon>
+                        <n-icon :component="ConstructOutline" />
+                      </template>
+                      {{ $t('contentPackage.numbering.actions.generatePlan') }}
+                    </n-button>
+                  </n-space>
+                </template>
+              </n-card>
+            </div>
+
+            <!-- 编号方案预览 -->
+            <div v-if="numberingPlan.length > 0" class="numbering-preview">
+              <n-card :title="$t('contentPackage.numbering.preview.title')" :bordered="false">
+                <n-alert type="info" style="margin-bottom: 1rem;">
+                  <template #icon>
+                    <n-icon :component="InformationCircleOutline" />
+                  </template>
+                  {{ $t('contentPackage.numbering.preview.description') }}
+                </n-alert>
+
+                <div class="plan-summary">
+                  <n-descriptions :column="2" bordered style="margin-bottom: 1rem;">
+                    <n-descriptions-item :label="$t('contentPackage.numbering.preview.totalCards')">
+                      <n-tag type="info" size="small">{{ numberingPlan.length }} 张</n-tag>
+                    </n-descriptions-item>
+                    <n-descriptions-item :label="$t('contentPackage.numbering.preview.numberRange')">
+                      <n-tag type="success" size="small">
+                        {{ numberingPlan[0]?.card_number }} - {{ numberingPlan[numberingPlan.length - 1]?.card_number }}
+                      </n-tag>
+                    </n-descriptions-item>
+                  </n-descriptions>
+                </div>
+
+                <!-- 编号方案表格 -->
+                <n-scrollbar style="max-height: 400px;">
+                  <n-data-table
+                    :columns="numberingTableColumns"
+                    :data="numberingPlan"
+                    :pagination="false"
+                    :bordered="true"
+                    size="small"
+                  />
+                </n-scrollbar>
+
+                <template #action>
+                  <n-space>
+                    <n-button @click="clearNumberingPlan">
+                      {{ $t('contentPackage.numbering.actions.cancelPlan') }}
+                    </n-button>
+                    <n-button type="primary" @click="applyNumberingPlan" :loading="applyingPlan">
+                      <template #icon>
+                        <n-icon :component="SaveOutline" />
+                      </template>
+                      {{ $t('contentPackage.numbering.actions.applyPlan') }}
+                    </n-button>
+                  </n-space>
+                </template>
+              </n-card>
+            </div>
+
+            <!-- 编号日志 -->
+            <div v-if="numberingLogs.length > 0" class="numbering-logs">
+              <n-card :title="$t('contentPackage.numbering.logs.title')" :bordered="false">
+                <n-scrollbar style="max-height: 200px;">
+                  <div class="logs-container">
+                    <div v-for="(log, index) in numberingLogs" :key="index" class="log-item">
+                      <n-text>{{ log }}</n-text>
+                    </div>
+                  </div>
+                </n-scrollbar>
+              </n-card>
+            </div>
+          </div>
+        </n-tab-pane>
+
         <!-- 线上导出标签页 -->
         <n-tab-pane name="export-online" :tab="$t('contentPackage.editor.tabs.onlineExport')">
           <div class="export-panel">
@@ -663,107 +765,6 @@
           </div>
         </n-tab-pane>
 
-        <!-- 自动编号标签页 -->
-        <n-tab-pane name="numbering" :tab="$t('contentPackage.editor.tabs.numbering')">
-          <div class="numbering-panel">
-            <h4>{{ $t('contentPackage.numbering.title') }}</h4>
-
-            <!-- 编号配置区域 -->
-            <div class="numbering-config">
-              <n-card :title="$t('contentPackage.numbering.config.title')" :bordered="false">
-                <n-form :label-width="140">
-                  <n-form-item :label="$t('contentPackage.numbering.config.startNumber')">
-                    <n-input-number v-model:value="numberingStartNumber" :min="1" :step="1" style="width: 200px;" />
-                  </n-form-item>
-                  <n-form-item :label="$t('contentPackage.numbering.config.noEncounterPosition')">
-                    <n-radio-group v-model:value="numberingNoEncounterPosition">
-                      <n-radio-button value="before">
-                        {{ $t('contentPackage.numbering.config.positionBefore') }}
-                      </n-radio-button>
-                      <n-radio-button value="after">
-                        {{ $t('contentPackage.numbering.config.positionAfter') }}
-                      </n-radio-button>
-                    </n-radio-group>
-                  </n-form-item>
-                </n-form>
-
-                <template #action>
-                  <n-space>
-                    <n-button type="primary" @click="generateNumberingPlan" :loading="generatingPlan">
-                      <template #icon>
-                        <n-icon :component="ConstructOutline" />
-                      </template>
-                      {{ $t('contentPackage.numbering.actions.generatePlan') }}
-                    </n-button>
-                  </n-space>
-                </template>
-              </n-card>
-            </div>
-
-            <!-- 编号方案预览 -->
-            <div v-if="numberingPlan.length > 0" class="numbering-preview">
-              <n-card :title="$t('contentPackage.numbering.preview.title')" :bordered="false">
-                <n-alert type="info" style="margin-bottom: 1rem;">
-                  <template #icon>
-                    <n-icon :component="InformationCircleOutline" />
-                  </template>
-                  {{ $t('contentPackage.numbering.preview.description') }}
-                </n-alert>
-
-                <div class="plan-summary">
-                  <n-descriptions :column="2" bordered style="margin-bottom: 1rem;">
-                    <n-descriptions-item :label="$t('contentPackage.numbering.preview.totalCards')">
-                      <n-tag type="info" size="small">{{ numberingPlan.length }} 张</n-tag>
-                    </n-descriptions-item>
-                    <n-descriptions-item :label="$t('contentPackage.numbering.preview.numberRange')">
-                      <n-tag type="success" size="small">
-                        {{ numberingPlan[0]?.card_number }} - {{ numberingPlan[numberingPlan.length - 1]?.card_number }}
-                      </n-tag>
-                    </n-descriptions-item>
-                  </n-descriptions>
-                </div>
-
-                <!-- 编号方案表格 -->
-                <n-scrollbar style="max-height: 400px;">
-                  <n-data-table
-                    :columns="numberingTableColumns"
-                    :data="numberingPlan"
-                    :pagination="false"
-                    :bordered="true"
-                    size="small"
-                  />
-                </n-scrollbar>
-
-                <template #action>
-                  <n-space>
-                    <n-button @click="clearNumberingPlan">
-                      {{ $t('contentPackage.numbering.actions.cancelPlan') }}
-                    </n-button>
-                    <n-button type="primary" @click="applyNumberingPlan" :loading="applyingPlan">
-                      <template #icon>
-                        <n-icon :component="SaveOutline" />
-                      </template>
-                      {{ $t('contentPackage.numbering.actions.applyPlan') }}
-                    </n-button>
-                  </n-space>
-                </template>
-              </n-card>
-            </div>
-
-            <!-- 编号日志 -->
-            <div v-if="numberingLogs.length > 0" class="numbering-logs">
-              <n-card :title="$t('contentPackage.numbering.logs.title')" :bordered="false">
-                <n-scrollbar style="max-height: 200px;">
-                  <div class="logs-container">
-                    <div v-for="(log, index) in numberingLogs" :key="index" class="log-item">
-                      <n-text>{{ log }}</n-text>
-                    </div>
-                  </div>
-                </n-scrollbar>
-              </n-card>
-            </div>
-          </div>
-        </n-tab-pane>
       </n-tabs>
     </div>
 
