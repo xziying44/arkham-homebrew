@@ -64,7 +64,7 @@ class CardAdapter:
         "name",  # 顶层字段
         "body",  # 顶层字段
         "flavor",  # 顶层字段
-        "card_back.other",  # 嵌套字段
+        "card_back.option",  # 嵌套字段
         "card_back.other",  # 嵌套字段
     ]
 
