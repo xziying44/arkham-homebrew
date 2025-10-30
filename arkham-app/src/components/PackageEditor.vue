@@ -1763,18 +1763,33 @@ const getCardExportStatus = (card: ContentPackageCard) => {
 const getLogItemClass = (log: string) => {
   const classes = [];
 
-  if (log.includes('✅')) classes.push('log-success');
-  if (log.includes('❌')) classes.push('log-error');
+  // 空行检测（只包含空格或空字符串）
+  if (!log || log.trim() === '') {
+    classes.push('log-spacer');
+    return classes.join(' ');
+  }
+
+  // 分隔线
+  if (log.includes('━━━') || log.includes('──')) classes.push('log-divider');
+
+  // 状态标识
+  if (log.includes('✅') || log.includes('✓')) classes.push('log-success');
+  if (log.includes('❌') || log.includes('✗')) classes.push('log-error');
   if (log.includes('⏳')) classes.push('log-processing');
   if (log.includes('💡')) classes.push('log-tip');
   if (log.includes('🚀')) classes.push('log-start');
   if (log.includes('🎉')) classes.push('log-complete');
   if (log.includes('📂')) classes.push('log-file');
   if (log.includes('💾')) classes.push('log-save');
+
+  // 内容类型标识
   if (log.includes('📦')) classes.push('log-package');
-  if (log.includes('📊')) classes.push('log-stats');
+  if (log.includes('📊') || log.includes('📏') || log.includes('📐')) classes.push('log-stats');
   if (log.includes('☁️')) classes.push('log-cloud');
   if (log.includes('💻')) classes.push('log-local');
+
+  // 配置和参数
+  if (log.includes('🎨') || log.includes('📄') || log.includes('✂️') || log.includes('🎯')) classes.push('log-stats');
 
   return classes.join(' ');
 };
@@ -2686,6 +2701,8 @@ const exportToPnp = async () => {
   // 用于存储任务ID和轮询定时器
   let taskId: string | null = null;
   let pollTimer: NodeJS.Timeout | null = null;
+  // 用于存储参数头部日志（静态部分，不会被后端日志覆盖）
+  let paramHeaderLogs: string[] = [];
 
   // 轮询获取日志的函数
   const pollLogs = async () => {
@@ -2694,8 +2711,8 @@ const exportToPnp = async () => {
     try {
       const logData = await ContentPackageService.getPnpExportLogs(taskId);
 
-      // 更新日志
-      pnpExportLogs.value = logData.logs;
+      // 合并参数头部和后端日志
+      pnpExportLogs.value = [...paramHeaderLogs, ...logData.logs];
 
       // 滚动到日志底部
       await nextTick();
@@ -2750,16 +2767,49 @@ const exportToPnp = async () => {
       ? t('contentPackage.pnp.exportParams.singleCard')
       : t('contentPackage.pnp.exportParams.printSheet');
 
-    // 添加初始日志
-    pnpExportLogs.value.push('🚀 ' + t('contentPackage.pnp.exportParams.startExport') + '...');
-    pnpExportLogs.value.push(`📦 ${t('contentPackage.pnp.exportStatus.packageName')}: ${packageData.value?.meta?.name || t('contentPackage.common.unnamedPackage')}`);
-    pnpExportLogs.value.push(`📊 ${t('contentPackage.pnp.exportStatus.cardCount')}: ${packageData.value?.cards?.length || 0}`);
-    pnpExportLogs.value.push(`🎨 ${t('contentPackage.pnp.exportParams.exportMode')}: ${modeText}`);
+    // 构建参数头部日志（这部分是静态的，不会被后端日志覆盖）
+    paramHeaderLogs = [];
+    paramHeaderLogs.push('🚀 开始导出 PNP PDF...');
+    paramHeaderLogs.push(' '); // 空行用空格代替空字符串
+    paramHeaderLogs.push(`📦 内容包名称: ${packageData.value?.meta?.name || t('contentPackage.common.unnamedPackage')}`);
+    paramHeaderLogs.push(' ');
+    paramHeaderLogs.push(`📊 卡牌数量: ${packageData.value?.cards?.length || 0}`);
+    paramHeaderLogs.push(' ');
+    paramHeaderLogs.push(`🎨 导出模式: ${modeText}`);
+    paramHeaderLogs.push(' ');
     if (pnpExportMode.value === 'print_sheet') {
-      pnpExportLogs.value.push(`📄 ${t('contentPackage.pnp.exportParams.paperSize')}: ${pnpPaperSize.value}`);
+      paramHeaderLogs.push(`📄 纸张规格: ${pnpPaperSize.value}`);
+      paramHeaderLogs.push(' ');
     }
-    pnpExportLogs.value.push(`📐 ${t('contentPackage.pnp.exportParams.dpi')}: ${pnpExportParams.value.dpi}`);
-    pnpExportLogs.value.push(`📏 ${t('contentPackage.pnp.exportParams.cardSize')}: ${pnpExportParams.value.size}`);
+    paramHeaderLogs.push(`📐 DPI: ${pnpExportParams.value.dpi}`);
+    paramHeaderLogs.push(' ');
+
+    // 解析卡牌规格显示
+    const cardSizeText = pnpExportParams.value.size;
+    // 尝试从选项中找到对应的标签
+    const cardSizeOption = cardSizeOptions.value.find(opt => opt.value === cardSizeText);
+    const cardSizeDisplay = cardSizeOption ? cardSizeOption.label : cardSizeText;
+    paramHeaderLogs.push(`📏 卡牌规格: ${cardSizeDisplay}`);
+    paramHeaderLogs.push(' ');
+
+    // 添加出血信息
+    const bleedOption = bleedOptions.value.find(opt => opt.value === pnpExportParams.value.bleed);
+    const bleedDisplay = bleedOption ? bleedOption.label : `${pnpExportParams.value.bleed}mm`;
+    paramHeaderLogs.push(`✂️ 出血尺寸: ${bleedDisplay}`);
+    paramHeaderLogs.push(' ');
+
+    // 添加遭遇组模式信息
+    const encounterModeOption = encounterGroupModeOptions.value.find(opt => opt.value === pnpExportParams.value.encounter_group_mode);
+    const encounterModeDisplay = encounterModeOption ? encounterModeOption.label : pnpExportParams.value.encounter_group_mode;
+    paramHeaderLogs.push(`🎯 遭遇组编号: ${encounterModeDisplay}`);
+    paramHeaderLogs.push(' ');
+
+    // 添加分隔线
+    paramHeaderLogs.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    paramHeaderLogs.push(' ');
+
+    // 先显示参数头部
+    pnpExportLogs.value = [...paramHeaderLogs];
 
     // 启动导出任务（后端会立即返回task_id）
     const result = await ContentPackageService.exportToPnp(
@@ -2774,9 +2824,6 @@ const exportToPnp = async () => {
     taskId = result.task_id || null;
 
     if (taskId) {
-      pnpExportLogs.value.push('⏳ 正在导出，实时日志如下：');
-      pnpExportLogs.value.push('');
-
       // 开始轮询日志（每秒一次）
       pollTimer = setInterval(pollLogs, 1000);
 
@@ -2784,8 +2831,7 @@ const exportToPnp = async () => {
       await pollLogs();
     } else {
       // 没有任务ID，显示错误
-      pnpExportLogs.value.push('');
-      pnpExportLogs.value.push('❌ 无法启动导出任务：未获取到任务ID');
+      pnpExportLogs.value = [...paramHeaderLogs, '', '❌ 无法启动导出任务：未获取到任务ID'];
       exportingToPnp.value = false;
     }
 
@@ -2796,11 +2842,14 @@ const exportToPnp = async () => {
       pollTimer = null;
     }
 
-    // 添加错误信息
-    pnpExportLogs.value.push('');
-    pnpExportLogs.value.push('❌ ' + t('contentPackage.pnp.messages.exportFailed') + '！');
-    pnpExportLogs.value.push(`💡 错误原因: ${error.message || '未知错误'}`);
-    pnpExportLogs.value.push('💡 ' + t('contentPackage.pnp.messages.checkDataIntegrity'));
+    // 添加错误信息（保留参数头部）
+    pnpExportLogs.value = [
+      ...paramHeaderLogs,
+      '',
+      '❌ ' + t('contentPackage.pnp.messages.exportFailed') + '！',
+      `💡 错误原因: ${error.message || '未知错误'}`,
+      '💡 ' + t('contentPackage.pnp.messages.checkDataIntegrity')
+    ];
 
     message.error(t('contentPackage.pnp.messages.exportFailed') + '，请查看日志了解详情');
     exportingToPnp.value = false;
@@ -3852,12 +3901,29 @@ watch(() => packageData.value, async (newPackage, oldPackage) => {
   font-style: italic;
 }
 
-/* 空行样式 */
-.log-item:empty {
+/* 空行样式 - 使用专门的类名 */
+.log-item.log-spacer {
   height: 0.5rem;
+  min-height: 0.5rem;
   background: transparent;
   border: none;
   padding: 0;
+  margin: 0;
+  visibility: hidden;
+}
+
+.log-item.log-spacer .n-text {
+  display: none;
+}
+
+/* 分隔线样式 */
+.log-item.log-divider {
+  background: transparent;
+  border: none;
+  padding: 0;
+  text-align: center;
+  color: #adb5bd;
+  font-weight: 300;
 }
 
 /* 加载中样式 */
