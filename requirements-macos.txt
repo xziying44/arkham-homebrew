@@ -19,6 +19,7 @@ pillow==11.1.0
 numpy==2.3.2
 psutil==6.1.1
 cloudinary==1.44.1
+reportlab==4.4.3
 # macOS 专用依赖
 pyobjc-core
 pyobjc-framework-Cocoa
