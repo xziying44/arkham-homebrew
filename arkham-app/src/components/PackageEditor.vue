@@ -345,10 +345,10 @@
           </div>
         </n-tab-pane>
 
-        <!-- 导出设置标签页 -->
-        <n-tab-pane name="export" :tab="$t('contentPackage.editor.tabs.export')">
+        <!-- 线上导出标签页 -->
+        <n-tab-pane name="export-online" tab="线上导出">
           <div class="export-panel">
-            <h4>{{ $t('contentPackage.editor.sections.export') }}</h4>
+            <h4>线上导出</h4>
 
             <!-- TTS导出区域 -->
             <div class="export-content">
@@ -509,6 +509,157 @@
                 </template>
               </n-modal>
             </div>
+          </div>
+        </n-tab-pane>
+
+        <!-- 实体导出标签页 -->
+        <n-tab-pane name="export-physical" tab="实体导出">
+          <div class="physical-export-panel">
+            <h4>PNP (打印即玩) PDF导出</h4>
+
+            <!-- 导出信息卡片 -->
+            <n-card title="导出状态" :bordered="false" style="margin-bottom: 1.5rem;">
+              <n-descriptions :column="2" bordered>
+                <n-descriptions-item label="内容包名称">
+                  <n-text strong>{{ packageData.meta?.name || t('contentPackage.common.unnamedPackage') }}</n-text>
+                </n-descriptions-item>
+                <n-descriptions-item label="卡牌数量">
+                  <n-tag type="info" size="small">{{ packageData.cards?.length || 0 }} 张</n-tag>
+                </n-descriptions-item>
+                <n-descriptions-item label="双面卡牌">
+                  <n-tag type="success" size="small">{{ v2Cards.length }} 张</n-tag>
+                </n-descriptions-item>
+                <n-descriptions-item label="导出状态">
+                  <n-tag :type="v2Cards.length > 0 ? 'success' : 'warning'" size="small">
+                    {{ v2Cards.length > 0 ? '可以导出' : '需要双面卡牌' }}
+                  </n-tag>
+                </n-descriptions-item>
+              </n-descriptions>
+            </n-card>
+
+            <!-- 导出说明 -->
+            <n-alert type="info" style="margin-bottom: 1.5rem;">
+              <template #icon>
+                <n-icon :component="InformationCircleOutline" />
+              </template>
+              <div>
+                <p><strong>单卡模式：</strong>一张卡一页，按图片实际尺寸导出，正反面顺序排列</p>
+                <p><strong>打印纸模式：</strong>按纸张规格排版，带切割辅助线，正反面页对应</p>
+                <p><strong>注意：</strong>横向卡牌会自动旋转为纵向以便打印</p>
+              </div>
+            </n-alert>
+
+            <!-- 导出参数配置 -->
+            <n-card title="导出参数" :bordered="false" style="margin-bottom: 1.5rem;">
+              <n-form :label-width="120">
+                <!-- 导出模式 -->
+                <n-form-item label="导出模式">
+                  <n-radio-group v-model:value="pnpExportMode">
+                    <n-space>
+                      <n-radio value="single_card">单卡模式</n-radio>
+                      <n-radio value="print_sheet">打印纸模式</n-radio>
+                    </n-space>
+                  </n-radio-group>
+                </n-form-item>
+
+                <!-- 纸张规格（仅打印纸模式） -->
+                <n-form-item v-if="pnpExportMode === 'print_sheet'" label="纸张规格">
+                  <n-select v-model:value="pnpPaperSize" :options="paperSizeOptions" style="width: 300px;" />
+                </n-form-item>
+
+                <n-divider>图片参数</n-divider>
+
+                <!-- DPI -->
+                <n-form-item label="DPI">
+                  <n-input-number v-model:value="pnpExportParams.dpi" :min="150" :max="600" :step="50" style="width: 200px;" />
+                  <n-text depth="3" style="margin-left: 1rem;">建议300或更高</n-text>
+                </n-form-item>
+
+                <!-- 卡牌规格 -->
+                <n-form-item label="卡牌规格">
+                  <n-select v-model:value="pnpExportParams.size" :options="cardSizeOptions" style="width: 300px;" />
+                </n-form-item>
+
+                <!-- 出血尺寸 -->
+                <n-form-item label="出血尺寸">
+                  <n-select v-model:value="pnpExportParams.bleed" :options="bleedOptions" style="width: 200px;" />
+                </n-form-item>
+
+                <!-- 出血模式 -->
+                <n-form-item label="出血模式">
+                  <n-select v-model:value="pnpExportParams.bleed_mode" :options="bleedModeOptions" style="width: 200px;" />
+                </n-form-item>
+
+                <!-- 出血模型 -->
+                <n-form-item label="出血模型">
+                  <n-select v-model:value="pnpExportParams.bleed_model" :options="bleedModelOptions" style="width: 200px;" />
+                </n-form-item>
+
+                <!-- 导出格式 -->
+                <n-form-item label="导出格式">
+                  <n-select v-model:value="pnpExportParams.format" :options="formatOptions" style="width: 200px;" />
+                </n-form-item>
+
+                <!-- 图片质量（仅JPG） -->
+                <n-form-item v-if="pnpExportParams.format === 'JPG'" label="图片质量">
+                  <n-slider v-model:value="pnpExportParams.quality" :min="50" :max="100" :step="5"
+                    :marks="{ 50: '50', 75: '75', 90: '90', 100: '100' }" style="width: 300px;" />
+                </n-form-item>
+
+                <n-divider>输出设置</n-divider>
+
+                <!-- 输出文件名 -->
+                <n-form-item label="输出文件名">
+                  <n-input v-model:value="pnpOutputFilename" placeholder="pnp_export.pdf" style="width: 300px;">
+                    <template #suffix>.pdf</template>
+                  </n-input>
+                </n-form-item>
+
+                <!-- 导出按钮 -->
+                <n-form-item label=" ">
+                  <n-button type="warning" @click="exportToPnp" :loading="exportingToPnp" :disabled="v2Cards.length === 0" size="large">
+                    <template #icon>
+                      <n-icon :component="PrintOutline" />
+                    </template>
+                    {{ exportingToPnp ? '正在导出...' : '开始导出 PNP PDF' }}
+                  </n-button>
+                </n-form-item>
+              </n-form>
+            </n-card>
+
+            <!-- 实时导出日志 -->
+            <n-card v-if="pnpExportLogs.length > 0" title="导出日志" :bordered="false">
+              <template #header-extra>
+                <n-space>
+                  <n-tag v-if="exportingToPnp" type="warning">
+                    <template #icon>
+                      <n-spin :size="14" />
+                    </template>
+                    导出中
+                  </n-tag>
+                  <n-tag v-else-if="pnpExportResult?.output_path" type="success">导出完成</n-tag>
+                  <n-button v-if="pnpExportResult?.output_path && !exportingToPnp" type="warning" size="small" @click="openPnpFileLocation">
+                    <template #icon>
+                      <n-icon :component="FolderOutline" />
+                    </template>
+                    打开文件位置
+                  </n-button>
+                </n-space>
+              </template>
+
+              <n-scrollbar style="max-height: 400px;">
+                <div class="logs-container">
+                  <div v-for="(log, index) in pnpExportLogs" :key="index" :class="['log-item', getLogItemClass(log)]">
+                    <n-text>{{ log }}</n-text>
+                  </div>
+                  <!-- 导出中的加载动画 -->
+                  <div v-if="exportingToPnp" class="log-item log-loading">
+                    <n-spin size="small" />
+                    <n-text style="margin-left: 0.5rem;">正在处理中，请稍候...</n-text>
+                  </div>
+                </div>
+              </n-scrollbar>
+            </n-card>
           </div>
         </n-tab-pane>
 
@@ -924,7 +1075,8 @@ import {
   InformationCircleOutline,
   ImagesOutline,
   RefreshOutline,
-  ReorderThreeOutline
+  ReorderThreeOutline,
+  PrintOutline
 } from '@vicons/ionicons5';
 import type { ContentPackageFile, PackageType, ContentPackageCard, EncounterSet } from '@/types/content-package';
 import { getPackageTypeOptions, getLanguageOptions, getStatusOptions } from '@/types/content-package';
@@ -1032,6 +1184,61 @@ const exportingToArkhamdb = ref(false);
 const showArkhamdbExportLogsDialog = ref(false);
 const arkhamdbExportLogs = ref<string[]>([]);
 const arkhamdbExportResult = ref<any>(null);
+
+// PNP导出状态
+const exportingToPnp = ref(false);
+const pnpExportLogs = ref<string[]>([]);
+const pnpExportResult = ref<any>(null);
+const pnpExportMode = ref<'single_card' | 'print_sheet'>('single_card');
+const pnpPaperSize = ref('A4');
+const pnpOutputFilename = ref('pnp_export');
+const pnpExportParams = ref({
+  format: 'PNG',
+  dpi: 300,
+  size: '63.5mm × 88.9mm (2.5″ × 3.5″)',
+  bleed: 3,
+  bleed_mode: '裁剪',
+  bleed_model: '镜像出血',
+  quality: 95,
+  saturation: 1.0,
+  brightness: 1.0,
+  gamma: 1.0
+});
+
+// PNP导出选项
+const paperSizeOptions = [
+  { label: 'A4 (210mm × 297mm)', value: 'A4' },
+  { label: 'A3 (297mm × 420mm)', value: 'A3' },
+  { label: 'Letter (215.9mm × 279.4mm)', value: 'Letter' }
+];
+
+const cardSizeOptions = [
+  { label: '61mm × 88mm', value: '61mm × 88mm' },
+  { label: '61.5mm × 88mm', value: '61.5mm × 88mm' },
+  { label: '62mm × 88mm', value: '62mm × 88mm' },
+  { label: '扑克牌尺寸 (63.5mm × 88.9mm)', value: '63.5mm × 88.9mm (2.5″ × 3.5″)' }
+];
+
+const bleedOptions = [
+  { label: '无出血', value: 0 },
+  { label: '2mm', value: 2 },
+  { label: '3mm', value: 3 }
+];
+
+const bleedModeOptions = [
+  { label: '裁剪', value: '裁剪' },
+  { label: '拉伸', value: '拉伸' }
+];
+
+const bleedModelOptions = [
+  { label: '镜像出血', value: '镜像出血' },
+  { label: 'LaMa模型出血', value: 'LaMa模型出血' }
+];
+
+const formatOptions = [
+  { label: 'PNG', value: 'PNG' },
+  { label: 'JPG', value: 'JPG' }
+];
 
 // 卡牌预览生成队列
 const previewGenerationQueue = ref<string[]>([]);
@@ -2427,6 +2634,113 @@ const openArkhamdbFileLocation = () => {
   }
 };
 
+// PNP导出方法
+const exportToPnp = async () => {
+  if (!packageData.value?.path) {
+    message.error('内容包路径无效');
+    return;
+  }
+
+  // 清空之前的日志和结果
+  pnpExportLogs.value = [];
+  pnpExportResult.value = null;
+  exportingToPnp.value = true;
+
+  // 滚动到日志区域（延迟以等待DOM更新）
+  await nextTick();
+  const logElement = document.querySelector('.physical-export-panel .logs-container');
+  if (logElement) {
+    logElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  try {
+    // 添加初始日志
+    pnpExportLogs.value.push('🚀 开始导出PNP PDF...');
+    pnpExportLogs.value.push(`📦 内容包: ${packageData.value?.meta?.name || '未知内容包'}`);
+    pnpExportLogs.value.push(`📊 总卡牌数: ${packageData.value?.cards?.length || 0} 张`);
+    pnpExportLogs.value.push(`🎨 导出模式: ${pnpExportMode.value === 'single_card' ? '单卡模式' : '打印纸模式'}`);
+    if (pnpExportMode.value === 'print_sheet') {
+      pnpExportLogs.value.push(`📄 纸张规格: ${pnpPaperSize.value}`);
+    }
+    pnpExportLogs.value.push(`📐 DPI: ${pnpExportParams.value.dpi}`);
+    pnpExportLogs.value.push(`📏 卡牌规格: ${pnpExportParams.value.size}`);
+    pnpExportLogs.value.push('⏳ 正在准备导出...');
+
+    // 等待一下让用户看到初始日志
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    const result = await ContentPackageService.exportToPnp(
+      packageData.value.path,
+      pnpExportParams.value,
+      pnpOutputFilename.value ? `${pnpOutputFilename.value}.pdf` : 'pnp_export.pdf',
+      pnpExportMode.value,
+      pnpPaperSize.value
+    );
+
+    // 添加后端日志
+    if (result && Array.isArray(result.logs)) {
+      // 过滤掉重复的开始日志
+      const backendLogs = result.logs.filter(log =>
+        !log.includes('开始导出PNP') &&
+        !log.includes('导出模式') &&
+        !log.includes('纸张规格')
+      );
+
+      if (backendLogs.length > 0) {
+        pnpExportLogs.value.push(...backendLogs);
+      }
+    }
+
+    // 添加成功信息
+    if (result.output_path) {
+      pnpExportLogs.value.push('');
+      pnpExportLogs.value.push('✅ PNP PDF导出成功！');
+      pnpExportLogs.value.push(`📂 PDF文件已保存到: ${result.output_path}`);
+      pnpExportLogs.value.push(`📊 成功导出 ${result.cards_exported} 张卡牌`);
+      pnpExportLogs.value.push('');
+      pnpExportLogs.value.push('🎉 导出完成！您可以直接打印此PDF文件。');
+      pnpExportLogs.value.push('💡 提示：建议使用高质量纸张打印，并仔细对齐正反面。');
+    }
+
+    pnpExportResult.value = result;
+    message.success('PNP PDF导出成功！');
+
+  } catch (error: any) {
+    console.error('导出PNP PDF失败:', error);
+
+    // 添加错误信息
+    pnpExportLogs.value.push('');
+    pnpExportLogs.value.push('❌ 导出失败！');
+    pnpExportLogs.value.push(`💡 错误原因: ${error.message || '未知错误'}`);
+    pnpExportLogs.value.push('💡 建议：请检查卡牌数据完整性或重试导出');
+
+    message.error('PNP PDF导出失败，请查看日志了解详情');
+  } finally {
+    exportingToPnp.value = false;
+
+    // 滚动到日志底部
+    await nextTick();
+    const logContainer = document.querySelector('.physical-export-panel .logs-container');
+    if (logContainer) {
+      logContainer.scrollTop = logContainer.scrollHeight;
+    }
+  }
+};
+
+// 打开PNP文件位置
+const openPnpFileLocation = () => {
+  if (pnpExportResult.value?.output_path) {
+    // 提取目录路径
+    const dirPath = pnpExportResult.value.output_path.substring(0, pnpExportResult.value.output_path.lastIndexOf('/'));
+    if (dirPath) {
+      WorkspaceService.openDirectory(dirPath).catch(error => {
+        console.error('打开目录失败:', error);
+        message.error('无法打开文件夹');
+      });
+    }
+  }
+};
+
 // 遭遇组上传相关方法
 // 打开遭遇组上传对话框
 const openUploadEncounterDialog = (encounter: EncounterSet) => {
@@ -3419,12 +3733,55 @@ watch(() => packageData.value, async (newPackage, oldPackage) => {
   padding: 0;
 }
 
+/* 加载中样式 */
+.log-item.log-loading {
+  border-left-color: #667eea;
+  background: #f0f4ff;
+  display: flex;
+  align-items: center;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
 /* 卡牌元数据标签样式 */
 .card-meta .n-tag {
   font-size: 0.75rem;
   font-weight: 500;
   padding: 0.125rem 0.375rem;
   border-radius: 4px;
+}
+
+/* 实体导出面板样式 */
+.physical-export-panel {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.physical-export-panel h4 {
+  margin-bottom: 1.5rem;
+  color: #333;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.physical-export-panel .n-alert p {
+  margin: 0.5rem 0;
+}
+
+.physical-export-panel .n-alert p:first-child {
+  margin-top: 0;
+}
+
+.physical-export-panel .n-alert p:last-child {
+  margin-bottom: 0;
 }
 
 /* 标签编辑对话框样式 */

@@ -145,6 +145,45 @@ export interface ApplyCardNumberingData {
 }
 
 /**
+ * 导出PNP PDF的请求数据结构
+ */
+export interface ExportContentPackagePnpRequest {
+    /** 内容包文件的相对路径 */
+    package_path: string;
+    /** 导出参数（传递给ExportHelper） */
+    export_params: {
+        format: string;
+        dpi: number;
+        size: string;
+        bleed: number;
+        bleed_mode: string;
+        bleed_model: string;
+        quality?: number;
+        saturation?: number;
+        brightness?: number;
+        gamma?: number;
+    };
+    /** 输出PDF文件名 */
+    output_filename?: string;
+    /** 导出模式：'single_card' 或 'print_sheet' */
+    mode?: string;
+    /** 纸张规格（仅在print_sheet模式下使用）：'A4', 'A3', 'Letter' */
+    paper_size?: string;
+}
+
+/**
+ * 导出PNP PDF的响应数据结构
+ */
+export interface ExportContentPackagePnpData {
+    /** 输出文件路径 */
+    output_path: string;
+    /** 导出的卡牌数量 */
+    cards_exported: number;
+    /** 操作日志信息 */
+    logs: string[];
+}
+
+/**
  * 内容包相关服务API
  */
 export class ContentPackageService {
@@ -355,6 +394,54 @@ export class ContentPackageService {
             throw new ApiError(14008, '应用卡牌编号方案失败（系统错误）', error);
         }
     }
+
+    /**
+     * 导出内容包为PNP PDF
+     * @param packagePath 内容包文件的相对路径
+     * @param exportParams 导出参数（传递给ExportHelper）
+     * @param outputFilename 输出PDF文件名，默认'pnp_export.pdf'
+     * @param mode 导出模式，'single_card' 或 'print_sheet'，默认'single_card'
+     * @param paperSize 纸张规格（仅在print_sheet模式下使用），默认'A4'
+     * @returns 导出结果，包含输出路径、导出的卡牌数量和操作日志
+     * @throws {ApiError} 当导出失败时抛出错误
+     */
+    public static async exportToPnp(
+        packagePath: string,
+        exportParams: ExportContentPackagePnpRequest['export_params'],
+        outputFilename: string = 'pnp_export.pdf',
+        mode: string = 'single_card',
+        paperSize: string = 'A4'
+    ): Promise<ExportContentPackagePnpData> {
+        try {
+            const requestData: ExportContentPackagePnpRequest = {
+                package_path: packagePath,
+                export_params: exportParams,
+                output_filename: outputFilename,
+                mode: mode,
+                paper_size: paperSize
+            };
+
+            const response = (await httpClient.post<ExportContentPackagePnpData>(
+                '/api/content-package/export-pnp',
+                requestData,
+                {
+                    timeout: 300000 // PNP导出可能非常耗时，设置5分钟超时
+                }
+            )).data.data;
+
+            // 确保响应有logs属性
+            if (!response.logs) {
+                response.logs = [];
+            }
+
+            return response;
+        } catch (error) {
+            if (error instanceof ApiError) {
+                throw error;
+            }
+            throw new ApiError(14010, '导出内容包为PNP PDF失败（系统错误）', error);
+        }
+    }
 }
 
 // 导出便捷方法
@@ -363,7 +450,8 @@ export const {
     exportToArkhamdb,
     getEncounterGroups,
     generateCardNumberingPlan,
-    applyCardNumbering
+    applyCardNumbering,
+    exportToPnp
 } = ContentPackageService;
 
 export default ContentPackageService;

@@ -7,6 +7,7 @@ from datetime import datetime
 
 from bin.card2arkhamdb import Card2ArkhamDBConverter
 from bin import card_numbering
+from bin.pnp_exporter import PNPExporter
 
 
 class ContentPackageManager:
@@ -741,6 +742,89 @@ class ContentPackageManager:
 
         except Exception as e:
             self._add_log(f"应用编号方案失败: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'logs': self.logs
+            }
+
+    def export_to_pnp(
+            self,
+            export_params: Dict[str, Any],
+            output_filename: str,
+            mode: str = 'single_card',
+            paper_size: str = 'A4'
+    ) -> Dict[str, Any]:
+        """
+        导出内容包为PNP PDF
+
+        Args:
+            export_params: 导出参数（传递给ExportHelper）
+            output_filename: 输出PDF文件名
+            mode: 导出模式，'single_card' 或 'print_sheet'
+            paper_size: 纸张规格（仅在print_sheet模式下使用），默认'A4'
+
+        Returns:
+            Dict: {
+                'success': bool,
+                'output_path': str - 输出文件路径,
+                'cards_exported': int - 导出的卡牌数量,
+                'logs': List[str] - 日志信息
+            }
+        """
+        try:
+            self.logs = []
+            self._add_log("开始导出PNP PDF...")
+
+            # 获取内容包的卡牌列表
+            cards = self.content_package.get('cards', [])
+            if not cards:
+                return {
+                    'success': False,
+                    'error': '内容包中没有卡牌',
+                    'logs': self.logs
+                }
+
+            self._add_log(f"找到 {len(cards)} 张卡牌")
+
+            # 构建输出路径
+            output_path = self.workspace_manager._get_absolute_path(
+                os.path.join('ContentPackage', output_filename)
+            )
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+            # 创建PNP导出器
+            pnp_exporter = PNPExporter(export_params, self.workspace_manager)
+
+            # 执行导出
+            result = pnp_exporter.export_pnp(
+                cards=cards,
+                output_path=output_path,
+                mode=mode,
+                paper_size=paper_size
+            )
+
+            # 合并日志
+            self.logs.extend(result.get('logs', []))
+
+            if result.get('success'):
+                self._add_log(f"PNP PDF导出成功: {output_path}")
+                return {
+                    'success': True,
+                    'output_path': output_path,
+                    'cards_exported': result.get('cards_exported', 0),
+                    'logs': self.logs
+                }
+            else:
+                self._add_log(f"PNP PDF导出失败: {result.get('error', 'Unknown error')}")
+                return {
+                    'success': False,
+                    'error': result.get('error', 'Unknown error'),
+                    'logs': self.logs
+                }
+
+        except Exception as e:
+            self._add_log(f"导出PNP PDF失败: {e}")
             return {
                 'success': False,
                 'error': str(e),

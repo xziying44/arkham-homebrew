@@ -1635,6 +1635,59 @@ def apply_card_numbering():
         )), 500
 
 
+@app.route('/api/content-package/export-pnp', methods=['POST'])
+@handle_api_error
+def export_content_package_to_pnp():
+    """导出内容包为PNP PDF"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    data = request.get_json()
+    if not data or 'package_path' not in data or 'export_params' not in data:
+        return jsonify(create_response(
+            code=14010,
+            msg="请提供内容包文件路径和导出参数"
+        )), 400
+
+    package_path = data['package_path']
+    export_params = data['export_params']
+    output_filename = data.get('output_filename', 'pnp_export.pdf')
+    mode = data.get('mode', 'single_card')  # 'single_card' 或 'print_sheet'
+    paper_size = data.get('paper_size', 'A4')  # 'A4', 'A3', 'Letter'
+
+    logger_manager.info(f"导出内容包为PNP PDF: {package_path}, 模式: {mode}")
+
+    # 获取内容包
+    content_package = current_workspace.get_content_package(package_path)
+
+    # 调用导出方法
+    result = content_package.export_to_pnp(
+        export_params=export_params,
+        output_filename=output_filename,
+        mode=mode,
+        paper_size=paper_size
+    )
+
+    if result.get("success"):
+        logger_manager.info(f"内容包PNP PDF导出成功: {package_path}")
+        return jsonify(create_response(
+            msg="内容包PNP PDF导出成功",
+            data={
+                "output_path": result.get("output_path"),
+                "cards_exported": result.get("cards_exported"),
+                "logs": result.get("logs", [])
+            }
+        ))
+    else:
+        logger_manager.error(f"内容包PNP PDF导出失败: {result.get('error', 'Unknown error')}")
+        return jsonify(create_response(
+            code=14011,
+            msg=result.get("error", "内容包PNP PDF导出失败"),
+            data={"logs": result.get("logs", [])}
+        )), 500
+
+
 # ================= ArkhamDB导入相关接口 =================
 
 @app.route('/api/arkhamdb/import', methods=['POST'])

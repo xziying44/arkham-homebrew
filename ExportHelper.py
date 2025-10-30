@@ -2,14 +2,15 @@ import enum
 import json
 import math
 import time
-from typing import Dict, Any, Tuple, TypeVar, Type, Union
+from typing import Dict, Any, Tuple, TypeVar, Type, Union, TYPE_CHECKING
 
 import numpy as np
 from PIL import Image, ImageFont, ImageDraw, ImageEnhance
 
-from bin.workspace_manager import WorkspaceManager
 from export_helper.LamaCleaner import LamaCleaner
 
+if TYPE_CHECKING:
+    from bin.workspace_manager import WorkspaceManager
 # 定义泛型类型变量
 T = TypeVar('T', bound=enum.Enum)
 
