@@ -413,14 +413,17 @@ class PNPExporter:
             side: 'front' 或 'back'
             cards_per_row: 每行卡牌数
             cards_per_col: 每列卡牌数
-            card_width_mm: 卡牌宽度(mm)
-            card_height_mm: 卡牌高度(mm)
+            card_width_mm: 卡牌宽度(mm) - 包含出血
+            card_height_mm: 卡牌高度(mm) - 包含出血
             paper_width_mm: 纸张宽度(mm)
             paper_height_mm: 纸张高度(mm)
             margin_mm: 边距(mm)
             card_gap_mm: 卡牌间距(mm)
             mirror: 是否水平镜像（用于背面）
         """
+        # 获取出血尺寸
+        bleed_mm = self.export_helper.bleed.value
+
         # 计算本页实际卡牌的行列数
         actual_cards = len(cards)
         actual_rows = (actual_cards + cards_per_row - 1) // cards_per_row
@@ -459,8 +462,10 @@ class PNPExporter:
             is_top_edge = (row == 0)
             is_bottom_edge = (row == actual_rows - 1)
 
+            # 绘制裁剪线（在出血线位置）
             self._draw_cut_marks(
                 c, x, y, card_width_mm, card_height_mm,
+                bleed_mm,  # 传入出血尺寸
                 draw_left=is_left_edge,
                 draw_right=is_right_edge,
                 draw_top=is_top_edge,
@@ -474,24 +479,24 @@ class PNPExporter:
             y_mm: float,
             width_mm: float,
             height_mm: float,
-            mark_length_mm: float = 3,
-            mark_offset_mm: float = 0.5,
+            bleed_mm: float,
+            mark_length_mm: float = 8,  # 裁剪线长度
             draw_left: bool = True,
             draw_right: bool = True,
             draw_top: bool = True,
             draw_bottom: bool = True
     ) -> None:
         """
-        绘制切割辅助线（每个角落2条线）
+        绘制切割辅助线（完全在图片外部，标记出血线位置）
 
         Args:
             c: PDF Canvas对象
-            x_mm: 卡牌左下角x坐标(mm)
-            y_mm: 卡牌左下角y坐标(mm)
-            width_mm: 卡牌宽度(mm)
-            height_mm: 卡牌高度(mm)
+            x_mm: 卡牌（含出血）左下角x坐标(mm)
+            y_mm: 卡牌（含出血）左下角y坐标(mm)
+            width_mm: 卡牌宽度(mm)，含出血
+            height_mm: 卡牌高度(mm)，含出血
+            bleed_mm: 出血尺寸(mm)
             mark_length_mm: 辅助线长度(mm)
-            mark_offset_mm: 辅助线与卡牌边缘的距离(mm)
             draw_left: 是否绘制左侧裁剪线
             draw_right: 是否绘制右侧裁剪线
             draw_top: 是否绘制顶部裁剪线
@@ -500,39 +505,56 @@ class PNPExporter:
         c.setStrokeColorRGB(0.5, 0.5, 0.5)  # 灰色
         c.setLineWidth(0.25)
 
-        # 四个角的坐标及其对应的边缘
+        # 计算出血线在图片内的位置（从图片边缘向内bleed_mm）
+        # 但裁剪线要画在图片外面，对齐这些位置
+        bleed_left_x = x_mm + bleed_mm  # 左侧出血线的x坐标
+        bleed_right_x = x_mm + width_mm - bleed_mm  # 右侧出血线的x坐标
+        bleed_bottom_y = y_mm + bleed_mm  # 底部出血线的y坐标
+        bleed_top_y = y_mm + height_mm - bleed_mm  # 顶部出血线的y坐标
+
+        # 图片的实际边界
+        image_left = x_mm
+        image_right = x_mm + width_mm
+        image_bottom = y_mm
+        image_top = y_mm + height_mm
+
+        # 四个角的出血线位置
         corners = [
-            (x_mm, y_mm, draw_left, draw_bottom),  # 左下
-            (x_mm + width_mm, y_mm, draw_right, draw_bottom),  # 右下
-            (x_mm, y_mm + height_mm, draw_left, draw_top),  # 左上
-            (x_mm + width_mm, y_mm + height_mm, draw_right, draw_top),  # 右上
+            (bleed_left_x, bleed_bottom_y, draw_left, draw_bottom, 'left', 'bottom'),  # 左下
+            (bleed_right_x, bleed_bottom_y, draw_right, draw_bottom, 'right', 'bottom'),  # 右下
+            (bleed_left_x, bleed_top_y, draw_left, draw_top, 'left', 'top'),  # 左上
+            (bleed_right_x, bleed_top_y, draw_right, draw_top, 'right', 'top'),  # 右上
         ]
 
-        for corner_x, corner_y, draw_horizontal_side, draw_vertical_side in corners:
-            # 水平线
-            if draw_horizontal_side:
-                if corner_x == x_mm:  # 左侧
+        for bleed_x, bleed_y, draw_h, draw_v, h_side, v_side in corners:
+            # 绘制水平裁剪线（完全在图片外）
+            if draw_h:
+                if h_side == 'left':
+                    # 左侧：从图片左边缘向外延伸
                     c.line(
-                        (corner_x - mark_offset_mm - mark_length_mm) * mm, corner_y * mm,
-                        (corner_x - mark_offset_mm) * mm, corner_y * mm
+                        (image_left - mark_length_mm) * mm, bleed_y * mm,
+                        image_left * mm, bleed_y * mm
                     )
-                else:  # 右侧
+                else:  # right
+                    # 右侧：从图片右边缘向外延伸
                     c.line(
-                        (corner_x + mark_offset_mm) * mm, corner_y * mm,
-                        (corner_x + mark_offset_mm + mark_length_mm) * mm, corner_y * mm
+                        image_right * mm, bleed_y * mm,
+                        (image_right + mark_length_mm) * mm, bleed_y * mm
                     )
 
-            # 垂直线
-            if draw_vertical_side:
-                if corner_y == y_mm:  # 下侧
+            # 绘制垂直裁剪线（完全在图片外）
+            if draw_v:
+                if v_side == 'bottom':
+                    # 底部：从图片底边向外延伸
                     c.line(
-                        corner_x * mm, (corner_y - mark_offset_mm - mark_length_mm) * mm,
-                        corner_x * mm, (corner_y - mark_offset_mm) * mm
+                        bleed_x * mm, (image_bottom - mark_length_mm) * mm,
+                        bleed_x * mm, image_bottom * mm
                     )
-                else:  # 上侧
+                else:  # top
+                    # 顶部：从图片顶边向外延伸
                     c.line(
-                        corner_x * mm, (corner_y + mark_offset_mm) * mm,
-                        corner_x * mm, (corner_y + mark_offset_mm + mark_length_mm) * mm
+                        bleed_x * mm, image_top * mm,
+                        bleed_x * mm, (image_top + mark_length_mm) * mm
                     )
 
     def export_pnp(
