@@ -903,7 +903,9 @@ class WorkspaceManager:
 
                 encounter_group_number = json_data.get('encounter_group_number', '')
                 card_number = json_data.get('card_number', '')
-                footer_icon_name = self.config.get('footer_icon_dir', '')
+                footer_icon_name = json_data.get('footer_icon_path', '')
+                if not footer_icon_name:
+                    footer_icon_name = self.config.get('footer_icon_dir', '')
                 footer_icon_font = json_data.get('footer_icon_font', '')
                 if not footer_icon_font or footer_icon_font == '':
                     footer_icon = None
