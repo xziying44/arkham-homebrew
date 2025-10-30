@@ -895,6 +895,10 @@ class WorkspaceManager:
                     card.set_encounter_icon(Image.open(encounter_group_picture_path))
 
             # 画页脚
+            illustrator = ""
+            footer_copyright = ""
+            encounter_group_number = ""
+            card_number = ""
             if not silence:
                 illustrator = json_data.get('illustrator', '')
                 footer_copyright = json_data.get('footer_copyright', '')
@@ -903,32 +907,33 @@ class WorkspaceManager:
 
                 encounter_group_number = json_data.get('encounter_group_number', '')
                 card_number = json_data.get('card_number', '')
-                footer_icon_name = json_data.get('footer_icon_path', '')
-                if not footer_icon_name:
-                    footer_icon_name = self.config.get('footer_icon_dir', '')
-                footer_icon_font = json_data.get('footer_icon_font', '')
-                if not footer_icon_font or footer_icon_font == '':
-                    footer_icon = None
-                    if footer_icon_name:
-                        footer_icon_path = self._get_absolute_path(footer_icon_name)
-                        if os.path.exists(footer_icon_path):
-                            footer_icon = Image.open(footer_icon_path)
+            # 画图标
+            footer_icon_name = json_data.get('footer_icon_path', '')
+            if not footer_icon_name:
+                footer_icon_name = self.config.get('footer_icon_dir', '')
+            footer_icon_font = json_data.get('footer_icon_font', '')
+            if not footer_icon_font or footer_icon_font == '':
+                footer_icon = None
+                if footer_icon_name:
+                    footer_icon_path = self._get_absolute_path(footer_icon_name)
+                    if os.path.exists(footer_icon_path):
+                        footer_icon = Image.open(footer_icon_path)
 
-                    card.set_footer_information(
-                        illustrator,
-                        footer_copyright,
-                        encounter_group_number,
-                        card_number,
-                        footer_icon=footer_icon
-                    )
-                else:
-                    card.set_footer_information(
-                        illustrator,
-                        footer_copyright,
-                        encounter_group_number,
-                        card_number,
-                        footer_icon_font=footer_icon_font
-                    )
+                card.set_footer_information(
+                    illustrator,
+                    footer_copyright,
+                    encounter_group_number,
+                    card_number,
+                    footer_icon=footer_icon
+                )
+            else:
+                card.set_footer_information(
+                    illustrator,
+                    footer_copyright,
+                    encounter_group_number,
+                    card_number,
+                    footer_icon_font=footer_icon_font
+                )
             return card
 
         except Exception as e:

@@ -591,6 +591,7 @@ class ExportHelper:
 
 
 if __name__ == "__main__":
+    from bin.workspace_manager import WorkspaceManager
     system_defaults = {
         "format": "PNG",
         "size": ExportSize.POKER_SIZE.value,
