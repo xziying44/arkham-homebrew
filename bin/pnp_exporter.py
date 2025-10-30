@@ -48,6 +48,9 @@ class PNPExporter:
         # 创建ExportHelper实例
         self.export_helper = ExportHelper(export_params, workspace_manager)
 
+        # 遭遇组模式: 'classic' (经典模式-独立编号) 或 'range' (范围模式-复制图片)
+        self.encounter_group_mode = export_params.get('encounter_group_mode', 'range')
+
     def _add_log(self, message: str) -> None:
         """添加日志"""
         self.logs.append(message)
@@ -71,6 +74,54 @@ class PNPExporter:
         if match:
             return int(match.group())
         return 1
+
+    def _parse_encounter_group_number(self, encounter_group_number: str) -> Optional[int]:
+        """
+        从遭遇组编号字符串中解析起始编号
+
+        Args:
+            encounter_group_number: 遭遇组编号字符串，例如 "11-13/20" 或 "5/20"
+
+        Returns:
+            起始编号，如果解析失败则返回None
+
+        示例:
+            "11-13/20" -> 11
+            "5/20" -> 5
+            "invalid" -> None
+        """
+        if not encounter_group_number or not isinstance(encounter_group_number, str):
+            return None
+
+        try:
+            # 尝试解析格式: "11-13/20" 或 "5/20"
+            # 首先按 '/' 分割，获取左半部分
+            parts = encounter_group_number.split('/')
+            if not parts or len(parts) < 2:
+                return None
+
+            left_part = parts[0].strip()
+
+            # 检查是否包含范围 (例如 "11-13")
+            if '-' in left_part:
+                # 取范围的第一个数字
+                range_parts = left_part.split('-')
+                if range_parts:
+                    start_num_str = range_parts[0].strip()
+                    # 提取数字
+                    match = re.search(r'\d+', start_num_str)
+                    if match:
+                        return int(match.group())
+            else:
+                # 单个数字 (例如 "5")
+                match = re.search(r'\d+', left_part)
+                if match:
+                    return int(match.group())
+
+        except (ValueError, IndexError) as e:
+            self._add_log(f"解析遭遇组编号失败: {encounter_group_number}, 错误: {e}")
+
+        return None
 
     def _create_temp_directory(self) -> str:
         """
@@ -106,6 +157,7 @@ class PNPExporter:
             导出结果列表，每项包含卡牌信息和导出的图片路径
         """
         exported_cards = []
+        card_export_index = 0  # 用于生成唯一的文件名索引
 
         for i, card_meta in enumerate(cards):
             try:
@@ -123,46 +175,106 @@ class PNPExporter:
                 card_name = card_data.get('name', f'Card_{i + 1}')
                 card_number = card_data.get('card_number', '')
                 quantity = card_data.get('quantity', 1)
+                encounter_group_number = card_data.get('encounter_group_number', '')
 
                 self._add_log(f"正在导出卡牌: {card_name} (编号: {card_number}, 数量: {quantity})")
 
-                # 使用ExportHelper导出卡牌
-                result = self.export_helper.export_card_auto(card_filename)
+                # 检查是否使用经典模式且有遭遇组编号
+                use_classic_mode = False
+                start_encounter_num = None
 
-                # 检查是否为双面卡牌
-                if isinstance(result, dict):
-                    # 双面卡牌
-                    front_image = result.get('front')
-                    back_image = result.get('back')
+                if self.encounter_group_mode == 'classic' and encounter_group_number:
+                    start_encounter_num = self._parse_encounter_group_number(encounter_group_number)
+                    if start_encounter_num is not None:
+                        use_classic_mode = True
+                        self._add_log(f"  → 使用经典模式，起始遭遇组编号: {start_encounter_num}")
 
-                    if not front_image or not back_image:
-                        self._add_log(f"✗ 错误: 卡牌 {card_name} 缺少正面或背面图片！")
-                        continue
+                if use_classic_mode and start_encounter_num is not None:
+                    # 经典模式：为每张卡生成独立的遭遇组编号
+                    # 提取总数（例如从 "11-13/20" 中提取 "20"）
+                    total_in_group = None
+                    if '/' in encounter_group_number:
+                        try:
+                            total_str = encounter_group_number.split('/')[1].strip()
+                            total_match = re.search(r'\d+', total_str)
+                            if total_match:
+                                total_in_group = int(total_match.group())
+                        except Exception:
+                            pass
 
-                    # 保存图片
-                    front_path, back_path = self._save_card_images(
-                        front_image, back_image, card_name, i, temp_dir
-                    )
+                    # 为每个quantity生成独立的卡牌
+                    for copy_idx in range(quantity):
+                        # 克隆卡牌数据以避免修改原数据
+                        card_data_copy = card_data.copy()
 
-                    exported_cards.append({
-                        'card_meta': card_meta,
-                        'card_data': card_data,
-                        'card_name': card_name,
-                        'card_number': card_number,
-                        'quantity': quantity,
-                        'front_path': front_path,
-                        'back_path': back_path,
-                        'is_double_sided': True
-                    })
+                        # 计算当前卡牌的遭遇组编号
+                        current_encounter_num = start_encounter_num + copy_idx
 
-                    self._add_log(f"✓ 成功导出双面卡牌: {card_name}")
+                        # 生成新的遭遇组编号字符串
+                        if total_in_group:
+                            new_encounter_group_number = f"{current_encounter_num}/{total_in_group}"
+                        else:
+                            # 如果无法解析总数，使用原有格式
+                            new_encounter_group_number = f"{current_encounter_num}"
+
+                        card_data_copy['encounter_group_number'] = new_encounter_group_number
+
+                        self._add_log(f"  → 生成第 {copy_idx + 1}/{quantity} 张，遭遇组编号: {new_encounter_group_number}")
+
+                        # 导出这张独立编号的卡牌
+                        result = self._export_single_card_with_data(
+                            card_filename, card_data_copy, card_name,
+                            card_export_index, temp_dir
+                        )
+
+                        if result:
+                            # quantity设为1，因为这是独立导出的单张卡
+                            result['quantity'] = 1
+                            result['card_data'] = card_data_copy
+                            exported_cards.append(result)
+                            card_export_index += 1
+
                 else:
-                    # 单面卡牌 - 这不应该发生，因为我们要求所有卡牌都是双面的
-                    self._add_log(f"✗ 错误: 卡牌 {card_name} 只有单面，无法导出PNP！")
-                    continue
+                    # 范围模式：使用原有的复制逻辑
+                    result = self.export_helper.export_card_auto(card_filename)
+
+                    # 检查是否为双面卡牌
+                    if isinstance(result, dict):
+                        # 双面卡牌
+                        front_image = result.get('front')
+                        back_image = result.get('back')
+
+                        if not front_image or not back_image:
+                            self._add_log(f"✗ 错误: 卡牌 {card_name} 缺少正面或背面图片！")
+                            continue
+
+                        # 保存图片
+                        front_path, back_path = self._save_card_images(
+                            front_image, back_image, card_name, card_export_index, temp_dir
+                        )
+
+                        exported_cards.append({
+                            'card_meta': card_meta,
+                            'card_data': card_data,
+                            'card_name': card_name,
+                            'card_number': card_number,
+                            'quantity': quantity,
+                            'front_path': front_path,
+                            'back_path': back_path,
+                            'is_double_sided': True
+                        })
+
+                        card_export_index += 1
+                        self._add_log(f"✓ 成功导出双面卡牌: {card_name}")
+                    else:
+                        # 单面卡牌 - 这不应该发生，因为我们要求所有卡牌都是双面的
+                        self._add_log(f"✗ 错误: 卡牌 {card_name} 只有单面，无法导出PNP！")
+                        continue
 
             except Exception as e:
                 self._add_log(f"✗ 导出卡牌 {i + 1} 失败: {e}")
+                import traceback
+                self._add_log(f"  详细错误: {traceback.format_exc()}")
                 continue
 
         return exported_cards
@@ -176,6 +288,76 @@ class PNPExporter:
             return json.loads(card_content)
         except Exception as e:
             self._add_log(f"读取卡牌JSON失败 {card_filename}: {e}")
+            return None
+
+    def _export_single_card_with_data(
+            self,
+            card_filename: str,
+            card_data: Dict[str, Any],
+            card_name: str,
+            index: int,
+            temp_dir: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        使用修改后的卡牌数据导出单张卡牌
+
+        Args:
+            card_filename: 原始卡牌文件名（用于获取模板等信息）
+            card_data: 修改后的卡牌数据（包含新的encounter_group_number）
+            card_name: 卡牌名称
+            index: 卡牌索引（用于文件名）
+            temp_dir: 临时目录
+
+        Returns:
+            导出结果字典，失败返回None
+        """
+        try:
+            # 创建临时文件保存修改后的卡牌数据
+            temp_card_file = os.path.join(temp_dir, f"temp_card_{index}.json")
+            with open(temp_card_file, 'w', encoding='utf-8') as f:
+                json.dump(card_data, f, ensure_ascii=False, indent=2)
+
+            # 使用ExportHelper导出这张卡牌
+            result = self.export_helper.export_card_auto(temp_card_file)
+
+            # 删除临时文件
+            try:
+                os.remove(temp_card_file)
+            except Exception:
+                pass
+
+            # 检查是否为双面卡牌
+            if isinstance(result, dict):
+                front_image = result.get('front')
+                back_image = result.get('back')
+
+                if not front_image or not back_image:
+                    self._add_log(f"✗ 错误: 卡牌 {card_name} 缺少正面或背面图片！")
+                    return None
+
+                # 保存图片
+                front_path, back_path = self._save_card_images(
+                    front_image, back_image, card_name, index, temp_dir
+                )
+
+                return {
+                    'card_meta': {'filename': card_filename},
+                    'card_data': card_data,
+                    'card_name': card_name,
+                    'card_number': card_data.get('card_number', ''),
+                    'quantity': 1,  # 单张卡
+                    'front_path': front_path,
+                    'back_path': back_path,
+                    'is_double_sided': True
+                }
+            else:
+                self._add_log(f"✗ 错误: 卡牌 {card_name} 只有单面，无法导出PNP！")
+                return None
+
+        except Exception as e:
+            self._add_log(f"✗ 导出单张卡牌失败: {e}")
+            import traceback
+            self._add_log(f"  详细错误: {traceback.format_exc()}")
             return None
 
     def _save_card_images(

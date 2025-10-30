@@ -492,6 +492,14 @@ export default {
       size62x88: '62mm × 88mm',
       poker: '扑克牌尺寸 (63.5mm × 88.9mm)'
     },
+    encounterGroupMode: {
+      label: '遭遇组模式',
+      description: '选择如何处理遭遇组编号',
+      range: '范围模式',
+      classic: '经典模式',
+      rangeDescription: '使用范围编号（如11-13/20），复制卡牌图片',
+      classicDescription: '生成独立编号（如11/20, 12/20, 13/20），每张卡独立导出'
+    },
     exportLogs: {
       title: '导出日志',
       exporting: '导出中',

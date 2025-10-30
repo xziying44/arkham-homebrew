@@ -709,6 +709,12 @@
                   <n-select v-model:value="pnpExportParams.bleed_model" :options="bleedModelOptions" style="width: 200px;" />
                 </n-form-item>
 
+                <!-- 遭遇组模式 -->
+                <n-form-item :label="$t('contentPackage.pnp.encounterGroupMode.label')">
+                  <n-select v-model:value="pnpExportParams.encounter_group_mode" :options="encounterGroupModeOptions" style="width: 200px;" />
+                  <n-text depth="3" style="margin-left: 1rem;">{{ $t('contentPackage.pnp.encounterGroupMode.description') }}</n-text>
+                </n-form-item>
+
                 <!-- 导出格式 -->
                 <n-form-item :label="$t('contentPackage.pnp.exportParams.exportFormat')">
                   <n-select v-model:value="pnpExportParams.format" :options="formatOptions" style="width: 200px;" />
@@ -1220,7 +1226,8 @@ const pnpExportParams = ref({
   quality: 95,
   saturation: 1.0,
   brightness: 1.0,
-  gamma: 1.0
+  gamma: 1.0,
+  encounter_group_mode: 'range' // 'classic' (经典模式-独立编号) 或 'range' (范围模式-复制图片)
 });
 
 // PNP导出选项
@@ -1251,6 +1258,11 @@ const bleedModeOptions = computed(() => [
 const bleedModelOptions = computed(() => [
   { label: t('contentPackage.pnp.exportParams.mirror'), value: '镜像出血' },
   { label: t('contentPackage.pnp.exportParams.lama'), value: 'LaMa模型出血' }
+]);
+
+const encounterGroupModeOptions = computed(() => [
+  { label: t('contentPackage.pnp.encounterGroupMode.range'), value: 'range' },
+  { label: t('contentPackage.pnp.encounterGroupMode.classic'), value: 'classic' }
 ]);
 
 const formatOptions = [

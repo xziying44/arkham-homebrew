@@ -487,6 +487,14 @@ export default {
       size62x88: '62mm × 88mm',
       poker: 'Poker Size (63.5mm × 88.9mm)'
     },
+    encounterGroupMode: {
+      label: 'Encounter Group Mode',
+      description: 'Choose how to handle encounter group numbering',
+      range: 'Range Mode',
+      classic: 'Classic Mode',
+      rangeDescription: 'Use range numbering (e.g., 11-13/20), duplicate card images',
+      classicDescription: 'Generate individual numbers (e.g., 11/20, 12/20, 13/20), export each card separately'
+    },
     exportLogs: {
       title: 'Export Logs',
       exporting: 'Exporting',
