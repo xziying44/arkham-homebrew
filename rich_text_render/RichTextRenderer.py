@@ -818,8 +818,9 @@ class RichTextRenderer:
             elif item.tag == "font":
                 font_name = item.attributes.get('name', options.font_name)
                 font_name = self.font_manager.get_lang_font(font_name).name
+                font_addsize = int(item.attributes.get('addsize', '0'))
                 try:
-                    font_stack.push(font_cache.get_font(font_name, options.font_size), font_name)
+                    font_stack.push(font_cache.get_font(font_name, options.font_size + font_addsize), font_name)
                 except Exception as e:
                     print(f"字体切换失败: {e}")
 
@@ -958,16 +959,19 @@ class RichTextRenderer:
                 else:
                     # 水平模式（原有逻辑）
                     # 创建RenderItem并添加到列表
+                    offset_y = 0
+                    if text_obj.font_name == 'SourceHanSansSC-Regular':
+                        offset_y = -(text_obj.font_size * 0.4)
                     render_item = RenderItem(
                         obj=text_obj,
                         x=current_x,
-                        y=start_y
+                        y=start_y + offset_y
                     )
                     render_items.append(render_item)
 
                     # 绘制文本
                     self.draw.text(
-                        (current_x, start_y),
+                        (current_x, start_y + offset_y),
                         segment['text'],
                         font=segment['font'],
                         fill=segment['color']
@@ -980,14 +984,14 @@ class RichTextRenderer:
                             for dy in [-options.border_width, 0, options.border_width]:
                                 if dx != 0 or dy != 0:  # 不重复绘制中心点
                                     self.draw.text(
-                                        (current_x + dx, start_y + dy),
+                                        (current_x + dx, start_y + offset_y + dy),
                                         segment['text'],
                                         font=segment['font'],
                                         fill=options.border_color
                                     )
                         # 重新绘制主文本（覆盖边框）
                         self.draw.text(
-                            (current_x, start_y),
+                            (current_x, start_y + offset_y),
                             segment['text'],
                             font=segment['font'],
                             fill=segment['color']

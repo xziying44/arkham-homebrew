@@ -1247,6 +1247,9 @@ class Card:
                 font_color=font_color
             )
         if center_text:
+            if self.font_manager.lang == 'zh':
+                pattern = r'([\u4e00-\u9fa5]+)'
+                center_text = re.sub(pattern, r'<font name="SourceHanSansSC-Regular" addsize="-2">\1</font>', center_text)
             self.draw_centered_text(
                 position=(pos_center[0], pos_center[1] + 8),
                 text=center_text,
