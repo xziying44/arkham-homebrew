@@ -1196,7 +1196,7 @@ const pnpExportParams = ref({
   format: 'PNG',
   dpi: 300,
   size: '63.5mm × 88.9mm (2.5″ × 3.5″)',
-  bleed: 3,
+  bleed: 2,
   bleed_mode: '裁剪',
   bleed_model: '镜像出血',
   quality: 95,
