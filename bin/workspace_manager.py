@@ -2020,7 +2020,7 @@ class WorkspaceManager:
     def export_card_with_params(self, card_path: str, export_filename: str, export_params: Dict[str, Any],
                                 params_hash: str) -> bool:
         """
-        使用指定的导出参数导出卡牌
+        使用指定的导出参数导出卡牌（支持单面和双面卡牌）
 
         Args:
             card_path: 卡牌文件相对路径
@@ -2047,13 +2047,6 @@ class WorkspaceManager:
                 print(f"不支持的导出格式: {export_format}")
                 return False
 
-            # 构建完整的导出文件名
-            export_filepath = os.path.join(export_dir, f"{export_filename}.{export_format.lower()}")
-
-            # 确保导出文件的父目录存在，一层一层创建直到目标目录存在
-            export_parent_dir = os.path.dirname(export_filepath)
-            os.makedirs(export_parent_dir, exist_ok=True)
-
             # 检查是否需要重新生成（通过参数哈希判断）
             export_helper = getattr(self, '_export_helper', None)
             current_hash = getattr(self, '_export_params_hash', None)
@@ -2066,24 +2059,85 @@ class WorkspaceManager:
                 self._export_params_hash = params_hash
                 print("创建新的ExportHelper实例")
 
-            # 导出卡牌
-            card_image = export_helper.export_card(card_path)
-            if card_image is None:
+            # 导出卡牌（自动判断单面或双面）
+            result = export_helper.export_card_auto(card_path)
+            if result is None:
                 print("导出卡牌失败")
                 return False
 
-            # 保存图片
-            dpi_info = (export_helper.dpi, export_helper.dpi)
-            if export_format == 'JPG':
-                quality = export_params.get('quality', 95)
-                # 转为RGB
-                card_image = card_image.convert('RGB')
-                card_image.save(export_filepath, format='JPEG', quality=quality, dpi=dpi_info)
-            else:
-                card_image.save(export_filepath, format='PNG', dpi=dpi_info)
+            # 判断是单面还是双面卡牌
+            if isinstance(result, dict):
+                # 双面卡牌
+                print("检测到双面卡牌，导出正面和背面")
 
-            print(f"卡牌已导出到: {export_filepath}")
-            return True
+                # 保存正面
+                front_image = result.get('front')
+                if front_image:
+                    front_filepath = os.path.join(export_dir, f"{export_filename}_a.{export_format.lower()}")
+
+                    # 确保导出文件的父目录存在
+                    os.makedirs(os.path.dirname(front_filepath), exist_ok=True)
+
+                    # 保存正面图片
+                    dpi_info = (export_helper.dpi, export_helper.dpi)
+                    if export_format == 'JPG':
+                        quality = export_params.get('quality', 95)
+                        front_image = front_image.convert('RGB')
+                        front_image.save(front_filepath, format='JPEG', quality=quality, dpi=dpi_info)
+                    else:
+                        front_image.save(front_filepath, format='PNG', dpi=dpi_info)
+                    print(f"正面已导出到: {front_filepath}")
+                else:
+                    print("警告：正面图片为空")
+                    return False
+
+                # 保存背面
+                back_image = result.get('back')
+                if back_image:
+                    back_filepath = os.path.join(export_dir, f"{export_filename}_b.{export_format.lower()}")
+
+                    # 确保导出文件的父目录存在
+                    os.makedirs(os.path.dirname(back_filepath), exist_ok=True)
+
+                    # 保存背面图片
+                    dpi_info = (export_helper.dpi, export_helper.dpi)
+                    if export_format == 'JPG':
+                        quality = export_params.get('quality', 95)
+                        back_image = back_image.convert('RGB')
+                        back_image.save(back_filepath, format='JPEG', quality=quality, dpi=dpi_info)
+                    else:
+                        back_image.save(back_filepath, format='PNG', dpi=dpi_info)
+                    print(f"背面已导出到: {back_filepath}")
+                else:
+                    print("警告：背面图片为空，仅导出正面")
+
+                print("双面卡牌导出完成")
+                return True
+
+            else:
+                # 单面卡牌
+                print("检测到单面卡牌")
+                card_image = result
+
+                # 构建完整的导出文件名
+                export_filepath = os.path.join(export_dir, f"{export_filename}.{export_format.lower()}")
+
+                # 确保导出文件的父目录存在
+                export_parent_dir = os.path.dirname(export_filepath)
+                os.makedirs(export_parent_dir, exist_ok=True)
+
+                # 保存图片
+                dpi_info = (export_helper.dpi, export_helper.dpi)
+                if export_format == 'JPG':
+                    quality = export_params.get('quality', 95)
+                    # 转为RGB
+                    card_image = card_image.convert('RGB')
+                    card_image.save(export_filepath, format='JPEG', quality=quality, dpi=dpi_info)
+                else:
+                    card_image.save(export_filepath, format='PNG', dpi=dpi_info)
+
+                print(f"卡牌已导出到: {export_filepath}")
+                return True
 
         except Exception as e:
             print(f"导出卡牌失败: {e}")

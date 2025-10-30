@@ -2,7 +2,7 @@ import enum
 import json
 import math
 import time
-from typing import Dict, Any, Tuple, TypeVar, Type
+from typing import Dict, Any, Tuple, TypeVar, Type, Union
 
 import numpy as np
 from PIL import Image, ImageFont, ImageDraw, ImageEnhance
@@ -359,7 +359,7 @@ class ExportHelper:
         :param text_layer: 文字层元数据列表
         """
         if not text_layer:
-            return
+            return card_map
         # 计算DPI缩放比例
         dpi_scale_factor = self.dpi / 300.0
         # 计算出血偏移量
@@ -488,28 +488,138 @@ class ExportHelper:
         )
         return card_map_image
 
+    # 在ExportHelper类中添加以下方法
+
+    def export_double_sided_card(self, card_path: str) -> Dict[str, Image.Image]:
+        """
+        导出双面卡牌
+
+        Args:
+            card_path: 卡牌文件路径
+
+        Returns:
+            dict: 包含'front'和'back'键的字典，值为PIL.Image对象
+        """
+        card_json = self.workspace_manager.get_file_content(card_path)
+        if card_json is None:
+            raise ValueError("无效的卡路径")
+        card_json = json.loads(card_json)
+
+        # 检查版本号判断是否为双面卡牌
+        version = card_json.get('version', '')
+        if version != '2.0':
+            raise ValueError("该卡牌不是双面卡牌（version != 2.0）")
+
+        card_json = self.workspace_manager.creator._preprocessing_json(card_json)
+
+        result = {}
+
+        # 处理正面
+        print("正在处理正面卡牌...")
+        front_layer = self.workspace_manager.generate_card_image(card_json, False)
+        front_map = self.workspace_manager.generate_card_image(card_json, True)
+        front_map_image = self._bleeding(card_json, front_map.image)
+
+        # 绘制正面文字层
+        front_text_layer = front_layer.get_text_layer_metadata()
+        front_map_image = self._draw_text_layer(front_map_image, front_text_layer)
+        front_map_image = self._apply_image_adjustments(
+            front_map_image,
+            saturation=self.saturation,
+            brightness=self.brightness,
+            gamma=self.gamma
+        )
+        result['front'] = front_map_image
+
+        # 处理背面
+        back_json = card_json.get('back', None)
+        if back_json:
+            print("正在处理背面卡牌...")
+            # 继承必要字段
+            if 'version' not in back_json:
+                back_json['version'] = version
+            if 'language' not in back_json:
+                back_json['language'] = card_json.get('language', 'zh')
+
+            back_json = self.workspace_manager.creator._preprocessing_json(back_json)
+
+            back_layer = self.workspace_manager.generate_card_image(back_json, False)
+            back_map = self.workspace_manager.generate_card_image(back_json, True)
+            back_map_image = self._bleeding(back_json, back_map.image)
+
+            # 绘制背面文字层
+            back_text_layer = back_layer.get_text_layer_metadata()
+            back_map_image = self._draw_text_layer(back_map_image, back_text_layer)
+            back_map_image = self._apply_image_adjustments(
+                back_map_image,
+                saturation=self.saturation,
+                brightness=self.brightness,
+                gamma=self.gamma
+            )
+            result['back'] = back_map_image
+        else:
+            print("警告：双面卡牌缺少背面数据")
+            result['back'] = None
+
+        return result
+
+    def export_card_auto(self, card_path: str) -> Union[Image.Image, Dict[str, Image.Image]]:
+        """
+        自动判断并导出卡牌（单面或双面）
+
+        Args:
+            card_path: 卡牌文件路径
+
+        Returns:
+            单面卡牌返回Image对象，双面卡牌返回包含'front'和'back'的字典
+        """
+        card_json = self.workspace_manager.get_file_content(card_path)
+        if card_json is None:
+            raise ValueError("无效的卡路径")
+        card_json = json.loads(card_json)
+
+        # 检查版本号判断是否为双面卡牌
+        version = card_json.get('version', '')
+
+        if version == '2.0':
+            print("检测到双面卡牌，使用双面导出模式")
+            return self.export_double_sided_card(card_path)
+        else:
+            print("检测到单面卡牌，使用单面导出模式")
+            return self.export_card(card_path)
+
 
 if __name__ == "__main__":
-    # 定义一个系统默认配置
     system_defaults = {
         "format": "PNG",
-        "size": ExportSize.POKER_SIZE.value,  # "63.5mm × 88.9mm (2.5″ × 3.5″)"
+        "size": ExportSize.POKER_SIZE.value,
         "dpi": 500,
         "bleed": 3,
         "bleed_mode": "拉伸",
-        "bleed_model": "镜像出血",  # LaMa模型出血 镜像出血
-        "quality": 90,  # 系统默认JPG质量
+        "bleed_model": "镜像出血",
+        "quality": 90,
         "saturation": 1.0,
         "brightness": 1.0,
         "gamma": 1.0,
     }
-    export_helper = ExportHelper(system_defaults, WorkspaceManager(r'D:\诡镇奇谈\重置剧本卡'))
-    print(export_helper)
-    # 计算出血时间
-    t = time.time()
-    export_helper.export_card(r'03_卡尔克萨之路\卡牌\03278_a.card').show()
-    # 输出耗时 单位秒 保留2位小数
-    print(f'耗时: {round(time.time() - t, 2)}s')
-    # export_helper = ExportHelper(system_defaults, WorkspaceManager(r'D:\汉化文件夹\测试工作空间'))
-    # print(export_helper)
-    # export_helper.export_card(r'支援卡.card')
+
+    export_helper = ExportHelper(
+        system_defaults,
+        WorkspaceManager(r'C:\Users\xziyi\Desktop\arkham-homebrew-projects\EdgeOfTheEarth')
+    )
+
+    # 自动判断卡牌类型并导出
+    result = export_helper.export_card_auto(r'Apeirophobia.card')
+
+    if isinstance(result, dict):
+        # 双面卡牌
+        print("双面卡牌导出完成", result)
+        result['front'].show()  # 显示正面
+        if result['back']:
+            result['back'].show()  # 显示背面
+
+
+    else:
+        # 单面卡牌
+        print("单面卡牌导出完成")
+        result.show()

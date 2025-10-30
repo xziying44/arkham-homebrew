@@ -1340,6 +1340,8 @@ class Card:
     def get_text_layer_metadata(self):
         """获取文字层元数据"""
         text_layer_metadata = []
+        if not hasattr(self, "last_render_list"):
+            return
         for item in self.last_render_list:
             if isinstance(item.obj, TextObject):
                 text_layer_metadata.append({
