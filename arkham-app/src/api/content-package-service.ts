@@ -179,6 +179,8 @@ export interface ExportContentPackagePnpRequest {
  * 导出PNP PDF的响应数据结构
  */
 export interface ExportContentPackagePnpData {
+    /** 任务ID，用于跟踪导出进度 */
+    task_id?: string;
     /** 输出文件路径 */
     output_path: string;
     /** 导出的卡牌数量 */
@@ -435,7 +437,7 @@ export class ContentPackageService {
                 '/api/content-package/export-pnp',
                 requestData,
                 {
-                    timeout: 300000 // PNP导出可能非常耗时，设置5分钟超时
+                    timeout: 0 // PNP导出可能非常耗时，设置用不超时
                 }
             )).data.data;
 
@@ -452,6 +454,27 @@ export class ContentPackageService {
             throw new ApiError(14010, '导出内容包为PNP PDF失败（系统错误）', error);
         }
     }
+
+    /**
+     * 获取PNP导出实时日志
+     * @param taskId 任务ID
+     * @returns 日志数据
+     */
+    public static async getPnpExportLogs(taskId: string): Promise<{
+        logs: string[];
+        status: 'running' | 'completed' | 'failed';
+        result: ExportContentPackagePnpData | null;
+    }> {
+        try {
+            const response = (await httpClient.get(`/api/content-package/export-pnp/logs/${taskId}`)).data.data;
+            return response;
+        } catch (error) {
+            if (error instanceof ApiError) {
+                throw error;
+            }
+            throw new ApiError(14012, '获取PNP导出日志失败', error);
+        }
+    }
 }
 
 // 导出便捷方法
@@ -461,7 +484,8 @@ export const {
     getEncounterGroups,
     generateCardNumberingPlan,
     applyCardNumbering,
-    exportToPnp
+    exportToPnp,
+    getPnpExportLogs
 } = ContentPackageService;
 
 export default ContentPackageService;

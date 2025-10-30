@@ -44,6 +44,11 @@ github_image_host = None
 # ArkhamDB导入管理器
 arkham_builder = {}
 
+# PNP导出实时日志缓存
+# 使用字典存储不同任务的日志，key为任务ID，value为日志列表和状态
+pnp_export_logs = {}
+pnp_export_logs_lock = threading.Lock()
+
 # 记录服务启动
 logger_manager.info("=" * 60)
 logger_manager.info("阿卡姆印牌姬")
@@ -1661,36 +1666,105 @@ def export_content_package_to_pnp():
     mode = data.get('mode', 'single_card')  # 'single_card' 或 'print_sheet'
     paper_size = data.get('paper_size', 'A4')  # 'A4', 'A3', 'Letter'
 
-    logger_manager.info(f"导出内容包为PNP PDF: {package_path}, 模式: {mode}")
+    # 生成任务ID
+    import uuid
+    task_id = str(uuid.uuid4())
 
-    # 获取内容包
-    content_package = current_workspace.get_content_package(package_path)
+    # 初始化日志缓存
+    with pnp_export_logs_lock:
+        pnp_export_logs[task_id] = {
+            'logs': [],
+            'status': 'running',
+            'result': None
+        }
 
-    # 调用导出方法
-    result = content_package.export_to_pnp(
-        export_params=export_params,
-        output_filename=output_filename,
-        mode=mode,
-        paper_size=paper_size
-    )
+    logger_manager.info(f"导出内容包为PNP PDF: {package_path}, 模式: {mode}, 任务ID: {task_id}")
 
-    if result.get("success"):
-        logger_manager.info(f"内容包PNP PDF导出成功: {package_path}")
+    # 定义异步执行的导出任务
+    def export_task():
+        try:
+            # 获取内容包
+            content_package = current_workspace.get_content_package(package_path)
+
+            # 定义日志回调函数
+            def log_callback(message: str):
+                with pnp_export_logs_lock:
+                    if task_id in pnp_export_logs:
+                        pnp_export_logs[task_id]['logs'].append(message)
+
+            # 调用导出方法（传入task_id和log_callback用于实时日志更新）
+            result = content_package.export_to_pnp(
+                export_params=export_params,
+                output_filename=output_filename,
+                mode=mode,
+                paper_size=paper_size,
+                task_id=task_id,
+                log_callback=log_callback
+            )
+
+            # 更新最终状态
+            with pnp_export_logs_lock:
+                if task_id in pnp_export_logs:
+                    pnp_export_logs[task_id]['status'] = 'completed' if result.get("success") else 'failed'
+                    pnp_export_logs[task_id]['result'] = result
+
+            if result.get("success"):
+                logger_manager.info(f"内容包PNP PDF导出成功: {package_path}")
+            else:
+                logger_manager.error(f"内容包PNP PDF导出失败: {result.get('error', 'Unknown error')}")
+
+        except Exception as e:
+            logger_manager.error(f"导出任务执行失败: {e}")
+            import traceback
+            traceback.print_exc()
+            with pnp_export_logs_lock:
+                if task_id in pnp_export_logs:
+                    pnp_export_logs[task_id]['status'] = 'failed'
+                    pnp_export_logs[task_id]['logs'].append(f"❌ 导出失败: {str(e)}")
+                    pnp_export_logs[task_id]['result'] = {
+                        'success': False,
+                        'error': str(e),
+                        'logs': pnp_export_logs[task_id]['logs']
+                    }
+
+    # 在新线程中启动导出任务
+    import threading
+    export_thread = threading.Thread(target=export_task)
+    export_thread.daemon = True
+    export_thread.start()
+
+    # 立即返回task_id，不等待导出完成
+    return jsonify(create_response(
+        msg="PNP导出任务已启动",
+        data={
+            "task_id": task_id,
+            "status": "running"
+        }
+    ))
+
+
+@app.route('/api/content-package/export-pnp/logs/<task_id>', methods=['GET'])
+@handle_api_error
+def get_pnp_export_logs(task_id):
+    """获取PNP导出任务的实时日志"""
+    with pnp_export_logs_lock:
+        if task_id not in pnp_export_logs:
+            return jsonify(create_response(
+                code=14012,
+                msg="任务ID不存在"
+            )), 404
+
+        task_data = pnp_export_logs[task_id]
+
+        # 返回日志和状态
         return jsonify(create_response(
-            msg="内容包PNP PDF导出成功",
+            msg="获取日志成功",
             data={
-                "output_path": result.get("output_path"),
-                "cards_exported": result.get("cards_exported"),
-                "logs": result.get("logs", [])
+                "logs": task_data['logs'],
+                "status": task_data['status'],
+                "result": task_data['result']
             }
         ))
-    else:
-        logger_manager.error(f"内容包PNP PDF导出失败: {result.get('error', 'Unknown error')}")
-        return jsonify(create_response(
-            code=14011,
-            msg=result.get("error", "内容包PNP PDF导出失败"),
-            data={"logs": result.get("logs", [])}
-        )), 500
 
 
 # ================= ArkhamDB导入相关接口 =================

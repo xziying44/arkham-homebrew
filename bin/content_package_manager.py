@@ -768,16 +768,20 @@ class ContentPackageManager:
             export_params: Dict[str, Any],
             output_filename: str,
             mode: str = 'single_card',
-            paper_size: str = 'A4'
+            paper_size: str = 'A4',
+            task_id: Optional[str] = None,
+            log_callback=None
     ) -> Dict[str, Any]:
         """
         导出内容包为PNP PDF
 
         Args:
-            export_params: 导出参数（传递给ExportHelper）
+            export_params: 导出参数(传递给ExportHelper)
             output_filename: 输出PDF文件名
             mode: 导出模式，'single_card' 或 'print_sheet'
-            paper_size: 纸张规格（仅在print_sheet模式下使用），默认'A4'
+            paper_size: 纸张规格(仅在print_sheet模式下使用)，默认'A4'
+            task_id: 任务ID，用于实时日志更新
+            log_callback: 日志回调函数，用于实时更新日志
 
         Returns:
             Dict: {
@@ -808,8 +812,8 @@ class ContentPackageManager:
             )
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-            # 创建PNP导出器
-            pnp_exporter = PNPExporter(export_params, self.workspace_manager)
+            # 创建PNP导出器，传递日志回调
+            pnp_exporter = PNPExporter(export_params, self.workspace_manager, task_id=task_id, log_callback=log_callback)
 
             # 执行导出
             result = pnp_exporter.export_pnp(

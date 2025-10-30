@@ -2683,6 +2683,68 @@ const exportToPnp = async () => {
     logElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
+  // 用于存储任务ID和轮询定时器
+  let taskId: string | null = null;
+  let pollTimer: NodeJS.Timeout | null = null;
+
+  // 轮询获取日志的函数
+  const pollLogs = async () => {
+    if (!taskId) return;
+
+    try {
+      const logData = await ContentPackageService.getPnpExportLogs(taskId);
+
+      // 更新日志
+      pnpExportLogs.value = logData.logs;
+
+      // 滚动到日志底部
+      await nextTick();
+      // 需要找到 n-scrollbar 内部的滚动容器
+      const scrollbarContainer = document.querySelector('.physical-export-panel .n-scrollbar-container');
+      if (scrollbarContainer) {
+        scrollbarContainer.scrollTop = scrollbarContainer.scrollHeight;
+      }
+
+      // 检查状态
+      if (logData.status === 'completed') {
+        // 导出完成，停止轮询
+        if (pollTimer) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+        }
+
+        exportingToPnp.value = false;
+
+        if (logData.result) {
+          pnpExportResult.value = logData.result;
+          message.success(t('contentPackage.pnp.messages.exportSuccess'));
+        }
+
+        // 不关闭日志显示，用户可以继续查看日志
+      } else if (logData.status === 'failed') {
+        // 导出失败，停止轮询
+        if (pollTimer) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+        }
+
+        exportingToPnp.value = false;
+        message.error(t('contentPackage.pnp.messages.exportFailed') + '，请查看日志了解详情');
+
+        // 不关闭日志显示，用户可以继续查看错误信息
+      }
+      // 如果status === 'running'，继续轮询
+    } catch (error) {
+      console.error('获取导出日志失败:', error);
+      // 出错时也停止轮询
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+      exportingToPnp.value = false;
+    }
+  };
+
   try {
     const modeText = pnpExportMode.value === 'single_card'
       ? t('contentPackage.pnp.exportParams.singleCard')
@@ -2698,11 +2760,8 @@ const exportToPnp = async () => {
     }
     pnpExportLogs.value.push(`📐 ${t('contentPackage.pnp.exportParams.dpi')}: ${pnpExportParams.value.dpi}`);
     pnpExportLogs.value.push(`📏 ${t('contentPackage.pnp.exportParams.cardSize')}: ${pnpExportParams.value.size}`);
-    pnpExportLogs.value.push('⏳ ' + t('contentPackage.pnp.exportParams.exporting'));
 
-    // 等待一下让用户看到初始日志
-    await new Promise(resolve => setTimeout(resolve, 300));
-
+    // 启动导出任务（后端会立即返回task_id）
     const result = await ContentPackageService.exportToPnp(
       packageData.value.path,
       pnpExportParams.value,
@@ -2711,35 +2770,32 @@ const exportToPnp = async () => {
       pnpPaperSize.value
     );
 
-    // 添加后端日志
-    if (result && Array.isArray(result.logs)) {
-      // 过滤掉重复的开始日志
-      const backendLogs = result.logs.filter(log =>
-        !log.includes('开始导出PNP') &&
-        !log.includes('导出模式') &&
-        !log.includes('纸张规格')
-      );
+    // 获取任务ID
+    taskId = result.task_id || null;
 
-      if (backendLogs.length > 0) {
-        pnpExportLogs.value.push(...backendLogs);
-      }
-    }
-
-    // 添加成功信息
-    if (result.output_path) {
+    if (taskId) {
+      pnpExportLogs.value.push('⏳ 正在导出，实时日志如下：');
       pnpExportLogs.value.push('');
-      pnpExportLogs.value.push('✅ ' + t('contentPackage.pnp.messages.exportSuccess'));
-      pnpExportLogs.value.push(`📂 PDF文件已保存到: ${result.output_path}`);
-      pnpExportLogs.value.push(`📊 成功导出 ${result.cards_exported} 张卡牌`);
-      pnpExportLogs.value.push('');
-      pnpExportLogs.value.push('🎉 导出完成！您可以直接打印此PDF文件。');
-      pnpExportLogs.value.push('💡 提示：建议使用高质量纸张打印，并仔细对齐正反面。');
-    }
 
-    pnpExportResult.value = result;
-    message.success(t('contentPackage.pnp.messages.exportSuccess'));
+      // 开始轮询日志（每秒一次）
+      pollTimer = setInterval(pollLogs, 1000);
+
+      // 立即执行一次
+      await pollLogs();
+    } else {
+      // 没有任务ID，显示错误
+      pnpExportLogs.value.push('');
+      pnpExportLogs.value.push('❌ 无法启动导出任务：未获取到任务ID');
+      exportingToPnp.value = false;
+    }
 
   } catch (error: any) {
+    // 停止轮询
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+
     // 添加错误信息
     pnpExportLogs.value.push('');
     pnpExportLogs.value.push('❌ ' + t('contentPackage.pnp.messages.exportFailed') + '！');
@@ -2747,15 +2803,7 @@ const exportToPnp = async () => {
     pnpExportLogs.value.push('💡 ' + t('contentPackage.pnp.messages.checkDataIntegrity'));
 
     message.error(t('contentPackage.pnp.messages.exportFailed') + '，请查看日志了解详情');
-  } finally {
     exportingToPnp.value = false;
-
-    // 滚动到日志底部
-    await nextTick();
-    const logContainer = document.querySelector('.physical-export-panel .logs-container');
-    if (logContainer) {
-      logContainer.scrollTop = logContainer.scrollHeight;
-    }
   }
 };
 

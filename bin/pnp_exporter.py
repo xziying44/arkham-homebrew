@@ -33,17 +33,21 @@ class PNPExporter:
         'Letter': (215.9, 279.4),
     }
 
-    def __init__(self, export_params: Dict[str, Any], workspace_manager):
+    def __init__(self, export_params: Dict[str, Any], workspace_manager, task_id: Optional[str] = None, log_callback=None):
         """
         初始化PNP导出器
 
         Args:
             export_params: 导出参数，将传递给ExportHelper
             workspace_manager: 工作空间管理器
+            task_id: 任务ID，用于实时日志更新
+            log_callback: 日志回调函数，用于实时更新日志
         """
         self.export_params = export_params
         self.workspace_manager = workspace_manager
         self.logs = []
+        self.task_id = task_id
+        self.log_callback = log_callback
 
         # 创建ExportHelper实例
         self.export_helper = ExportHelper(export_params, workspace_manager)
@@ -55,6 +59,14 @@ class PNPExporter:
         """添加日志"""
         self.logs.append(message)
         print(f"[PNPExporter] {message}")
+
+        # 如果有日志回调函数，调用它来更新全局日志
+        if self.log_callback:
+            try:
+                self.log_callback(message)
+            except Exception as e:
+                # 忽略日志更新错误，避免影响主流程
+                print(f"[PNPExporter] 日志回调失败: {e}")
 
     def _extract_card_number(self, card_number_str: str) -> int:
         """
