@@ -286,7 +286,23 @@
                 </n-empty>
               </div>
               <div v-else class="encounters-grid">
-                <div v-for="encounter in encounters" :key="encounter.code" class="encounter-item">
+                <div
+                  v-for="encounter in encounters"
+                  :key="encounter.code"
+                  class="encounter-item"
+                  :class="{ 'dragging': draggedEncounter?.code === encounter.code, 'drag-over': dragOverEncounter?.code === encounter.code }"
+                  draggable="true"
+                  @dragstart="handleDragStart(encounter, $event)"
+                  @dragover="handleDragOver(encounter, $event)"
+                  @dragleave="handleDragLeave"
+                  @drop="handleDrop(encounter, $event)"
+                  @dragend="handleDragEnd"
+                >
+                  <!-- 拖动手柄 -->
+                  <div class="drag-handle" :title="t('contentPackage.encounters.dragToReorder')">
+                    <n-icon :component="ReorderThreeOutline" size="20" />
+                  </div>
+
                   <!-- 状态图标 - 左上角 -->
                   <div v-if="hasCloudUrl(encounter)" class="status-icon">
                     <n-icon :component="CloudOutline" size="18"
@@ -805,7 +821,8 @@ import {
   AddOutline,
   InformationCircleOutline,
   ImagesOutline,
-  RefreshOutline
+  RefreshOutline,
+  ReorderThreeOutline
 } from '@vicons/ionicons5';
 import type { ContentPackageFile, PackageType, ContentPackageCard, EncounterSet } from '@/types/content-package';
 import { getPackageTypeOptions, getLanguageOptions, getStatusOptions } from '@/types/content-package';
@@ -873,6 +890,10 @@ const showUploadEncounterDialog = ref(false);
 const showBatchEncounterUploadDialog = ref(false);
 const uploadingEncounter = ref<EncounterSet | null>(null);
 const isEncounterUploading = ref(false);
+
+// 拖动排序相关状态
+const draggedEncounter = ref<EncounterSet | null>(null);
+const dragOverEncounter = ref<EncounterSet | null>(null);
 
 // 遭遇组批量上传状态
 const batchEncounterUploading = ref(false);
@@ -1813,25 +1834,31 @@ const refreshEncounterGroups = async () => {
     const apiEncounters = result.encounter_groups || [];
     const existingEncounters = packageData.value.encounter_sets || [];
 
-    // 合并数据，优先使用现有的icon_url，补充base64和relative_path
-    const mergedEncounters: EncounterSet[] = apiEncounters.map((apiEncounter: any) => {
+    // 合并数据，优先使用现有的icon_url和order，补充base64和relative_path
+    const mergedEncounters: EncounterSet[] = apiEncounters.map((apiEncounter: any, index: number) => {
       const existing = existingEncounters.find(e => e.name === apiEncounter.name);
       if (existing) {
         return {
           ...existing,
           base64: apiEncounter.base64,
-          relative_path: apiEncounter.relative_path
+          relative_path: apiEncounter.relative_path,
+          // 保留现有的 order，如果没有则使用当前索引
+          order: existing.order !== undefined ? existing.order : index
         };
       } else {
-        // 生成新的UUID code
+        // 生成新的UUID code，并使用当前索引作为初始order
         return {
           code: uuidv4(),
           name: apiEncounter.name,
           base64: apiEncounter.base64,
-          relative_path: apiEncounter.relative_path
+          relative_path: apiEncounter.relative_path,
+          order: index
         };
       }
     });
+
+    // 按 order 排序
+    mergedEncounters.sort((a, b) => (a.order || 0) - (b.order || 0));
 
     // 更新本地状态
     encounters.value = mergedEncounters;
@@ -1853,6 +1880,83 @@ const refreshEncounterGroups = async () => {
   } finally {
     refreshingEncounters.value = false;
   }
+};
+
+// 拖动排序相关方法
+// 开始拖动
+const handleDragStart = (encounter: EncounterSet, event: DragEvent) => {
+  draggedEncounter.value = encounter;
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/html', encounter.code);
+  }
+};
+
+// 拖动经过
+const handleDragOver = (encounter: EncounterSet, event: DragEvent) => {
+  event.preventDefault();
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move';
+  }
+  dragOverEncounter.value = encounter;
+};
+
+// 拖动离开
+const handleDragLeave = () => {
+  dragOverEncounter.value = null;
+};
+
+// 放置
+const handleDrop = (targetEncounter: EncounterSet, event: DragEvent) => {
+  event.preventDefault();
+
+  if (!draggedEncounter.value || draggedEncounter.value.code === targetEncounter.code) {
+    draggedEncounter.value = null;
+    dragOverEncounter.value = null;
+    return;
+  }
+
+  // 重新排序遭遇组
+  const newEncounters = [...encounters.value];
+  const draggedIndex = newEncounters.findIndex(e => e.code === draggedEncounter.value!.code);
+  const targetIndex = newEncounters.findIndex(e => e.code === targetEncounter.code);
+
+  if (draggedIndex !== -1 && targetIndex !== -1) {
+    // 移除被拖动的元素
+    const [removed] = newEncounters.splice(draggedIndex, 1);
+    // 插入到目标位置
+    newEncounters.splice(targetIndex, 0, removed);
+
+    // 更新所有遭遇组的 order
+    const updatedEncounters = newEncounters.map((encounter, index) => ({
+      ...encounter,
+      order: index
+    }));
+
+    // 更新本地状态
+    encounters.value = updatedEncounters;
+
+    // 更新包数据
+    const updatedPackage = {
+      ...packageData.value,
+      encounter_sets: updatedEncounters
+    };
+    emit('update:package', updatedPackage);
+
+    // 触发保存
+    emit('save', true);
+
+    message.success(t('contentPackage.encounters.success.orderUpdated'));
+  }
+
+  draggedEncounter.value = null;
+  dragOverEncounter.value = null;
+};
+
+// 拖动结束
+const handleDragEnd = () => {
+  draggedEncounter.value = null;
+  dragOverEncounter.value = null;
 };
 
 // 为当前内容包开始预览生成
@@ -2354,7 +2458,9 @@ watch(() => packageData.value, async (newPackage, oldPackage) => {
 
     // 刷新遭遇组信息
     if (newPackage.encounter_sets && newPackage.encounter_sets.length > 0) {
-      encounters.value = newPackage.encounter_sets;
+      // 按 order 排序后更新
+      const sortedEncounters = [...newPackage.encounter_sets].sort((a, b) => (a.order || 0) - (b.order || 0));
+      encounters.value = sortedEncounters;
     } else {
       // 如果没有遭遇组数据，尝试从API获取
       await refreshEncounterGroups();
@@ -3158,12 +3264,63 @@ watch(() => packageData.value, async (newPackage, oldPackage) => {
   flex-direction: column;
   align-items: center;
   gap: 0.75rem;
+  cursor: grab;
+}
+
+.encounter-item:active {
+  cursor: grabbing;
 }
 
 .encounter-item:hover {
   border-color: #667eea;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transform: translateY(-2px);
+}
+
+/* 拖动状态样式 */
+.encounter-item.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+  transform: scale(0.95);
+  border-color: #667eea;
+}
+
+.encounter-item.drag-over {
+  border-color: #48bb78;
+  background: #f0fff4;
+  box-shadow: 0 0 0 2px rgba(72, 187, 120, 0.3);
+}
+
+/* 拖动手柄 */
+.drag-handle {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  cursor: grab;
+  opacity: 0;
+  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 4px;
+  z-index: 5;
+}
+
+.encounter-item:hover .drag-handle {
+  opacity: 1;
+}
+
+.drag-handle:hover {
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.drag-handle:active {
+  cursor: grabbing;
 }
 
 .encounter-icon {

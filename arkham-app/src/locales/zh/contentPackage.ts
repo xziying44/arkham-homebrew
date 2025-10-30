@@ -232,6 +232,7 @@ export default {
     }
   },
   encounters: {
+    dragToReorder: '拖动以重新排序',
     empty: {
       title: '还没有遭遇组',
       description: '点击刷新按钮加载遭遇组'
@@ -246,6 +247,7 @@ export default {
     success: {
       refreshSuccess: '成功刷新 {count} 个遭遇组',
       uploadSuccess: '遭遇组上传成功',
+      orderUpdated: '遭遇组排序已更新',
       batchUploadSuccess: '批量上传成功！共上传 {count} 个遭遇组'
     },
     messages: {

@@ -44,6 +44,7 @@ export interface EncounterSet {
   icon_url?: string;   // 遭遇组图标URL（本地file://或远程http://）
   base64?: string;     // 遭遇组图标base64数据
   relative_path?: string; // 图标相对路径
+  order?: number;      // 排序顺序，数字越小越靠前
 }
 
 /**

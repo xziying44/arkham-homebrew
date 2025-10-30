@@ -227,6 +227,7 @@ export default {
     }
   },
   encounters: {
+    dragToReorder: 'Drag to reorder',
     empty: {
       title: 'No encounter sets yet',
       description: 'Click refresh button to load encounter sets'
@@ -241,6 +242,7 @@ export default {
     success: {
       refreshSuccess: 'Successfully refreshed {count} encounter sets',
       uploadSuccess: 'Encounter set uploaded successfully',
+      orderUpdated: 'Encounter set order updated',
       batchUploadSuccess: 'Batch upload successful! Total {count} encounter sets uploaded'
     },
     messages: {
