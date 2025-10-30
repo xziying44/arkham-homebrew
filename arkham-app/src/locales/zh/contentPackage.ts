@@ -296,6 +296,8 @@ export default {
       encounterName: '遭遇组名称',
       encounterCode: '遭遇组代码',
       currentStatus: '当前状态',
+      noBanner: '暂无封面',
+      currentBanner: '当前封面',
       noIcon: '无图标',
       uploadInfo: '上传信息',
       imageUploadSuccess: '图片上传成功: {filename}',

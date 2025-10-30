@@ -291,6 +291,8 @@ export default {
       encounterName: 'Encounter Set Name',
       encounterCode: 'Encounter Set Code',
       currentStatus: 'Current Status',
+      noBanner: 'No Banner',
+      currentBanner: 'Current Banner',
       noIcon: 'No Icon',
       uploadInfo: 'Upload Information',
       imageUploadSuccess: 'Image uploaded successfully: {filename}',

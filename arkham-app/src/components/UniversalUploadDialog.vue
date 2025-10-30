@@ -80,7 +80,7 @@
         <div class="preview-container">
           <!-- 封面预览 -->
           <div v-if="uploadType === 'banner'" class="banner-preview">
-            <img v-if="currentItem.base64" :src="currentItem.base64" :alt="t('contentPackage.upload.dialog.currentBanner')" />
+            <img v-if="currentItem.banner_base64" :src="currentItem.banner_base64" :alt="t('contentPackage.upload.dialog.currentBanner')" />
             <div v-else class="no-content">
               <n-icon :component="ImageOutline" size="48" />
               <span>{{ $t('contentPackage.upload.dialog.noBanner') }}</span>
