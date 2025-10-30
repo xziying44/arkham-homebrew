@@ -81,6 +81,70 @@ export interface GetContentPackageEncounterGroupsData {
 }
 
 /**
+ * 卡牌编号方案项
+ */
+export interface CardNumberingPlanItem {
+    /** 卡牌文件路径 */
+    filename: string;
+    /** 卡牌名称 */
+    name: string;
+    /** 卡牌类型 */
+    type: string;
+    /** 职阶 */
+    class: string;
+    /** 遭遇组 */
+    encounter_group: string;
+    /** 遭遇组编号 */
+    encounter_group_number: string;
+    /** 卡牌序号 */
+    card_number: string;
+    /** 卡牌数量 */
+    quantity: number;
+}
+
+/**
+ * 生成卡牌编号方案的请求数据结构
+ */
+export interface GenerateCardNumberingPlanRequest {
+    /** 内容包文件的相对路径 */
+    package_path: string;
+    /** 无遭遇组卡牌的位置，'before' 或 'after' */
+    no_encounter_position?: string;
+    /** 起始序号 */
+    start_number?: number;
+}
+
+/**
+ * 生成卡牌编号方案的响应数据结构
+ */
+export interface GenerateCardNumberingPlanData {
+    /** 编号方案列表 */
+    numbering_plan: CardNumberingPlanItem[];
+    /** 操作日志信息 */
+    logs: string[];
+}
+
+/**
+ * 应用卡牌编号的请求数据结构
+ */
+export interface ApplyCardNumberingRequest {
+    /** 内容包文件的相对路径 */
+    package_path: string;
+    /** 编号方案列表 */
+    numbering_plan: CardNumberingPlanItem[];
+}
+
+/**
+ * 应用卡牌编号的响应数据结构
+ */
+export interface ApplyCardNumberingData {
+    /** 更新的卡牌数量 */
+    updated_count: number;
+    /** 操作日志信息 */
+    logs: string[];
+}
+
+/**
  * 内容包相关服务API
  */
 export class ContentPackageService {
@@ -191,7 +255,7 @@ export class ContentPackageService {
                 response.encounter_groups = [];
             }
 
-            // 不要动这里
+            // 不要动这里，这里不是BUG
             return response.data.data;
         } catch (error) {
             if (error instanceof ApiError) {
@@ -200,9 +264,106 @@ export class ContentPackageService {
             throw new ApiError(14006, '获取内容包遭遇组失败（系统错误）', error);
         }
     }
+
+    /**
+     * 生成卡牌编号方案
+     * @param packagePath 内容包文件的相对路径
+     * @param noEncounterPosition 无遭遇组卡牌的位置，'before' 或 'after'，默认 'before'
+     * @param startNumber 起始序号，默认 1
+     * @returns 编号方案数据，包含编号方案列表和操作日志
+     * @throws {ApiError} 当生成编号方案失败时抛出错误
+     */
+    public static async generateCardNumberingPlan(
+        packagePath: string,
+        noEncounterPosition: string = 'before',
+        startNumber: number = 1
+    ): Promise<GenerateCardNumberingPlanData> {
+        try {
+            const requestData: GenerateCardNumberingPlanRequest = {
+                package_path: packagePath,
+                no_encounter_position: noEncounterPosition,
+                start_number: startNumber
+            };
+
+            const response = (await httpClient.post<GenerateCardNumberingPlanData>(
+                '/api/content-package/generate-numbering-plan',
+                requestData,
+                {
+                    timeout: 30000 // 生成编号方案较快，设置30秒超时
+                }
+            )).data.data;
+
+            // 确保响应有logs属性
+            if (!response.logs) {
+                response.logs = [];
+            }
+
+            // 确保编号方案列表是数组
+            if (!response.numbering_plan) {
+                response.numbering_plan = [];
+            }
+
+            return response;
+        } catch (error) {
+            if (error instanceof ApiError) {
+                throw error;
+            }
+            throw new ApiError(14006, '生成卡牌编号方案失败（系统错误）', error);
+        }
+    }
+
+    /**
+     * 应用卡牌编号方案
+     * @param packagePath 内容包文件的相对路径
+     * @param numberingPlan 编号方案列表
+     * @returns 应用结果，包含更新的卡牌数量和操作日志
+     * @throws {ApiError} 当应用编号方案失败时抛出错误
+     */
+    public static async applyCardNumbering(
+        packagePath: string,
+        numberingPlan: CardNumberingPlanItem[]
+    ): Promise<ApplyCardNumberingData> {
+        try {
+            const requestData: ApplyCardNumberingRequest = {
+                package_path: packagePath,
+                numbering_plan: numberingPlan
+            };
+
+            const response = (await httpClient.post<ApplyCardNumberingData>(
+                '/api/content-package/apply-numbering',
+                requestData,
+                {
+                    timeout: 60000 // 应用编号方案可能涉及文件写入，设置60秒超时
+                }
+            )).data.data;
+
+            // 确保响应有logs属性
+            if (!response.logs) {
+                response.logs = [];
+            }
+
+            // 确保updated_count存在
+            if (typeof response.updated_count !== 'number') {
+                response.updated_count = 0;
+            }
+
+            return response;
+        } catch (error) {
+            if (error instanceof ApiError) {
+                throw error;
+            }
+            throw new ApiError(14008, '应用卡牌编号方案失败（系统错误）', error);
+        }
+    }
 }
 
 // 导出便捷方法
-export const {exportToTts, exportToArkhamdb, getEncounterGroups} = ContentPackageService;
+export const {
+    exportToTts,
+    exportToArkhamdb,
+    getEncounterGroups,
+    generateCardNumberingPlan,
+    applyCardNumbering
+} = ContentPackageService;
 
 export default ContentPackageService;

@@ -1543,6 +1543,98 @@ def export_content_package_to_arkhamdb():
         )), 500
 
 
+@app.route('/api/content-package/generate-numbering-plan', methods=['POST'])
+@handle_api_error
+def generate_card_numbering_plan():
+    """生成卡牌编号方案"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    data = request.get_json()
+    if not data or 'package_path' not in data:
+        return jsonify(create_response(
+            code=14006,
+            msg="请提供内容包文件路径"
+        )), 400
+
+    package_path = data['package_path']
+    no_encounter_position = data.get('no_encounter_position', 'before')  # 'before' 或 'after'
+    start_number = data.get('start_number', 1)
+
+    logger_manager.info(f"生成卡牌编号方案: {package_path}")
+
+    # 获取内容包
+    content_package = current_workspace.get_content_package(package_path)
+
+    # 调用工作空间的编号方法
+    result = content_package.generate_card_numbering_plan(
+        no_encounter_position,
+        start_number
+    )
+
+    if result.get("success"):
+        logger_manager.info(f"卡牌编号方案生成成功: {package_path}")
+        return jsonify(create_response(
+            msg="卡牌编号方案生成成功",
+            data={
+                "numbering_plan": result.get("numbering_plan"),
+                "logs": result.get("logs", [])
+            }
+        ))
+    else:
+        logger_manager.error(f"卡牌编号方案生成失败: {result.get('error', 'Unknown error')}")
+        return jsonify(create_response(
+            code=14007,
+            msg=result.get("error", "卡牌编号方案生成失败"),
+            data={"logs": result.get("logs", [])}
+        )), 500
+
+
+@app.route('/api/content-package/apply-numbering', methods=['POST'])
+@handle_api_error
+def apply_card_numbering():
+    """应用卡牌编号方案"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    data = request.get_json()
+    if not data or 'package_path' not in data or 'numbering_plan' not in data:
+        return jsonify(create_response(
+            code=14008,
+            msg="请提供内容包文件路径和编号方案"
+        )), 400
+
+    package_path = data['package_path']
+    numbering_plan = data['numbering_plan']
+
+    logger_manager.info(f"应用卡牌编号方案: {package_path}")
+
+    # 获取内容包
+    content_package = current_workspace.get_content_package(package_path)
+
+    # 调用工作空间的编号应用方法
+    result = content_package.apply_card_numbering(numbering_plan)
+
+    if result.get("success"):
+        logger_manager.info(f"卡牌编号应用成功: {package_path}, 更新 {result.get('updated_count')} 张卡牌")
+        return jsonify(create_response(
+            msg="卡牌编号应用成功",
+            data={
+                "updated_count": result.get("updated_count"),
+                "logs": result.get("logs", [])
+            }
+        ))
+    else:
+        logger_manager.error(f"卡牌编号应用失败: {result.get('error', 'Unknown error')}")
+        return jsonify(create_response(
+            code=14009,
+            msg=result.get("error", "卡牌编号应用失败"),
+            data={"logs": result.get("logs", [])}
+        )), 500
+
+
 # ================= ArkhamDB导入相关接口 =================
 
 @app.route('/api/arkhamdb/import', methods=['POST'])

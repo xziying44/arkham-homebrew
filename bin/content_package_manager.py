@@ -6,6 +6,7 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime
 
 from bin.card2arkhamdb import Card2ArkhamDBConverter
+from bin import card_numbering
 
 
 class ContentPackageManager:
@@ -595,6 +596,156 @@ class ContentPackageManager:
         except Exception as e:
             self._add_log(f"获取遭遇组图片base64失败 {encounter_group}: {e}")
             return ""
+
+    def generate_card_numbering_plan(
+            self,
+            no_encounter_position: str = 'before',
+            start_number: int = 1
+    ) -> Dict[str, Any]:
+        """
+        生成卡牌编号方案
+
+        Args:
+            no_encounter_position: 无遭遇组卡牌的位置，'before' 或 'after'
+            start_number: 起始序号
+
+        Returns:
+            Dict: {
+                'success': bool,
+                'numbering_plan': List[Dict] - 编号方案列表,
+                'logs': List[str] - 日志信息
+            }
+        """
+        try:
+            self.logs = []
+            self._add_log("开始生成卡牌编号方案...")
+
+            # 获取卡牌列表
+            cards = self.content_package.get('cards', [])
+            if not cards:
+                return {
+                    'success': False,
+                    'error': '内容包中没有卡牌',
+                    'logs': self.logs
+                }
+
+            self._add_log(f"找到 {len(cards)} 张卡牌")
+
+            # 读取所有卡牌数据
+            cards_data = []
+            for card_meta in cards:
+                filename = card_meta.get('filename', '')
+                if not filename:
+                    continue
+
+                card_data = self._read_card_json(filename)
+                if card_data:
+                    # 合并元数据
+                    card_data['filename'] = filename
+                    cards_data.append(card_data)
+
+            self._add_log(f"成功读取 {len(cards_data)} 张卡牌数据")
+
+            # 获取遭遇组列表
+            encounter_sets = self.content_package.get('encounter_sets', [])
+            self._add_log(f"找到 {len(encounter_sets)} 个遭遇组")
+
+            # 生成编号方案
+            numbering_plan = card_numbering.generate_numbering_plan(
+                cards_data=cards_data,
+                encounter_sets=encounter_sets,
+                no_encounter_position=no_encounter_position,
+                start_number=start_number
+            )
+
+            self._add_log(f"成功生成编号方案，共 {len(numbering_plan)} 张卡牌")
+
+            return {
+                'success': True,
+                'numbering_plan': numbering_plan,
+                'logs': self.logs
+            }
+
+        except Exception as e:
+            self._add_log(f"生成编号方案失败: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'logs': self.logs
+            }
+
+    def apply_card_numbering(self, numbering_plan: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        应用卡牌编号方案
+
+        Args:
+            numbering_plan: 编号方案列表
+
+        Returns:
+            Dict: {
+                'success': bool,
+                'updated_count': int - 更新的卡牌数量,
+                'logs': List[str] - 日志信息
+            }
+        """
+        try:
+            self.logs = []
+            self._add_log("开始应用卡牌编号方案...")
+
+            # 创建文件名到编号方案的映射
+            plan_map = {plan['filename']: plan for plan in numbering_plan}
+
+            updated_count = 0
+
+            # 遍历所有卡牌文件并应用编号
+            for filename, plan in plan_map.items():
+                try:
+                    # 读取卡牌数据
+                    card_data = self._read_card_json(filename)
+                    if not card_data:
+                        self._add_log(f"跳过: 无法读取卡牌 {filename}")
+                        continue
+
+                    # 应用编号
+                    has_changes = False
+
+                    if 'encounter_group_number' in plan and plan['encounter_group_number']:
+                        card_data['encounter_group_number'] = plan['encounter_group_number']
+                        has_changes = True
+
+                    if 'card_number' in plan and plan['card_number']:
+                        card_data['card_number'] = plan['card_number']
+                        has_changes = True
+
+                    # 保存修改
+                    if has_changes:
+                        self.workspace_manager.save_file_content(
+                            filename,
+                            json.dumps(card_data, ensure_ascii=False, indent=2)
+                        )
+                        updated_count += 1
+                        self._add_log(
+                            f"更新成功: {filename} (编号: {plan.get('card_number')}, 遭遇组编号: {plan.get('encounter_group_number')})")
+
+                except Exception as e:
+                    self._add_log(f"更新失败: {filename} - {e}")
+                    continue
+
+            self._add_log(f"编号应用完成，共更新 {updated_count} 张卡牌")
+
+            return {
+                'success': True,
+                'updated_count': updated_count,
+                'logs': self.logs
+            }
+
+        except Exception as e:
+            self._add_log(f"应用编号方案失败: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'logs': self.logs
+            }
 
 
 if __name__ == '__main__':

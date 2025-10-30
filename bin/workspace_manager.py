@@ -2232,3 +2232,48 @@ class WorkspaceManager:
                 "logs": [error_msg],
                 "error": str(e)
             }
+
+    def get_content_package(self, package_relative_path: str) -> Optional['ContentPackageManager']:
+        """
+        通过相对路径获取内容包管理器对象
+
+        Args:
+            package_relative_path: 内容包文件的相对路径
+
+        Returns:
+            ContentPackageManager: 内容包管理器对象，失败时返回None
+        """
+        try:
+            # 确保路径在工作空间内
+            if not self._is_path_in_workspace(package_relative_path):
+                logger_manager.error(f"内容包路径不在工作空间内: {package_relative_path}")
+                return None
+
+            # 获取绝对路径
+            package_path = self._get_absolute_path(package_relative_path)
+
+            # 检查文件是否存在
+            if not os.path.exists(package_path):
+                logger_manager.error(f"内容包文件不存在: {package_relative_path}")
+                return None
+
+            # 检查是否为文件
+            if not os.path.isfile(package_path):
+                logger_manager.error(f"指定路径不是文件: {package_relative_path}")
+                return None
+
+            # 读取并解析JSON文件
+            with open(package_path, 'r', encoding='utf-8') as f:
+                content_package_data = json.load(f)
+
+            # 创建并返回ContentPackageManager对象
+            manager = ContentPackageManager(content_package_data, self)
+            logger_manager.info(f"成功创建内容包管理器: {package_relative_path}")
+            return manager
+
+        except json.JSONDecodeError as e:
+            logger_manager.error(f"内容包JSON格式错误 {package_relative_path}: {e}")
+            return None
+        except Exception as e:
+            logger_manager.exception(f"创建内容包管理器失败 {package_relative_path}: {e}")
+            return None

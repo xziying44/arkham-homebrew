@@ -21,7 +21,8 @@ export default {
       info: '基础信息',
       cards: '卡牌管理',
       encounters: '遭遇组',
-      export: '导出设置'
+      export: '导出设置',
+      numbering: '自动编号'
     },
     sections: {
       banner: '封面预览',
@@ -362,6 +363,51 @@ export default {
       startConfiguration: '开始配置 ({count} 张)',
       startUpload: '开始上传',
       uploadToCloud: '上传云端'
+    }
+  },
+  numbering: {
+    title: '卡牌自动编号',
+    config: {
+      title: '编号配置',
+      startNumber: '起始序号',
+      noEncounterPosition: '无遭遇组卡牌位置',
+      positionBefore: '排在遭遇组之前',
+      positionAfter: '排在遭遇组之后'
+    },
+    preview: {
+      title: '编号方案预览',
+      description: '下表显示了将要应用的卡牌编号方案。请仔细检查后点击"应用方案"按钮。',
+      totalCards: '总卡牌数',
+      numberRange: '编号范围'
+    },
+    table: {
+      cardNumber: '卡牌序号',
+      filename: '文件名',
+      name: '卡牌名称',
+      type: '卡牌类型',
+      encounterGroup: '遭遇组',
+      encounterGroupNumber: '遭遇组编号',
+      quantity: '数量'
+    },
+    actions: {
+      generatePlan: '生成编号方案',
+      applyPlan: '应用方案',
+      cancelPlan: '取消'
+    },
+    logs: {
+      title: '编号日志'
+    },
+    messages: {
+      planGenerateSuccess: '编号方案生成成功，共 {count} 张卡牌',
+      noPlanGenerated: '未生成编号方案',
+      planApplySuccess: '编号方案应用成功，已更新 {count} 张卡牌',
+      noCardsUpdated: '没有卡牌被更新'
+    },
+    errors: {
+      noPackagePath: '内容包路径无效',
+      noPlanToApply: '没有可应用的编号方案，请先生成方案',
+      generatePlanFailed: '生成编号方案失败: {message}',
+      applyPlanFailed: '应用编号方案失败: {message}'
     }
   },
   common: {

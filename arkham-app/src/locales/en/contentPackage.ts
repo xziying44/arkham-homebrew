@@ -21,7 +21,8 @@ export default {
       info: 'Basic Info',
       cards: 'Card Management',
       encounters: 'Encounter Sets',
-      export: 'Export Settings'
+      export: 'Export Settings',
+      numbering: 'Auto Numbering'
     },
     sections: {
       banner: 'Banner Preview',
@@ -357,6 +358,51 @@ export default {
       startConfiguration: 'Start Configuration ({count} cards)',
       startUpload: 'Start Upload',
       uploadToCloud: 'Upload to Cloud'
+    }
+  },
+  numbering: {
+    title: 'Card Auto Numbering',
+    config: {
+      title: 'Numbering Configuration',
+      startNumber: 'Start Number',
+      noEncounterPosition: 'No Encounter Group Position',
+      positionBefore: 'Before Encounter Groups',
+      positionAfter: 'After Encounter Groups'
+    },
+    preview: {
+      title: 'Numbering Plan Preview',
+      description: 'The table below shows the card numbering plan to be applied. Please review carefully and click "Apply Plan" button.',
+      totalCards: 'Total Cards',
+      numberRange: 'Number Range'
+    },
+    table: {
+      cardNumber: 'Card Number',
+      filename: 'Filename',
+      name: 'Card Name',
+      type: 'Card Type',
+      encounterGroup: 'Encounter Group',
+      encounterGroupNumber: 'Encounter Group Number',
+      quantity: 'Quantity'
+    },
+    actions: {
+      generatePlan: 'Generate Plan',
+      applyPlan: 'Apply Plan',
+      cancelPlan: 'Cancel'
+    },
+    logs: {
+      title: 'Numbering Logs'
+    },
+    messages: {
+      planGenerateSuccess: 'Numbering plan generated successfully, total {count} cards',
+      noPlanGenerated: 'No numbering plan generated',
+      planApplySuccess: 'Numbering plan applied successfully, {count} cards updated',
+      noCardsUpdated: 'No cards updated'
+    },
+    errors: {
+      noPackagePath: 'Content package path invalid',
+      noPlanToApply: 'No plan to apply, please generate a plan first',
+      generatePlanFailed: 'Failed to generate numbering plan: {message}',
+      applyPlanFailed: 'Failed to apply numbering plan: {message}'
     }
   },
   common: {

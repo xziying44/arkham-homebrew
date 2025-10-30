@@ -511,6 +511,108 @@
             </div>
           </div>
         </n-tab-pane>
+
+        <!-- 自动编号标签页 -->
+        <n-tab-pane name="numbering" :tab="$t('contentPackage.editor.tabs.numbering')">
+          <div class="numbering-panel">
+            <h4>{{ $t('contentPackage.numbering.title') }}</h4>
+
+            <!-- 编号配置区域 -->
+            <div class="numbering-config">
+              <n-card :title="$t('contentPackage.numbering.config.title')" :bordered="false">
+                <n-form :label-width="140">
+                  <n-form-item :label="$t('contentPackage.numbering.config.startNumber')">
+                    <n-input-number v-model:value="numberingStartNumber" :min="1" :step="1" style="width: 200px;" />
+                  </n-form-item>
+                  <n-form-item :label="$t('contentPackage.numbering.config.noEncounterPosition')">
+                    <n-radio-group v-model:value="numberingNoEncounterPosition">
+                      <n-radio-button value="before">
+                        {{ $t('contentPackage.numbering.config.positionBefore') }}
+                      </n-radio-button>
+                      <n-radio-button value="after">
+                        {{ $t('contentPackage.numbering.config.positionAfter') }}
+                      </n-radio-button>
+                    </n-radio-group>
+                  </n-form-item>
+                </n-form>
+
+                <template #action>
+                  <n-space>
+                    <n-button type="primary" @click="generateNumberingPlan" :loading="generatingPlan">
+                      <template #icon>
+                        <n-icon :component="ConstructOutline" />
+                      </template>
+                      {{ $t('contentPackage.numbering.actions.generatePlan') }}
+                    </n-button>
+                  </n-space>
+                </template>
+              </n-card>
+            </div>
+
+            <!-- 编号方案预览 -->
+            <div v-if="numberingPlan.length > 0" class="numbering-preview">
+              <n-card :title="$t('contentPackage.numbering.preview.title')" :bordered="false">
+                <n-alert type="info" style="margin-bottom: 1rem;">
+                  <template #icon>
+                    <n-icon :component="InformationCircleOutline" />
+                  </template>
+                  {{ $t('contentPackage.numbering.preview.description') }}
+                </n-alert>
+
+                <div class="plan-summary">
+                  <n-descriptions :column="2" bordered style="margin-bottom: 1rem;">
+                    <n-descriptions-item :label="$t('contentPackage.numbering.preview.totalCards')">
+                      <n-tag type="info" size="small">{{ numberingPlan.length }} 张</n-tag>
+                    </n-descriptions-item>
+                    <n-descriptions-item :label="$t('contentPackage.numbering.preview.numberRange')">
+                      <n-tag type="success" size="small">
+                        {{ numberingPlan[0]?.card_number }} - {{ numberingPlan[numberingPlan.length - 1]?.card_number }}
+                      </n-tag>
+                    </n-descriptions-item>
+                  </n-descriptions>
+                </div>
+
+                <!-- 编号方案表格 -->
+                <n-scrollbar style="max-height: 400px;">
+                  <n-data-table
+                    :columns="numberingTableColumns"
+                    :data="numberingPlan"
+                    :pagination="false"
+                    :bordered="true"
+                    size="small"
+                  />
+                </n-scrollbar>
+
+                <template #action>
+                  <n-space>
+                    <n-button @click="clearNumberingPlan">
+                      {{ $t('contentPackage.numbering.actions.cancelPlan') }}
+                    </n-button>
+                    <n-button type="primary" @click="applyNumberingPlan" :loading="applyingPlan">
+                      <template #icon>
+                        <n-icon :component="SaveOutline" />
+                      </template>
+                      {{ $t('contentPackage.numbering.actions.applyPlan') }}
+                    </n-button>
+                  </n-space>
+                </template>
+              </n-card>
+            </div>
+
+            <!-- 编号日志 -->
+            <div v-if="numberingLogs.length > 0" class="numbering-logs">
+              <n-card :title="$t('contentPackage.numbering.logs.title')" :bordered="false">
+                <n-scrollbar style="max-height: 200px;">
+                  <div class="logs-container">
+                    <div v-for="(log, index) in numberingLogs" :key="index" class="log-item">
+                      <n-text>{{ log }}</n-text>
+                    </div>
+                  </div>
+                </n-scrollbar>
+              </n-card>
+            </div>
+          </div>
+        </n-tab-pane>
       </n-tabs>
     </div>
 
@@ -910,6 +1012,14 @@ const editTagsForm = ref({
   myriad: false,
   exile: false
 });
+
+// 自动编号相关状态
+const numberingStartNumber = ref(1);
+const numberingNoEncounterPosition = ref<'before' | 'after'>('before');
+const numberingPlan = ref<any[]>([]);
+const numberingLogs = ref<string[]>([]);
+const generatingPlan = ref(false);
+const applyingPlan = ref(false);
 
 // TTS导出状态
 const exportingToTts = ref(false);
@@ -1487,6 +1597,60 @@ const uploadConfig = computed(() => {
     cards: packageData.value?.cards || []
   };
 });
+
+// 自动编号表格列定义
+const numberingTableColumns = computed(() => [
+  {
+    title: t('contentPackage.numbering.table.cardNumber'),
+    key: 'card_number',
+    width: 80,
+    align: 'center' as const
+  },
+  {
+    title: t('contentPackage.numbering.table.filename'),
+    key: 'filename',
+    width: 200,
+    ellipsis: {
+      tooltip: true
+    }
+  },
+  {
+    title: t('contentPackage.numbering.table.name'),
+    key: 'name',
+    width: 150,
+    ellipsis: {
+      tooltip: true
+    }
+  },
+  {
+    title: t('contentPackage.numbering.table.type'),
+    key: 'type',
+    width: 100
+  },
+  {
+    title: t('contentPackage.numbering.table.encounterGroup'),
+    key: 'encounter_group',
+    width: 120,
+    render: (row: any) => {
+      return row.encounter_group || '-';
+    }
+  },
+  {
+    title: t('contentPackage.numbering.table.encounterGroupNumber'),
+    key: 'encounter_group_number',
+    width: 100,
+    align: 'center' as const,
+    render: (row: any) => {
+      return row.encounter_group_number || '-';
+    }
+  },
+  {
+    title: t('contentPackage.numbering.table.quantity'),
+    key: 'quantity',
+    width: 60,
+    align: 'center' as const
+  }
+]);
 
 // 显示上传卡牌对话框
 const openUploadCardDialog = (card: ContentPackageCard) => {
@@ -2439,6 +2603,109 @@ const startBatchEncounterUpload = async () => {
   } finally {
     batchEncounterUploading.value = false;
   }
+};
+
+// ==================== 自动编号相关方法 ====================
+
+/**
+ * 生成卡牌编号方案
+ */
+const generateNumberingPlan = async () => {
+  try {
+    generatingPlan.value = true;
+    numberingLogs.value = [];
+
+    const packagePath = props.package.path;
+    if (!packagePath) {
+      message.error(t('contentPackage.numbering.errors.noPackagePath'));
+      return;
+    }
+
+    // 调用API生成编号方案
+    const result = await ContentPackageService.generateCardNumberingPlan(
+      packagePath,
+      numberingNoEncounterPosition.value,
+      numberingStartNumber.value
+    );
+
+    numberingPlan.value = result.numbering_plan || [];
+    numberingLogs.value = result.logs || [];
+
+    if (numberingPlan.value.length > 0) {
+      message.success(t('contentPackage.numbering.messages.planGenerateSuccess', {
+        count: numberingPlan.value.length
+      }));
+    } else {
+      message.warning(t('contentPackage.numbering.messages.noPlanGenerated'));
+    }
+  } catch (error: any) {
+    console.error('生成编号方案失败:', error);
+    message.error(t('contentPackage.numbering.errors.generatePlanFailed', {
+      message: error.message || '未知错误'
+    }));
+  } finally {
+    generatingPlan.value = false;
+  }
+};
+
+/**
+ * 应用卡牌编号方案
+ */
+const applyNumberingPlan = async () => {
+  try {
+    applyingPlan.value = true;
+
+    const packagePath = props.package.path;
+    if (!packagePath) {
+      message.error(t('contentPackage.numbering.errors.noPackagePath'));
+      return;
+    }
+
+    if (numberingPlan.value.length === 0) {
+      message.error(t('contentPackage.numbering.errors.noPlanToApply'));
+      return;
+    }
+
+    // 调用API应用编号方案
+    const result = await ContentPackageService.applyCardNumbering(
+      packagePath,
+      numberingPlan.value
+    );
+
+    // 追加日志
+    numberingLogs.value = [
+      ...numberingLogs.value,
+      ...(result.logs || [])
+    ];
+
+    if (result.updated_count > 0) {
+      message.success(t('contentPackage.numbering.messages.planApplySuccess', {
+        count: result.updated_count
+      }));
+
+      // 清除编号方案
+      clearNumberingPlan();
+
+      // 触发保存到文件
+      emit('save');
+    } else {
+      message.warning(t('contentPackage.numbering.messages.noCardsUpdated'));
+    }
+  } catch (error: any) {
+    console.error('应用编号方案失败:', error);
+    message.error(t('contentPackage.numbering.errors.applyPlanFailed', {
+      message: error.message || '未知错误'
+    }));
+  } finally {
+    applyingPlan.value = false;
+  }
+};
+
+/**
+ * 清除编号方案
+ */
+const clearNumberingPlan = () => {
+  numberingPlan.value = [];
 };
 
 // 监听内容包变化，自动刷新版本信息
