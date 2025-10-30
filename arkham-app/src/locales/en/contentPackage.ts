@@ -368,7 +368,11 @@ export default {
       startNumber: 'Start Number',
       noEncounterPosition: 'No Encounter Group Position',
       positionBefore: 'Before Encounter Groups',
-      positionAfter: 'After Encounter Groups'
+      positionAfter: 'After Encounter Groups',
+      footerCopyright: 'Footer Copyright',
+      footerCopyrightPlaceholder: 'Enter footer copyright (optional)',
+      footerIcon: 'Footer Icon',
+      footerIconPlaceholder: 'Select footer icon (optional)'
     },
     preview: {
       title: 'Numbering Plan Preview',

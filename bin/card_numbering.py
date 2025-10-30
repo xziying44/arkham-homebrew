@@ -158,7 +158,9 @@ def generate_numbering_plan(
     cards_data: List[Dict[str, Any]],
     encounter_sets: List[Dict[str, Any]],
     no_encounter_position: str = 'before',  # 'before' 或 'after'
-    start_number: int = 1
+    start_number: int = 1,
+    footer_copyright: str = '',
+    footer_icon_path: str = ''
 ) -> List[Dict[str, Any]]:
     """
     生成卡牌编号方案
@@ -168,6 +170,8 @@ def generate_numbering_plan(
         encounter_sets: 遭遇组列表
         no_encounter_position: 无遭遇组卡牌的位置，'before' 或 'after'
         start_number: 起始序号
+        footer_copyright: 底部版权信息
+        footer_icon_path: 底标图标路径
 
     Returns:
         List: 编号方案列表，每项包含：
@@ -179,6 +183,8 @@ def generate_numbering_plan(
             - encounter_group_number: 遭遇组编号
             - card_number: 卡牌序号
             - quantity: 卡牌数量
+            - footer_copyright: 底部版权信息（如果提供）
+            - footer_icon_path: 底标图标路径（如果提供）
     """
     # 1. 分组
     grouped_cards = group_cards_by_encounter(cards_data, encounter_sets)
@@ -217,7 +223,7 @@ def generate_numbering_plan(
     # 6. 生成返回数据（只包含必要字段）
     result = []
     for card in all_sorted_cards:
-        result.append({
+        plan_item = {
             'filename': card.get('filename', ''),
             'name': card.get('name', ''),
             'type': card.get('type', ''),
@@ -226,7 +232,15 @@ def generate_numbering_plan(
             'encounter_group_number': card.get('encounter_group_number', ''),
             'card_number': card.get('card_number', ''),
             'quantity': card.get('quantity', 1)
-        })
+        }
+
+        # 添加底部版权信息和底标图标（如果提供）
+        if footer_copyright:
+            plan_item['footer_copyright'] = footer_copyright
+        if footer_icon_path:
+            plan_item['footer_icon_path'] = footer_icon_path
+
+        result.append(plan_item)
 
     return result
 
@@ -258,6 +272,12 @@ def apply_numbering_plan(
             plan = plan_map[filename]
             card_copy['encounter_group_number'] = plan.get('encounter_group_number', '')
             card_copy['card_number'] = plan.get('card_number', '')
+
+            # 应用底部版权信息和底标图标（如果在方案中存在）
+            if 'footer_copyright' in plan:
+                card_copy['footer_copyright'] = plan['footer_copyright']
+            if 'footer_icon_path' in plan:
+                card_copy['footer_icon_path'] = plan['footer_icon_path']
 
         result.append(card_copy)
 

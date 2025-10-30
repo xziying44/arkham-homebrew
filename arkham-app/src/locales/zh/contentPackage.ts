@@ -373,7 +373,11 @@ export default {
       startNumber: '起始序号',
       noEncounterPosition: '无遭遇组卡牌位置',
       positionBefore: '排在遭遇组之前',
-      positionAfter: '排在遭遇组之后'
+      positionAfter: '排在遭遇组之后',
+      footerCopyright: '底部版权信息',
+      footerCopyrightPlaceholder: '请输入底部版权信息（可选）',
+      footerIcon: '底标图标',
+      footerIconPlaceholder: '请选择底标图标（可选）'
     },
     preview: {
       title: '编号方案预览',

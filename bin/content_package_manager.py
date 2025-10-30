@@ -601,7 +601,9 @@ class ContentPackageManager:
     def generate_card_numbering_plan(
             self,
             no_encounter_position: str = 'before',
-            start_number: int = 1
+            start_number: int = 1,
+            footer_copyright: str = '',
+            footer_icon_path: str = ''
     ) -> Dict[str, Any]:
         """
         生成卡牌编号方案
@@ -609,6 +611,8 @@ class ContentPackageManager:
         Args:
             no_encounter_position: 无遭遇组卡牌的位置，'before' 或 'after'
             start_number: 起始序号
+            footer_copyright: 底部版权信息
+            footer_icon_path: 底标图标路径
 
         Returns:
             Dict: {
@@ -656,7 +660,9 @@ class ContentPackageManager:
                 cards_data=cards_data,
                 encounter_sets=encounter_sets,
                 no_encounter_position=no_encounter_position,
-                start_number=start_number
+                start_number=start_number,
+                footer_copyright=footer_copyright,
+                footer_icon_path=footer_icon_path
             )
 
             self._add_log(f"成功生成编号方案，共 {len(numbering_plan)} 张卡牌")
@@ -716,6 +722,15 @@ class ContentPackageManager:
 
                     if 'card_number' in plan and plan['card_number']:
                         card_data['card_number'] = plan['card_number']
+                        has_changes = True
+
+                    # 应用底部版权信息和底标图标
+                    if 'footer_copyright' in plan:
+                        card_data['footer_copyright'] = plan['footer_copyright']
+                        has_changes = True
+
+                    if 'footer_icon_path' in plan:
+                        card_data['footer_icon_path'] = plan['footer_icon_path']
                         has_changes = True
 
                     # 保存修改

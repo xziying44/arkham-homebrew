@@ -367,6 +367,18 @@
                       </n-radio-button>
                     </n-radio-group>
                   </n-form-item>
+                  <n-form-item :label="$t('contentPackage.numbering.config.footerCopyright')">
+                    <n-input v-model:value="numberingFooterCopyright" type="text"
+                      :placeholder="$t('contentPackage.numbering.config.footerCopyrightPlaceholder')"
+                      style="width: 400px;" />
+                  </n-form-item>
+                  <n-form-item :label="$t('contentPackage.numbering.config.footerIcon')">
+                    <n-select v-model:value="numberingFooterIconPath"
+                      :options="footerIconOptions"
+                      :placeholder="$t('contentPackage.numbering.config.footerIconPlaceholder')"
+                      style="width: 400px;"
+                      clearable />
+                  </n-form-item>
                 </n-form>
 
                 <template #action>
@@ -1169,10 +1181,15 @@ const editTagsForm = ref({
 // 自动编号相关状态
 const numberingStartNumber = ref(1);
 const numberingNoEncounterPosition = ref<'before' | 'after'>('before');
+const numberingFooterCopyright = ref('');
+const numberingFooterIconPath = ref('');
 const numberingPlan = ref<any[]>([]);
 const numberingLogs = ref<string[]>([]);
 const generatingPlan = ref(false);
 const applyingPlan = ref(false);
+
+// 底标图标选项
+const footerIconOptions = ref<Array<{ label: string; value: string }>>([]);
 
 // TTS导出状态
 const exportingToTts = ref(false);
@@ -2925,6 +2942,48 @@ const startBatchEncounterUpload = async () => {
 // ==================== 自动编号相关方法 ====================
 
 /**
+ * 加载底标图标列表
+ */
+const loadFooterIconOptions = async () => {
+  try {
+    const fileTree = await WorkspaceService.getFileTree();
+
+    // 提取根目录下的PNG图片
+    const rootImages: Array<{ label: string; value: string }> = [];
+
+    if (fileTree.fileTree.children) {
+      for (const child of fileTree.fileTree.children) {
+        // 只查找根目录下的直接子文件，且为PNG图片
+        if (child.type === 'image' && child.path && child.label.toLowerCase().endsWith('.png')) {
+          // 计算相对路径
+          const rootPath = fileTree.fileTree.path.replace(/\\/g, '/');
+          const absolutePath = child.path.replace(/\\/g, '/');
+          let relativePath = '';
+
+          if (absolutePath.startsWith(rootPath)) {
+            relativePath = absolutePath.slice(rootPath.length);
+            relativePath = relativePath.startsWith('/') ? relativePath.slice(1) : relativePath;
+          } else {
+            relativePath = child.path;
+          }
+
+          rootImages.push({
+            label: child.label,
+            value: relativePath
+          });
+        }
+      }
+    }
+
+    // 按名称排序
+    rootImages.sort((a, b) => a.label.localeCompare(b.label));
+    footerIconOptions.value = rootImages;
+  } catch (error) {
+    console.error('加载底标图标列表失败:', error);
+  }
+};
+
+/**
  * 生成卡牌编号方案
  */
 const generateNumberingPlan = async () => {
@@ -2942,7 +3001,9 @@ const generateNumberingPlan = async () => {
     const result = await ContentPackageService.generateCardNumberingPlan(
       packagePath,
       numberingNoEncounterPosition.value,
-      numberingStartNumber.value
+      numberingStartNumber.value,
+      numberingFooterCopyright.value,
+      numberingFooterIconPath.value
     );
 
     numberingPlan.value = result.numbering_plan || [];
@@ -3025,7 +3086,7 @@ const clearNumberingPlan = () => {
   numberingPlan.value = [];
 };
 
-// 监听内容包变化，自动刷新版本信息
+// 监听内容包变化,自动刷新版本信息
 watch(() => packageData.value, async (newPackage, oldPackage) => {
   if (newPackage && (!oldPackage ||
     newPackage.path !== oldPackage.path ||
@@ -3039,6 +3100,9 @@ watch(() => packageData.value, async (newPackage, oldPackage) => {
 
     // 刷新版本信息
     await refreshCardVersions();
+
+    // 加载底标图标选项
+    await loadFooterIconOptions();
 
     // 刷新遭遇组信息
     if (newPackage.encounter_sets && newPackage.encounter_sets.length > 0) {

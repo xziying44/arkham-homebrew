@@ -1561,6 +1561,8 @@ def generate_card_numbering_plan():
     package_path = data['package_path']
     no_encounter_position = data.get('no_encounter_position', 'before')  # 'before' 或 'after'
     start_number = data.get('start_number', 1)
+    footer_copyright = data.get('footer_copyright', '')
+    footer_icon_path = data.get('footer_icon_path', '')
 
     logger_manager.info(f"生成卡牌编号方案: {package_path}")
 
@@ -1570,7 +1572,9 @@ def generate_card_numbering_plan():
     # 调用工作空间的编号方法
     result = content_package.generate_card_numbering_plan(
         no_encounter_position,
-        start_number
+        start_number,
+        footer_copyright,
+        footer_icon_path
     )
 
     if result.get("success"):

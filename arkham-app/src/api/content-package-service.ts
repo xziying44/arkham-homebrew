@@ -112,6 +112,10 @@ export interface GenerateCardNumberingPlanRequest {
     no_encounter_position?: string;
     /** 起始序号 */
     start_number?: number;
+    /** 底部版权信息 */
+    footer_copyright?: string;
+    /** 底标图标路径 */
+    footer_icon_path?: string;
 }
 
 /**
@@ -309,19 +313,25 @@ export class ContentPackageService {
      * @param packagePath 内容包文件的相对路径
      * @param noEncounterPosition 无遭遇组卡牌的位置，'before' 或 'after'，默认 'before'
      * @param startNumber 起始序号，默认 1
+     * @param footerCopyright 底部版权信息，可选
+     * @param footerIconPath 底标图标路径，可选
      * @returns 编号方案数据，包含编号方案列表和操作日志
      * @throws {ApiError} 当生成编号方案失败时抛出错误
      */
     public static async generateCardNumberingPlan(
         packagePath: string,
         noEncounterPosition: string = 'before',
-        startNumber: number = 1
+        startNumber: number = 1,
+        footerCopyright?: string,
+        footerIconPath?: string
     ): Promise<GenerateCardNumberingPlanData> {
         try {
             const requestData: GenerateCardNumberingPlanRequest = {
                 package_path: packagePath,
                 no_encounter_position: noEncounterPosition,
-                start_number: startNumber
+                start_number: startNumber,
+                footer_copyright: footerCopyright,
+                footer_icon_path: footerIconPath
             };
 
             const response = (await httpClient.post<GenerateCardNumberingPlanData>(
