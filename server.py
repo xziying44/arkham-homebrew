@@ -19,6 +19,17 @@ from bin.logger import logger_manager
 from bin.workspace_manager import WorkspaceManager
 from bin.image_uploader import create_uploader
 
+mimetypes.init()
+mimetypes.add_type('application/javascript', '.js')
+mimetypes.add_type('application/javascript', '.mjs')
+mimetypes.add_type('text/css', '.css')
+mimetypes.add_type('image/svg+xml', '.svg')
+mimetypes.add_type('application/json', '.json')
+mimetypes.add_type('font/woff', '.woff')
+mimetypes.add_type('font/woff2', '.woff2')
+mimetypes.add_type('font/ttf', '.ttf')
+mimetypes.add_type('font/otf', '.otf')
+
 
 # 导入日志系统
 # ============================================
@@ -2179,21 +2190,57 @@ def index():
 
 @app.route('/<path:path>')
 def serve_static_files(path):
-    """服务Vue应用的静态文件"""
+    """服务Vue应用的静态文件（兼容旧浏览器）"""
     try:
-        # 获取文件的 MIME 类型
-        mimetype = mimetypes.guess_type(path)[0]
+        # 构建完整的文件路径
+        file_path = os.path.join(app.static_folder, path)
 
-        # 使用 send_from_directory 并显式设置 mimetype
-        response = send_from_directory(app.static_folder, path, mimetype=mimetype)
+        # 检查文件是否存在
+        if not os.path.exists(file_path):
+            # 对于 Vue Router 的 history 模式，返回 index.html
+            return send_from_directory(app.static_folder, 'index.html', mimetype='text/html')
 
-        # 确保 Content-Type 总是被设置
-        if not response.content_type and mimetype:
-            response.content_type = mimetype
+        # 获取文件扩展名
+        _, ext = os.path.splitext(path)
+        ext = ext.lower()
+
+        # 定义 MIME 类型映射表（优先级高于 mimetypes.guess_type）
+        mime_map = {
+            '.js': 'application/javascript',
+            '.mjs': 'application/javascript',
+            '.css': 'text/css',
+            '.html': 'text/html',
+            '.json': 'application/json',
+            '.svg': 'image/svg+xml',
+            '.png': 'image/png',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.gif': 'image/gif',
+            '.ico': 'image/x-icon',
+            '.woff': 'font/woff',
+            '.woff2': 'font/woff2',
+            '.ttf': 'font/ttf',
+            '.otf': 'font/otf',
+            '.eot': 'application/vnd.ms-fontobject',
+            '.map': 'application/json',  # Source maps
+        }
+
+        # 优先使用映射表，否则使用 mimetypes.guess_type
+        mimetype = mime_map.get(ext) or mimetypes.guess_type(path)[0] or 'application/octet-stream'
+
+        # 发送文件并设置正确的 MIME 类型
+        response = send_from_directory(app.static_folder, path)
+        response.headers['Content-Type'] = mimetype
+
+        # 为 JavaScript 模块添加额外的头部（提升兼容性）
+        if ext in ['.js', '.mjs']:
+            response.headers['X-Content-Type-Options'] = 'nosniff'
 
         return response
-    except:
-        # 如果文件不存在，返回index.html（用于Vue Router的history模式）
+
+    except Exception as e:
+        logger_manager.exception(f"服务静态文件失败: {path}")
+        # 出错时返回 index.html
         return send_from_directory(app.static_folder, 'index.html', mimetype='text/html')
 
 
