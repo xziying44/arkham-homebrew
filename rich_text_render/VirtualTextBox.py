@@ -44,6 +44,8 @@ class ImageObject:
     image: Image.Image
     height: int
     width: int
+    offset_x: int = 0
+    offset_y: int = 0
 
 
 @dataclass

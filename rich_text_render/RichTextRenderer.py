@@ -4,11 +4,14 @@ import re
 import sys
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 
 from PIL import Image, ImageDraw
 
 from ResourceManager import FontManager, ImageManager
+
+if TYPE_CHECKING:
+    from rich_text_render import ParsedItem
 
 sys.path.append('..')
 # ---
@@ -183,6 +186,95 @@ class DrawOptions:
     border_color: str = "#000000"
     border_width: int = 1
     has_underline: bool = False
+
+
+class ImageTag:
+    """图片标签类，用于处理解析后的图片元素"""
+
+    def __init__(self, parsed_item: 'ParsedItem', image_manager: 'ImageManager', font_size: int):
+        """
+        初始化图片标签
+
+        Args:
+            parsed_item: 解析结果项对象
+            image_manager: 图片管理器对象
+            font_size: 字体大小，用于默认缩放参考
+        """
+        self.parsed_item = parsed_item
+        self.image_manager = image_manager
+        self.font_size = font_size
+        self._image_object = None
+
+    def get_image_object(self) -> ImageObject:
+        """
+        获取处理后的图片对象
+
+        Returns:
+            ImageObject: 包含PIL图片及其尺寸信息的对象
+        """
+        if self._image_object is not None:
+            return self._image_object
+
+        # 获取src属性
+        src = self.parsed_item.attributes.get('src', '')
+        if not src:
+            raise ValueError("图片标签缺少src属性")
+
+        # 通过ImageManager获取原始图片
+        original_image = self.image_manager.get_image_by_src(src)
+        if original_image is None:
+            raise ValueError(f"无法获取图片: {src}")
+
+        # 获取原始尺寸
+        orig_width, orig_height = original_image.size
+
+        # 获取目标尺寸属性
+        target_width = self.parsed_item.attributes.get('width')
+        target_height = self.parsed_item.attributes.get('height')
+
+        # 转换为整数（如果存在）
+        target_width = int(target_width) if target_width else None
+        target_height = int(target_height) if target_height else None
+
+        # 根据不同情况处理图片尺寸
+        if target_width is not None and target_height is not None:
+            # 情况1: 两个尺寸都存在，强制拉伸
+            new_width = target_width
+            new_height = target_height
+            resized_image = original_image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+
+        elif target_width is not None:
+            # 情况2: 只有width，按比例缩放
+            new_width = target_width
+            scale_ratio = new_width / orig_width
+            new_height = int(orig_height * scale_ratio)
+            resized_image = original_image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+
+        elif target_height is not None:
+            # 情况3: 只有height，按比例缩放
+            new_height = target_height
+            scale_ratio = new_height / orig_height
+            new_width = int(orig_width * scale_ratio)
+            resized_image = original_image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+
+        else:
+            # 情况4: 都不存在，按font_size高度缩放
+            new_height = self.font_size
+            scale_ratio = new_height / orig_height
+            new_width = int(orig_width * scale_ratio)
+            resized_image = original_image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+
+        # 创建并缓存ImageObject
+        self._image_object = ImageObject(
+            image=resized_image,
+            height=new_height,
+            width=new_width
+        )
+
+        return self._image_object
+
+    def __repr__(self):
+        return f"ImageTag(src={self.parsed_item.attributes.get('src', 'N/A')!r}, font_size={self.font_size})"
 
 
 class RichTextRenderer:
@@ -567,6 +659,10 @@ class RichTextRenderer:
             elif item.tag == "par":
                 pop_cache()
                 success = virtual_text_box.new_paragraph()
+            elif item.tag == "img":
+                print(item)
+                img_tag = ImageTag(item, self.image_manager, size_to_test)
+                virtual_text_box.push(img_tag.get_image_object())
             elif item.tag == "font":
                 font_name = item.attributes.get('name', base_options.font_name)
                 font_offset_y = int(item.attributes.get('offset', '0'))
@@ -691,12 +787,12 @@ class RichTextRenderer:
                 x, y = render_item.x, render_item.y
                 offset_x = obj.offset_x
                 offset_y = obj.offset_y
-                if obj.font_name == 'arkham-icons' and self.font_manager.lang != 'zh':
-                    offset_y += -2
-                if obj.font_name == '江城斜宋体':
-                    offset_y = -9
 
                 if isinstance(obj, TextObject):
+                    if obj.font_name == 'arkham-icons' and self.font_manager.lang != 'zh':
+                        offset_y += -2
+                    if obj.font_name == '江城斜宋体':
+                        offset_y = -9
                     self.draw.text((x + offset_x, y + offset_y), obj.text, font=obj.font, fill=options.font_color)
                 elif isinstance(obj, ImageObject):
                     if obj.image.mode == 'RGBA':
