@@ -33,7 +33,8 @@ class PNPExporter:
         'Letter': (215.9, 279.4),
     }
 
-    def __init__(self, export_params: Dict[str, Any], workspace_manager, task_id: Optional[str] = None, log_callback=None):
+    def __init__(self, export_params: Dict[str, Any], workspace_manager, task_id: Optional[str] = None,
+                 log_callback=None):
         """
         初始化PNP导出器
 
@@ -231,7 +232,8 @@ class PNPExporter:
 
                         card_data_copy['encounter_group_number'] = new_encounter_group_number
 
-                        self._add_log(f"  → 生成第 {copy_idx + 1}/{quantity} 张，遭遇组编号: {new_encounter_group_number}")
+                        self._add_log(
+                            f"  → 生成第 {copy_idx + 1}/{quantity} 张，遭遇组编号: {new_encounter_group_number}")
 
                         # 导出这张独立编号的卡牌
                         result = self._export_single_card_with_data(
@@ -751,6 +753,142 @@ class PNPExporter:
                         bleed_x * mm, (image_top + mark_length_mm) * mm
                     )
 
+    def _export_images_mode(
+            self,
+            exported_cards: List[Dict[str, Any]],
+            output_path: str
+    ) -> None:
+        """
+        图片导出模式：将卡牌导出为独立的图片文件
+
+        Args:
+            exported_cards: 导出的卡牌列表
+            output_path: 输出路径（会被用作内容包名称的一部分）
+        """
+        self._add_log("使用图片导出模式...")
+
+        # 从output_path提取内容包名称，或使用默认名称
+        if output_path:
+            # 提取文件名（不含扩展名）作为内容包名称
+            content_pack_name = os.path.splitext(os.path.basename(output_path))[0]
+        else:
+            content_pack_name = "card_export"
+
+        # 创建导出目录
+        export_dir = self._create_export_directory(content_pack_name)
+
+        # 获取文件名前缀
+        prefix = self.export_params.get('prefix', '')
+        if prefix:
+            self._add_log(f"使用文件名前缀: {prefix}")
+
+        # 导出所有卡牌图片
+        exported_count = 0
+
+        for card_info in exported_cards:
+            try:
+                card_number = card_info.get('card_number', '')
+                quantity = card_info.get('quantity', 1)
+                front_path = card_info['front_path']
+                back_path = card_info['back_path']
+                card_name = card_info.get('card_name', 'Unknown')
+
+                # 读取图片
+                from PIL import Image as PILImage
+                front_img = PILImage.open(front_path)
+                back_img = PILImage.open(back_path)
+
+                # 为每个副本生成文件
+                for copy_idx in range(quantity):
+                    copy_num = copy_idx + 1
+
+                    # 生成文件名
+                    front_filename = self._generate_image_filename(
+                        prefix, card_number, copy_num, 'front', quantity
+                    )
+                    back_filename = self._generate_image_filename(
+                        prefix, card_number, copy_num, 'back', quantity
+                    )
+
+                    # 保存图片
+                    front_export_path = os.path.join(export_dir, front_filename)
+                    back_export_path = os.path.join(export_dir, back_filename)
+
+                    front_img.save(front_export_path, 'PNG')
+                    back_img.save(back_export_path, 'PNG')
+
+                    exported_count += 2
+                    self._add_log(f"  ✓ 导出 {card_name} 副本 {copy_num}/{quantity}")
+
+                front_img.close()
+                back_img.close()
+
+            except Exception as e:
+                self._add_log(f"✗ 导出卡牌图片失败: {e}")
+                import traceback
+                self._add_log(f"  详细错误: {traceback.format_exc()}")
+                continue
+
+        self._add_log(f"图片导出完成，共导出 {exported_count} 个文件到: {export_dir}")
+
+    def _create_export_directory(self, content_pack_name: str) -> str:
+        """
+        在工作目录创建导出文件夹
+
+        Args:
+            content_pack_name: 内容包名称
+
+        Returns:
+            导出文件夹的绝对路径
+        """
+        # 生成文件夹名称: 内容包名称+日期
+        date_str = datetime.now().strftime('%Y%m%d')
+        folder_name = f"{content_pack_name}_{date_str}"
+
+        # 在工作目录创建文件夹
+        export_dir = self.workspace_manager._get_absolute_path(folder_name)
+        os.makedirs(export_dir, exist_ok=True)
+
+        self._add_log(f"创建导出目录: {export_dir}")
+        return export_dir
+
+    def _generate_image_filename(
+            self,
+            prefix: str,
+            card_number: str,
+            copy_index: int,
+            side: str,
+            quantity: int
+    ) -> str:
+        """
+        生成图片文件名
+
+        Args:
+            prefix: 用户输入的前缀
+            card_number: 卡牌编号
+            copy_index: 副本编号（从1开始）
+            side: 'front' 或 'back'
+            quantity: 卡牌数量
+
+        Returns:
+            文件名（不含路径）
+
+        Examples:
+            _generate_image_filename("MY_", "5", 1, "front", 3)
+            => "MY_000501_front_3.png"
+        """
+        # 提取并补齐卡牌编号为4位
+        card_num = self._extract_card_number(card_number)
+        card_num_str = f"{card_num:04d}"
+
+        # 补齐副本编号为2位
+        copy_num_str = f"{copy_index:02d}"
+
+        # 组合文件名: <prefix><卡牌编号><副本编号>_<卡面>_<卡牌数量>
+        filename = f"{prefix}{card_num_str}{copy_num_str}_{side}_{quantity}.png"
+
+        return filename
+
     def export_pnp(
             self,
             cards: List[Dict[str, Any]],
@@ -759,12 +897,12 @@ class PNPExporter:
             paper_size: str = 'A4'
     ) -> Dict[str, Any]:
         """
-        导出PNP PDF
+        导出PNP PDF或图片
 
         Args:
             cards: 内容包的卡牌列表
-            output_path: PDF输出路径
-            mode: 导出模式，'single_card' 或 'print_sheet'
+            output_path: 输出路径（PDF路径或用作内容包名称）
+            mode: 导出模式，'single_card'、'print_sheet' 或 'images'
             paper_size: 纸张规格（仅在print_sheet模式下使用）
 
         Returns:
@@ -772,8 +910,7 @@ class PNPExporter:
         """
         try:
             self.logs = []
-            self._add_log("开始导出PNP PDF...")
-            self._add_log(f"导出模式: {mode}")
+            self._add_log(f"开始导出 (模式: {mode})...")
             self._add_log(f"总卡牌数: {len(cards)}")
 
             # 1. 创建临时目录
@@ -793,18 +930,30 @@ class PNPExporter:
                 exported_cards = self._sort_cards_by_number(exported_cards)
                 self._add_log("卡牌已按编号排序")
 
-                # 4. 生成PDF
-                if mode == 'single_card':
+                # 4. 根据模式生成输出
+                if mode == 'images':
+                    # 图片导出模式
+                    self._export_images_mode(exported_cards, output_path)
+                    return {
+                        'success': True,
+                        'mode': 'images',
+                        'cards_exported': len(exported_cards),
+                        'logs': self.logs.copy()
+                    }
+                elif mode == 'single_card':
+                    # 单卡PDF模式
                     self._generate_single_card_pdf(exported_cards, output_path)
                 elif mode == 'print_sheet':
+                    # 打印纸PDF模式
                     self._generate_print_sheet_pdf(exported_cards, output_path, paper_size)
                 else:
                     raise ValueError(f"不支持的导出模式: {mode}")
 
-                self._add_log("PNP PDF导出成功！")
+                self._add_log("导出成功！")
 
                 return {
                     'success': True,
+                    'mode': mode,
                     'output_path': output_path,
                     'cards_exported': len(exported_cards),
                     'logs': self.logs.copy()
@@ -819,7 +968,9 @@ class PNPExporter:
                     self._add_log(f"清理临时目录失败: {e}")
 
         except Exception as e:
-            self._add_log(f"导出PNP PDF失败: {e}")
+            self._add_log(f"导出失败: {e}")
+            import traceback
+            self._add_log(f"详细错误: {traceback.format_exc()}")
             return {
                 'success': False,
                 'error': str(e),
