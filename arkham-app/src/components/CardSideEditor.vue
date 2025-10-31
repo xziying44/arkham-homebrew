@@ -90,7 +90,7 @@
                     </div>
                 </div>
                 <div class="form-row">
-                    <!-- 卡牌数量 - 正面可编辑，背面只读 -->
+                    <!-- 卡牌数量 - 正面可编辑，背面只读（共享数据）-->
                     <div class="form-field layout-half" v-if="props.side === 'front'">
                         <FormFieldComponent :field="{
                             key: 'quantity',
@@ -103,34 +103,26 @@
                             @update:value="quantity = $event"
                             @update:new-string-value="newStringValue = $event" />
                     </div>
-                    <!-- 卡牌数量 - 背面显示只读 -->
                     <div class="form-field layout-half" v-else>
                         <n-form-item :label="$t('cardEditor.panel.cardQuantity')">
                             <n-input-number :value="quantity" readonly :precision="0" :min="1" :max="999"
                                 style="width: 100%" />
                         </n-form-item>
                     </div>
-                    <!-- 卡牌版权信息 -->
-                    <div class="form-field layout-half" v-if="props.side === 'front'">
+                    <!-- 卡牌版权信息 - 正反面都可编辑（独立数据）-->
+                    <div class="form-field layout-half">
                         <FormFieldComponent :field="{
                             key: 'footer_copyright',
                             name: $t('cardEditor.panel.copyright'),
                             type: 'text',
-                            placeholder: '例如：© 2024 Fantasy Flight Games'
+                            placeholder: '例如：© FFG'
                         }" :value="sideCardData.footer_copyright || ''" :new-string-value="newStringValue"
                             @update:value="updateSideData('footer_copyright', $event)"
                             @update:new-string-value="newStringValue = $event" />
                     </div>
-                    <!-- 版权信息 - 背面显示只读 -->
-                    <div class="form-field layout-half" v-else>
-                        <n-form-item :label="$t('cardEditor.panel.copyright')">
-                            <n-input :value="props.cardData.footer_copyright || ''" readonly
-                                :placeholder="'例如：© 2024 Fantasy Flight Games'" style="width: 100%" />
-                        </n-form-item>
-                    </div>
                 </div>
-                <div class="form-row" v-if="props.side === 'front'">
-                    <!-- 卡牌备注信息 - 只在正面显示 -->
+                <!-- 卡牌备注信息 - 正反面都可编辑（独立数据）-->
+                <div class="form-row">
                     <div class="form-field layout-full">
                         <FormFieldComponent :field="{
                             key: 'remark',
@@ -141,16 +133,6 @@
                         }" :value="sideCardData.requirements || ''" :new-string-value="newStringValue"
                             @update:value="updateSideData('requirements', $event)"
                             @update:new-string-value="newStringValue = $event" />
-                    </div>
-                </div>
-                <div class="form-row" v-else>
-                    <!-- 卡牌备注信息 - 背面显示只读 -->
-                    <div class="form-field layout-full">
-                        <n-form-item :label="$t('cardEditor.panel.cardRemarks')">
-                            <n-input :value="props.cardData.requirements || ''" readonly type="textarea"
-                                :rows="2" :maxlength="200"
-                                :placeholder="'请在这里输入卡牌备注信息...'" style="width: 100%" />
-                        </n-form-item>
                     </div>
                 </div>
             </n-form>
