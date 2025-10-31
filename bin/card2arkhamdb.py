@@ -74,8 +74,8 @@ class Card2ArkhamDBConverter:
             card_data: Dict[str, Any],
             card_meta: Dict[str, Any],
             pack_code: str,
-            encounter_sets: List[Dict[str, Any]],
             workspace_manager,
+            encounter_sets: List[Dict[str, Any]] = [],
             signature_to_investigator: Dict[str, str] = None
     ) -> None:
         """
