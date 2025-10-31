@@ -357,7 +357,7 @@ class Card:
         """
         if self.font_manager.silence and not underline:
             return
-        if self.font_manager.lang != 'zh' and font_name == '副标题字体':
+        if self.font_manager.lang not in ['zh', 'zh-CHT'] and font_name == '副标题字体':
             font_size = font_size - 3
             position = (position[0], position[1] - 1)
         if font_color == (0, 0, 0):
@@ -1247,7 +1247,7 @@ class Card:
                 font_color=font_color
             )
         if center_text:
-            if self.font_manager.lang == 'zh':
+            if self.font_manager.lang in ['zh', 'zh-CHT']:
                 pattern = r'([\u4e00-\u9fa5]+)'
                 center_text = re.sub(pattern, r'<font name="SourceHanSansSC-Regular" addsize="-2">\1</font>', center_text)
             self.draw_centered_text(
@@ -1301,7 +1301,7 @@ class Card:
         """
         if victory_value is None:
             return
-        if self.font_manager.lang != 'zh':
+        if self.font_manager.lang not in ['zh', 'zh-CHT']:
             position = (position[0] - 10, position[1])
 
         # 根据victory值的类型决定显示方式

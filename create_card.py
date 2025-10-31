@@ -813,7 +813,7 @@ class CardCreator:
         if 'cost' in data and isinstance(data['cost'], int):
             card.set_card_cost(data['cost'])
         vertices = [(19, 658), (718, 658), (718, 908), (290, 908), (73, 950), (19, 950)]
-        if data.get('flavor') or self.font_manager.lang != 'zh':
+        if data.get('flavor') or self.font_manager.lang not in ['zh', 'zh-CHT']:
             vertices = [(19, 658), (718, 658), (718, 920), (19, 920)]
 
         card.draw_text(body, vertices=vertices,
@@ -1256,7 +1256,7 @@ class CardCreator:
 
         card.draw_centered_text((375, 640), traits, "特性字体", 32, (0, 0, 0))
         vertices = [(19, 658), (718, 658), (718, 908), (290, 908), (73, 950), (19, 950)]
-        if data.get('flavor') or self.font_manager.lang != 'zh':
+        if data.get('flavor') or self.font_manager.lang not in ['zh', 'zh-CHT']:
             vertices = [(19, 658), (718, 658), (718, 920), (19, 920)]
         card.draw_text(body, vertices=vertices, default_font_name='正文字体', default_size=32, padding=15,
                        draw_virtual_box=False)
@@ -1436,7 +1436,7 @@ class CardCreator:
         small_words = self.font_manager.get_font_text('场景') if data['type'] == '场景卡' \
             else self.font_manager.get_font_text('密谋')
         small_words = small_words.upper()
-        if self.font_manager.lang != 'zh' and data['type'] != '场景卡':
+        if self.font_manager.lang not in ['zh', 'zh-CHT'] and data['type'] != '场景卡':
             font_size = 21
             if self.font_manager.lang == 'pl':
                 font_size -= 4
@@ -1447,7 +1447,7 @@ class CardCreator:
             card.draw_centered_text((98, 68), small_words, "卡牌类型字体", 28, (0, 0, 0))
 
         # 写标题
-        if self.font_manager.lang == 'zh':
+        if self.font_manager.lang in ['zh', 'zh-CHT']:
             card.draw_centered_text((98, 422), data['name'], "标题字体", 48, (0, 0, 0), vertical=True)
             pass
         else:
@@ -1584,7 +1584,7 @@ class CardCreator:
             # 写副标题
             if 'subtitle' in data and data['subtitle'] != '':
                 card.draw_centered_text((369, 265), data['subtitle'], "副标题字体",
-                                        26 if self.font_manager.lang == 'zh' else 30
+                                        26 if self.font_manager.lang in ['zh', 'zh-CHT'] else 30
                                         , (0, 0, 0))
 
             # 画正文

@@ -349,7 +349,7 @@ class RichTextParser:
                 text_before = html_text[i:i + tag_match.start()]
                 if text_before:
                     # 根据lang参数选择解析方式
-                    if lang == 'zh':
+                    if lang in ['zh', 'zh-CHT']:
                         text_items = self.split_text_by_type(text_before)
                     else:
                         text_items = self.simple_split_text(text_before)
@@ -416,7 +416,7 @@ class RichTextParser:
                                 i = len(html_text)
                         else:
                             # 没找到匹配的闭合标签，当作普通文本处理
-                            if lang == 'zh':
+                            if lang in ['zh', 'zh-CHT']:
                                 text_items = self.split_text_by_type(full_match)
                             else:
                                 text_items = self.simple_split_text(full_match)
@@ -424,7 +424,7 @@ class RichTextParser:
                             i += tag_match.start() + len(full_match)
                 else:
                     # 无效标签或闭合标签，当作文本处理
-                    if lang == 'zh':
+                    if lang in ['zh', 'zh-CHT']:
                         text_items = self.split_text_by_type(full_match)
                     else:
                         text_items = self.simple_split_text(full_match)
@@ -434,7 +434,7 @@ class RichTextParser:
                 # 没有更多标签，处理剩余文本
                 remaining_text = html_text[i:]
                 if remaining_text:
-                    if lang == 'zh':
+                    if lang in ['zh', 'zh-CHT']:
                         text_items = self.split_text_by_type(remaining_text)
                     else:
                         text_items = self.simple_split_text(remaining_text)

@@ -614,7 +614,7 @@ class FontManager:
 
         # 特殊字符处理
         if text_key == '：' or text_key == '。':
-            if self.lang != 'zh':
+            if self.lang not in ['zh', 'zh-CHT']:
                 if text_key == '：':
                     return ': '
                 elif text_key == '。':

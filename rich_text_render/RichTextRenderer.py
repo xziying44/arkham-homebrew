@@ -303,7 +303,7 @@ class RichTextRenderer:
             italic=self.font_manager.get_lang_font('风味文本字体').name,
             trait=self.font_manager.get_lang_font('特性字体').name
         )
-        if lang == 'zh':
+        if lang in ['zh', 'zh-CHT']:
             self.line_spacing_multiplier = 1.2
         else:
             self.line_spacing_multiplier = 1.1
@@ -545,7 +545,7 @@ class RichTextRenderer:
         parsed_items = self.rich_text_parser.parse(text, self.font_manager.lang)
 
         # 使用构造函数中传入的行距倍率来计算行高
-        if self.font_manager.lang == 'zh':
+        if self.font_manager.lang in ['zh', 'zh-CHT']:
             if size_to_test < 27 and self.line_spacing_multiplier > 1.05:
                 line_height = int(size_to_test * 1.05)
             elif size_to_test < 29 and self.line_spacing_multiplier > 1.1:
@@ -632,7 +632,7 @@ class RichTextRenderer:
                     text_box = self._get_text_box(item.content, font)
                     text_object = TextObject(item.content, font, font_name, font.size, text_box[1], text_box[0],
                                              base_options.font_color)
-                    if self.font_manager.lang == 'zh':
+                    if self.font_manager.lang in ['zh', 'zh-CHT']:
                         virtual_text_box.push(text_object)
                     else:
                         if item.content == ' ':
@@ -789,7 +789,7 @@ class RichTextRenderer:
                 offset_y = obj.offset_y
 
                 if isinstance(obj, TextObject):
-                    if obj.font_name == 'arkham-icons' and self.font_manager.lang != 'zh':
+                    if obj.font_name == 'arkham-icons' and self.font_manager.lang not in ['zh', 'zh-CHT']:
                         offset_y += -2
                     if obj.font_name == '江城斜宋体':
                         offset_y = -9
@@ -1120,7 +1120,7 @@ class RichTextRenderer:
             else:
                 # 水平模式的下划线
                 underline_y = start_y + max_height + 2
-                if self.font_manager.lang == 'zh':
+                if self.font_manager.lang in ['zh', 'zh-CHT']:
                     y_offset = 12
                 else:
                     y_offset = 0

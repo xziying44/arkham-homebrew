@@ -96,7 +96,7 @@ class CardAdapter:
             (r"<rev>|<显现>", font_manager.get_font_text('revelation')),
             (r"<fullname>|<名称>", fullname),
         ]
-        if font_manager.lang == 'zh':
+        if font_manager.lang in ['zh', 'zh-CHT']:
             self.conversion_rules.append(
                 (r'<upg>|<升级>', r'<font name="ArnoPro-Regular" offset="3" addsize="8">☐</font>'))
             self.conversion_rules.append(

@@ -31,7 +31,7 @@
                 <div class="welcome-guide">
                     <h2 class="welcome-title">{{ $t('cardEditor.panel.noCardSelected') }}</h2>
                     <p class="welcome-subtitle">{{ $t('cardEditor.panel.createOrSelectCard') }}</p>
-                    
+
                     <div class="guide-section">
                         <h3 class="guide-title">{{ $t('cardEditor.panel.howToCreateCard') }}</h3>
                         <div class="guide-steps">
@@ -55,7 +55,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="welcome-footer">
                         <p class="encourage-text">{{ $t('cardEditor.panel.getStarted') }}</p>
                     </div>
@@ -75,28 +75,19 @@
 
                     <!-- 单面卡牌或当前选中面的编辑器 -->
                     <div v-if="!isDoubleSided || currentSide === 'front'">
-                        <CardSideEditor
-                            side="front"
-                            :card-data="currentCardData"
-                            :card-type-configs="cardTypeConfigs"
-                            :card-type-options="cardTypeOptions"
-                            :language-options="languageOptions"
-                            @update-card-data="updateCardSideData"
-                            @update-card-type="updateCardSideType"
+                        <CardSideEditor side="front" :card-data="currentCardData" :card-type-configs="cardTypeConfigs"
+                            :card-type-options="cardTypeOptions" :language-options="languageOptions"
+                            @update-card-data="updateCardSideData" @update-card-type="updateCardSideType"
                             @trigger-preview="triggerDebouncedPreviewUpdate" />
                     </div>
 
                     <!-- 背面编辑器（仅在双面卡牌且选择背面时显示） -->
                     <div v-if="isDoubleSided && currentSide === 'back'">
-                        <CardSideEditor
-                            side="back"
+                        <CardSideEditor side="back"
                             :card-data="{ ...currentCardData.back || {}, quantity: currentCardData.quantity || 1 }"
-                            :card-type-configs="cardTypeConfigs"
-                            :card-type-options="cardTypeOptions"
-                            :language-options="languageOptions"
-                            @update-card-data="updateCardSideData"
-                            @update-card-type="updateCardSideType"
-                            @trigger-preview="triggerDebouncedPreviewUpdate" />
+                            :card-type-configs="cardTypeConfigs" :card-type-options="cardTypeOptions"
+                            :language-options="languageOptions" @update-card-data="updateCardSideData"
+                            @update-card-type="updateCardSideType" @trigger-preview="triggerDebouncedPreviewUpdate" />
                     </div>
 
                     <!-- 共享组件区域 -->
@@ -120,7 +111,7 @@
                                 <span class="keyboard-shortcut">{{ $t('cardEditor.panel.ctrlS') }}</span>
                             </n-button>
                             <n-button @click="previewCard" :loading="generating">{{ $t('cardEditor.panel.previewCard')
-                            }}</n-button>
+                                }}</n-button>
                             <n-button @click="exportCard" :loading="exporting" :disabled="!hasValidCardData">{{
                                 $t('cardEditor.panel.exportImage') }}</n-button>
                             <!-- 版本转换按钮 - 仅在非2.0版本且有有效卡牌数据时显示 -->
@@ -207,7 +198,7 @@
                         <n-button @click="discardChanges">{{ $t('cardEditor.panel.dontSave') }}</n-button>
                         <n-button @click="showSaveConfirmDialog = false">{{ $t('cardEditor.panel.cancel') }}</n-button>
                         <n-button type="primary" @click="saveAndSwitch" :loading="saving">{{ $t('cardEditor.panel.save')
-                        }}</n-button>
+                            }}</n-button>
                     </n-space>
                 </template>
             </n-card>
@@ -215,8 +206,8 @@
 
         <!-- 版本转换确认对话框 -->
         <n-modal v-model:show="showVersionConvertDialog">
-            <n-card style="width: 500px" :title="$t('cardEditor.panel.convertToV2Confirm')" :bordered="false" size="huge"
-                role="dialog" aria-modal="true">
+            <n-card style="width: 500px" :title="$t('cardEditor.panel.convertToV2Confirm')" :bordered="false"
+                size="huge" role="dialog" aria-modal="true">
                 <n-space vertical>
                     <n-alert type="info" :title="$t('cardEditor.panel.versionConvertInfo')">
                         <template #icon>
@@ -224,20 +215,25 @@
                         </template>
                         <div>
                             <p>{{ $t('cardEditor.panel.versionConvertDescription') }}</p>
-                            <p style="margin-top: 8px; font-weight: 500;">{{ $t('cardEditor.panel.convertWillCreateBack') }}</p>
+                            <p style="margin-top: 8px; font-weight: 500;">{{
+                                $t('cardEditor.panel.convertWillCreateBack') }}</p>
                         </div>
                     </n-alert>
                     <n-space vertical size="small">
-                        <p><strong>{{ $t('cardEditor.panel.currentCard') }}:</strong> {{ currentCardData.name || '未命名卡牌' }}</p>
-                        <p><strong>{{ $t('cardEditor.panel.currentType') }}:</strong> {{ currentCardData.type || '未知类型' }}</p>
+                        <p><strong>{{ $t('cardEditor.panel.currentCard') }}:</strong> {{ currentCardData.name || '未命名卡牌'
+                            }}</p>
+                        <p><strong>{{ $t('cardEditor.panel.currentType') }}:</strong> {{ currentCardData.type || '未知类型'
+                            }}</p>
                         <p v-if="currentCardData.type" style="color: #666; font-size: 12px;">
-                            {{ $t('cardEditor.panel.autoSetBackType') }}: <strong>{{ getDefaultBackType(currentCardData.type)?.type || '标准卡背' }}</strong>
+                            {{ $t('cardEditor.panel.autoSetBackType') }}: <strong>{{
+                                getDefaultBackType(currentCardData.type)?.type || '标准卡背' }}</strong>
                         </p>
                     </n-space>
                 </n-space>
                 <template #footer>
                     <n-space justify="end">
-                        <n-button @click="showVersionConvertDialog = false">{{ $t('cardEditor.panel.cancel') }}</n-button>
+                        <n-button @click="showVersionConvertDialog = false">{{ $t('cardEditor.panel.cancel')
+                            }}</n-button>
                         <n-button type="warning" @click="convertToVersion2" :loading="converting">
                             {{ $t('cardEditor.panel.confirmConvert') }}
                         </n-button>
@@ -358,8 +354,12 @@ const currentSideType = computed({
 // 新增：语言选项
 const languageOptions = computed(() => [
     {
-        label: "中文",
+        label: "简体中文",
         value: 'zh'
+    },
+    {
+        label: "繁體中文",
+        value: 'zh-CHT'
     },
     {
         label: "English",
@@ -1737,13 +1737,14 @@ onUnmounted(() => {
 /* 欢迎指导界面样式 */
 .welcome-guide {
     text-align: center;
-    padding: 80px 40px 60px 40px; /* 增加顶部padding避免被标题栏挡住 */
+    padding: 80px 40px 60px 40px;
+    /* 增加顶部padding避免被标题栏挡住 */
     max-width: 600px;
     margin: 0 auto;
-    background: linear-gradient(135deg, 
-        rgba(102, 126, 234, 0.05) 0%, 
-        rgba(118, 75, 162, 0.05) 50%,
-        rgba(255, 255, 255, 0.8) 100%);
+    background: linear-gradient(135deg,
+            rgba(102, 126, 234, 0.05) 0%,
+            rgba(118, 75, 162, 0.05) 50%,
+            rgba(255, 255, 255, 0.8) 100%);
     border-radius: 20px;
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.3);
@@ -1805,12 +1806,13 @@ onUnmounted(() => {
 
 .guide-step {
     display: flex;
-    align-items: center; /* 修改为垂直居中对齐 */
+    align-items: center;
+    /* 修改为垂直居中对齐 */
     gap: 16px;
     padding: 16px 20px;
-    background: linear-gradient(135deg, 
-        rgba(255, 255, 255, 0.8) 0%, 
-        rgba(248, 250, 252, 0.9) 100%);
+    background: linear-gradient(135deg,
+            rgba(255, 255, 255, 0.8) 0%,
+            rgba(248, 250, 252, 0.9) 100%);
     border-radius: 12px;
     border: 1px solid rgba(226, 232, 240, 0.6);
     transition: all 0.3s ease;
@@ -1832,9 +1834,9 @@ onUnmounted(() => {
 
 .guide-step:hover {
     transform: translateX(4px);
-    background: linear-gradient(135deg, 
-        rgba(102, 126, 234, 0.08) 0%, 
-        rgba(255, 255, 255, 0.9) 100%);
+    background: linear-gradient(135deg,
+            rgba(102, 126, 234, 0.08) 0%,
+            rgba(255, 255, 255, 0.9) 100%);
     border-color: rgba(102, 126, 234, 0.3);
     box-shadow: 0 6px 20px rgba(102, 126, 234, 0.15);
 }
@@ -1906,6 +1908,7 @@ onUnmounted(() => {
         opacity: 0;
         transform: translateY(30px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -1919,35 +1922,35 @@ onUnmounted(() => {
         padding: 40px 24px;
         margin: 20px;
     }
-    
+
     .welcome-title {
         font-size: 1.6rem;
     }
-    
+
     .welcome-subtitle {
         font-size: 1rem;
     }
-    
+
     .guide-section {
         padding: 24px 16px;
         margin: 24px 0;
     }
-    
+
     .guide-title {
         font-size: 1.2rem;
     }
-    
+
     .guide-step {
         padding: 12px 16px;
         gap: 12px;
     }
-    
+
     .step-icon {
         width: 40px;
         height: 40px;
         font-size: 1.2rem;
     }
-    
+
     .step-text {
         font-size: 0.9rem;
     }
@@ -1957,7 +1960,8 @@ onUnmounted(() => {
     .form-pane {
         min-width: 100%;
         width: 100%;
-        height: 100vh; /* 确保移动端占满视口高度 */
+        height: 100vh;
+        /* 确保移动端占满视口高度 */
         display: flex;
         flex-direction: column;
     }
@@ -1967,7 +1971,8 @@ onUnmounted(() => {
         min-width: auto;
         width: 100%;
         box-sizing: border-box;
-        flex-shrink: 0; /* 防止头部被压缩 */
+        flex-shrink: 0;
+        /* 防止头部被压缩 */
     }
 
     .pane-title {
@@ -1976,15 +1981,20 @@ onUnmounted(() => {
 
     /* 优化移动端滚动容器 */
     .form-content {
-        height: 0; /* 让flex子元素正确计算高度 */
+        height: 0;
+        /* 让flex子元素正确计算高度 */
         flex: 1;
-        overflow-y: auto; /* 只允许垂直滚动 */
-        -webkit-overflow-scrolling: touch; /* iOS平滑滚动 */
+        overflow-y: auto;
+        /* 只允许垂直滚动 */
+        -webkit-overflow-scrolling: touch;
+        /* iOS平滑滚动 */
     }
 
     .form-wrapper {
-        padding: 16px 12px; /* 移动端减少内边距 */
-        min-height: min-content; /* 确保内容能完整显示 */
+        padding: 16px 12px;
+        /* 移动端减少内边距 */
+        min-height: min-content;
+        /* 确保内容能完整显示 */
     }
 
     /* 模态框移动端适配 */
@@ -2031,7 +2041,8 @@ onUnmounted(() => {
     .form-actions {
         padding: 16px 12px;
         margin-top: 24px;
-        flex-shrink: 0; /* 防止操作按钮被压缩 */
+        flex-shrink: 0;
+        /* 防止操作按钮被压缩 */
     }
 
     .form-actions :deep(.n-space) {

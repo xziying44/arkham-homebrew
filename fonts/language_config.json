@@ -74,6 +74,80 @@
     }
   },
   {
+    "name": "繁体中文",
+    "code": "zh-CHT",
+    "fonts": {
+      "title": {
+        "name": "汉仪小隶书简",
+        "size_percent": 1.0,
+        "vertical_offset": 0
+      },
+      "subtitle": {
+        "name": "汉仪小隶书简",
+        "size_percent": 1.0,
+        "vertical_offset": 0
+      },
+      "card_type": {
+        "name": "汉仪小隶书简",
+        "size_percent": 1.0,
+        "vertical_offset": 0
+      },
+      "trait": {
+        "name": "方正舒体",
+        "size_percent": 1.0,
+        "vertical_offset": 0
+      },
+      "bold": {
+        "name": "思源黑体",
+        "size_percent": 1.0,
+        "vertical_offset": 0
+      },
+      "body": {
+        "name": "simfang",
+        "size_percent": 1.0,
+        "vertical_offset": 0
+      },
+      "flavor": {
+        "name": "simfang-Italic",
+        "size_percent": 1.0,
+        "vertical_offset": 0
+      },
+      "collection_info": {
+        "name": "ArnoPro-Bold",
+        "size_percent": 1.0,
+        "vertical_offset": 0
+      }
+    },
+    "texts": {
+      "skill": "技能",
+      "location": "地點",
+      "event": "事件",
+      "asset": "支援",
+      "treachery": "詭計",
+      "story": "劇情",
+      "enemy": "敵人",
+      "weakness": "弱點",
+      "basic_weakness": "基礎弱點",
+      "deck_size": "牌組卡牌張數",
+      "deck_options": "牌組構建選項",
+      "deck_requirements": "牌組構建需求",
+      "not_count": "不計入牌組卡牌張數",
+      "agenda": "密謀",
+      "act": "場景",
+      "resolution": "結局",
+      "upgrades": "升級項",
+      "victory": "勝利<X>。",
+      "Illus": "Illus.",
+      "prey": "<b>獵物</b> - ",
+      "spawn": "<b>生成</b> - ",
+      "forced": "<b>強制</b> - ",
+      "haunted": "<b>鬧鬼</b> - ",
+      "objective": "<b>目標</b> - ",
+      "patrol": "巡邏",
+      "revelation": "<b>顯現</b> - "
+    }
+  },
+  {
     "name": "English",
     "code": "en",
     "fonts": {
