@@ -93,6 +93,32 @@ const nameTip = `支持添加独特标记：🏅 或 <独特>`
 
 const victoryTip = `胜利点和胜利点文本只能填写一个，胜利点文本优先级大于胜利点。`
 
+
+const externalImageFields: FormField[] = [
+  {
+    key: 'use_external_image',
+    name: '🔄 替换为外部图片',
+    type: 'select',
+    layout: 'half',
+    defaultValue: false,
+    options: [
+      { label: '❌ 不使用', value: 0 },
+      { label: '✅ 使用外部图片', value: 1 }
+    ]
+  },
+  {
+    key: 'external_image',
+    name: '🖼️ 外部卡图',
+    type: 'image',
+    layout: 'half',
+    maxSize: 50 * 1024 * 1024,
+    showCondition: {
+      field: 'use_external_image',
+      value: 1
+    }
+  }
+];
+
 export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   '支援卡': {
     field_type_display: '📦 支援卡',
@@ -344,6 +370,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'half',
         maxSize: 50 * 1024 * 1024, // 50MB
       },
+      ...externalImageFields
     ]
   },
   '事件卡': {
@@ -522,6 +549,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'half',
         maxSize: 50 * 1024 * 1024, // 50MB
       },
+      ...externalImageFields
     ]
   },
   '技能卡': {
@@ -630,6 +658,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'half',
         maxSize: 50 * 1024 * 1024, // 50MB
       },
+      ...externalImageFields
     ]
   },
   '调查员': {
@@ -758,6 +787,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'half',
         maxSize: 50 * 1024 * 1024, // 50MB
       },
+      ...externalImageFields
     ]
   },
   '调查员背面': {
@@ -841,6 +871,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'half',
         maxSize: 50 * 1024 * 1024, // 50MB
       },
+      ...externalImageFields
     ]
   },
   '定制卡': {
@@ -861,6 +892,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'full',
         helpText: bodyTip
       },
+      ...externalImageFields
     ]
   },
   '故事卡': {
@@ -900,6 +932,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         type: 'encounter-group-select',
         layout: 'full'
       },
+      ...externalImageFields
     ]
   },
   '诡计卡': {
@@ -984,6 +1017,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'half',
         maxSize: 50 * 1024 * 1024, // 50MB
       },
+      ...externalImageFields
     ]
   },
   '敌人卡': {
@@ -1115,6 +1149,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'half',
         maxSize: 50 * 1024 * 1024, // 50MB
       },
+      ...externalImageFields
     ]
   },
   '地点卡': {
@@ -1247,6 +1282,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'half',
         maxSize: 50 * 1024 * 1024, // 50MB
       },
+      ...externalImageFields
     ]
   },
   '密谋卡': {
@@ -1340,6 +1376,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'half',
         maxSize: 50 * 1024 * 1024, // 50MB
       },
+      ...externalImageFields
     ]
   },
   '密谋卡-大画': {
@@ -1379,6 +1416,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'half',
         maxSize: 50 * 1024 * 1024, // 50MB
       },
+      ...externalImageFields
     ]
   },
   '场景卡': {
@@ -1472,6 +1510,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'half',
         maxSize: 50 * 1024 * 1024, // 50MB
       },
+      ...externalImageFields
     ]
   },
   '场景卡-大画': {
@@ -1511,6 +1550,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'half',
         maxSize: 50 * 1024 * 1024, // 50MB
       },
+      ...externalImageFields
     ]
   },
   '冒险参考卡': {
@@ -1650,6 +1690,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'half',
         maxSize: 50 * 1024 * 1024, // 50MB
       },
+      ...externalImageFields
     ]
   },
 };

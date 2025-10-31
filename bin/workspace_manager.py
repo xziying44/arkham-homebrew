@@ -743,7 +743,8 @@ class WorkspaceManager:
             logger_manager.exception(f"保存文件内容失败: {e}")
             return False
 
-    def get_card_base64(self, json_data: Dict[str, Any]) -> Union[str, Image.Image, None]:
+    def get_card_base64(self, json_data: Dict[str, Any], field: str = 'picture_base64') -> Union[
+        str, Image.Image, None]:
         """
         获取卡牌的base64图片数据
 
@@ -757,7 +758,7 @@ class WorkspaceManager:
         picture_path = json_data.get('picture_path', None)
 
         # 检查 picture_base64 字段
-        picture_base64 = json_data.get('picture_base64', '')
+        picture_base64 = json_data.get(field, '')
 
         if picture_base64 and picture_base64.strip():
             try:
@@ -865,6 +866,41 @@ class WorkspaceManager:
                 else:
                     print(f"遭遇卡背图片不存在: {cardback_path}")
                     return None
+            if json_data.get('use_external_image', 0) == 1:
+                external_image = self.get_card_base64(json_data, 'external_image')
+                if external_image and isinstance(external_image, Image.Image):
+                    target_size = (739, 1049)
+                    if card_type in ['调查员', '调查员背面', '密谋卡', '密谋卡-大画', '场景卡', '场景卡-大画']:
+                        target_size = (1049, 739)
+
+                    # === 等比例缩放 ===
+                    target_w, target_h = target_size
+                    src_w, src_h = external_image.size
+                    src_ratio = src_w / src_h
+                    target_ratio = target_w / target_h
+
+                    if src_ratio > target_ratio:
+                        # 图片偏宽 → 以高度为基准缩放
+                        new_h = target_h
+                        new_w = int(src_ratio * new_h)
+                    else:
+                        # 图片偏高 → 以宽度为基准缩放
+                        new_w = target_w
+                        new_h = int(new_w / src_ratio)
+
+                    external_image = external_image.resize((new_w, new_h), Image.LANCZOS)
+
+                    # === 居中裁剪 ===
+                    left = max((new_w - target_w) // 2, 0)
+                    top = max((new_h - target_h) // 2, 0)
+                    right = left + target_w
+                    bottom = top + target_h
+                    external_image = external_image.crop((left, top, right, bottom))
+
+                    # === 创建卡牌 ===
+                    card = Card(external_image.width, external_image.height, image=external_image)
+                    card.image = external_image
+                    return card
 
             # 检测卡牌语言
             language = json_data.get('language', 'zh')
