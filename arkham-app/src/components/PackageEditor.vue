@@ -672,6 +672,7 @@
                     <n-space>
                       <n-radio value="single_card">{{ $t('contentPackage.pnp.exportParams.singleCard') }}</n-radio>
                       <n-radio value="print_sheet">{{ $t('contentPackage.pnp.exportParams.printSheet') }}</n-radio>
+                      <n-radio value="images">{{ $t('contentPackage.pnp.exportParams.images') }}</n-radio>
                     </n-space>
                   </n-radio-group>
                 </n-form-item>
@@ -679,6 +680,12 @@
                 <!-- 纸张规格（仅打印纸模式） -->
                 <n-form-item v-if="pnpExportMode === 'print_sheet'" :label="$t('contentPackage.pnp.exportParams.paperSize')">
                   <n-select v-model:value="pnpPaperSize" :options="paperSizeOptions" style="width: 300px;" />
+                </n-form-item>
+
+                <!-- 文件名前缀（仅图片模式） -->
+                <n-form-item v-if="pnpExportMode === 'images'" :label="$t('contentPackage.pnp.exportParams.prefix')">
+                  <n-input v-model:value="pnpExportParams.prefix" :placeholder="$t('contentPackage.pnp.exportParams.prefixPlaceholder')" style="width: 300px;" />
+                  <n-text depth="3" style="margin-left: 1rem;">{{ $t('contentPackage.pnp.exportParams.prefixDescription') }}</n-text>
                 </n-form-item>
 
                 <n-divider>{{ $t('contentPackage.pnp.exportParams.imageParams') }}</n-divider>
@@ -729,10 +736,14 @@
                 <n-divider>{{ $t('contentPackage.pnp.exportParams.outputSettings') }}</n-divider>
 
                 <!-- 输出文件名 -->
-                <n-form-item :label="$t('contentPackage.pnp.exportParams.outputFilename')">
-                  <n-input v-model:value="pnpOutputFilename" placeholder="pnp_export.pdf" style="width: 300px;">
-                    <template #suffix>{{ $t('contentPackage.pnp.exportParams.pdfExtension') }}</template>
+                <n-form-item :label="pnpExportMode === 'images' ? $t('contentPackage.pnp.exportParams.outputFolderName') : $t('contentPackage.pnp.exportParams.outputFilename')">
+                  <n-input
+                    v-model:value="pnpOutputFilename"
+                    :placeholder="pnpExportMode === 'images' ? $t('contentPackage.pnp.exportParams.folderNamePlaceholder') : 'pnp_export.pdf'"
+                    style="width: 300px;">
+                    <template #suffix v-if="pnpExportMode !== 'images'">{{ $t('contentPackage.pnp.exportParams.pdfExtension') }}</template>
                   </n-input>
+                  <n-text v-if="pnpExportMode === 'images'" depth="3" style="margin-left: 1rem;">{{ $t('contentPackage.pnp.exportParams.folderNameDescription') }}</n-text>
                 </n-form-item>
 
                 <!-- 导出按钮 -->
@@ -1213,7 +1224,7 @@ const arkhamdbExportResult = ref<any>(null);
 const exportingToPnp = ref(false);
 const pnpExportLogs = ref<string[]>([]);
 const pnpExportResult = ref<any>(null);
-const pnpExportMode = ref<'single_card' | 'print_sheet'>('single_card');
+const pnpExportMode = ref<'single_card' | 'print_sheet' | 'images'>('single_card');
 const pnpPaperSize = ref('A4');
 const pnpOutputFilename = ref('pnp_export');
 const pnpExportParams = ref({
@@ -1227,7 +1238,8 @@ const pnpExportParams = ref({
   saturation: 1.0,
   brightness: 1.0,
   gamma: 1.0,
-  encounter_group_mode: 'range' // 'classic' (经典模式-独立编号) 或 'range' (范围模式-复制图片)
+  encounter_group_mode: 'range', // 'classic' (经典模式-独立编号) 或 'range' (范围模式-复制图片)
+  prefix: '' // 文件名前缀(仅在images模式下使用)
 });
 
 // PNP导出选项
@@ -2734,7 +2746,11 @@ const exportToPnp = async () => {
 
         if (logData.result) {
           pnpExportResult.value = logData.result;
-          message.success(t('contentPackage.pnp.messages.exportSuccess'));
+          // 根据导出模式显示不同的成功消息
+          const successMsg = pnpExportMode.value === 'images'
+            ? t('contentPackage.pnp.messages.exportImagesSuccess')
+            : t('contentPackage.pnp.messages.exportSuccess');
+          message.success(successMsg);
         }
 
         // 不关闭日志显示，用户可以继续查看日志
@@ -2765,11 +2781,14 @@ const exportToPnp = async () => {
   try {
     const modeText = pnpExportMode.value === 'single_card'
       ? t('contentPackage.pnp.exportParams.singleCard')
-      : t('contentPackage.pnp.exportParams.printSheet');
+      : pnpExportMode.value === 'print_sheet'
+        ? t('contentPackage.pnp.exportParams.printSheet')
+        : t('contentPackage.pnp.exportParams.images');
 
     // 构建参数头部日志（这部分是静态的，不会被后端日志覆盖）
     paramHeaderLogs = [];
-    paramHeaderLogs.push('🚀 开始导出 PNP PDF...');
+    const exportTypeLabel = pnpExportMode.value === 'images' ? 'PNP 图片' : 'PNP PDF';
+    paramHeaderLogs.push(`🚀 开始导出 ${exportTypeLabel}...`);
     paramHeaderLogs.push(' '); // 空行用空格代替空字符串
     paramHeaderLogs.push(`📦 内容包名称: ${packageData.value?.meta?.name || t('contentPackage.common.unnamedPackage')}`);
     paramHeaderLogs.push(' ');
@@ -2779,6 +2798,10 @@ const exportToPnp = async () => {
     paramHeaderLogs.push(' ');
     if (pnpExportMode.value === 'print_sheet') {
       paramHeaderLogs.push(`📄 纸张规格: ${pnpPaperSize.value}`);
+      paramHeaderLogs.push(' ');
+    }
+    if (pnpExportMode.value === 'images' && pnpExportParams.value.prefix) {
+      paramHeaderLogs.push(`🏷️ 文件名前缀: ${pnpExportParams.value.prefix}`);
       paramHeaderLogs.push(' ');
     }
     paramHeaderLogs.push(`📐 DPI: ${pnpExportParams.value.dpi}`);
@@ -2812,10 +2835,15 @@ const exportToPnp = async () => {
     pnpExportLogs.value = [...paramHeaderLogs];
 
     // 启动导出任务（后端会立即返回task_id）
+    // 根据导出模式决定文件名格式
+    const outputFilename = pnpExportMode.value === 'images'
+      ? (pnpOutputFilename.value || 'pnp_images')
+      : (pnpOutputFilename.value ? `${pnpOutputFilename.value}.pdf` : 'pnp_export.pdf');
+
     const result = await ContentPackageService.exportToPnp(
       packageData.value.path,
       pnpExportParams.value,
-      pnpOutputFilename.value ? `${pnpOutputFilename.value}.pdf` : 'pnp_export.pdf',
+      outputFilename,
       pnpExportMode.value,
       pnpPaperSize.value
     );

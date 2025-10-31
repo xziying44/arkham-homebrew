@@ -154,7 +154,7 @@ export interface ApplyCardNumberingData {
 export interface ExportContentPackagePnpRequest {
     /** 内容包文件的相对路径 */
     package_path: string;
-    /** 导出参数（传递给ExportHelper） */
+    /** 导出参数(传递给ExportHelper) */
     export_params: {
         format: string;
         dpi: number;
@@ -166,12 +166,13 @@ export interface ExportContentPackagePnpRequest {
         saturation?: number;
         brightness?: number;
         gamma?: number;
+        prefix?: string;  // 新增：文件名前缀(仅在images模式下使用)
     };
     /** 输出PDF文件名 */
     output_filename?: string;
-    /** 导出模式：'single_card' 或 'print_sheet' */
+    /** 导出模式：'single_card'、'print_sheet' 或 'images' */
     mode?: string;
-    /** 纸张规格（仅在print_sheet模式下使用）：'A4', 'A3', 'Letter' */
+    /** 纸张规格(仅在print_sheet模式下使用)：'A4', 'A3', 'Letter' */
     paper_size?: string;
 }
 
@@ -408,11 +409,11 @@ export class ContentPackageService {
     }
 
     /**
-     * 导出内容包为PNP PDF
+     * 导出内容包为PNP PDF或图片
      * @param packagePath 内容包文件的相对路径
-     * @param exportParams 导出参数（传递给ExportHelper）
-     * @param outputFilename 输出PDF文件名，默认'pnp_export.pdf'
-     * @param mode 导出模式，'single_card' 或 'print_sheet'，默认'single_card'
+     * @param exportParams 导出参数（传递给ExportHelper），包含prefix字段用于图片模式
+     * @param outputFilename 输出文件名，PDF模式默认'pnp_export.pdf'，图片模式作为内容包名称
+     * @param mode 导出模式：'single_card'(单卡PDF)、'print_sheet'(打印纸PDF) 或 'images'(图片)，默认'single_card'
      * @param paperSize 纸张规格（仅在print_sheet模式下使用），默认'A4'
      * @returns 导出结果，包含输出路径、导出的卡牌数量和操作日志
      * @throws {ApiError} 当导出失败时抛出错误
@@ -451,7 +452,7 @@ export class ContentPackageService {
             if (error instanceof ApiError) {
                 throw error;
             }
-            throw new ApiError(14010, '导出内容包为PNP PDF失败（系统错误）', error);
+            throw new ApiError(14010, '导出内容包为PNP失败（系统错误）', error);
         }
     }
 

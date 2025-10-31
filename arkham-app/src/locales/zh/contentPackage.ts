@@ -460,7 +460,11 @@ export default {
       exportMode: '导出模式',
       singleCard: '单卡模式',
       printSheet: '打印纸模式',
+      images: '图片模式',
       paperSize: '纸张规格',
+      prefix: '文件名前缀',
+      prefixPlaceholder: '例如: MY_',
+      prefixDescription: '每张卡牌文件名前缀',
       imageParams: '图片参数',
       dpi: 'DPI',
       dpiRecommendation: '建议300或更高',
@@ -477,6 +481,9 @@ export default {
       imageQuality: '图片质量',
       outputSettings: '输出设置',
       outputFilename: '输出文件名',
+      outputFolderName: '输出文件夹名',
+      folderNamePlaceholder: 'pnp_images',
+      folderNameDescription: '将创建以此命名的文件夹',
       pdfExtension: '.pdf',
       startExport: '开始导出 PNP PDF',
       exporting: '正在导出...'
@@ -508,6 +515,7 @@ export default {
     },
     messages: {
       exportSuccess: 'PNP PDF导出成功！',
+      exportImagesSuccess: 'PNP 图片导出成功！',
       exportFailed: '导出失败',
       invalidPackagePath: '内容包路径无效',
       checkDataIntegrity: '请检查卡牌数据完整性或重试导出'

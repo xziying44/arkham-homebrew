@@ -455,7 +455,11 @@ export default {
       exportMode: 'Export Mode',
       singleCard: 'Single Card Mode',
       printSheet: 'Print Sheet Mode',
+      images: 'Image Mode',
       paperSize: 'Paper Size',
+      prefix: 'Filename Prefix',
+      prefixPlaceholder: 'e.g. MY_',
+      prefixDescription: 'Prefix for each card filename',
       imageParams: 'Image Parameters',
       dpi: 'DPI',
       dpiRecommendation: 'Recommend 300 or higher',
@@ -472,6 +476,9 @@ export default {
       imageQuality: 'Image Quality',
       outputSettings: 'Output Settings',
       outputFilename: 'Output Filename',
+      outputFolderName: 'Output Folder Name',
+      folderNamePlaceholder: 'pnp_images',
+      folderNameDescription: 'Will create a folder with this name',
       pdfExtension: '.pdf',
       startExport: 'Start Export PNP PDF',
       exporting: 'Exporting...'
@@ -503,6 +510,7 @@ export default {
     },
     messages: {
       exportSuccess: 'PNP PDF export successful!',
+      exportImagesSuccess: 'PNP images export successful!',
       exportFailed: 'Export Failed',
       invalidPackagePath: 'Content package path invalid',
       checkDataIntegrity: 'Please check card data integrity or retry export'

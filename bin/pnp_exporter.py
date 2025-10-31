@@ -399,9 +399,9 @@ class PNPExporter:
         is_landscape = front_image.width > front_image.height
 
         if is_landscape:
-            # 横向卡牌：正面顺时针旋转90度，背面逆时针旋转90度
-            front_image = front_image.rotate(-90, expand=True)
-            back_image = back_image.rotate(90, expand=True)
+            # 横向卡牌：正面逆时针旋转90度，背面顺时针旋转90度
+            front_image = front_image.rotate(90, expand=True)
+            back_image = back_image.rotate(-90, expand=True)
             self._add_log(f"卡牌 {card_name} 为横向，已旋转")
 
         # 生成文件名（使用索引确保唯一性和排序）
