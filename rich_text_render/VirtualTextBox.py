@@ -490,7 +490,7 @@ class VirtualTextBox:
         if not self._can_fit_vertically(obj.height):
             return False
 
-        render_item = RenderItem(obj, self.cursor_x + obj.offset_x, self.cursor_y + obj.offset_y)
+        render_item = RenderItem(obj, self.cursor_x, self.cursor_y)
         self.render_list.append(render_item)
         self.cursor_x += obj.width
         return True
@@ -557,7 +557,7 @@ class VirtualTextBox:
             self.current_line_height = max(self.current_line_height, obj.height)
 
             # 创建渲染项
-            render_item = RenderItem(obj, self.cursor_x + obj.offset_x, self.cursor_y + obj.offset_y)
+            render_item = RenderItem(obj, self.cursor_x, self.cursor_y)
             self.render_list.append(render_item)
 
             # 移动光标
