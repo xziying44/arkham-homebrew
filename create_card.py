@@ -1578,7 +1578,10 @@ class CardCreator:
         if data.get('scenario_type', 0) == 2:
             # 辅助卡
             body = self._tidy_body_flavor(data['body'], data['flavor'])
-            card.draw_text(body, vertices=[(56, 250), (685, 250), (685, 920), (56, 920)],
+            vertices = [(56, 250), (685, 250), (685, 920), (56, 920)]
+            if not data['name']:
+                vertices = [(56, 210), (685, 210), (685, 920), (56, 920)]
+            card.draw_text(body, vertices=vertices,
                            default_font_name='正文字体', default_size=32, padding=15, draw_virtual_box=False)
         else:
             # 写副标题
