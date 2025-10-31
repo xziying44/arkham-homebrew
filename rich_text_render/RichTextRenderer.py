@@ -217,13 +217,11 @@ class ImageTag:
 
         # 获取src属性
         src = self.parsed_item.attributes.get('src', '')
-        if not src:
-            raise ValueError("图片标签缺少src属性")
-
         # 通过ImageManager获取原始图片
         original_image = self.image_manager.get_image_by_src(src)
         if original_image is None:
             raise ValueError(f"无法获取图片: {src}")
+        offset_y = int(self.parsed_item.attributes.get('offset', '0'))
 
         # 获取原始尺寸
         orig_width, orig_height = original_image.size
@@ -268,7 +266,8 @@ class ImageTag:
         self._image_object = ImageObject(
             image=resized_image,
             height=new_height,
-            width=new_width
+            width=new_width,
+            offset_y=offset_y
         )
 
         return self._image_object
@@ -784,16 +783,16 @@ class RichTextRenderer:
         if not self.font_manager.silence or ignore_silence:
             for render_item in render_list:
                 obj = render_item.obj
-                x, y = render_item.x, render_item.y
                 offset_x = obj.offset_x
                 offset_y = obj.offset_y
+                x, y = render_item.x + offset_x, render_item.y + offset_y
 
                 if isinstance(obj, TextObject):
                     if obj.font_name == 'arkham-icons' and self.font_manager.lang not in ['zh', 'zh-CHT']:
-                        offset_y += -2
+                        y += -2
                     if obj.font_name == '江城斜宋体':
-                        offset_y = -9
-                    self.draw.text((x + offset_x, y + offset_y), obj.text, font=obj.font, fill=options.font_color)
+                        y = -9
+                    self.draw.text((x, y), obj.text, font=obj.font, fill=options.font_color)
                 elif isinstance(obj, ImageObject):
                     if obj.image.mode == 'RGBA':
                         self.image.paste(obj.image, (x, y), obj.image)
