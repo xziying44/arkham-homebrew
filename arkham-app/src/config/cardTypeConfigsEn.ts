@@ -84,6 +84,7 @@ Special tags:
 <br> line break
 <hr> horizontal line
 <p></p> paragraph
+<center>Centered text</center>
 
 Support direct use of emoji or corresponding tag format
 `;
@@ -1540,6 +1541,11 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       },
       {
         key: 'subtitle',
+        showCondition: {
+          field: 'scenario_type',
+          value: 2,
+          operator: 'not-equals'
+        },
         name: '📋 Subtitle',
         type: 'text',
         layout: 'half'
@@ -1552,8 +1558,20 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         defaultValue: 0,
         options: [
           { label: '📊 Default Type', value: 0 },
-          { label: '💎 Resource Type', value: 1 }
+          { label: '💎 Resource Type', value: 1 },
+          { label: '📄 Text Type', value: 2 }
         ]
+      },
+      {
+        key: 'body',
+        showCondition: {
+          field: 'scenario_type',
+          value: 2
+        },
+        name: '📄 Card Text',
+        type: 'textarea',
+        layout: 'full',
+        helpText: bodyTip
       },
       {
         key: 'scenario_card.resource_name',
@@ -1567,24 +1585,44 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       },
       {
         key: 'scenario_card.skull',
+        showCondition: {
+          field: 'scenario_type',
+          value: 2,
+          operator: 'not-equals'
+        },
         name: '💀 Skull Effect',
         type: 'textarea',
         layout: 'half'
       },
       {
         key: 'scenario_card.cultist',
+        showCondition: {
+          field: 'scenario_type',
+          value: 2,
+          operator: 'not-equals'
+        },
         name: '👥 Cultist Effect',
         type: 'textarea',
         layout: 'half'
       },
       {
         key: 'scenario_card.tablet',
+        showCondition: {
+          field: 'scenario_type',
+          value: 2,
+          operator: 'not-equals'
+        },
         name: '📜 Tablet Effect',
         type: 'textarea',
         layout: 'half'
       },
       {
         key: 'scenario_card.elder_thing',
+        showCondition: {
+          field: 'scenario_type',
+          value: 2,
+          operator: 'not-equals'
+        },
         name: '👁️ Elder Thing Effect',
         type: 'textarea',
         layout: 'half'

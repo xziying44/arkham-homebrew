@@ -586,6 +586,10 @@ class RichTextRenderer:
             elif item.tag == "/p":
                 success = pop_cache()
                 html_tag_stack.pop()
+            elif item.tag == "center":
+                virtual_text_box.set_line_center()
+            elif item.tag == "/center":
+                virtual_text_box.cancel_line_center()
             elif item.tag == "flavor":
                 html_tag_stack.push("flavor")
                 # 是否添加引用线

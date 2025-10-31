@@ -40,7 +40,8 @@ class RichTextParser:
         # HTML标签模式
         self.html_tag_pattern = r'<(/?)([a-zA-Z][a-zA-Z0-9]*)\s*([^>]*?)>'
         # 有效的HTML标签 - 新增par标签
-        self.valid_tags = ['b', 'i', 'u', 'p', 'font', 'flavor', 'em', 'br', 'hr', 'par', 'flex', 'trait', 'nbsp']
+        self.valid_tags = ['b', 'i', 'u', 'p', 'font', 'flavor', 'em', 'br', 'hr', 'par', 'flex', 'trait', 'nbsp',
+                           'center']
 
         # 英文单词模式 - 改进版本，支持更多特殊字符
         self.english_word_pattern = r'\b[\w\'\-]+\b'

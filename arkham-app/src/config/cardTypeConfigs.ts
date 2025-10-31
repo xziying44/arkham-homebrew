@@ -84,6 +84,7 @@ const bodyTip = `输入格式：
 特殊标签：
 <br> 换行
 <hr> 横线
+<center>居中文本</center>
 
 支持直接使用emoji或对应的标签格式
 `
@@ -1525,6 +1526,11 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       },
       {
         key: 'subtitle',
+        showCondition: {
+          field: 'scenario_type',
+          value: 2,
+          operator: 'not-equals'
+        },
         name: '📋 副标题',
         type: 'text',
         layout: 'half'
@@ -1537,8 +1543,20 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         defaultValue: 0,
         options: [
           { label: '📊 默认类型', value: 0 },
-          { label: '💎 资源类型', value: 1 }
+          { label: '💎 资源类型', value: 1 },
+          { label: '📄 文本类型', value: 2 }
         ]
+      },
+      {
+        key: 'body',
+        showCondition: {
+          field: 'scenario_type',
+          value: 2
+        },
+        name: '📄 正文内容',
+        type: 'textarea',
+        layout: 'full',
+        helpText: bodyTip
       },
       {
         key: 'scenario_card.resource_name',
@@ -1552,24 +1570,44 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       },
       {
         key: 'scenario_card.skull',
+        showCondition: {
+          field: 'scenario_type',
+          value: 2,
+          operator: 'not-equals'
+        },
         name: '💀 骷髅效果',
         type: 'textarea',
         layout: 'half'
       },
       {
         key: 'scenario_card.cultist',
+        showCondition: {
+          field: 'scenario_type',
+          value: 2,
+          operator: 'not-equals'
+        },
         name: '👥 异教徒效果',
         type: 'textarea',
         layout: 'half'
       },
       {
         key: 'scenario_card.tablet',
+        showCondition: {
+          field: 'scenario_type',
+          value: 2,
+          operator: 'not-equals'
+        },
         name: '📜 石板效果',
         type: 'textarea',
         layout: 'half'
       },
       {
         key: 'scenario_card.elder_thing',
+        showCondition: {
+          field: 'scenario_type',
+          value: 2,
+          operator: 'not-equals'
+        },
         name: '👁️ 古神效果',
         type: 'textarea',
         layout: 'half'
