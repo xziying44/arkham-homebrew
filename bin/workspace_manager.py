@@ -87,6 +87,8 @@ class WorkspaceManager:
 
                 self.font_manager = FontManager(fonts_path)
                 self.image_manager = ImageManager(images_path)
+                # 设置图片工作目录
+                self.image_manager.set_working_directory(workspace_path)
                 self.creator = CardCreator(
                     font_manager=self.font_manager,
                     image_manager=self.image_manager,

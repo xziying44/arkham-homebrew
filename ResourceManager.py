@@ -183,7 +183,11 @@ class ImageManager:
         self.image_map = {}  # 存储实际图片对象：英文键 -> Image
         self.name_mapping = {}  # 中文键 -> 英文文件名
 
+        # 工作目录，默认为系统图片资源路径
+        self.working_directory = get_resource_path(image_folder)
+
         logger_manager.info(f"[ImageManager] 初始化，图片目录: {image_folder}")
+        logger_manager.info(f"[ImageManager] 工作目录: {self.working_directory}")
 
         # 加载文件名映射
         filename_mapping = load_filename_mapping()
@@ -194,6 +198,27 @@ class ImageManager:
         self.load_images(image_folder)
 
         logger_manager.info(f"[ImageManager] 加载完成，共加载 {len(self.image_map)} 张图片")
+
+    def set_working_directory(self, directory_path):
+        """
+        设置工作目录
+        :param directory_path: 工作目录路径
+        """
+        if os.path.isabs(directory_path):
+            # 如果是绝对路径，直接使用
+            self.working_directory = directory_path
+        else:
+            # 如果是相对路径，相对于当前工作目录
+            self.working_directory = os.path.abspath(directory_path)
+
+        logger_manager.info(f"[ImageManager] 工作目录已设置为: {self.working_directory}")
+
+    def get_working_directory(self):
+        """
+        获取当前工作目录
+        :return: 工作目录路径
+        """
+        return self.working_directory
 
     def load_images(self, image_folder):
         """加载图片目录下所有支持的图像文件"""
@@ -284,6 +309,61 @@ class ImageManager:
         logger_manager.info(f"[ImageManager] 可用的中文键示例: {list(self.name_mapping.keys())[:5]}")
 
         return None
+
+    def get_image_by_src(self, src_path):
+        """
+        根据源路径获取图片
+        :param src_path: 图片源路径
+                        - 以 "@" 开头：相对于工作目录的路径，如 "@export\\饥荒DIY\\杀人蜂群_advanced_a.png"
+                        - 不以 "@" 开头：绝对路径
+        :return: PIL.Image对象，如果文件不存在则返回20x20的灰色矩形
+        """
+        # 确定实际文件路径
+        if src_path.startswith('@'):
+            # 相对路径：去掉 @ 符号，拼接工作目录
+            relative_path = src_path[1:]  # 去掉开头的 @
+            # 处理路径分隔符（支持 / 和 \）
+            if relative_path.startswith('\\') or relative_path.startswith('/'):
+                relative_path = relative_path[1:]  # 去掉开头的分隔符
+
+            actual_path = os.path.join(self.working_directory, relative_path)
+        else:
+            # 绝对路径
+            actual_path = src_path
+
+        # 规范化路径
+        actual_path = os.path.normpath(actual_path)
+
+        logger_manager.info(f"[ImageManager] 尝试加载图片: {actual_path}")
+
+        # 尝试打开图片
+        if os.path.exists(actual_path):
+            try:
+                img = Image.open(actual_path)
+                # 转换为 RGBA 模式以支持透明度
+                if img.mode not in ('RGB', 'RGBA'):
+                    img = img.convert('RGBA')
+                logger_manager.info(f"[ImageManager] 成功加载图片: {actual_path}")
+                return img
+            except Exception as e:
+                logger_manager.info(f"[ImageManager] 打开图片失败 {actual_path}: {str(e)}")
+        else:
+            logger_manager.info(f"[ImageManager] 图片文件不存在: {actual_path}")
+
+        # 文件不存在或打开失败，返回默认的灰色矩形
+        return self._create_default_image()
+
+    def _create_default_image(self, width=20, height=20, color=(128, 128, 128)):
+        """
+        创建默认的纯色矩形图片
+        :param width: 图片宽度，默认20
+        :param height: 图片高度，默认20
+        :param color: RGB颜色元组，默认灰色(128, 128, 128)
+        :return: PIL.Image对象
+        """
+        img = Image.new('RGB', (width, height), color)
+        logger_manager.info(f"[ImageManager] 创建默认图片: {width}x{height}, 颜色: {color}")
+        return img
 
 
 # ============================================
