@@ -31,6 +31,7 @@ export default {
       quickExport: '快速导出',      // 新增
       advancedExport: '高级导出',   // 新增
       copy: '复制',
+      copyRelativePath: '复制相对路径',
       paste: '粘贴',
       rename: '重命名',
       delete: '删除'
@@ -244,6 +245,8 @@ export default {
       deleteFailedRetry: '删除失败，请重试',
       copySuccess: '文件复制成功',
       copyFailed: '复制失败，只能复制卡牌文件',
+      copyRelativePathSuccess: '相对路径已复制: {path}',
+      copyRelativePathFailed: '复制相对路径失败',
       pasteSuccess: '文件粘贴成功',
       pasteFailed: '粘贴失败',
       pasteNoContent: '剪贴板中没有可粘贴的内容',

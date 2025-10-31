@@ -32,6 +32,7 @@ export default {
       quickExport: 'Quick Export',        // 新增
       advancedExport: 'Advanced Export',  // 新增
       copy: 'Copy',
+      copyRelativePath: 'Copy Relative Path',
       paste: 'Paste',
       rename: 'Rename',
       delete: 'Delete'
@@ -247,6 +248,8 @@ export default {
       deleteFailedRetry: 'Failed to delete, please try again',
       copySuccess: 'File copied successfully',
       copyFailed: 'Copy failed, only card files can be copied',
+      copyRelativePathSuccess: 'Relative path copied: {path}',
+      copyRelativePathFailed: 'Failed to copy relative path',
       pasteSuccess: 'File pasted successfully',
       pasteFailed: 'Paste failed',
       pasteNoContent: 'No content to paste in clipboard',

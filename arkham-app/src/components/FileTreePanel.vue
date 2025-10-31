@@ -792,6 +792,15 @@ const contextMenuOptions = computed(() => {
 
   const options = [];
 
+  // 为所有非工作空间节点添加复制相对路径选项
+  if (!isWorkspace) {
+    options.push({
+      label: t('workspaceMain.fileTree.contextMenu.copyRelativePath'),
+      key: 'copy-relative-path',
+      icon: () => h(NIcon, { component: DocumentOutline })
+    });
+  }
+
   // 工作空间和目录可以创建子项
   if (isWorkspace || isDirectory) {
     options.push(
@@ -1178,6 +1187,9 @@ const handleContextMenuSelect = (key: string) => {
   showContextMenu.value = false;
 
   switch (key) {
+    case 'copy-relative-path':
+      handleCopyRelativePath();
+      break;
     case 'create-folder':
       createFolderForm.value.name = '';
       showCreateFolderDialog.value = true;
@@ -1798,6 +1810,28 @@ const addAdvancedExportLog = (type: 'success' | 'error' | 'warning' | 'info', me
     type: type === 'info' ? 'success' : type,
     message: `[${new Date().toLocaleTimeString()}] ${message}`
   });
+};
+
+// 处理复制相对路径功能
+const handleCopyRelativePath = async () => {
+  if (!contextMenuTarget.value) {
+    message.error(t('workspaceMain.fileTree.messages.copyRelativePathFailed'));
+    return;
+  }
+
+  try {
+    const relativePath = contextMenuTarget.value.path as string;
+    // 使用@开头的相对路径格式
+    const formattedPath = '@' + relativePath;
+
+    // 复制到系统剪贴板
+    await navigator.clipboard.writeText(formattedPath);
+
+    message.success(t('workspaceMain.fileTree.messages.copyRelativePathSuccess', { path: formattedPath }));
+  } catch (error) {
+    console.error('复制相对路径失败:', error);
+    message.error(t('workspaceMain.fileTree.messages.copyRelativePathFailed'));
+  }
 };
 
 // 处理复制功能
