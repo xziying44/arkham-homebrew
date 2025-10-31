@@ -33,7 +33,7 @@
     </template>
     <n-input :value="value" @update:value="$emit('update:value', $event)" type="textarea" :rows="field.rows || 3"
       :maxlength="field.maxlength" :placeholder="$t('cardEditor.field.pleaseEnter', { name: getCleanFieldName(field.name) })" show-count
-      :autosize="{ minRows: field.rows || 3, maxRows: (field.rows || 3) + 2 }" />
+      :autosize="{ minRows: field.rows || 5, maxRows: (field.rows || 5) + 3 }" />
   </n-form-item>
 
   <!-- 数字输入 -->

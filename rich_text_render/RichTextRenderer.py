@@ -659,9 +659,8 @@ class RichTextRenderer:
                 pop_cache()
                 success = virtual_text_box.new_paragraph()
             elif item.tag == "img":
-                print(item)
                 img_tag = ImageTag(item, self.image_manager, size_to_test)
-                virtual_text_box.push(img_tag.get_image_object())
+                success = virtual_text_box.push(img_tag.get_image_object())
             elif item.tag == "font":
                 font_name = item.attributes.get('name', base_options.font_name)
                 font_offset_y = int(item.attributes.get('offset', '0'))
