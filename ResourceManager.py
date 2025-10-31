@@ -9,6 +9,9 @@ from PIL import Image, ImageFont
 from bin.logger import logger_manager
 
 
+# ============================================
+# dataclass 定义
+# ============================================
 @dataclass
 class FontInfo:
     """字体信息配置"""
@@ -236,274 +239,7 @@ class ImageManager:
         except Exception as e:
             logger_manager.info(f"[ImageManager] 图片加载失败: {str(e)}")
             import traceback
-            traceback.logger_manager.info_exc()
-
-    def open(self, path, **kwargs):
-        """
-        打开指定图片文件（支持PIL.Image.open参数）
-
-        :param path: 图片路径
-        :param kwargs: 传递给Image.open的额外参数
-        :return: PIL.Image对象，如果找不到返回None
-        """
-        try:
-            img = Image.open(path, **kwargs)
-            # 自动将图片转换为RGB模式（如果需要）
-            if img.mode not in ('RGB', 'RGBA'):
-                img = img.convert('RGB')
-            return img
-        except Exception as e:
-            logger_manager.info(f"无法打开图片 {path}: {str(e)}")
-            return None
-
-    def get_image(self, image_name):
-        """
-        获取图片
-
-        :param image_name: 图片名称（不带扩展名）
-        :return: 图片对象
-        """
-        return self.image_map.get(image_name.lower())
-
-
-import json
-import os
-import sys
-from dataclasses import dataclass
-from typing import Optional, Dict
-from PIL import Image, ImageFont
-
-
-# ============================================
-# 资源路径和文件名映射
-# ============================================
-def get_resource_path(relative_path):
-    """获取资源文件的绝对路径，适用于开发环境、PyInstaller打包和Android打包"""
-
-    # 1. 检查是否在 Android 环境
-    if 'ANDROID_ARGUMENT' in os.environ:
-        try:
-            from jnius import autoclass
-            PythonActivity = autoclass('org.kivy.android.PythonActivity')
-            activity = PythonActivity.mActivity
-
-            # 获取应用的私有文件目录
-            files_dir = activity.getFilesDir().getAbsolutePath()
-
-            # 资源文件在 app 目录下
-            resource_path = os.path.join(files_dir, 'app', relative_path)
-
-            # 检查文件是否存在
-            if os.path.exists(resource_path):
-                return resource_path
-
-            # 方式2: 尝试直接使用相对路径
-            direct_path = os.path.join(os.path.abspath("."), relative_path)
-            if os.path.exists(direct_path):
-                return direct_path
-
-            # 方式3: 检查当前工作目录
-            cwd_path = os.path.join(os.getcwd(), relative_path)
-            if os.path.exists(cwd_path):
-                return cwd_path
-
-            return resource_path
-
-        except Exception as e:
-            logger_manager.info(f"[Android] 获取资源路径失败: {e}")
-            return os.path.join(os.path.abspath("."), relative_path)
-
-    # 2. PyInstaller 打包环境
-    if hasattr(sys, '_MEIPASS'):
-        return os.path.join(sys._MEIPASS, relative_path)
-
-    # 3. 开发环境
-    return os.path.join(os.path.abspath("."), relative_path)
-
-
-def load_filename_mapping() -> Dict[str, Dict[str, str]]:
-    """
-    加载文件名翻译映射
-    返回格式: {
-        "images": {"中文名.png": "english-name.png"},
-        "fonts": {"中文名.ttf": "english-name.ttf"}
-    }
-    """
-    mapping_file = get_resource_path('fonts/filename_translation_mapping.json')
-
-    if os.path.exists(mapping_file):
-        try:
-            with open(mapping_file, 'r', encoding='utf-8') as f:
-                mapping = json.load(f)
-                logger_manager.info(
-                    f"[映射] 成功加载文件名映射: {len(mapping.get('images', {}))} 个图片, {len(mapping.get('fonts', {}))} 个字体")
-                return mapping
-        except Exception as e:
-            logger_manager.info(f"[映射] 加载文件名映射失败: {e}")
-    else:
-        logger_manager.info(f"[映射] 映射文件不存在: {mapping_file}")
-
-    return {"images": {}, "fonts": {}}
-
-
-def create_reverse_mapping(forward_mapping: Dict[str, str]) -> Dict[str, str]:
-    """
-    创建反向映射：去除扩展名的中文键 -> 英文文件名
-    例如: "UI-伤害" -> "UI-damage.png"
-    """
-    reverse = {}
-
-    for chinese_filename, english_filename in forward_mapping.items():
-        # 获取中文文件名（无扩展名）
-        chinese_key = os.path.splitext(chinese_filename)[0]
-
-        # 转换为小写作为键
-        key = chinese_key.lower()
-
-        # 映射到英文文件名
-        reverse[key] = english_filename
-
-        # 同时添加英文键映射（无扩展名）
-        english_key = os.path.splitext(english_filename)[0].lower()
-        reverse[english_key] = english_filename
-
-    return reverse
-
-
-# ============================================
-# dataclass 定义
-# ============================================
-@dataclass
-class FontInfo:
-    """字体信息配置"""
-    name: str  # 字体名称
-    size_percent: float = 1.0  # 字体大小百分比
-    vertical_offset: int = 0  # 垂直偏移量
-
-
-@dataclass
-class LanguageFonts:
-    """语言字体配置"""
-    title: FontInfo  # 标题字体
-    subtitle: FontInfo  # 副标题字体
-    card_type: FontInfo  # 卡牌类别字体
-    trait: FontInfo  # 特征字体
-    bold: FontInfo  # 粗体字体
-    body: FontInfo  # 正文字体
-    flavor: FontInfo  # 风味文本字体
-    collection_info: FontInfo  # 收藏信息字体
-
-
-@dataclass
-class LanguageTexts:
-    """语言文本配置"""
-    skill: str = "技能"
-    location: str = "地点"
-    event: str = "事件"
-    asset: str = "支援"
-    story: str = "剧情"
-    treachery: str = "诡计"
-    enemy: str = "敌人"
-    weakness: str = "弱点"
-    basic_weakness: str = "基础弱点"
-    deck_size: str = "牌库卡牌张数"
-    deck_options: str = "牌库构筑选项"
-    deck_requirements: str = "牌库构筑需求"
-    not_count: str = "不计入卡牌张数"
-    agenda: str = "密谋"
-    act: str = "场景"
-    resolution: str = "结局"
-    upgrades: str = "升级项"
-    victory: str = "胜利<X>。"
-    Illus: str = "Illus."
-    prey: str = "猎物"
-    spawn: str = "生成"
-    forced: str = "强制"
-    haunted: str = "闹鬼"
-    objective: str = "目标"
-    patrol: str = "巡逻"
-    revelation: str = "显现"
-
-
-@dataclass
-class LanguageConfig:
-    """单一语言配置"""
-    name: str  # 语言名称
-    fonts: LanguageFonts  # 字体配置
-    texts: LanguageTexts  # 文本配置
-
-
-# ============================================
-# ImageManager
-# ============================================
-class ImageManager:
-    """图像资源管理器，用于预加载和管理图片文件"""
-
-    def __init__(self, image_folder='images'):
-        """
-        初始化图像管理器
-        :param image_folder: 图片文件存放目录，默认为'images'
-        """
-        self.image_map = {}  # 存储实际图片对象：英文键 -> Image
-        self.name_mapping = {}  # 中文键 -> 英文文件名
-
-        logger_manager.info(f"[ImageManager] 初始化，图片目录: {image_folder}")
-
-        # 加载文件名映射
-        filename_mapping = load_filename_mapping()
-        self.name_mapping = create_reverse_mapping(filename_mapping.get('images', {}))
-        logger_manager.info(f"[ImageManager] 文件名映射数量: {len(self.name_mapping)}")
-
-        # 加载图片
-        self.load_images(image_folder)
-
-        logger_manager.info(f"[ImageManager] 加载完成，共加载 {len(self.image_map)} 张图片")
-
-    def load_images(self, image_folder):
-        """加载图片目录下所有支持的图像文件"""
-        supported_ext = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
-        image_folder_path = get_resource_path(image_folder)
-        logger_manager.info(f"[ImageManager] 图片目录路径: {image_folder_path}")
-
-        if not os.path.exists(image_folder_path):
-            logger_manager.info(f"[ImageManager] 错误：图片目录不存在 - {image_folder_path}")
-            return
-
-        try:
-            # 直接列出目录（文件名已经是英文）
-            files = os.listdir(image_folder_path)
-            logger_manager.info(f"[ImageManager] 目录中的文件数: {len(files)}")
-
-            loaded_count = 0
-            for filename in files:
-                name, ext = os.path.splitext(filename)
-
-                if ext.lower() not in supported_ext:
-                    continue
-
-                file_path = os.path.join(image_folder_path, filename)
-
-                if not os.path.exists(file_path):
-                    continue
-
-                # 打开图片
-                image = self.open(file_path)
-                if image:
-                    # 使用小写的英文文件名（无扩展名）作为键
-                    key = name.lower()
-                    self.image_map[key] = image
-                    loaded_count += 1
-
-                    # 只打印前10个
-                    if loaded_count <= 10:
-                        logger_manager.info(f"[ImageManager] #{loaded_count}: {filename} (key: {key})")
-
-            logger_manager.info(f"[ImageManager] 成功加载 {loaded_count} 张图片")
-
-        except Exception as e:
-            logger_manager.info(f"[ImageManager] 图片加载失败: {str(e)}")
-            import traceback
-            traceback.logger_manager.info_exc()
+            traceback.print_exc()
 
     def open(self, path, **kwargs):
         """
@@ -620,7 +356,7 @@ class FontManager:
         except Exception as e:
             logger_manager.info(f"[FontManager] 字体加载失败: {str(e)}")
             import traceback
-            traceback.logger_manager.info_exc()
+            traceback.print_exc()
 
     def _load_language_configs(self, lang_config=None):
         """加载多语言配置"""
@@ -702,6 +438,7 @@ class FontManager:
         return None
 
     def get_lang_font(self, font_type):
+        """根据字体类型获取语言配置的字体信息"""
         current_config = self.get_current_config()
         if font_type == '标题字体':
             return current_config.fonts.title
@@ -719,9 +456,7 @@ class FontManager:
             return current_config.fonts.flavor
         elif font_type == '收藏信息字体':
             return current_config.fonts.collection_info
-        return FontInfo(
-            name=font_type
-        )
+        return FontInfo(name=font_type)
 
     def get_font(self, font_name: str, size: int = 20) -> Optional[ImageFont.FreeTypeFont]:
         """
@@ -774,7 +509,6 @@ class FontManager:
     def get_font_offset(self, font_type):
         """
         获取字体垂直偏移量
-
         :param font_type: 字体类型
         :return: 垂直偏移量
         """
@@ -788,27 +522,16 @@ class FontManager:
     def get_font_text(self, text_key):
         """
         获取多语言文本
-
         :param text_key: 文本键名
         :return: 对应语言的文本
-        skill: str = "技能"
-        location: str = "地点"
-        event: str = "事件"
-        asset: str = "支援"
-        treachery: str = "诡计"
-        enemy: str = "敌人"
-        weakness: str = "弱点"
-        basic_weakness: str = "基础弱点"
-        deck_size: str = "牌库卡牌张数"
-        deck_options: str = "牌库构筑选项"
-        deck_requirements: str = "牌库构筑需求"
-        not_count: str = "不计入卡牌张数"
         """
         if self.silence:
             return ''
+
         config = self.get_current_config()
         if not config:
             return text_key  # 如果没有配置，返回原始文本
+
         # 特殊字符处理
         if text_key == '：' or text_key == '。':
             if self.lang != 'zh':
@@ -817,45 +540,34 @@ class FontManager:
                 elif text_key == '。':
                     return '.'
             return text_key
-        if text_key == '技能':
-            text_key = 'skill'
-        elif text_key == '地点':
-            text_key = 'location'
-        elif text_key == '事件':
-            text_key = 'event'
-        elif text_key == '支援':
-            text_key = 'asset'
-        elif text_key == '诡计':
-            text_key = 'treachery'
-        elif text_key == '敌人':
-            text_key = 'enemy'
-        elif text_key == '弱点':
-            text_key = 'weakness'
-        elif text_key == '基础弱点':
-            text_key = 'basic_weakness'
-        elif text_key == '牌库卡牌张数':
-            text_key = 'deck_size'
-        elif text_key == '牌库构筑选项':
-            text_key = 'deck_options'
-        elif text_key == '牌库构筑需求':
-            text_key = 'deck_requirements'
-        elif text_key == '不计入卡牌张数':
-            text_key = 'not_count'
-        elif text_key == '密谋':
-            text_key = 'agenda'
-        elif text_key == '场景':
-            text_key = 'act'
-        elif text_key == '胜利点':
-            text_key = 'victory'
-        elif text_key == '升级项':
-            text_key = 'upgrades'
-        elif text_key == '剧情':
-            text_key = 'story'
-        elif text_key == '插画':
-            text_key = 'Illus'
-        elif text_key == '结局':
-            text_key = 'resolution'
-        return getattr(config.texts, text_key, text_key)
+
+        # 文本键映射
+        text_key_mapping = {
+            '技能': 'skill',
+            '地点': 'location',
+            '事件': 'event',
+            '支援': 'asset',
+            '诡计': 'treachery',
+            '敌人': 'enemy',
+            '弱点': 'weakness',
+            '基础弱点': 'basic_weakness',
+            '牌库卡牌张数': 'deck_size',
+            '牌库构筑选项': 'deck_options',
+            '牌库构筑需求': 'deck_requirements',
+            '不计入卡牌张数': 'not_count',
+            '密谋': 'agenda',
+            '场景': 'act',
+            '胜利点': 'victory',
+            '升级项': 'upgrades',
+            '剧情': 'story',
+            '插画': 'Illus',
+            '结局': 'resolution'
+        }
+
+        # 如果有映射，使用映射后的键
+        mapped_key = text_key_mapping.get(text_key, text_key)
+
+        return getattr(config.texts, mapped_key, text_key)
 
     def get_available_languages(self):
         """获取可用的语言列表"""
