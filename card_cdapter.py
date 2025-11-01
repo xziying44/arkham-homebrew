@@ -66,6 +66,10 @@ class CardAdapter:
         "flavor",  # 顶层字段
         "card_back.option",  # 嵌套字段
         "card_back.other",  # 嵌套字段
+        "scenario_card.skull",
+        "scenario_card.cultist",
+        "scenario_card.tablet",
+        "scenario_card.elder_thing",
     ]
 
     def __init__(self, card_data: Dict[str, Any], font_manager: 'FontManager'):
