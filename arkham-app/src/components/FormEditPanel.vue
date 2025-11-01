@@ -16,8 +16,6 @@
                     <n-button size="tiny" @click="triggerSaveAll" class="header-button" v-if="hasUnsavedFiles">
                         {{ $t('cardEditor.panel.saveAll') }}
                     </n-button>
-                    <n-button size="tiny" @click="showImportJsonModal = true" class="header-button">{{
-                        $t('cardEditor.panel.importJson') }}</n-button>
                     <n-button size="tiny" @click="showJsonModal = true" class="header-button" v-if="selectedFile">{{
                         $t('cardEditor.panel.viewJson') }}</n-button>
                     <n-button v-if="!showImagePreview" size="tiny" quaternary @click="$emit('toggle-image-preview')"
@@ -154,28 +152,6 @@
                     </n-space>
                 </template>
             </n-card>
-        </n-modal>
-
-        <!-- 导入JSON模态框 -->
-        <n-modal v-model:show="showImportJsonModal" preset="dialog" :title="$t('cardEditor.panel.importJsonData')">
-            <div class="import-json-content">
-                <n-form-item :label="$t('cardEditor.panel.pasteJsonData')">
-                    <n-input v-model:value="importJsonText" type="textarea"
-                        :placeholder="$t('cardEditor.panel.pasteJsonPlaceholder')" :rows="10" maxlength="50000"
-                        show-count class="import-textarea" />
-                </n-form-item>
-                <div v-if="importJsonError" class="import-error">
-                    <n-alert type="error" :title="importJsonError" />
-                </div>
-            </div>
-            <template #action>
-                <n-space>
-                    <n-button @click="cancelImportJson">{{ $t('cardEditor.panel.cancel') }}</n-button>
-                    <n-button type="primary" @click="importJsonData" :disabled="!importJsonText.trim()">
-                        {{ $t('cardEditor.panel.import') }}
-                    </n-button>
-                </n-space>
-            </template>
         </n-modal>
 
         <!-- 保存确认对话框 -->
@@ -397,7 +373,6 @@ const pendingSwitchFile = ref<TreeOption | null>(null);
 
 const currentCardType = ref('');
 const showJsonModal = ref(false);
-const showImportJsonModal = ref(false);
 const showSaveConfirmDialog = ref(false);
 const showVersionConvertDialog = ref(false);
 const saving = ref(false);
@@ -407,10 +382,6 @@ const converting = ref(false);
 
 // 新增：图片预览加载状态
 const imagePreviewLoading = ref(false);
-
-// 导入JSON相关状态
-const importJsonText = ref('');
-const importJsonError = ref('');
 
 // 防抖相关状态
 const debounceTimer = ref<number | null>(null);
@@ -580,79 +551,6 @@ const copyJsonToClipboard = async () => {
             message.error(t('cardEditor.panel.copyFailed'));
         }
     }
-};
-
-// 导入JSON数据
-const importJsonData = async () => {
-    importJsonError.value = '';
-
-    if (!importJsonText.value.trim()) {
-        message.warning(t('cardEditor.panel.pleaseEnterJsonData'));
-        return;
-    }
-
-    try {
-        // 解析JSON
-        const jsonData = JSON.parse(importJsonText.value.trim());
-
-        // 验证是否是有效的卡牌数据
-        if (typeof jsonData !== 'object' || jsonData === null) {
-            throw new Error(t('cardEditor.panel.invalidJsonFormat'));
-        }
-
-        // 保存当前的元数据
-        const metadata = {
-            id: currentCardData.id || '',
-            created_at: currentCardData.created_at || '',
-            version: currentCardData.version || '1.0',
-        };
-
-        // 合并数据
-        const newData = { ...metadata, ...jsonData };
-
-        // 清空当前数据
-        Object.keys(currentCardData).forEach(key => {
-            delete currentCardData[key];
-        });
-
-        // 等待DOM更新
-        await nextTick();
-
-        // 重新赋值 - 修复：确保deck_options等数组字段正确复制
-        Object.keys(newData).forEach(key => {
-            if (key === 'deck_options' && Array.isArray(newData[key])) {
-                // 对于数组类型，创建新的数组引用避免响应式问题
-                currentCardData[key] = [...newData[key]];
-                console.log('📚 导入deck_options数据:', currentCardData[key].length, '个选项');
-            } else {
-                currentCardData[key] = newData[key];
-            }
-        });
-
-        // 更新卡牌类型
-        if (jsonData.type) {
-            currentCardType.value = jsonData.type;
-        }
-
-        // 关闭模态框
-        showImportJsonModal.value = false;
-        importJsonText.value = '';
-
-        // 触发防抖预览更新
-        triggerDebouncedPreviewUpdate();
-
-        message.success(t('cardEditor.panel.jsonDataImportedSuccessfully'));
-    } catch (error) {
-        console.error('导入JSON失败:', error);
-        importJsonError.value = `${t('cardEditor.panel.importFailed')}: ${error.message || t('cardEditor.panel.invalidJsonFormat')}`;
-    }
-};
-
-// 取消导入JSON
-const cancelImportJson = () => {
-    showImportJsonModal.value = false;
-    importJsonText.value = '';
-    importJsonError.value = '';
 };
 
 // 防抖预览更新方法
@@ -1243,12 +1141,12 @@ const clearFormData = () => {
     saveOriginalData();
 };
 
-// 过滤后的JSON数据（排除base64图片字段）
+// 过滤后的JSON数据（排除base64图片字段和tts_script字段）
 const filteredJsonData = computed(() => {
     const filteredData = { ...currentCardData };
 
     // 删除所有base64图片字段
-    const imageFields = ['picture_base64', 'avatar_base64', 'background_base64']; // 可以根据需要添加更多字段
+    const imageFields = ['picture_base64', 'avatar_base64', 'background_base64'];
 
     imageFields.forEach(field => {
         if (field in filteredData) {
@@ -1256,7 +1154,12 @@ const filteredJsonData = computed(() => {
         }
     });
 
-    // 如果有嵌套对象，也要处理嵌套的base64字段
+    // 删除tts_script字段
+    if ('tts_script' in filteredData) {
+        delete filteredData['tts_script'];
+    }
+
+    // 如果有嵌套对象，也要处理嵌套的base64字段和tts_script字段
     const removeBase64FromObject = (obj: any): any => {
         if (typeof obj !== 'object' || obj === null) {
             return obj;
@@ -1268,8 +1171,8 @@ const filteredJsonData = computed(() => {
 
         const result = {};
         for (const [key, value] of Object.entries(obj)) {
-            // 跳过包含base64的字段
-            if (key.includes('base64') || (typeof value === 'string' && value.startsWith('data:image'))) {
+            // 跳过包含base64的字段和tts_script字段
+            if (key === 'tts_script' || key.includes('base64') || (typeof value === 'string' && value.startsWith('data:image'))) {
                 continue;
             }
             result[key] = removeBase64FromObject(value);
@@ -1817,26 +1720,6 @@ onUnmounted(() => {
     border-color: #5a67d8;
 }
 
-/* 导入JSON模态框样式 */
-.import-json-content {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    min-height: 300px;
-    max-width: 95vw;
-    width: auto;
-}
-
-.import-textarea {
-    font-family: 'Courier New', monospace;
-    font-size: 13px;
-}
-
-.import-error {
-    margin-top: 12px;
-}
-
-
 /* 双面卡牌切换器样式 */
 .card-side-selector {
     display: flex;
@@ -2147,11 +2030,6 @@ onUnmounted(() => {
 
     /* 模态框移动端适配 */
     .json-modal-content {
-        max-width: 95vw;
-        width: auto;
-    }
-
-    .import-json-content {
         max-width: 95vw;
         width: auto;
     }
