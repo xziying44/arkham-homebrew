@@ -37833,17 +37833,6 @@
           "token": "clue"
         }
       ]
-    },
-    "locationBack": {
-      "icons": "",
-      "connections": "",
-      "uses": [
-        {
-          "count": 1,
-          "type": "Clue",
-          "token": "clue"
-        }
-      ]
     }
   },
   "06132": {

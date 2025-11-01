@@ -279,7 +279,7 @@ class ArkhamDBConverter:
                                 flags=re.IGNORECASE)
         formatted_text = re.sub(r'<i>(.*?)</i>', r'[\1]', formatted_text)
         formatted_text = formatted_text.replace('\n<cite>', '<cite>')
-        formatted_text = re.sub(r'<cite>(.*?)</cite>', r'<br>[-\1]', formatted_text)
+        formatted_text = re.sub(r'<cite>(.*?)</cite>', r'<br>——\1', formatted_text)
         formatted_text = re.sub(r'\[([^]]+)]', r'<i>\1</i>', formatted_text)
 
         formatted_text = re.sub(r'\n- ', r"\n<点> ", formatted_text)
@@ -669,7 +669,7 @@ class ArkhamDBConverter:
 
         # 特殊处理：code==01145 的背面设置 type 为"场景卡-大画"
         if card_code in ["01145", "02314", "04048", "04049", "04318", "03322a", "03323a", "03276b",
-                         "03279b", "05199", "05247", "05248"] and is_back:
+                         "03279b", "05199", "05247", "05248", "06292", "06337"] and is_back:
             card_data["type"] = "场景卡-大画"
             card_data["footer_copyright"] = ""
             card_data["footer_icon_font"] = ""
