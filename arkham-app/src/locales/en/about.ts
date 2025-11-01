@@ -54,7 +54,7 @@ export default {
     },
     thanks: {
       title: '🙏 Special Thanks',
-      description: 'Thanks to all friends who contributed content to the Arkham Horror fan-made community, and users who provided suggestions and feedback for this project. Special thanks to:<br><br>@爆破专家苦力怕 (Card UI Design)<br>@Chr1Z (SCED Data Format Support)<br>@felice (arkham.build Data Format Support)<br>@morvael (English and Polish language card layout improvement guidance and testing)<br><br>If you encounter problems or have suggestions for improvement, please feel free to contact us via email.'
+      description: 'Thanks to all friends who contributed content to the Arkham Horror fan-made community, and users who provided suggestions and feedback for this project. Special thanks to:<br><br>&#64;爆破专家苦力怕 (Card UI Design)<br>&#64;Chr1Z (SCED Data Format Support)<br>&#64;felice (arkham.build Data Format Support)<br>&#64;morvael (English and Polish language card layout improvement guidance and testing)<br><br>If you encounter problems or have suggestions for improvement, please feel free to contact us via email.'
     },
     footer: {
       thanks: 'Thank you for using Arkham Card Maker'
