@@ -83,6 +83,7 @@ export default {
 
     // 操作按钮
     saveCard: '保存卡牌',
+    saveAll: '全部保存',
     previewCard: '预览卡图',
     exportImage: '导出图片',
     reset: '重置',
@@ -115,6 +116,7 @@ export default {
     cardSavedSuccessfully: '卡牌保存成功',
     saveCardFailed: '保存卡牌失败',
     loadCardDataFailed: '加载卡牌数据失败',
+    loadFromCacheFailed: '从暂存加载失败',
     cardDataValidationFailed: '卡牌数据验证失败',
     generateCardImageFailed: '生成卡图失败',
     pleaseEnterCardNameAndType: '请先填写卡牌名称和类型',
@@ -130,6 +132,10 @@ export default {
     jsonDataImportedSuccessfully: 'JSON数据导入成功',
     importFailed: '导入失败',
     invalidJsonFormat: '无效的JSON格式',
+    noUnsavedFiles: '没有未保存的文件',
+    saveAllSuccess: '成功保存 {count} 个文件',
+    saveAllPartial: '保存了 {success} 个文件，{failed} 个失败',
+    saveAllFailed: '保存失败',
 
     // AI 相关消息
     pleaseEnterPrompt: '请输入提示词',

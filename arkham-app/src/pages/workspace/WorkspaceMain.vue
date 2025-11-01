@@ -1,9 +1,11 @@
 <template>
   <div class="workspace-main-container" :class="{ 'is-resizing': isResizing }">
     <!-- 左侧文件树区域 -->
-    <FileTreePanel 
+    <FileTreePanel
       v-if="showFileTree && shouldShowFileTree"
       :width="fileTreeWidth"
+      :selected-file="selectedFile"
+      :unsaved-file-paths="unsavedFilePaths"
       ref="fileTreeRef"
       @toggle="toggleFileTree"
       @go-back="goBack"
@@ -25,12 +27,17 @@
       :show-image-preview="showImagePreview && shouldShowImagePreview"
       :selected-file="selectedFile"
       :is-mobile="isMobile"
+      :unsaved-files-count="unsavedFilesCache.size"
       @toggle-file-tree="toggleFileTree"
       @toggle-image-preview="toggleImagePreview"
       @update-preview-image="updatePreviewImage"
       @update-preview-side="updatePreviewSide"
       @update-preview-loading="updatePreviewLoading"
       @refresh-file-tree="refreshFileTree"
+      @save-to-cache="saveToCache"
+      @load-from-cache="handleLoadFromCache"
+      @clear-cache="clearCache"
+      @trigger-save-all="saveAllUnsaved"
     />
 
     <!-- 右侧分割条 -->
@@ -83,8 +90,10 @@
           <h3>{{ $t('workspaceMain.fileTree.title') }}</h3>
           <button class="close-btn" @click="closeMobileFileTree">{{ $t('workspaceMain.modals.close') }}</button>
         </div>
-        <FileTreePanel 
+        <FileTreePanel
           :width="'100%'"
+          :selected-file="selectedFile"
+          :unsaved-file-paths="unsavedFilePaths"
           ref="mobileFileTreeRef"
           @file-select="handleMobileFileSelect"
           @go-back="goBack"
@@ -181,6 +190,12 @@ const formEditPanelRef = ref();
 const fileTreeRef = ref();
 const mobileFileTreeRef = ref();
 const mobileImagePreviewRef = ref();
+
+// 多文件编辑暂存管理
+const unsavedFilesCache = ref<Map<string, any>>(new Map());
+
+// 计算未保存文件路径列表（用于FileTreePanel显示"*"）
+const unsavedFilePaths = computed(() => Array.from(unsavedFilesCache.value.keys()));
 
 // 窗口大小变化监听
 const handleResize = () => {
@@ -335,6 +350,73 @@ const refreshFileTree = () => {
   const treeRef = shouldShowFileTree.value ? fileTreeRef : mobileFileTreeRef;
   if (treeRef.value && typeof treeRef.value.refreshFileTree === 'function') {
     treeRef.value.refreshFileTree();
+  }
+};
+
+// 暂存文件数据到缓存
+const saveToCache = (filePath: string, data: any) => {
+  if (!filePath) return;
+  // 深拷贝数据，避免引用问题
+  unsavedFilesCache.value.set(filePath, JSON.parse(JSON.stringify(data)));
+  console.log(`💾 暂存文件数据: ${filePath}`, unsavedFilesCache.value.size, '个未保存文件');
+};
+
+// 从缓存加载文件数据
+const loadFromCache = (filePath: string): any | null => {
+  if (!filePath) return null;
+  const cachedData = unsavedFilesCache.value.get(filePath);
+  if (cachedData) {
+    console.log(`📂 从暂存加载: ${filePath}`);
+    // 返回深拷贝，避免修改缓存数据
+    return JSON.parse(JSON.stringify(cachedData));
+  }
+  return null;
+};
+
+// 清除文件的暂存数据
+const clearCache = (filePath: string) => {
+  if (!filePath) return;
+  const hadCache = unsavedFilesCache.value.has(filePath);
+  unsavedFilesCache.value.delete(filePath);
+  if (hadCache) {
+    console.log(`🗑️ 清除暂存: ${filePath}`, unsavedFilesCache.value.size, '个未保存文件');
+  }
+};
+
+// 保存所有未保存的文件
+const saveAllUnsaved = async () => {
+  if (unsavedFilesCache.value.size === 0) {
+    message.info(t('workspaceMain.messages.noUnsavedFiles'));
+    return;
+  }
+
+  const unsavedPaths = Array.from(unsavedFilesCache.value.keys());
+  console.log(`💾 开始保存所有未保存文件，共 ${unsavedPaths.length} 个`);
+
+  if (formEditPanelRef.value?.saveAllUnsaved) {
+    await formEditPanelRef.value.saveAllUnsaved(unsavedPaths, unsavedFilesCache.value);
+  }
+};
+
+// 【新增】处理从暂存加载的请求
+const handleLoadFromCache = async (filePath: string) => {
+  if (!filePath) return;
+
+  console.log(`🔍 检查文件是否有暂存: ${filePath}`);
+
+  // 检查是否有暂存数据
+  const cachedData = loadFromCache(filePath);
+
+  if (cachedData && formEditPanelRef.value?.loadFromCacheData) {
+    // 从暂存加载
+    console.log(`📂 从暂存加载文件: ${filePath}`);
+    await formEditPanelRef.value.loadFromCacheData(cachedData);
+  } else {
+    // 正常从文件系统加载
+    console.log(`📁 从文件系统加载: ${filePath}`);
+    if (formEditPanelRef.value?.loadCardData) {
+      await formEditPanelRef.value.loadCardData();
+    }
   }
 };
 

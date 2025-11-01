@@ -13,6 +13,9 @@
                     </span>
                 </n-space>
                 <n-space size="small">
+                    <n-button size="tiny" @click="triggerSaveAll" class="header-button" v-if="hasUnsavedFiles">
+                        {{ $t('cardEditor.panel.saveAll') }}
+                    </n-button>
                     <n-button size="tiny" @click="showImportJsonModal = true" class="header-button">{{
                         $t('cardEditor.panel.importJson') }}</n-button>
                     <n-button size="tiny" @click="showJsonModal = true" class="header-button" v-if="selectedFile">{{
@@ -268,6 +271,8 @@ interface Props {
     showFileTree: boolean;
     showImagePreview: boolean;
     selectedFile?: TreeOption | null;
+    isMobile?: boolean;
+    unsavedFilesCount?: number; // 新增：未保存文件数量
 }
 
 const props = defineProps<Props>();
@@ -279,6 +284,10 @@ const emit = defineEmits<{
     'update-preview-side': [side: 'front' | 'back'];
     'update-preview-loading': [loading: boolean];
     'refresh-file-tree': [];
+    'save-to-cache': [filePath: string, data: any]; // 新增：保存到暂存
+    'load-from-cache': [filePath: string]; // 新增：从暂存加载（用于事件通知）
+    'clear-cache': [filePath: string]; // 新增：清除暂存
+    'trigger-save-all': []; // 新增：触发保存所有未保存文件
 }>();
 
 const { t, locale } = useI18n(); // 添加 locale
@@ -726,7 +735,7 @@ const hasValidCardData = computed(() => {
     return currentCardData.type && currentCardData.type.trim() !== '';
 });
 
-// 检查是否有任何有效的卡牌数据（用于共享组件显示）
+// 检查是否有未保存的卡牌数据（用于共享组件显示）
 const hasAnyValidCardData = computed(() => {
     const hasValidFront = currentCardData.name && currentCardData.name.trim() !== '' &&
         currentCardData.type && currentCardData.type.trim() !== '';
@@ -738,6 +747,16 @@ const hasAnyValidCardData = computed(() => {
 
     return hasValidFront || hasValidBack;
 });
+
+// 检查是否有未保存的文件（用于显示"全部保存"按钮）
+const hasUnsavedFiles = computed(() => {
+    return (props.unsavedFilesCount ?? 0) > 0;
+});
+
+// 触发保存所有未保存文件
+const triggerSaveAll = () => {
+    emit('trigger-save-all');
+};
 
 const currentFormConfig = computed((): CardTypeConfig | null => {
     return currentCardType.value ? cardTypeConfigs.value[currentCardType.value] : null;
@@ -886,8 +905,21 @@ const loadCardData = async () => {
         // 等待DOM更新，确保表单完全卸载
         await nextTick();
 
-        const content = await WorkspaceService.getFileContent(props.selectedFile.path);
-        const cardData = JSON.parse(content || '{}');
+        // 【新增】优先从暂存加载数据
+        let cardData: any = null;
+
+        // 尝试从暂存获取数据
+        const filePath = props.selectedFile.path;
+        // 通过emit触发父组件的loadFromCache方法
+        // 由于我们需要同步获取数据，这里需要特殊处理
+        // 实际上，我们需要父组件将loadFromCache作为prop传下来
+
+        // 临时方案：直接从localStorage或通过事件获取
+        // 更好的方案：将loadFromCache作为prop传递
+
+        // 先尝试正常加载文件内容
+        const content = await WorkspaceService.getFileContent(filePath);
+        cardData = JSON.parse(content || '{}');
 
         // 加载新数据 - 修复：确保deck_options等关键字段正确加载
         const processedCardData = { ...cardData };
@@ -1061,6 +1093,10 @@ const saveCard = async () => {
         await WorkspaceService.saveFileContent(fileToSave.path, jsonContent);
         // 更新原始数据状态
         saveOriginalData();
+
+        // 【新增】保存成功后清除暂存
+        emit('clear-cache', fileToSave.path as string);
+
         // 显示卡图（使用已生成的结果）
         const imageBase64 = result_card?.image;
         if (imageBase64) {
@@ -1433,17 +1469,10 @@ const convertToVersion2 = async () => {
 
 // 监听选中文件变化
 watch(() => props.selectedFile, async (newFile, oldFile) => {
-    // 如果当前有未保存的修改，显示确认对话框
-    if (hasUnsavedChanges.value && oldFile) {
-        // 记住原始文件信息（用于保存）
-        originalFileInfo.value = {
-            path: oldFile.path as string,
-            label: oldFile.label as string
-        };
-
-        pendingSwitchFile.value = newFile;
-        showSaveConfirmDialog.value = true;
-        return;
+    // 【新增】如果切换前的文件有未保存修改，暂存数据
+    if (hasUnsavedChanges.value && oldFile && oldFile.path) {
+        console.log('💾 检测到未保存修改，暂存当前数据:', oldFile.path);
+        emit('save-to-cache', oldFile.path as string, currentCardData);
     }
 
     // 如果是切换到新文件，先重置状态
@@ -1479,15 +1508,20 @@ watch(() => props.selectedFile, async (newFile, oldFile) => {
         }
     }
 
-    // 没有未保存修改，直接切换
+    // 清空原始文件信息
     originalFileInfo.value = null;
+
     if (newFile && newFile.type === 'card') {
-        // 【新增】直接切换文件时显示加载动画
+        // 【新增】切换文件时显示加载动画
         imagePreviewLoading.value = true;
         emit('update-preview-loading', true);
-        console.log('🔄 直接切换文件，开始显示卡牌形状加载动画');
+        console.log('🔄 切换文件，开始显示卡牌形状加载动画');
 
-        await loadCardData();
+        // 【新增】通知父组件加载数据（父组件会检查是否有暂存并调用相应方法）
+        emit('load-from-cache', newFile.path as string);
+
+        // 等待父组件处理完暂存逻辑后，如果没有暂存则正常加载
+        // 注意：这里不直接调用loadCardData，而是让WorkspaceMain决定
     } else {
         clearFormData();
     }
@@ -1513,9 +1547,117 @@ const setSideFromExternal = (side: 'front' | 'back') => {
     console.log(`🔄 从外部设置编辑器面为: ${side}`);
 };
 
+// 【新增】从暂存数据加载（外部调用）
+const loadFromCacheData = async (cachedData: any) => {
+    if (!cachedData) return;
+
+    try {
+        console.log('📂 从暂存数据加载卡牌');
+
+        // 清空卡牌类型，触发表单卸载
+        currentCardType.value = '';
+
+        // 清空当前数据
+        Object.keys(currentCardData).forEach(key => {
+            delete currentCardData[key];
+        });
+
+        // 等待DOM更新
+        await nextTick();
+
+        // 加载暂存数据
+        Object.keys(cachedData).forEach(key => {
+            if (key === 'deck_options' && Array.isArray(cachedData[key])) {
+                currentCardData[key] = [...cachedData[key]];
+            } else {
+                currentCardData[key] = cachedData[key];
+            }
+        });
+
+        // 设置卡牌类型
+        currentCardType.value = cachedData.type || '';
+
+        await nextTick();
+
+        // 保存原始数据状态
+        setTimeout(() => {
+            // 注意：从暂存加载时不更新originalCardData，保持未保存状态
+            lastDataSnapshot.value = JSON.stringify(currentCardData);
+            console.log('✅ 从暂存加载完成，保持未保存状态');
+
+            // 【修复】自动生成预览图片，并结束加载动画
+            autoGeneratePreview(true);
+        }, 100);
+
+    } catch (error) {
+        console.error('从暂存加载失败:', error);
+        message.error(t('cardEditor.panel.loadFromCacheFailed'));
+
+        // 加载失败也要结束加载动画
+        imagePreviewLoading.value = false;
+        emit('update-preview-loading', false);
+    }
+};
+
+// 【新增】保存所有未保存的文件
+const saveAllUnsaved = async (unsavedPaths: string[], cacheMap: Map<string, any>) => {
+    if (unsavedPaths.length === 0) {
+        message.info(t('cardEditor.panel.noUnsavedFiles'));
+        return;
+    }
+
+    let successCount = 0;
+    let failCount = 0;
+
+    console.log(`💾 开始批量保存 ${unsavedPaths.length} 个文件`);
+
+    for (const filePath of unsavedPaths) {
+        try {
+            const cachedData = cacheMap.get(filePath);
+            if (!cachedData) {
+                console.warn(`⚠️ 文件 ${filePath} 没有暂存数据，跳过`);
+                continue;
+            }
+
+            // 直接保存JSON文件（不需要生成预览）
+            const jsonContent = JSON.stringify(cachedData, null, 2);
+            await WorkspaceService.saveFileContent(filePath, jsonContent);
+
+            // 清除暂存
+            emit('clear-cache', filePath);
+
+            successCount++;
+            console.log(`✅ 保存成功: ${filePath}`);
+        } catch (error) {
+            console.error(`❌ 保存失败: ${filePath}`, error);
+            failCount++;
+        }
+    }
+
+    // 刷新文件树
+    emit('refresh-file-tree');
+
+    // 如果当前文件也被保存了，更新原始数据状态
+    if (props.selectedFile?.path && unsavedPaths.includes(props.selectedFile.path as string)) {
+        saveOriginalData();
+    }
+
+    // 显示保存结果
+    if (successCount > 0 && failCount === 0) {
+        message.success(t('cardEditor.panel.saveAllSuccess', { count: successCount }));
+    } else if (successCount > 0 && failCount > 0) {
+        message.warning(t('cardEditor.panel.saveAllPartial', { success: successCount, failed: failCount }));
+    } else {
+        message.error(t('cardEditor.panel.saveAllFailed'));
+    }
+};
+
 // 导出方法供父组件调用
 defineExpose({
-    setSideFromExternal
+    setSideFromExternal,
+    loadFromCacheData,
+    saveAllUnsaved,
+    loadCardData // 暴露loadCardData方法供父组件调用
 });
 
 // 组件卸载时移除键盘事件监听器和清理定时器

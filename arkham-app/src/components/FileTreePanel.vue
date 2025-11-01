@@ -27,7 +27,9 @@
     <div class="file-tree-content">
       <n-spin :show="loading">
         <n-tree v-if="fileTreeData && fileTreeData.length > 0" :data="fileTreeData" :render-label="renderTreeLabel"
-          :render-prefix="renderTreePrefix" selectable expand-on-click @update:selected-keys="handleFileSelect" />
+          :render-prefix="renderTreePrefix" selectable :expand-on-click="false" :expanded-keys="expandedKeys"
+          :selected-keys="selectedKeys" @update:selected-keys="handleFileSelect"
+          @update:expanded-keys="handleExpandedKeysChange" />
         <n-empty v-else :description="$t('workspaceMain.fileTree.emptyText')" />
       </n-spin>
     </div>
@@ -500,7 +502,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, h, onMounted, computed, nextTick, onUnmounted } from 'vue';
+import { ref, h, onMounted, computed, nextTick, onUnmounted, watch } from 'vue';
 import { NIcon, useMessage, NText, NTag } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import type { TreeOption, FormInst, FormRules } from 'naive-ui';
@@ -532,9 +534,11 @@ import type { CardData, ExportCardParams, ArkhamDBContentPack } from '@/api/type
 
 interface Props {
   width: number;
+  selectedFile?: TreeOption | null;
+  unsavedFilePaths?: string[]; // 新增：未保存文件路径列表
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
 const emit = defineEmits<{
   'toggle': [];
@@ -655,6 +659,10 @@ const bleedModelOptions = computed(() => [
 
 // 文件树数据
 const fileTreeData = ref<TreeOption[]>([]);
+
+// 文件树展开和选中状态
+const expandedKeys = ref<Array<string | number>>([]);
+const selectedKeys = ref<Array<string | number>>([]);
 
 // 右键菜单
 const showContextMenu = ref(false);
@@ -1036,11 +1044,17 @@ const loadFileTree = async () => {
   loading.value = true;
   try {
     const data = await WorkspaceService.getFileTree(false);
-    // API返回的是单个根节点对象，需要转换为数组
+    // API返回的是单个根节点对象,需要转换为数组
     if (data.fileTree) {
       fileTreeData.value = [convertFileTreeData(data.fileTree)];
+
+      // 默认展开根节点
+      if (fileTreeData.value.length > 0 && fileTreeData.value[0].key) {
+        expandedKeys.value = [fileTreeData.value[0].key];
+      }
     } else {
       fileTreeData.value = [];
+      expandedKeys.value = [];
     }
   } catch (error) {
     console.error('加载文件树失败:', error);
@@ -1050,6 +1064,7 @@ const loadFileTree = async () => {
       message.error(t('workspaceMain.fileTree.messages.loadFailedNetwork'));
     }
     fileTreeData.value = [];
+    expandedKeys.value = [];
   } finally {
     loading.value = false;
   }
@@ -1062,9 +1077,22 @@ const refreshFileTree = () => {
 
 // 渲染树节点标签
 const renderTreeLabel = ({ option }: { option: TreeOption }) => {
+  // 检查是否为未保存文件
+  const isUnsaved = props.unsavedFilePaths?.includes(option.path as string) || false;
+
   return h('span', {
     onContextmenu: (e: MouseEvent) => handleRightClick(e, option)
-  }, option.label as string);
+  }, [
+    option.label as string,
+    // 如果文件未保存，显示"*"标记
+    isUnsaved ? h('span', {
+      style: {
+        color: '#fbbf24',
+        fontWeight: 'bold',
+        marginLeft: '4px'
+      }
+    }, ' *') : null
+  ]);
 };
 
 // 渲染树节点前缀图标
@@ -1156,7 +1184,36 @@ const renderTreePrefix = ({ option }: { option: TreeOption }) => {
 
 // 处理文件选择
 const handleFileSelect = (keys: Array<string | number>, options: TreeOption[]) => {
-  emit('file-select', keys, options[0]);
+  if (keys.length === 0 || !options[0]) {
+    return;
+  }
+
+  const selectedOption = options[0];
+
+  // 如果点击的是文件夹或工作空间节点，只展开/折叠，不触发文件切换
+  if (selectedOption.type === 'directory' || selectedOption.type === 'workspace') {
+    // 切换展开状态
+    const key = selectedOption.key;
+    if (expandedKeys.value.includes(key)) {
+      // 如果已展开，则折叠
+      expandedKeys.value = expandedKeys.value.filter(k => k !== key);
+    } else {
+      // 如果已折叠，则展开
+      expandedKeys.value = [...expandedKeys.value, key];
+    }
+
+    // 保持原有的选中状态，不改变选中项
+    return;
+  }
+
+  // 如果点击的是文件，触发文件切换事件
+  // 注意：不在这里更新 selectedKeys，而是等待父组件确认切换后，通过 watch 自动同步
+  emit('file-select', keys, selectedOption);
+};
+
+// 处理展开状态变化
+const handleExpandedKeysChange = (keys: Array<string | number>) => {
+  expandedKeys.value = keys;
 };
 
 // 处理右键点击
@@ -2113,6 +2170,17 @@ const closeArkhamDBImportDialog = () => {
   arkhamdbImportTarget.value = null;
   arkhamdbImportContent.value = null;
 };
+
+// 监听 selectedFile 的变化，同步 selectedKeys
+watch(() => props.selectedFile, (newFile) => {
+  if (newFile && newFile.key) {
+    // 更新选中状态，确保树组件显示正确的选中项
+    selectedKeys.value = [newFile.key];
+  } else {
+    // 如果没有选中文件，清空选中状态
+    selectedKeys.value = [];
+  }
+}, { immediate: true });
 
 // 组件挂载时加载数据
 onMounted(() => {

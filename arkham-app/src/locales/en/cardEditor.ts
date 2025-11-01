@@ -83,6 +83,7 @@ export default {
 
     // Action buttons
     saveCard: 'Save Card',
+    saveAll: 'Save All',
     previewCard: 'Preview Card',
     exportImage: 'Export Image',
     reset: 'Reset',
