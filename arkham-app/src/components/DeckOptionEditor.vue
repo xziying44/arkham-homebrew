@@ -165,25 +165,212 @@
                                                 :render-tag="renderTag"
                                             />
                                         </n-form-item>
-                                        <n-form-item :label="$t('deckOptionEditor.levelRange')">
-                                            <n-space>
-                                                <n-input-number
-                                                    v-model:value="option.level.min"
-                                                    :min="0"
-                                                    :max="10"
-                                                    :placeholder="$t('deckOptionEditor.minLevel')"
-                                                    style="width: 100px"
-                                                />
-                                                <n-text>-</n-text>
-                                                <n-input-number
-                                                    v-model:value="option.level.max"
-                                                    :min="0"
-                                                    :max="10"
-                                                    :placeholder="$t('deckOptionEditor.maxLevel')"
-                                                    style="width: 100px"
-                                                />
+
+                                        <n-divider style="margin: 12px 0;">
+                                            <n-text depth="3" style="font-size: 12px;">{{ $t('deckOptionEditor.basicFilters') }}</n-text>
+                                        </n-divider>
+
+                                        <!-- 基础条件标签（职阶选择专用） -->
+                                        <div class="basic-condition-tags" style="margin-bottom: 12px;">
+                                            <n-space size="small" wrap>
+                                                <!-- 卡牌类型标签 -->
+                                                <n-tag
+                                                    :type="hasBasicConditionValue(option, 'type') ? 'primary' : 'default'"
+                                                    :closable="false"
+                                                    checkable
+                                                    :checked="basicConditionTags[`${option.id || 'new'}_faction_select_tags`]?.type || hasBasicConditionValue(option, 'type')"
+                                                    @update:checked="() => toggleFactionSelectConditionTag(option, 'type')"
+                                                    style="cursor: pointer;"
+                                                >
+                                                    {{ $t('deckOptionEditor.cardType') }}
+                                                    <n-text v-if="hasBasicConditionValue(option, 'type')" depth="1" style="font-size: 10px; margin-left: 4px; font-weight: 500;">
+                                                        ({{ option.type?.length || 0 }})
+                                                    </n-text>
+                                                </n-tag>
+
+                                                <!-- 特性标签 -->
+                                                <n-tag
+                                                    :type="hasBasicConditionValue(option, 'trait') ? 'info' : 'default'"
+                                                    :closable="false"
+                                                    checkable
+                                                    :checked="basicConditionTags[`${option.id || 'new'}_faction_select_tags`]?.trait || hasBasicConditionValue(option, 'trait')"
+                                                    @update:checked="() => toggleFactionSelectConditionTag(option, 'trait')"
+                                                    style="cursor: pointer;"
+                                                >
+                                                    {{ $t('deckOptionEditor.traits') }}
+                                                    <n-text v-if="hasBasicConditionValue(option, 'trait')" depth="1" style="font-size: 10px; margin-left: 4px; font-weight: 500;">
+                                                        ({{ option.trait?.length || 0 }})
+                                                    </n-text>
+                                                </n-tag>
+
+                                                <!-- 槽位标签 -->
+                                                <n-tag
+                                                    :type="hasBasicConditionValue(option, 'slot') ? 'warning' : 'default'"
+                                                    :closable="false"
+                                                    checkable
+                                                    :checked="basicConditionTags[`${option.id || 'new'}_faction_select_tags`]?.slot || hasBasicConditionValue(option, 'slot')"
+                                                    @update:checked="() => toggleFactionSelectConditionTag(option, 'slot')"
+                                                    style="cursor: pointer;"
+                                                >
+                                                    {{ $t('deckOptionEditor.slots') }}
+                                                    <n-text v-if="hasBasicConditionValue(option, 'slot')" depth="1" style="font-size: 10px; margin-left: 4px; font-weight: 500;">
+                                                        ({{ option.slot?.length || 0 }})
+                                                    </n-text>
+                                                </n-tag>
+
+                                                <!-- 使用标记标签 -->
+                                                <n-tag
+                                                    :type="hasBasicConditionValue(option, 'uses') ? 'error' : 'default'"
+                                                    :closable="false"
+                                                    checkable
+                                                    :checked="basicConditionTags[`${option.id || 'new'}_faction_select_tags`]?.uses || hasBasicConditionValue(option, 'uses')"
+                                                    @update:checked="() => toggleFactionSelectConditionTag(option, 'uses')"
+                                                    style="cursor: pointer;"
+                                                >
+                                                    {{ $t('deckOptionEditor.uses') }}
+                                                    <n-text v-if="hasBasicConditionValue(option, 'uses')" depth="1" style="font-size: 10px; margin-left: 4px; font-weight: 500;">
+                                                        ({{ option.uses?.length || 0 }})
+                                                    </n-text>
+                                                </n-tag>
+
+                                                <!-- 文本匹配标签 -->
+                                                <n-tag
+                                                    :type="hasBasicConditionValue(option, 'text') ? 'info' : 'default'"
+                                                    :closable="false"
+                                                    checkable
+                                                    :checked="basicConditionTags[`${option.id || 'new'}_faction_select_tags`]?.text || hasBasicConditionValue(option, 'text')"
+                                                    @update:checked="() => toggleFactionSelectConditionTag(option, 'text')"
+                                                    style="cursor: pointer;"
+                                                >
+                                                    {{ $t('deckOptionEditor.textContains') }}
+                                                    <n-text v-if="hasBasicConditionValue(option, 'text')" depth="1" style="font-size: 10px; margin-left: 4px; font-weight: 500;">
+                                                        ({{ option.text?.length || 0 }})
+                                                    </n-text>
+                                                </n-tag>
+
+                                                <!-- 等级范围标签 -->
+                                                <n-tag
+                                                    :type="hasBasicConditionValue(option, 'level') ? 'warning' : 'default'"
+                                                    :closable="false"
+                                                    checkable
+                                                    :checked="basicConditionTags[`${option.id || 'new'}_faction_select_tags`]?.level || hasBasicConditionValue(option, 'level')"
+                                                    @update:checked="() => toggleFactionSelectConditionTag(option, 'level')"
+                                                    style="cursor: pointer;"
+                                                >
+                                                    {{ $t('deckOptionEditor.levelRange') }}
+                                                    <n-text v-if="hasBasicConditionValue(option, 'level')" depth="1" style="font-size: 10px; margin-left: 4px; font-weight: 500;">
+                                                        ({{ option.level?.min || 0 }}-{{ option.level?.max || 5 }})
+                                                    </n-text>
+                                                </n-tag>
+
+                                                <!-- 数量限制标签 -->
+                                                <n-tag
+                                                    :type="hasBasicConditionValue(option, 'limit') ? 'error' : 'default'"
+                                                    :closable="false"
+                                                    checkable
+                                                    :checked="basicConditionTags[`${option.id || 'new'}_faction_select_tags`]?.limit || hasBasicConditionValue(option, 'limit')"
+                                                    @update:checked="() => toggleFactionSelectConditionTag(option, 'limit')"
+                                                    style="cursor: pointer;"
+                                                >
+                                                    {{ $t('deckOptionEditor.limit') }}
+                                                    <n-text v-if="hasBasicConditionValue(option, 'limit')" depth="1" style="font-size: 10px; margin-left: 4px; font-weight: 500;">
+                                                        ({{ option.limit }})
+                                                    </n-text>
+                                                </n-tag>
                                             </n-space>
-                                        </n-form-item>
+                                        </div>
+
+                                        <!-- 展开的条件配置（职阶选择专用） -->
+                                        <div v-if="basicConditionTags[`${option.id || 'new'}_faction_select_tags`]" class="expanded-conditions">
+                                            <!-- 卡牌类型 -->
+                                            <div v-show="basicConditionTags[`${option.id || 'new'}_faction_select_tags`]?.type" class="condition-config">
+                                                <n-form-item :label="$t('deckOptionEditor.cardType')">
+                                                    <n-select
+                                                        v-model:value="option.type"
+                                                        :options="cardTypeOptions"
+                                                        multiple
+                                                        :placeholder="$t('deckOptionEditor.selectCardTypes')"
+                                                        :render-tag="renderTag"
+                                                    />
+                                                </n-form-item>
+                                            </div>
+
+                                            <!-- 特性 -->
+                                            <div v-show="basicConditionTags[`${option.id || 'new'}_faction_select_tags`]?.trait" class="condition-config">
+                                                <n-form-item :label="$t('deckOptionEditor.traits')">
+                                                    <n-dynamic-tags v-model:value="option.trait" :placeholder="$t('deckOptionEditor.addTrait')" />
+                                                </n-form-item>
+                                            </div>
+
+                                            <!-- 槽位 -->
+                                            <div v-show="basicConditionTags[`${option.id || 'new'}_faction_select_tags`]?.slot" class="condition-config">
+                                                <n-form-item :label="$t('deckOptionEditor.slots')">
+                                                    <n-select
+                                                        v-model:value="option.slot"
+                                                        :options="slotOptions"
+                                                        multiple
+                                                        :placeholder="$t('deckOptionEditor.selectSlots')"
+                                                        :render-tag="renderTag"
+                                                    />
+                                                </n-form-item>
+                                            </div>
+
+                                            <!-- 使用标记 -->
+                                            <div v-show="basicConditionTags[`${option.id || 'new'}_faction_select_tags`]?.uses" class="condition-config">
+                                                <n-form-item :label="$t('deckOptionEditor.uses')">
+                                                    <n-select
+                                                        v-model:value="option.uses"
+                                                        :options="usesOptions"
+                                                        multiple
+                                                        :placeholder="$t('deckOptionEditor.selectUses')"
+                                                        :render-tag="renderTag"
+                                                    />
+                                                </n-form-item>
+                                            </div>
+
+                                            <!-- 文本匹配 -->
+                                            <div v-show="basicConditionTags[`${option.id || 'new'}_faction_select_tags`]?.text" class="condition-config">
+                                                <n-form-item :label="$t('deckOptionEditor.textContains')">
+                                                    <n-dynamic-tags v-model:value="option.text" :placeholder="$t('deckOptionEditor.addText')" />
+                                                </n-form-item>
+                                            </div>
+
+                                            <!-- 等级范围 -->
+                                            <div v-show="basicConditionTags[`${option.id || 'new'}_faction_select_tags`]?.level" class="condition-config">
+                                                <n-form-item :label="$t('deckOptionEditor.levelRange')">
+                                                    <n-space>
+                                                        <n-input-number
+                                                            v-model:value="option.level.min"
+                                                            :min="0"
+                                                            :max="10"
+                                                            :placeholder="$t('deckOptionEditor.minLevel')"
+                                                            style="width: 100px"
+                                                        />
+                                                        <n-text>-</n-text>
+                                                        <n-input-number
+                                                            v-model:value="option.level.max"
+                                                            :min="0"
+                                                            :max="10"
+                                                            :placeholder="$t('deckOptionEditor.maxLevel')"
+                                                            style="width: 100px"
+                                                        />
+                                                    </n-space>
+                                                </n-form-item>
+                                            </div>
+
+                                            <!-- 数量限制 -->
+                                            <div v-show="basicConditionTags[`${option.id || 'new'}_faction_select_tags`]?.limit" class="condition-config">
+                                                <n-form-item :label="$t('deckOptionEditor.limit')">
+                                                    <n-input-number
+                                                        v-model:value="option.limit"
+                                                        :min="0"
+                                                        :max="50"
+                                                        :placeholder="$t('deckOptionEditor.limitPlaceholder')"
+                                                        style="width: 150px"
+                                                    />
+                                                </n-form-item>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <!-- 牌库大小选择配置 -->
@@ -1056,6 +1243,31 @@ const toggleBasicConditionTag = (option: DeckOption, conditionType: string) => {
     basicConditionTags.value[optionKey][conditionType] = !basicConditionTags.value[optionKey][conditionType];
 };
 
+// 初始化职阶选择条件标签状态
+const initializeFactionSelectConditionTags = (option: DeckOption) => {
+    const optionKey = `${option.id || 'new'}_faction_select_tags`;
+    if (!basicConditionTags.value[optionKey]) {
+        basicConditionTags.value[optionKey] = {
+            type: hasBasicConditionValue(option, 'type'),
+            trait: hasBasicConditionValue(option, 'trait'),
+            slot: hasBasicConditionValue(option, 'slot'),
+            uses: hasBasicConditionValue(option, 'uses'),
+            text: hasBasicConditionValue(option, 'text'),
+            level: hasBasicConditionValue(option, 'level'),
+            limit: hasBasicConditionValue(option, 'limit')
+        };
+    }
+};
+
+// 切换职阶选择条件标签
+const toggleFactionSelectConditionTag = (option: DeckOption, conditionType: string) => {
+    const optionKey = `${option.id || 'new'}_faction_select_tags`;
+    if (!basicConditionTags.value[optionKey]) {
+        initializeFactionSelectConditionTags(option);
+    }
+    basicConditionTags.value[optionKey][conditionType] = !basicConditionTags.value[optionKey][conditionType];
+};
+
 // 检查高级属性选项是否有值
 const hasAdvancedOptionValue = (item: OptionSelectItem, valueType: string): boolean => {
     switch (valueType) {
@@ -1162,7 +1374,7 @@ const editOption = (index: number) => {
         return;
     }
 
-    // 如果之前有其他选项在编辑状态，先保存它
+    // 如果之前有其他选项在编辑状态,先保存它
     if (editingIndex.value >= 0 && editingIndex.value !== index) {
         saveOption(editingIndex.value);
     }
@@ -1182,6 +1394,11 @@ const editOption = (index: number) => {
         } else if (option.atleast.types !== undefined) {
             atleastType.value = 'types';
         }
+    }
+
+    // 初始化职阶选择标签状态
+    if (option.selectionType === 'faction') {
+        initializeFactionSelectConditionTags(option);
     }
 };
 
@@ -1286,9 +1503,16 @@ const autoSaveOptions = () => {
             if (option.faction_select && option.faction_select.length > 0) {
                 cleaned.faction_select = option.faction_select;
             }
+            // 职阶选择支持所有基础条件（除了faction，因为用的是faction_select）
+            if (option.type && option.type.length > 0) cleaned.type = option.type;
+            if (option.trait && option.trait.length > 0) cleaned.trait = option.trait;
+            if (option.slot && option.slot.length > 0) cleaned.slot = option.slot;
+            if (option.uses && option.uses.length > 0) cleaned.uses = option.uses;
+            if (option.text && option.text.length > 0) cleaned.text = option.text;
             if (option.level !== undefined && option.level !== null) {
                 cleaned.level = { ...option.level };
             }
+            if (option.limit) cleaned.limit = option.limit;
         } else if (option.selectionType === 'deckSize') {
             cleaned.name = t('deckOptionEditor.selectionTypeNames.deckSize');
             if (option.deck_size_select && option.deck_size_select.length > 0) {
@@ -1356,9 +1580,16 @@ const generateJsonPreview = () => {
             if (option.faction_select && option.faction_select.length > 0) {
                 cleaned.faction_select = option.faction_select;
             }
+            // 职阶选择支持所有基础条件（除了faction，因为用的是faction_select）
+            if (option.type && option.type.length > 0) cleaned.type = option.type;
+            if (option.trait && option.trait.length > 0) cleaned.trait = option.trait;
+            if (option.slot && option.slot.length > 0) cleaned.slot = option.slot;
+            if (option.uses && option.uses.length > 0) cleaned.uses = option.uses;
+            if (option.text && option.text.length > 0) cleaned.text = option.text;
             if (option.level !== undefined && option.level !== null) {
                 cleaned.level = { ...option.level };
             }
+            if (option.limit) cleaned.limit = option.limit;
         } else if (option.selectionType === 'deckSize') {
             cleaned.name = t('deckOptionEditor.selectionTypeNames.deckSize');
             if (option.deck_size_select && option.deck_size_select.length > 0) {
@@ -1519,6 +1750,11 @@ const loadFromCardData = () => {
     // 初始化所有选项的标签状态
     deckOptions.value.forEach(option => {
         initializeBasicConditionTags(option);
+
+        // 初始化职阶选择的标签状态
+        if (option.selectionType === 'faction') {
+            initializeFactionSelectConditionTags(option);
+        }
 
         // 初始化高级属性选项的标签状态
         if (option.option_select) {
