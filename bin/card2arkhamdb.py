@@ -479,6 +479,10 @@ class Card2ArkhamDBConverter:
             "pack_code": self.pack_code
         }
 
+        # 特性
+        if traits := self._get_traits():
+            data["traits"] = traits
+
         # 背面数据
         card_size = 30
         card_back = self.card_data.get("back", {})
