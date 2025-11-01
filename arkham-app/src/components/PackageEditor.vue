@@ -1,35 +1,70 @@
 <template>
   <div class="package-editor-container">
-    <!-- 编辑器头部 -->
-    <div class="editor-header">
-      <div class="package-info">
-        <h3>{{ packageData.meta?.name || t('contentPackage.common.unnamedPackage') }}</h3>
-        <div class="package-meta">
-          <n-tag type="info" size="small">{{ t(`contentPackage.languages.${packageData.meta?.language || 'zh-cn'}`)
-          }}</n-tag>
-          <n-tag v-for="type in (packageData.meta?.types || [])" :key="type" type="default" size="small">
-            {{ t(`contentPackage.packageTypes.${type}`) }}
-          </n-tag>
-          <n-tag type="success" size="small">ID: {{ packageData.meta?.code || t('contentPackage.common.unknown') }}</n-tag>
-        </div>
+    <!-- 上传页面 -->
+    <div v-if="showUploadPage" class="upload-page">
+      <div class="upload-page-header">
+        <n-button @click="closeUploadPage" size="small">
+          <template #icon>
+            <n-icon :component="ArrowBackOutline" />
+          </template>
+          {{ t('common.buttons.back') }}
+        </n-button>
+        <h3>{{ getUploadPageTitle() }}</h3>
       </div>
-      <div class="editor-actions">
-        <n-button @click="showEditMetaDialog = true" size="small">
-          <template #icon>
-            <n-icon :component="CreateOutline" />
-          </template>
-          {{ t('contentPackage.common.editInfo') }}
-        </n-button>
-        <n-button type="primary" @click="handleSave" :loading="saving" size="small">
-          <template #icon>
-            <n-icon :component="SaveOutline" />
-          </template>
-          {{ t('contentPackage.common.save') }}
-        </n-button>
+      <div class="upload-page-content">
+        <UniversalUploadDialog
+          ref="uploadDialogRef"
+          :upload-type="currentUploadType"
+          :current-item="currentUploadItem"
+          :upload-items="currentUploadItems"
+          :config="packageData"
+          :is-batch="isCurrentUploadBatch"
+          @confirm="handleUploadConfirm"
+          @cancel="closeUploadPage"
+        />
+      </div>
+      <div class="upload-page-footer">
+        <n-space>
+          <n-button @click="closeUploadPage">{{ t('contentPackage.actions.cancel') }}</n-button>
+          <n-button type="primary" @click="triggerUpload" :loading="isAnyUploading">
+            {{ getUploadButtonText() }}
+          </n-button>
+        </n-space>
       </div>
     </div>
 
-    <!-- 编辑器内容 -->
+    <!-- 主编辑器内容 -->
+    <div v-else class="editor-main">
+      <!-- 编辑器头部 -->
+      <div class="editor-header">
+        <div class="package-info">
+          <h3>{{ packageData.meta?.name || t('contentPackage.common.unnamedPackage') }}</h3>
+          <div class="package-meta">
+            <n-tag type="info" size="small">{{ t(`contentPackage.languages.${packageData.meta?.language || 'zh-cn'}`)
+            }}</n-tag>
+            <n-tag v-for="type in (packageData.meta?.types || [])" :key="type" type="default" size="small">
+              {{ t(`contentPackage.packageTypes.${type}`) }}
+            </n-tag>
+            <n-tag type="success" size="small">ID: {{ packageData.meta?.code || t('contentPackage.common.unknown') }}</n-tag>
+          </div>
+        </div>
+        <div class="editor-actions">
+          <n-button @click="showEditMetaDialog = true" size="small">
+            <template #icon>
+              <n-icon :component="CreateOutline" />
+            </template>
+            {{ t('contentPackage.common.editInfo') }}
+          </n-button>
+          <n-button type="primary" @click="handleSave" :loading="saving" size="small">
+            <template #icon>
+              <n-icon :component="SaveOutline" />
+            </template>
+            {{ t('contentPackage.common.save') }}
+          </n-button>
+        </div>
+      </div>
+
+      <!-- 编辑器内容 -->
     <div class="editor-content">
       <n-tabs type="card" default-value="info" animated>
         <!-- 基础信息标签页 -->
@@ -51,7 +86,7 @@
                 </div>
                 <!-- 上传云端按钮 - 当有base64数据时显示 -->
                 <n-button v-if="packageData.banner_base64" type="primary" size="small"
-                  @click="showUploadBannerDialog = true" class="upload-cloud-btn">
+                  @click="openBannerUploadPage" class="upload-cloud-btn">
                   <template #icon>
                     <n-icon :component="CloudUploadOutline" />
                   </template>
@@ -129,7 +164,7 @@
                 <n-button
                   v-if="v2Cards.length > 0"
                   type="warning"
-                  @click="showBatchUploadDialog = true"
+                  @click="openCardBatchUploadPage"
                   size="small"
                 >
                   <template #icon>
@@ -231,7 +266,7 @@
 
                       <!-- 上传按钮 -->
                       <n-button v-if="getCardStatus(card.filename).version === '2.0'" type="primary" size="small"
-                        @click="openUploadCardDialog(card)"
+                        @click="openCardUploadPage(card)"
                         :loading="isCardUploading && uploadingCard?.filename === card.filename">
                         <template #icon>
                           <n-icon :component="CloudUploadOutline" />
@@ -256,7 +291,7 @@
                 <n-button
                   v-if="encounters.length > 0"
                   type="warning"
-                  @click="showBatchEncounterUploadDialog = true"
+                  @click="openEncounterBatchUploadPage"
                   size="small"
                 >
                   <template #icon>
@@ -332,7 +367,7 @@
                     </div>
                   </div>
                   <div class="encounter-actions">
-                    <n-button circle size="tiny" type="info" @click="openUploadEncounterDialog(encounter)"
+                    <n-button circle size="tiny" type="info" @click="openEncounterUploadPage(encounter)"
                       :loading="isEncounterUploading && uploadingEncounter?.code === encounter.code">
                       <template #icon>
                         <n-icon :component="CloudUploadOutline" />
@@ -631,135 +666,134 @@
           <div class="physical-export-panel">
             <h4>{{ $t('contentPackage.pnp.title') }}</h4>
 
-            <!-- 导出信息卡片 -->
-            <n-card :title="$t('contentPackage.pnp.exportStatus.title')" :bordered="false" style="margin-bottom: 1.5rem;">
-              <n-descriptions :column="2" bordered>
-                <n-descriptions-item :label="$t('contentPackage.pnp.exportStatus.packageName')">
-                  <n-text strong>{{ packageData.meta?.name || t('contentPackage.common.unnamedPackage') }}</n-text>
-                </n-descriptions-item>
-                <n-descriptions-item :label="$t('contentPackage.pnp.exportStatus.cardCount')">
-                  <n-tag type="info" size="small">{{ packageData.cards?.length || 0 }} {{ $t('contentPackage.pnp.exportStatus.cardCount') }}</n-tag>
-                </n-descriptions-item>
-                <n-descriptions-item :label="$t('contentPackage.pnp.exportStatus.doubleSidedCards')">
-                  <n-tag type="success" size="small">{{ v2Cards.length }} {{ $t('contentPackage.pnp.exportStatus.doubleSidedCards') }}</n-tag>
-                </n-descriptions-item>
-                <n-descriptions-item :label="$t('contentPackage.pnp.exportStatus.exportStatus')">
-                  <n-tag :type="v2Cards.length > 0 ? 'success' : 'warning'" size="small">
-                    {{ v2Cards.length > 0 ? $t('contentPackage.pnp.exportStatus.canExport') : $t('contentPackage.pnp.exportStatus.needDoubleSidedCards') }}
-                  </n-tag>
-                </n-descriptions-item>
-              </n-descriptions>
-            </n-card>
+            <!-- 上半部分：左右分栏 -->
+            <div class="pnp-top-layout">
+              <!-- 左侧：导出状态 -->
+              <div class="pnp-status-section">
+                <!-- 导出信息卡片 -->
+                <n-card :title="$t('contentPackage.pnp.exportStatus.title')" :bordered="false" size="small" style="margin-bottom: 1rem;">
+                  <n-descriptions :column="1" bordered size="small">
+                    <n-descriptions-item :label="$t('contentPackage.pnp.exportStatus.packageName')">
+                      <n-text strong>{{ packageData.meta?.name || t('contentPackage.common.unnamedPackage') }}</n-text>
+                    </n-descriptions-item>
+                    <n-descriptions-item :label="$t('contentPackage.pnp.exportStatus.cardCount')">
+                      <n-tag type="info" size="small">{{ packageData.cards?.length || 0 }} 张</n-tag>
+                    </n-descriptions-item>
+                    <n-descriptions-item :label="$t('contentPackage.pnp.exportStatus.doubleSidedCards')">
+                      <n-tag type="success" size="small">{{ v2Cards.length }} 张</n-tag>
+                    </n-descriptions-item>
+                    <n-descriptions-item :label="$t('contentPackage.pnp.exportStatus.exportStatus')">
+                      <n-tag :type="v2Cards.length > 0 ? 'success' : 'warning'" size="small">
+                        {{ v2Cards.length > 0 ? $t('contentPackage.pnp.exportStatus.canExport') : $t('contentPackage.pnp.exportStatus.needDoubleSidedCards') }}
+                      </n-tag>
+                    </n-descriptions-item>
+                  </n-descriptions>
+                </n-card>
 
-            <!-- 导出说明 -->
-            <n-alert type="info" style="margin-bottom: 1.5rem;">
-              <template #icon>
-                <n-icon :component="InformationCircleOutline" />
-              </template>
-              <div>
-                <p><strong>{{ $t('contentPackage.pnp.exportParams.singleCard') }}：</strong>{{ $t('contentPackage.pnp.description.singleCardMode') }}</p>
-                <p><strong>{{ $t('contentPackage.pnp.exportParams.printSheet') }}：</strong>{{ $t('contentPackage.pnp.description.printSheetMode') }}</p>
-                <p><strong>{{ $t('contentPackage.pnp.description.landscapeNote') }}</strong></p>
+                <!-- 导出说明 -->
+                <n-alert type="info" size="small">
+                  <template #icon>
+                    <n-icon :component="InformationCircleOutline" />
+                  </template>
+                  <div>
+                    <p><strong>{{ $t('contentPackage.pnp.exportParams.singleCard') }}：</strong>{{ $t('contentPackage.pnp.description.singleCardMode') }}</p>
+                    <p><strong>{{ $t('contentPackage.pnp.exportParams.printSheet') }}：</strong>{{ $t('contentPackage.pnp.description.printSheetMode') }}</p>
+                    <p style="margin-bottom: 0;"><strong>{{ $t('contentPackage.pnp.description.landscapeNote') }}</strong></p>
+                  </div>
+                </n-alert>
               </div>
-            </n-alert>
 
-            <!-- 导出参数配置 -->
-            <n-card :title="$t('contentPackage.pnp.exportParams.title')" :bordered="false" style="margin-bottom: 1.5rem;">
-              <n-form :label-width="120">
-                <!-- 导出模式 -->
-                <n-form-item :label="$t('contentPackage.pnp.exportParams.exportMode')">
-                  <n-radio-group v-model:value="pnpExportMode">
-                    <n-space>
-                      <n-radio value="single_card">{{ $t('contentPackage.pnp.exportParams.singleCard') }}</n-radio>
-                      <n-radio value="print_sheet">{{ $t('contentPackage.pnp.exportParams.printSheet') }}</n-radio>
-                      <n-radio value="images">{{ $t('contentPackage.pnp.exportParams.images') }}</n-radio>
-                    </n-space>
-                  </n-radio-group>
-                </n-form-item>
+              <!-- 右侧：导出参数 -->
+              <div class="pnp-params-section">
+                <n-card :title="$t('contentPackage.pnp.exportParams.title')" :bordered="false" size="small">
+                  <n-form :label-width="100" size="small">
+                    <!-- 导出模式 -->
+                    <n-form-item :label="$t('contentPackage.pnp.exportParams.exportMode')">
+                      <n-radio-group v-model:value="pnpExportMode">
+                        <n-space>
+                          <n-radio value="single_card">{{ $t('contentPackage.pnp.exportParams.singleCard') }}</n-radio>
+                          <n-radio value="print_sheet">{{ $t('contentPackage.pnp.exportParams.printSheet') }}</n-radio>
+                          <n-radio value="images">{{ $t('contentPackage.pnp.exportParams.images') }}</n-radio>
+                        </n-space>
+                      </n-radio-group>
+                    </n-form-item>
 
-                <!-- 纸张规格（仅打印纸模式） -->
-                <n-form-item v-if="pnpExportMode === 'print_sheet'" :label="$t('contentPackage.pnp.exportParams.paperSize')">
-                  <n-select v-model:value="pnpPaperSize" :options="paperSizeOptions" style="width: 300px;" />
-                </n-form-item>
+                    <!-- 纸张规格（仅打印纸模式） -->
+                    <n-form-item v-if="pnpExportMode === 'print_sheet'" :label="$t('contentPackage.pnp.exportParams.paperSize')">
+                      <n-select v-model:value="pnpPaperSize" :options="paperSizeOptions" />
+                    </n-form-item>
 
-                <!-- 文件名前缀（仅图片模式） -->
-                <n-form-item v-if="pnpExportMode === 'images'" :label="$t('contentPackage.pnp.exportParams.prefix')">
-                  <n-input v-model:value="pnpExportParams.prefix" :placeholder="$t('contentPackage.pnp.exportParams.prefixPlaceholder')" style="width: 300px;" />
-                  <n-text depth="3" style="margin-left: 1rem;">{{ $t('contentPackage.pnp.exportParams.prefixDescription') }}</n-text>
-                </n-form-item>
+                    <!-- 文件名前缀（仅图片模式） -->
+                    <n-form-item v-if="pnpExportMode === 'images'" :label="$t('contentPackage.pnp.exportParams.prefix')">
+                      <n-input v-model:value="pnpExportParams.prefix" :placeholder="$t('contentPackage.pnp.exportParams.prefixPlaceholder')" />
+                    </n-form-item>
 
-                <n-divider>{{ $t('contentPackage.pnp.exportParams.imageParams') }}</n-divider>
+                    <!-- DPI -->
+                    <n-form-item :label="$t('contentPackage.pnp.exportParams.dpi')">
+                      <n-input-number v-model:value="pnpExportParams.dpi" :min="150" :max="600" :step="50" style="width: 120px;" />
+                    </n-form-item>
 
-                <!-- DPI -->
-                <n-form-item :label="$t('contentPackage.pnp.exportParams.dpi')">
-                  <n-input-number v-model:value="pnpExportParams.dpi" :min="150" :max="600" :step="50" style="width: 200px;" />
-                  <n-text depth="3" style="margin-left: 1rem;">{{ $t('contentPackage.pnp.exportParams.dpiRecommendation') }}</n-text>
-                </n-form-item>
+                    <!-- 卡牌规格 -->
+                    <n-form-item :label="$t('contentPackage.pnp.exportParams.cardSize')">
+                      <n-select v-model:value="pnpExportParams.size" :options="cardSizeOptions" />
+                    </n-form-item>
 
-                <!-- 卡牌规格 -->
-                <n-form-item :label="$t('contentPackage.pnp.exportParams.cardSize')">
-                  <n-select v-model:value="pnpExportParams.size" :options="cardSizeOptions" style="width: 300px;" />
-                </n-form-item>
+                    <!-- 出血尺寸 -->
+                    <n-form-item :label="$t('contentPackage.pnp.exportParams.bleedSize')">
+                      <n-select v-model:value="pnpExportParams.bleed" :options="bleedOptions" style="width: 120px;" />
+                    </n-form-item>
 
-                <!-- 出血尺寸 -->
-                <n-form-item :label="$t('contentPackage.pnp.exportParams.bleedSize')">
-                  <n-select v-model:value="pnpExportParams.bleed" :options="bleedOptions" style="width: 200px;" />
-                </n-form-item>
+                    <!-- 出血模式 -->
+                    <n-form-item :label="$t('contentPackage.pnp.exportParams.bleedMode')">
+                      <n-select v-model:value="pnpExportParams.bleed_mode" :options="bleedModeOptions" style="width: 120px;" />
+                    </n-form-item>
 
-                <!-- 出血模式 -->
-                <n-form-item :label="$t('contentPackage.pnp.exportParams.bleedMode')">
-                  <n-select v-model:value="pnpExportParams.bleed_mode" :options="bleedModeOptions" style="width: 200px;" />
-                </n-form-item>
+                    <!-- 出血模型 -->
+                    <n-form-item :label="$t('contentPackage.pnp.exportParams.bleedModel')">
+                      <n-select v-model:value="pnpExportParams.bleed_model" :options="bleedModelOptions" style="width: 120px;" />
+                    </n-form-item>
 
-                <!-- 出血模型 -->
-                <n-form-item :label="$t('contentPackage.pnp.exportParams.bleedModel')">
-                  <n-select v-model:value="pnpExportParams.bleed_model" :options="bleedModelOptions" style="width: 200px;" />
-                </n-form-item>
+                    <!-- 遭遇组模式 -->
+                    <n-form-item :label="$t('contentPackage.pnp.encounterGroupMode.label')">
+                      <n-select v-model:value="pnpExportParams.encounter_group_mode" :options="encounterGroupModeOptions" style="width: 120px;" />
+                    </n-form-item>
 
-                <!-- 遭遇组模式 -->
-                <n-form-item :label="$t('contentPackage.pnp.encounterGroupMode.label')">
-                  <n-select v-model:value="pnpExportParams.encounter_group_mode" :options="encounterGroupModeOptions" style="width: 200px;" />
-                  <n-text depth="3" style="margin-left: 1rem;">{{ $t('contentPackage.pnp.encounterGroupMode.description') }}</n-text>
-                </n-form-item>
+                    <!-- 导出格式 -->
+                    <n-form-item :label="$t('contentPackage.pnp.exportParams.exportFormat')">
+                      <n-select v-model:value="pnpExportParams.format" :options="formatOptions" style="width: 120px;" />
+                    </n-form-item>
 
-                <!-- 导出格式 -->
-                <n-form-item :label="$t('contentPackage.pnp.exportParams.exportFormat')">
-                  <n-select v-model:value="pnpExportParams.format" :options="formatOptions" style="width: 200px;" />
-                </n-form-item>
+                    <!-- 图片质量（仅JPG） -->
+                    <n-form-item v-if="pnpExportParams.format === 'JPG'" :label="$t('contentPackage.pnp.exportParams.imageQuality')">
+                      <n-slider v-model:value="pnpExportParams.quality" :min="50" :max="100" :step="5"
+                        :marks="{ 50: '50', 75: '75', 90: '90', 100: '100' }" style="width: 200px;" />
+                    </n-form-item>
 
-                <!-- 图片质量（仅JPG） -->
-                <n-form-item v-if="pnpExportParams.format === 'JPG'" :label="$t('contentPackage.pnp.exportParams.imageQuality')">
-                  <n-slider v-model:value="pnpExportParams.quality" :min="50" :max="100" :step="5"
-                    :marks="{ 50: '50', 75: '75', 90: '90', 100: '100' }" style="width: 300px;" />
-                </n-form-item>
+                    <!-- 输出文件名 -->
+                    <n-form-item :label="pnpExportMode === 'images' ? $t('contentPackage.pnp.exportParams.outputFolderName') : $t('contentPackage.pnp.exportParams.outputFilename')">
+                      <n-input
+                        v-model:value="pnpOutputFilename"
+                        :placeholder="pnpExportMode === 'images' ? $t('contentPackage.pnp.exportParams.folderNamePlaceholder') : 'pnp_export.pdf'">
+                        <template #suffix v-if="pnpExportMode !== 'images'">{{ $t('contentPackage.pnp.exportParams.pdfExtension') }}</template>
+                      </n-input>
+                    </n-form-item>
 
-                <n-divider>{{ $t('contentPackage.pnp.exportParams.outputSettings') }}</n-divider>
+                    <!-- 导出按钮 -->
+                    <n-form-item>
+                      <n-button type="warning" @click="exportToPnp" :loading="exportingToPnp" :disabled="v2Cards.length === 0" block>
+                        <template #icon>
+                          <n-icon :component="PrintOutline" />
+                        </template>
+                        {{ exportingToPnp ? $t('contentPackage.pnp.exportParams.exporting') : $t('contentPackage.pnp.exportParams.startExport') }}
+                      </n-button>
+                    </n-form-item>
+                  </n-form>
+                </n-card>
+              </div>
+            </div>
 
-                <!-- 输出文件名 -->
-                <n-form-item :label="pnpExportMode === 'images' ? $t('contentPackage.pnp.exportParams.outputFolderName') : $t('contentPackage.pnp.exportParams.outputFilename')">
-                  <n-input
-                    v-model:value="pnpOutputFilename"
-                    :placeholder="pnpExportMode === 'images' ? $t('contentPackage.pnp.exportParams.folderNamePlaceholder') : 'pnp_export.pdf'"
-                    style="width: 300px;">
-                    <template #suffix v-if="pnpExportMode !== 'images'">{{ $t('contentPackage.pnp.exportParams.pdfExtension') }}</template>
-                  </n-input>
-                  <n-text v-if="pnpExportMode === 'images'" depth="3" style="margin-left: 1rem;">{{ $t('contentPackage.pnp.exportParams.folderNameDescription') }}</n-text>
-                </n-form-item>
-
-                <!-- 导出按钮 -->
-                <n-form-item label=" ">
-                  <n-button type="warning" @click="exportToPnp" :loading="exportingToPnp" :disabled="v2Cards.length === 0" size="large">
-                    <template #icon>
-                      <n-icon :component="PrintOutline" />
-                    </template>
-                    {{ exportingToPnp ? $t('contentPackage.pnp.exportParams.exporting') : $t('contentPackage.pnp.exportParams.startExport') }}
-                  </n-button>
-                </n-form-item>
-              </n-form>
-            </n-card>
-
-            <!-- 实时导出日志 -->
-            <n-card v-if="pnpExportLogs.length > 0" :title="$t('contentPackage.pnp.exportLogs.title')" :bordered="false">
+            <!-- 下半部分：导出日志 -->
+            <n-card :title="$t('contentPackage.pnp.exportLogs.title')" :bordered="false" size="small" style="margin-top: 1rem;">
               <template #header-extra>
                 <n-space>
                   <n-tag v-if="exportingToPnp" type="warning">
@@ -778,7 +812,15 @@
                 </n-space>
               </template>
 
-              <n-scrollbar style="max-height: 400px;">
+              <!-- 日志内容区域 -->
+              <div v-if="pnpExportLogs.length === 0 && !exportingToPnp" class="empty-logs">
+                <n-empty :description="$t('contentPackage.pnp.exportLogs.noLogsYet')" size="small">
+                  <template #icon>
+                    <n-icon :component="DocumentTextOutline" />
+                  </template>
+                </n-empty>
+              </div>
+              <n-scrollbar v-else style="max-height: 300px;">
                 <div class="logs-container">
                   <div v-for="(log, index) in pnpExportLogs" :key="index" :class="['log-item', getLogItemClass(log)]">
                     <n-text>{{ log }}</n-text>
@@ -795,6 +837,7 @@
         </n-tab-pane>
 
       </n-tabs>
+    </div>
     </div>
 
     <!-- 编辑元数据对话框 -->
@@ -1106,7 +1149,8 @@ import {
   ImagesOutline,
   RefreshOutline,
   ReorderThreeOutline,
-  PrintOutline
+  PrintOutline,
+  ArrowBackOutline
 } from '@vicons/ionicons5';
 import type { ContentPackageFile, PackageType, ContentPackageCard, EncounterSet } from '@/types/content-package';
 import { getPackageTypeOptions, getLanguageOptions, getStatusOptions } from '@/types/content-package';
@@ -1140,7 +1184,15 @@ const showEditMetaDialog = ref(false);
 const showAddCardDialog = ref(false);
 const editFormRef = ref<FormInst | null>(null);
 
-// 上传云端状态
+// 上传页面状态
+const showUploadPage = ref(false);
+const currentUploadType = ref<'banner' | 'card' | 'encounter'>('card');
+const currentUploadItem = ref<any>(null);
+const currentUploadItems = ref<any[]>([]);
+const isCurrentUploadBatch = ref(false);
+const uploadDialogRef = ref<any>(null);
+
+// 上传云端状态 (保留用于兼容)
 const showUploadBannerDialog = ref(false);
 const showUploadCardDialog = ref(false);
 const showBatchUploadDialog = ref(false);
@@ -1916,13 +1968,175 @@ const numberingTableColumns = computed(() => [
   }
 ]);
 
-// 显示上传卡牌对话框
-const openUploadCardDialog = (card: ContentPackageCard) => {
-  uploadingCard.value = card;
-  showUploadCardDialog.value = true;
+// 计算属性：检查是否有任何上传正在进行
+const isAnyUploading = computed(() => {
+  return isBannerUploading.value || isCardUploading.value || isEncounterUploading.value ||
+         batchUploading.value || batchEncounterUploading.value;
+});
+
+// 打开封面上传页面
+const openBannerUploadPage = () => {
+  currentUploadType.value = 'banner';
+  currentUploadItem.value = { banner_base64: packageData.value.banner_base64, meta: packageData.value.meta };
+  currentUploadItems.value = [];
+  isCurrentUploadBatch.value = false;
+  showUploadPage.value = true;
 };
 
-// 触发封面上传
+// 打开单个卡牌上传页面
+const openCardUploadPage = (card: ContentPackageCard) => {
+  currentUploadType.value = 'card';
+  currentUploadItem.value = card;
+  currentUploadItems.value = [];
+  isCurrentUploadBatch.value = false;
+  uploadingCard.value = card;
+  showUploadPage.value = true;
+};
+
+// 打开批量卡牌上传页面
+const openCardBatchUploadPage = () => {
+  currentUploadType.value = 'card';
+  currentUploadItem.value = null;
+  currentUploadItems.value = v2Cards.value;
+  isCurrentUploadBatch.value = true;
+  showUploadPage.value = true;
+};
+
+// 打开单个遭遇组上传页面
+const openEncounterUploadPage = (encounter: EncounterSet) => {
+  currentUploadType.value = 'encounter';
+  currentUploadItem.value = encounter;
+  currentUploadItems.value = [];
+  isCurrentUploadBatch.value = false;
+  uploadingEncounter.value = encounter;
+  showUploadPage.value = true;
+};
+
+// 打开批量遭遇组上传页面
+const openEncounterBatchUploadPage = () => {
+  currentUploadType.value = 'encounter';
+  currentUploadItem.value = null;
+  currentUploadItems.value = encounters.value;
+  isCurrentUploadBatch.value = true;
+  showUploadPage.value = true;
+};
+
+// 关闭上传页面
+const closeUploadPage = () => {
+  showUploadPage.value = false;
+  currentUploadItem.value = null;
+  currentUploadItems.value = [];
+  uploadingCard.value = null;
+  uploadingEncounter.value = null;
+};
+
+// 获取上传页面标题
+const getUploadPageTitle = (): string => {
+  if (currentUploadType.value === 'banner') {
+    return t('contentPackage.upload.title.uploadBannerToCloud');
+  } else if (currentUploadType.value === 'card') {
+    return isCurrentUploadBatch.value
+      ? t('contentPackage.upload.title.batchUploadToCloud')
+      : t('contentPackage.upload.title.uploadCardToCloud');
+  } else if (currentUploadType.value === 'encounter') {
+    return isCurrentUploadBatch.value
+      ? t('contentPackage.upload.title.batchUploadEncountersToCloud')
+      : t('contentPackage.upload.title.uploadEncounterToCloud');
+  }
+  return t('contentPackage.upload.title.upload');
+};
+
+// 获取上传按钮文本
+const getUploadButtonText = (): string => {
+  if (isCurrentUploadBatch.value) {
+    return t('contentPackage.upload.action.startConfiguration', { count: currentUploadItems.value.length });
+  }
+  return t('contentPackage.upload.action.startUpload');
+};
+
+// 触发上传
+const triggerUpload = () => {
+  if (uploadDialogRef.value) {
+    if (currentUploadType.value === 'banner') {
+      isBannerUploading.value = true;
+    } else if (currentUploadType.value === 'card') {
+      if (isCurrentUploadBatch.value) {
+        batchUploading.value = true;
+      } else {
+        isCardUploading.value = true;
+      }
+    } else if (currentUploadType.value === 'encounter') {
+      if (isCurrentUploadBatch.value) {
+        batchEncounterUploading.value = true;
+      } else {
+        isEncounterUploading.value = true;
+      }
+    }
+    uploadDialogRef.value.handleConfirm();
+  }
+};
+
+// 处理上传确认
+const handleUploadConfirm = (updatedPackage: any) => {
+  if (currentUploadType.value === 'banner') {
+    isBannerUploading.value = false;
+  } else if (currentUploadType.value === 'card') {
+    if (isCurrentUploadBatch.value) {
+      batchUploading.value = false;
+    } else {
+      isCardUploading.value = false;
+    }
+  } else if (currentUploadType.value === 'encounter') {
+    if (isCurrentUploadBatch.value) {
+      batchEncounterUploading.value = false;
+    } else {
+      isEncounterUploading.value = false;
+    }
+  }
+
+  // 更新包数据
+  emit('update:package', updatedPackage);
+
+  // 更新本地遭遇组状态
+  if (currentUploadType.value === 'encounter') {
+    encounters.value = updatedPackage.encounter_sets || [];
+  }
+
+  // 直接触发保存到文件
+  emit('save', true);
+
+  // 不自动关闭上传页面，让用户查看日志后手动返回
+  // closeUploadPage();
+
+  // 显示成功消息
+  if (currentUploadType.value === 'banner') {
+    message.success(t('contentPackage.messages.bannerUploadSuccess'));
+  } else if (currentUploadType.value === 'card') {
+    if (isCurrentUploadBatch.value) {
+      message.success(t('contentPackage.messages.batchUploadSuccess', { count: currentUploadItems.value.length }));
+    } else {
+      message.success(t('contentPackage.messages.cardUploadSuccess'));
+    }
+  } else if (currentUploadType.value === 'encounter') {
+    if (isCurrentUploadBatch.value) {
+      message.success(t('contentPackage.encounters.success.batchUploadSuccess', { count: currentUploadItems.value.length }));
+    } else {
+      message.success(t('contentPackage.encounters.success.uploadSuccess'));
+    }
+  }
+};
+
+// 显示上传卡牌对话框 (废弃,保留用于兼容)
+const openUploadCardDialog = (card: ContentPackageCard) => {
+  openCardUploadPage(card);
+};
+
+// 打开遭遇组上传对话框 (废弃,保留用于兼容)
+const openUploadEncounterDialog = (encounter: EncounterSet) => {
+  openEncounterUploadPage(encounter);
+};
+
+// 触发封面上传 (废弃,保留用于兼容)
 const triggerBannerUpload = () => {
   isBannerUploading.value = true;
   if (bannerUploadDialogRef.value) {
@@ -2899,12 +3113,6 @@ const openPnpFileLocation = () => {
 };
 
 // 遭遇组上传相关方法
-// 打开遭遇组上传对话框
-const openUploadEncounterDialog = (encounter: EncounterSet) => {
-  uploadingEncounter.value = encounter;
-  showUploadEncounterDialog.value = true;
-};
-
 // 触发遭遇组上传
 const triggerEncounterUpload = () => {
   isEncounterUploading.value = true;
@@ -3261,6 +3469,61 @@ watch(() => packageData.value, async (newPackage, oldPackage) => {
   display: flex;
   flex-direction: column;
   background: white;
+  min-height: 0;
+  position: relative;
+}
+
+/* 上传页面样式 */
+.upload-page {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: white;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+
+.upload-page-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e9ecef;
+  background: #f8f9fa;
+}
+
+.upload-page-header h3 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.upload-page-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.upload-page-footer {
+  flex-shrink: 0;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e9ecef;
+  background: #f8f9fa;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* 主编辑器内容样式 */
+.editor-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
 }
 
@@ -3982,8 +4245,9 @@ watch(() => packageData.value, async (newPackage, oldPackage) => {
 
 /* 实体导出面板样式 */
 .physical-export-panel {
-  max-width: 900px;
-  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .physical-export-panel h4 {
@@ -3991,6 +4255,34 @@ watch(() => packageData.value, async (newPackage, oldPackage) => {
   color: #333;
   font-size: 1.5rem;
   font-weight: 600;
+}
+
+/* PNP上下布局 - 顶部左右分栏，底部日志 */
+.pnp-top-layout {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.pnp-status-section {
+  flex: 0 0 350px;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.pnp-params-section {
+  flex: 1;
+  min-width: 400px;
+}
+
+.empty-logs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 400px;
 }
 
 .physical-export-panel .n-alert p {

@@ -511,7 +511,8 @@ export default {
       title: '导出日志',
       exporting: '导出中',
       exportComplete: '导出完成',
-      openFileLocation: '打开文件位置'
+      openFileLocation: '打开文件位置',
+      noLogsYet: '暂无日志'
     },
     messages: {
       exportSuccess: 'PNP PDF导出成功！',

@@ -64,7 +64,7 @@
       <div v-if="exportFormat === 'JPG'" class="quality-setting">
         <n-form-item :label="$t('contentPackage.upload.dialog.imageQuality')">
           <n-slider v-model:value="exportQuality" :min="1" :max="100"
-            :marks="{ 1: '1%', 50: '50%', 95: '95%', 100: '100%' }" :tooltip="false" />
+            :marks="{ 1: '1%', 50: '50%', 100: '100%' }" :tooltip="false" />
           <n-input-number v-model:value="exportQuality" :min="1" :max="100" size="small"
             style="width: 100px; margin-left: 12px;" />
         </n-form-item>
@@ -894,11 +894,7 @@ const batchUpload = async () => {
 
     emit('confirm', updatedPackage);
 
-    if (failureCount === 0) {
-      message.success(`批量上传成功！共上传 ${successCount} 个项目`);
-    } else {
-      message.warning(`批量上传完成，成功 ${successCount} 个，失败 ${failureCount} 个`);
-    }
+    // 消息提示已移至PackageEditor的handleUploadConfirm方法中统一处理
 
   } catch (error) {
     console.error('批量上传失败:', error);
