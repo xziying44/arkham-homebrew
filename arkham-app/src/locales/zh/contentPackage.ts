@@ -341,7 +341,10 @@ export default {
       local: '本地',
       noImage: '无图片',
       uploaded: '已上传',
-      pending: '待上传'
+      pending: '待上传',
+      uploadedToCloud: '已上传到云端',
+      savedToLocal: '已保存到本地',
+      notUploaded: '未上传'
     },
     title: {
       uploadBannerToCloud: '上传封面到云端',
