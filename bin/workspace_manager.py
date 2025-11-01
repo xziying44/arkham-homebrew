@@ -870,7 +870,8 @@ class WorkspaceManager:
                 external_image = self.get_card_base64(json_data, 'external_image')
                 if external_image and isinstance(external_image, Image.Image):
                     target_size = (739, 1049)
-                    if card_type in ['调查员', '调查员背面', '密谋卡', '密谋卡-大画', '场景卡', '场景卡-大画']:
+                    if card_type in ['调查员', '调查员卡', '调查员背面', '调查员卡背', '密谋卡', '密谋卡-大画',
+                                     '场景卡', '场景卡-大画']:
                         target_size = (1049, 739)
 
                     # === 等比例缩放 ===

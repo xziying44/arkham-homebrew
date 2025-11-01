@@ -240,12 +240,6 @@ class ExportHelper:
 
     def _standard_bleeding(self, card_json: dict, image: Image.Image):
         """标准出血"""
-        # 先出血到标准出血尺寸768*1087
-        if self._is_horizontal(image):
-            card_map = self._call_lama_cleaner(image, 1087, 768)
-        else:
-            card_map = self._call_lama_cleaner(image, 768, 1087)
-
         ui_name = '出血_'
         card_type = card_json.get('type', '')
         if card_json.get('class', '') == '弱点':
@@ -274,10 +268,17 @@ class ExportHelper:
             ui_name += '-副标题'
         if card_type == '调查员卡':
             ui_name += '-底图'
-        print(ui_name)
         ui = self.workspace_manager.creator.image_manager.get_image(ui_name)
         if ui:
+            # 先出血到标准出血尺寸768*1087
+            if self._is_horizontal(image):
+                card_map = self._call_lama_cleaner(image, 1087, 768)
+            else:
+                card_map = self._call_lama_cleaner(image, 768, 1087)
+
             card_map.paste(ui, (0, 0, ui.size[0], ui.size[1]), ui)
+        else:
+            card_map = image
 
         # 出血投入图标
         card_map = self._bleeding_submit_icon(card_json, card_map)
@@ -303,9 +304,9 @@ class ExportHelper:
         else:
             width, height = self.calculate_pixel_dimensions(bleed=self.bleed, size=self.size)
 
-        # if not (card_json.get('type') == '调查员卡' and card_json.get('is_back', False) is False):
-        #     # 标准出血
-        card_map = self._standard_bleeding(card_json, card_map)
+        if card_json.get('use_external_image', 0) != 1:
+            # 标准出血
+            card_map = self._standard_bleeding(card_json, card_map)
         # 二次出血
         if self._is_horizontal(card_map):
             card_map = self._call_lama_cleaner(card_map, height, width)
@@ -592,6 +593,7 @@ class ExportHelper:
 
 if __name__ == "__main__":
     from bin.workspace_manager import WorkspaceManager
+
     system_defaults = {
         "format": "PNG",
         "size": ExportSize.POKER_SIZE.value,
@@ -607,11 +609,11 @@ if __name__ == "__main__":
 
     export_helper = ExportHelper(
         system_defaults,
-        WorkspaceManager(r'C:\Users\xziyi\Desktop\arkham-homebrew-projects\EdgeOfTheEarth')
+        WorkspaceManager(r'C:\Users\xziyi\Desktop\arkham-homebrew-projects\EdgeOfTheEarthInv')
     )
 
     # 自动判断卡牌类型并导出
-    result = export_helper.export_card_auto(r'Apeirophobia.card')
+    result = export_helper.export_card_auto(r'Defensive Stance.card')
 
     if isinstance(result, dict):
         # 双面卡牌
