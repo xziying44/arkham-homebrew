@@ -604,6 +604,17 @@ class RichTextRenderer:
             if item.tag == "text":
                 font = font_stack.get_top()
                 font_name = font_stack.get_top_font_name()
+
+                offset_y = 0 + font_offset_y
+                offset_x = 0
+                if font_name == '方正舒体':
+                    offset_y = -2
+                elif font_name == 'SourceHanSansSC-Regular':
+                    offset_y = -9
+                elif font_name == 'arkham-icons' and self.font_manager.lang not in ['zh', 'zh-CHT']:
+                    offset_y = -int(size_to_test * 0.112)
+                elif font_name == '江城斜宋体':
+                    offset_y = -9
                 if item.type == TextType.OTHER:
                     # 一个一个push
                     for char in item.content:
@@ -613,13 +624,6 @@ class RichTextRenderer:
                             text_width = int(text_width * 0.95)
                         else:
                             text_width, text_height = self._get_text_box(char, font)
-                        offset_y = 0 + font_offset_y
-                        offset_x = 0
-                        if font_name == '方正舒体':
-                            offset_y = -2
-                        elif font_name == 'SourceHanSansSC-Regular':
-                            offset_y = -9
-
                         if char == '﹒':
                             text_width = int(text_width * 0.5)
                             offset_x = -int(text_width * 0.5)
@@ -630,7 +634,7 @@ class RichTextRenderer:
                 else:
                     text_box = self._get_text_box(item.content, font)
                     text_object = TextObject(item.content, font, font_name, font.size, text_box[1], text_box[0],
-                                             base_options.font_color)
+                                             base_options.font_color, offset_x=offset_x, offset_y=offset_y)
                     if self.font_manager.lang in ['zh', 'zh-CHT']:
                         virtual_text_box.push(text_object)
                     else:
@@ -787,10 +791,6 @@ class RichTextRenderer:
                 x, y = render_item.x + offset_x, render_item.y + offset_y
 
                 if isinstance(obj, TextObject):
-                    if obj.font_name == 'arkham-icons' and self.font_manager.lang not in ['zh', 'zh-CHT']:
-                        y += -2
-                    if obj.font_name == '江城斜宋体':
-                        y = -9
                     self.draw.text((x, y), obj.text, font=obj.font, fill=options.font_color)
                 elif isinstance(obj, ImageObject):
                     if obj.image.mode == 'RGBA':

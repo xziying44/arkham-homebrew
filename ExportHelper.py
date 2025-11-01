@@ -391,8 +391,8 @@ class ExportHelper:
             try:
                 # 提取文字信息并应用DPI缩放
                 text = text_info.get('text', '')
-                x = text_info.get('x', 0) * dpi_scale_factor + bleed_offset_x
-                y = text_info.get('y', 0) * dpi_scale_factor + bleed_offset_y
+                x = (text_info.get('x', 0) + text_info.get('offset_x', 0)) * dpi_scale_factor + bleed_offset_x
+                y = (text_info.get('y', 0) + text_info.get('offset_y', 0)) * dpi_scale_factor + bleed_offset_y
                 font_name = text_info.get('font', 'default')
                 font_size = int(text_info.get('font_size', 12) * dpi_scale_factor)
                 color = text_info.get('color', '#000000')
@@ -609,11 +609,11 @@ if __name__ == "__main__":
 
     export_helper = ExportHelper(
         system_defaults,
-        WorkspaceManager(r'C:\Users\xziyi\Desktop\arkham-homebrew-projects\EdgeOfTheEarthInv')
+        WorkspaceManager(r'C:\Users\xziyi\Desktop\arkham-homebrew-projects\EdgeOfTheEarth')
     )
 
     # 自动判断卡牌类型并导出
-    result = export_helper.export_card_auto(r'Defensive Stance.card')
+    result = export_helper.export_card_auto(r'Terror of the Stars.card')
 
     if isinstance(result, dict):
         # 双面卡牌
