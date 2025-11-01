@@ -1469,10 +1469,16 @@ const convertToVersion2 = async () => {
 
 // 监听选中文件变化
 watch(() => props.selectedFile, async (newFile, oldFile) => {
-    // 【新增】如果切换前的文件有未保存修改，暂存数据
-    if (hasUnsavedChanges.value && oldFile && oldFile.path) {
-        console.log('💾 检测到未保存修改，暂存当前数据:', oldFile.path);
-        emit('save-to-cache', oldFile.path as string, currentCardData);
+    // 【修复】如果切换前的文件是卡牌且有未保存修改，暂存数据
+    // 注意：不能使用 hasUnsavedChanges，因为此时 props.selectedFile 已经变成新文件
+    if (oldFile && oldFile.type === 'card' && oldFile.path) {
+        const currentDataString = JSON.stringify(currentCardData);
+        const hasChanges = originalCardData.value !== currentDataString;
+
+        if (hasChanges) {
+            console.log('💾 检测到未保存修改，暂存当前数据:', oldFile.path);
+            emit('save-to-cache', oldFile.path as string, currentCardData);
+        }
     }
 
     // 如果是切换到新文件，先重置状态
