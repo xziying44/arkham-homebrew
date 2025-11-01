@@ -33,11 +33,24 @@ export default {
       advancedExport: 'Advanced Export',  // 新增
       copy: 'Copy',
       copyRelativePath: 'Copy Relative Path',
+      copyImageTag: 'Copy Image Tag',
       paste: 'Paste',
       rename: 'Rename',
       delete: 'Delete'
     },
-
+    copyImageTag: {
+    title: 'Copy Image Tag',
+    widthLabel: 'Width',
+    widthPlaceholder: 'e.g.: 100',
+    heightLabel: 'Height',
+    heightPlaceholder: 'e.g.: 100',
+    offsetLabel: 'Y-Offset',
+    offsetPlaceholder: 'e.g.: -2',
+    centerLabel: 'Center',
+    preview: 'Preview:',
+    cancel: 'Cancel',
+    confirm: 'Confirm'
+    },
     // 新增 quickExport 部分：
     quickExport: {
       title: 'Quick Batch Export',
@@ -250,6 +263,8 @@ export default {
       copyFailed: 'Copy failed, only card files can be copied',
       copyRelativePathSuccess: 'Relative path copied: {path}',
       copyRelativePathFailed: 'Failed to copy relative path',
+      copyImageTagSuccess: 'Image tag copied to clipboard',  // 新增
+      copyImageTagFailed: 'Failed to copy image tag',  // 新增
       pasteSuccess: 'File pasted successfully',
       pasteFailed: 'Paste failed',
       pasteNoContent: 'No content to paste in clipboard',

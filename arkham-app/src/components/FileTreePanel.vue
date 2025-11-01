@@ -143,6 +143,50 @@
       </n-card>
     </n-modal>
 
+    <!-- 复制图片标签对话框 -->
+    <n-modal v-model:show="showCopyImageTagDialog">
+      <n-card style="width: 90vw; max-width: 500px" :title="$t('workspaceMain.fileTree.copyImageTag.title')" :bordered="false"
+        size="huge" role="dialog" aria-modal="true">
+        <n-form ref="copyImageTagFormRef" :model="copyImageTagForm" label-placement="left" label-width="100">
+          <n-form-item :label="$t('workspaceMain.fileTree.copyImageTag.widthLabel')">
+            <n-input v-model:value="copyImageTagForm.width"
+              :placeholder="$t('workspaceMain.fileTree.copyImageTag.widthPlaceholder')" clearable />
+          </n-form-item>
+          <n-form-item :label="$t('workspaceMain.fileTree.copyImageTag.heightLabel')">
+            <n-input v-model:value="copyImageTagForm.height"
+              :placeholder="$t('workspaceMain.fileTree.copyImageTag.heightPlaceholder')" clearable />
+          </n-form-item>
+          <n-form-item :label="$t('workspaceMain.fileTree.copyImageTag.offsetLabel')">
+            <n-input v-model:value="copyImageTagForm.offset"
+              :placeholder="$t('workspaceMain.fileTree.copyImageTag.offsetPlaceholder')" clearable />
+          </n-form-item>
+          <n-form-item :label="$t('workspaceMain.fileTree.copyImageTag.centerLabel')">
+            <n-switch v-model:value="copyImageTagForm.center" />
+          </n-form-item>
+          <n-space vertical size="small">
+            <n-text depth="3" style="font-size: 12px;">
+              {{ $t('workspaceMain.fileTree.copyImageTag.preview') }}
+            </n-text>
+            <n-text style="font-size: 11px; font-family: monospace; word-break: break-all;">
+              {{ copyImageTagForm.center ? '<center>' : '' }}&lt;img src="@{{ contextMenuTarget?.path }}"{{
+                copyImageTagForm.width ? ' width="' + copyImageTagForm.width + '"' : '' }}{{
+                copyImageTagForm.height ? ' height="' + copyImageTagForm.height + '"' : '' }}{{
+                copyImageTagForm.offset ? ' offset="' + copyImageTagForm.offset + '"' : '' }}&gt;&lt;/img&gt;{{
+                copyImageTagForm.center ? '</center>' : '' }}
+            </n-text>
+          </n-space>
+        </n-form>
+        <template #footer>
+          <n-space justify="end">
+            <n-button @click="showCopyImageTagDialog = false">{{ $t('workspaceMain.fileTree.copyImageTag.cancel')
+            }}</n-button>
+            <n-button type="primary" @click="confirmCopyImageTag">{{
+              $t('workspaceMain.fileTree.copyImageTag.confirm') }}</n-button>
+          </n-space>
+        </template>
+      </n-card>
+    </n-modal>
+
     <!-- 快速批量导出进度对话框 -->
     <n-modal v-model:show="showBatchExportDialog">
       <n-card style="width: 95vw; max-width: 600px" :title="$t('workspaceMain.fileTree.quickExport.title')" :bordered="false" size="huge"
@@ -677,6 +721,7 @@ const showRenameDialog = ref(false);
 const showDeleteDialog = ref(false);
 const showArkhamDBImportDialog = ref(false);
 const showArkhamDBProgressDialog = ref(false);
+const showCopyImageTagDialog = ref(false);
 
 // ArkhamDB导入相关状态
 const arkhamdbImporting = ref(false);
@@ -694,11 +739,18 @@ const renameForm = ref({
   filename: '',
   extension: ''
 });
+const copyImageTagForm = ref({
+  width: '',
+  height: '',
+  offset: '',
+  center: false
+});
 
 // 表单引用
 const createFolderFormRef = ref<FormInst | null>(null);
 const createCardFormRef = ref<FormInst | null>(null);
 const renameFormRef = ref<FormInst | null>(null);
+const copyImageTagFormRef = ref<FormInst | null>(null);
 
 // ArkhamDB日志滚动条引用
 const arkhamdbLogScrollbar = ref<any>(null);
@@ -797,10 +849,52 @@ const contextMenuOptions = computed(() => {
   const isCard = contextMenuTarget.value.type === 'card';
   const isFile = !isWorkspace && !isDirectory;
   const isConfigFile = isFile && ['json', 'pack'].includes((contextMenuTarget.value.label as string).split('.').pop()?.toLowerCase() || '');
+  const isImage = contextMenuTarget.value.type === 'image';
 
   const options = [];
 
-  // 为所有非工作空间节点添加复制相对路径选项
+  // 1. 新建卡牌（工作空间和目录）
+  if (isWorkspace || isDirectory) {
+    options.push({
+      label: t('workspaceMain.fileTree.contextMenu.newCard'),
+      key: 'create-card',
+      icon: () => h(NIcon, { component: DocumentOutline })
+    });
+  }
+
+  // 2. 新建文件夹（工作空间和目录）
+  if (isWorkspace || isDirectory) {
+    options.push({
+      label: t('workspaceMain.fileTree.contextMenu.newFolder'),
+      key: 'create-folder',
+      icon: () => h(NIcon, { component: FolderOutline })
+    });
+  }
+
+  // 3. 快速导出（工作空间和目录）
+  if (isWorkspace || isDirectory) {
+    options.push({
+      label: t('workspaceMain.fileTree.contextMenu.quickExport'),
+      key: 'batch-export',
+      icon: () => h(NIcon, { component: ImageOutline })
+    });
+  }
+
+  // 4. 高级导出（工作空间、目录或卡牌）
+  if (isWorkspace || isDirectory || isCard) {
+    options.push({
+      label: t('workspaceMain.fileTree.contextMenu.advancedExport'),
+      key: 'advanced-export',
+      icon: () => h(NIcon, { component: SettingsOutline })
+    });
+  }
+
+  // 第一个分隔符
+  if (options.length > 0 && !isWorkspace) {
+    options.push({ type: 'divider', key: 'divider1' });
+  }
+
+  // 5. 复制相对路径（所有非工作空间节点）
   if (!isWorkspace) {
     options.push({
       label: t('workspaceMain.fileTree.contextMenu.copyRelativePath'),
@@ -809,61 +903,34 @@ const contextMenuOptions = computed(() => {
     });
   }
 
-  // 工作空间和目录可以创建子项
-  if (isWorkspace || isDirectory) {
-    options.push(
-      {
-        label: t('workspaceMain.fileTree.contextMenu.newFolder'),
-        key: 'create-folder',
-        icon: () => h(NIcon, { component: FolderOutline })
-      },
-      {
-        label: t('workspaceMain.fileTree.contextMenu.newCard'),
-        key: 'create-card',
-        icon: () => h(NIcon, { component: DocumentOutline })
-      }
-    );
-
-    // 为目录添加快速导出选项（原批量导出）
+  // 6. 复制图片标签（仅图片文件）
+  if (isImage) {
     options.push({
-      label: t('workspaceMain.fileTree.contextMenu.quickExport'),
-      key: 'batch-export',
+      label: t('workspaceMain.fileTree.contextMenu.copyImageTag'),
+      key: 'copy-image-tag',
       icon: () => h(NIcon, { component: ImageOutline })
     });
-
-    // 为目录添加高级导出选项
-    options.push({
-      label: t('workspaceMain.fileTree.contextMenu.advancedExport'),
-      key: 'advanced-export',
-      icon: () => h(NIcon, { component: SettingsOutline })
-    });
-
-    // 为目录添加粘贴选项（如果有复制的内容）
-    if (copiedFile.value && (isDirectory || isWorkspace)) {
-      options.push({
-        label: t('workspaceMain.fileTree.contextMenu.paste'),
-        key: 'paste',
-        icon: () => h(NIcon, { component: DocumentOutline })
-      });
-    }
   }
 
-  // 为单个card文件添加复制和高级导出选项
+  // 7. 复制（仅卡牌）
   if (isCard) {
     options.push({
       label: t('workspaceMain.fileTree.contextMenu.copy'),
       key: 'copy',
       icon: () => h(NIcon, { component: DocumentOutline })
     });
+  }
 
+  // 8. 粘贴（目录且有复制内容）
+  if (copiedFile.value && (isDirectory || isWorkspace)) {
     options.push({
-      label: t('workspaceMain.fileTree.contextMenu.advancedExport'),
-      key: 'advanced-export',
-      icon: () => h(NIcon, { component: SettingsOutline })
+      label: t('workspaceMain.fileTree.contextMenu.paste'),
+      key: 'paste',
+      icon: () => h(NIcon, { component: DocumentOutline })
     });
   }
 
-  // 为JSON文件添加ArkhamDB导入选项
+  // 9. ArkhamDB导入（JSON/pack文件）
   if (isConfigFile) {
     options.push({
       label: t('arkhamdbImport.title'),
@@ -872,23 +939,27 @@ const contextMenuOptions = computed(() => {
     });
   }
 
-  // 非工作空间节点可以重命名和删除
+  // 第二个分隔符
+  if (!isWorkspace && options.length > 0) {
+    options.push({ type: 'divider', key: 'divider2' });
+  }
+
+  // 10. 重命名（非工作空间节点）
   if (!isWorkspace) {
-    if (options.length > 0) {
-      options.push({ type: 'divider', key: 'divider1' });
-    }
-    options.push(
-      {
-        label: t('workspaceMain.fileTree.contextMenu.rename'),
-        key: 'rename',
-        icon: () => h(NIcon, { component: CreateOutline })
-      },
-      {
-        label: t('workspaceMain.fileTree.contextMenu.delete'),
-        key: 'delete',
-        icon: () => h(NIcon, { component: TrashOutline })
-      }
-    );
+    options.push({
+      label: t('workspaceMain.fileTree.contextMenu.rename'),
+      key: 'rename',
+      icon: () => h(NIcon, { component: CreateOutline })
+    });
+  }
+
+  // 11. 删除（非工作空间节点）
+  if (!isWorkspace) {
+    options.push({
+      label: t('workspaceMain.fileTree.contextMenu.delete'),
+      key: 'delete',
+      icon: () => h(NIcon, { component: TrashOutline })
+    });
   }
 
   return options;
@@ -1247,6 +1318,9 @@ const handleContextMenuSelect = (key: string) => {
     case 'copy-relative-path':
       handleCopyRelativePath();
       break;
+    case 'copy-image-tag':
+      handleCopyImageTag();
+      break;
     case 'create-folder':
       createFolderForm.value.name = '';
       showCreateFolderDialog.value = true;
@@ -1554,10 +1628,13 @@ const exportCardTask = async (cardPath: string): Promise<{ success: boolean, car
       throw new Error(`${t('workspaceMain.fileTree.quickExport.validationFailed')}: ${validation.errors.join(', ')}`);
     }
 
-    // 导出图片到同目录
-    const parentPath = cardPath.substring(0, cardPath.lastIndexOf('/'));
+    // 计算导出路径（导出到卡牌文件同级目录）
+    const pathParts = cardPath.split('/');
+    pathParts.pop(); // 移除文件名
+    const parentPath = pathParts.join('/'); // 重新组合成目录路径
     const filename = `${cardName}.png`;
 
+    // 导出图片到同目录
     await CardService.saveCard(cardData, filename, parentPath);
 
     return { success: true, cardName };
@@ -1888,6 +1965,67 @@ const handleCopyRelativePath = async () => {
   } catch (error) {
     console.error('复制相对路径失败:', error);
     message.error(t('workspaceMain.fileTree.messages.copyRelativePathFailed'));
+  }
+};
+
+// 处理复制图片标签功能
+const handleCopyImageTag = () => {
+  if (!contextMenuTarget.value) {
+    message.error(t('workspaceMain.fileTree.messages.copyImageTagFailed'));
+    return;
+  }
+
+  // 重置表单
+  copyImageTagForm.value = {
+    width: '',
+    height: '',
+    offset: '',
+    center: false
+  };
+
+  // 显示对话框
+  showCopyImageTagDialog.value = true;
+};
+
+// 确认复制图片标签
+const confirmCopyImageTag = async () => {
+  if (!contextMenuTarget.value) {
+    return;
+  }
+
+  try {
+    const relativePath = contextMenuTarget.value.path as string;
+    const formattedPath = '@' + relativePath;
+
+    // 构建图片标签
+    let imageTag = '<img src="' + formattedPath + '"';
+
+    // 添加可选参数
+    if (copyImageTagForm.value.width) {
+      imageTag += ' width="' + copyImageTagForm.value.width + '"';
+    }
+    if (copyImageTagForm.value.height) {
+      imageTag += ' height="' + copyImageTagForm.value.height + '"';
+    }
+    if (copyImageTagForm.value.offset) {
+      imageTag += ' offset="' + copyImageTagForm.value.offset + '"';
+    }
+
+    imageTag += '></img>';
+
+    // 如果需要居中
+    if (copyImageTagForm.value.center) {
+      imageTag = '<center>' + imageTag + '</center>';
+    }
+
+    // 复制到系统剪贴板
+    await navigator.clipboard.writeText(imageTag);
+
+    message.success(t('workspaceMain.fileTree.messages.copyImageTagSuccess'));
+    showCopyImageTagDialog.value = false;
+  } catch (error) {
+    console.error('复制图片标签失败:', error);
+    message.error(t('workspaceMain.fileTree.messages.copyImageTagFailed'));
   }
 };
 

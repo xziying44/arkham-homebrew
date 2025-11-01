@@ -32,10 +32,24 @@ export default {
       advancedExport: '高级导出',   // 新增
       copy: '复制',
       copyRelativePath: '复制相对路径',
+      copyImageTag: '复制图片标签',
       paste: '粘贴',
       rename: '重命名',
       delete: '删除'
     },
+    copyImageTag: {
+        title: '复制图片标签',
+        widthLabel: '宽度',
+        widthPlaceholder: '例如：100',
+        heightLabel: '高度',
+        heightPlaceholder: '例如：100',
+        offsetLabel: 'Y轴偏移',
+        offsetPlaceholder: '例如：-2',
+        centerLabel: '是否居中',
+        preview: '预览：',
+        cancel: '取消',
+        confirm: '确认'
+      },
     // 新增 quickExport 部分：
     quickExport: {
       title: '快速批量导出',
@@ -247,6 +261,8 @@ export default {
       copyFailed: '复制失败，只能复制卡牌文件',
       copyRelativePathSuccess: '相对路径已复制: {path}',
       copyRelativePathFailed: '复制相对路径失败',
+      copyImageTagSuccess: '图片标签已复制到剪贴板',  // 新增
+      copyImageTagFailed: '复制图片标签失败',  // 新增
       pasteSuccess: '文件粘贴成功',
       pasteFailed: '粘贴失败',
       pasteNoContent: '剪贴板中没有可粘贴的内容',
