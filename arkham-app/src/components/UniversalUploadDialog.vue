@@ -3,7 +3,7 @@
     <!-- 图床选择 -->
     <div class="upload-section">
       <h4>{{ $t('contentPackage.upload.dialog.selectImageHost') }}</h4>
-      <n-radio-group v-model:value="selectedHost" size="medium">
+      <n-radio-group :value="selectedHost" @update:value="handleHostChange" size="medium">
         <n-radio-button value="cloudinary">Cloudinary</n-radio-button>
         <n-radio-button value="imgbb">ImgBB</n-radio-button>
         <n-radio-button value="local">{{ $t('contentPackage.upload.dialog.localMode') }}</n-radio-button>
@@ -266,6 +266,7 @@ const tMessage = (key: string, params?: Record<string, string | number>) => {
 
 // 上传状态
 const selectedHost = ref<ImageHostType>('cloudinary');
+const userSelectedHost = ref(false); // 标记用户是否手动选择过图床
 const exportFormat = ref<'JPG' | 'PNG'>('JPG');
 const exportQuality = ref(95);
 const isUploading = ref(false);
@@ -381,6 +382,12 @@ const getItemKey = (item: any): string => {
   return item.id || JSON.stringify(item);
 };
 
+// 处理用户手动选择图床
+const handleHostChange = (value: ImageHostType) => {
+  selectedHost.value = value;
+  userSelectedHost.value = true; // 标记为用户手动选择
+};
+
 // 添加日志
 const addLog = (message: string, type: 'info' | 'error' = 'info') => {
   uploadLogs.value.push({ message, type });
@@ -426,11 +433,13 @@ const loadConfig = async () => {
       footer_icon.value = config.footer_icon_dir;
     }
 
-    // 如果有配置，自动选择对应的图床
-    if (config.cloud_name || config.api_key) {
-      selectedHost.value = 'cloudinary';
-    } else if (config.imgbb_api_key) {
-      selectedHost.value = 'imgbb';
+    // 只在用户未手动选择时，根据配置自动选择对应的图床
+    if (!userSelectedHost.value) {
+      if (config.cloud_name || config.api_key) {
+        selectedHost.value = 'cloudinary';
+      } else if (config.imgbb_api_key) {
+        selectedHost.value = 'imgbb';
+      }
     }
   } catch (error) {
     console.error('加载配置失败:', error);
@@ -845,9 +854,8 @@ const batchUpload = async () => {
     uploadProgress.value = 10;
     uploadStatus.value = tMessage('contentPackage.upload.dialog.configSaved');
 
-    // 获取图床配置
-    const config = await ConfigService.getConfig();
-    const selectedHostType = config.cloud_name ? 'cloudinary' : 'imgbb';
+    // 使用用户选择的图床类型
+    const selectedHostType = selectedHost.value;
 
     uploadProgress.value = 20;
     uploadStatus.value = '开始批量上传...';
