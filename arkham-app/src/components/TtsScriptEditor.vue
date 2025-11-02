@@ -1075,10 +1075,10 @@ const syncAttributesFromCardData = () => {
     if (props.cardType === '调查员' && currentEditingData.attribute) {
         const attributes = currentEditingData.attribute;
         if (Array.isArray(attributes) && attributes.length >= 4) {
-            investigatorConfig.value.willpowerIcons = attributes[0] || 3;
-            investigatorConfig.value.intellectIcons = attributes[1] || 3;
-            investigatorConfig.value.combatIcons = attributes[2] || 2;
-            investigatorConfig.value.agilityIcons = attributes[3] || 2;
+            investigatorConfig.value.willpowerIcons = attributes[0] ?? 3;
+            investigatorConfig.value.intellectIcons = attributes[1] ?? 3;
+            investigatorConfig.value.combatIcons = attributes[2] ?? 2;
+            investigatorConfig.value.agilityIcons = attributes[3] ?? 2;
         }
     }
     if ((props.cardType === '支援卡' || props.cardType === '事件卡') && currentEditingData.uses) {
@@ -1154,10 +1154,10 @@ const loadFromLegacyFormat = (ttsScript: any) => {
             if (props.cardType === '调查员') {
                 investigatorConfig.value = {
                     extraToken: (parsed.extraToken || 'None').split('|').filter(token => token && token !== 'None'),
-                    willpowerIcons: parsed.willpowerIcons || 3,
-                    intellectIcons: parsed.intellectIcons || 3,
-                    combatIcons: parsed.combatIcons || 2,
-                    agilityIcons: parsed.agilityIcons || 2
+                    willpowerIcons: parsed.willpowerIcons ?? 3,
+                    intellectIcons: parsed.intellectIcons ?? 3,
+                    combatIcons: parsed.combatIcons ?? 2,
+                    agilityIcons: parsed.agilityIcons ?? 2
                 };
             }
             if ((props.cardType === '支援卡' || props.cardType === '事件卡') && parsed.uses) {
@@ -1189,7 +1189,7 @@ const loadFromLegacyFormat = (ttsScript: any) => {
                         icons: parsed.locationBack.icons || 'Diamond',
                         connections: parsed.locationBack.connections ? parsed.locationBack.connections.split('|') : [],
                         uses: parsed.locationBack.uses ? parsed.locationBack.uses.map((use: any) => ({
-                            count: use.count || use.countPerInvestigator || 1,
+                            count: use.count ?? use.countPerInvestigator ?? 1,
                             type: use.type || 'Clue',
                             token: use.token || 'clue',
                             isPerInvestigator: !!use.countPerInvestigator
