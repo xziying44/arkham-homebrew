@@ -669,7 +669,7 @@ class ArkhamDBConverter:
 
         # 特殊处理：code==01145 的背面设置 type 为"场景卡-大画"
         if card_code in ["01145", "02314", "04048", "04049", "04318", "03322a", "03323a", "03276b",
-                         "03279b", "05199", "05247", "05248", "06292", "06337"] and is_back:
+                         "03279b", "05199", "05247", "05248", "06292", "06337", "07313"] and is_back:
             card_data["type"] = "场景卡-大画"
             card_data["footer_copyright"] = ""
             card_data["footer_icon_font"] = ""
@@ -689,6 +689,9 @@ class ArkhamDBConverter:
         if card_code == '04277':
             card_data["scenario_type"] = 1
             card_data["scenario_card"]['resource_name'] = '当前深度'
+        if card_code == '07274':
+            card_data["scenario_type"] = 1
+            card_data["scenario_card"]['resource_name'] = '花费的钥匙'
 
         if card_code in ['04125a', '04126a', '04127', '04128a', '04129', '04130a', '04131',
                          '04132', '03278', '03279a', '03280', '03282'] and 'serial_number' in card_data:
@@ -723,7 +726,9 @@ class ArkhamDBConverter:
         if card_code in ['03283', '03284'] and is_back:
             card_data["flavor"] = card_data["flavor"].split("<hr>")[0]
 
-        if card_code in ['03065', '03066', '03067', '03068', '03069']:
+        if card_code in ['03065', '03066', '03067', '03068', '03069',
+                         '07174b', '07175b', '07176b', '07177b',
+                         '07204b', '07204c', '07205b', '07206b', '07207b', '07208b', '07208c', '07209b']:
             if is_back:
                 card_data["Notes"] = 'front'
             else:
@@ -735,6 +740,11 @@ class ArkhamDBConverter:
         if card_code in ['08679'] is not is_back:
             card_data['attack'] = f"{card_data['attack']}<调查员>"
             card_data['evade'] = f"{card_data['attack']}<调查员>"
+
+        if card_code in ['07062a'] is not is_back:
+            card_data['type'] = '冒险参考卡'
+            card_data['scenario_type'] = 2
+            card_data['body'] = f"<center>{card_data['body']}</center>"
 
         # 可以在这里添加更多特殊处理逻辑
         # 例如：
