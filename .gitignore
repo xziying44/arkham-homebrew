@@ -13,6 +13,7 @@
 # 排除 venv 目录
 /venv/
 
+/.idea/
 app.spec
 config.json
 output_card.png
@@ -27,3 +28,9 @@ output_card.png
 /recent_directories.json
 # 排除 python 编译缓存
 */__pycache__
+/logs/
+/.workflow/
+/.serena/
+/.claude/
+/remaek_card/translation_data.json
+/remaek_card/db_cards_en.json
