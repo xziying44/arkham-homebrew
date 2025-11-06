@@ -44,13 +44,52 @@
                     </div>
                 </div>
             </n-form>
+
+            <!-- 插画布局设置展开按钮 -->
+            <n-divider v-if="sideCardData.picture_base64" style="margin: 16px 0 12px 0;" />
+            <div v-if="sideCardData.picture_base64" style="display: flex; justify-content: center;">
+                <n-button
+                    type="primary"
+                    secondary
+                    size="medium"
+                    @click="toggleIllustrationLayout"
+                    style="width: 100%; font-weight: 500;">
+                    <template #icon>
+                        <n-icon>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+                                <path v-if="illustrationLayoutCollapsed.includes('illustration')"
+                                    d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"
+                                    fill="currentColor"/>
+                                <path v-else
+                                    d="M233.4 105.4c12.5-12.5 32.8-12.5 45.3 0l192 192c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L256 173.3 86.6 342.6c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3l192-192z"
+                                    fill="currentColor"/>
+                            </svg>
+                        </n-icon>
+                    </template>
+                    {{ illustrationLayoutCollapsed.includes('illustration') ?
+                       $t('cardEditor.illustrationLayout.hideSettings') :
+                       $t('cardEditor.illustrationLayout.showSettings') }}
+                </n-button>
+            </div>
         </n-card>
 
         <!-- 插画布局编辑器 -->
-        <IllustrationLayoutEditor v-if="sideCardData.picture_base64"
-            :image-src="sideCardData.picture_base64" :layout="sideCardData.picture_layout"
-            :card_type="sideCardData.type"
-            @update:layout="updateIllustrationLayout" />
+        <div v-if="sideCardData.picture_base64 && illustrationLayoutCollapsed.includes('illustration')"
+             style="margin-top: 12px;">
+            <IllustrationLayoutEditor
+                :image-src="sideCardData.picture_base64"
+                :layout="sideCardData.picture_layout"
+                :card_type="sideCardData.type"
+                @update:layout="updateIllustrationLayout" />
+        </div>
+
+        <!-- 高级文本布局编辑器 -->
+        <n-card v-if="currentSideType" :title="$t('cardEditor.panel.advancedTextLayout')" size="small"
+            class="form-card">
+            <n-button @click="showTextBoundaryModal = true" size="small" type="primary">
+                {{ $t('cardEditor.panel.advancedTextLayout') }}
+            </n-button>
+        </n-card>
 
         <!-- 卡牌信息 -->
         <n-card v-if="currentSideType" :title="$t('cardEditor.panel.cardInfo')" size="small"
@@ -137,6 +176,16 @@
                 </div>
             </n-form>
         </n-card>
+
+        <!-- 文本边界编辑器抽屉 -->
+        <n-drawer v-model:show="showTextBoundaryModal" :width="600" placement="left" :show-mask="false">
+            <n-drawer-content :title="$t('cardEditor.panel.advancedTextLayout')" closable>
+                <TextBoundaryEditor
+                    :card-type="sideCardData.type"
+                    :text-boundary="sideCardData.text_boundary"
+                    @update:text-boundary="updateTextBoundary" />
+            </n-drawer-content>
+        </n-drawer>
     </div>
 </template>
 
@@ -146,6 +195,7 @@ import { useI18n } from 'vue-i18n';
 import type { FormField, CardTypeConfig, ShowCondition } from '@/config/cardTypeConfigs';
 import FormFieldComponent from './FormField.vue';
 import IllustrationLayoutEditor from './IllustrationLayoutEditor.vue';
+import TextBoundaryEditor from './TextBoundaryEditor.vue';
 
 interface Props {
     side: 'front' | 'back';
@@ -239,6 +289,12 @@ const currentFormConfig = computed((): CardTypeConfig | null => {
 
 // 表单操作状态
 const newStringValue = ref('');
+
+// 文本边界编辑器模态状态
+const showTextBoundaryModal = ref(false);
+
+// 插画布局编辑器折叠状态（默认收起）
+const illustrationLayoutCollapsed = ref<string[]>([]);
 
 // 检查显示条件
 const checkShowCondition = (condition: ShowCondition): boolean => {
@@ -508,6 +564,22 @@ const onCardTypeChange = (newType: string) => {
 const updateIllustrationLayout = (newLayout: string) => {
     sideCardData.picture_layout = newLayout;
     updateSideData('picture_layout', newLayout);
+};
+
+// 切换插画布局编辑器显示状态
+const toggleIllustrationLayout = () => {
+    if (illustrationLayoutCollapsed.value.includes('illustration')) {
+        illustrationLayoutCollapsed.value = [];
+    } else {
+        illustrationLayoutCollapsed.value = ['illustration'];
+    }
+};
+
+// 更新文本边界
+const updateTextBoundary = (newBoundary: any) => {
+    sideCardData.text_boundary = newBoundary;
+    emit('update-card-data', props.side, 'text_boundary', newBoundary);
+    emit('trigger-preview');
 };
 
 // 更新面数据

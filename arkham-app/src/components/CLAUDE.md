@@ -17,7 +17,7 @@ This document provides a complete, multi‑layer reference for the Vue 3 compone
   - Selectors/dialogs: `CardFileBrowser.vue`, `UniversalUploadDialog.vue`, `LanguageWelcomeModal.vue`.
 - Child component imports (intra‑module):
   - `FormEditPanel.vue` → `CardSideEditor.vue`, `IllustrationLayoutEditor.vue`, `DeckOptionEditor.vue`, `TtsScriptEditor.vue`
-  - `CardSideEditor.vue` → `FormField.vue`, `IllustrationLayoutEditor.vue`
+  - `CardSideEditor.vue` → `FormField.vue`, `IllustrationLayoutEditor.vue`, `TextBoundaryEditor.vue`
   - `DeckEditor.vue` → `TTSExportGuide.vue`
   - `PackageEditor.vue` → `UniversalUploadDialog.vue`
   - `TtsScriptEditor.vue` → `CardFileBrowser.vue`
@@ -26,8 +26,9 @@ This document provides a complete, multi‑layer reference for the Vue 3 compone
 ## 3) Component Catalog
 - Editors
   - `FormEditPanel.vue` – Card editing hub (single/double‑sided cards, preview, cache & save workflows)
-  - `CardSideEditor.vue` – Side‑specific card fields editor, type/language switching
+  - `CardSideEditor.vue` – Side‑specific card fields editor, type/language switching, collapsible illustration layout, text boundary drawer
   - `IllustrationLayoutEditor.vue` – Visual crop/offset/scale/rotate/flip editor for card art
+  - `TextBoundaryEditor.vue` – Advanced text boundary adjustment (body boundaries + flavor padding)
   - `DeckOptionEditor.vue` – Investigator deck building options editor
   - `TtsScriptEditor.vue` – TTS scripting config editor (per card type), integrates file browser
   - `DeckEditor.vue` – Deck content arrangement and export integration
@@ -93,6 +94,40 @@ CardSideEditor(
 Behavior
 - Manages a reactive clone of `cardData`; updates emit precise field changes and card type changes.
 - Integrates `FormField` for per‑field rendering and `IllustrationLayoutEditor` for art.
+- Features collapsible illustration layout settings with toggle button at bottom of card properties panel.
+- Integrates `TextBoundaryEditor` via left-side drawer (no mask overlay) for advanced text boundary adjustments.
+
+### TextBoundaryEditor.vue
+Signature
+```ts
+interface TextBoundary {
+  body: {
+    top: number;      // Range: -50 to 50
+    bottom: number;   // Range: -50 to 50
+    left: number;     // Range: -50 to 50
+    right: number;    // Range: -50 to 50
+  };
+  flavor: {
+    padding: number;  // Range: 0 to 100, default: 20
+  };
+}
+
+TextBoundaryEditor(
+  props: {
+    cardType: string;
+    textBoundary?: TextBoundary;
+  },
+  emits: {
+    'update:text-boundary'(value: TextBoundary): void;
+  }
+)
+```
+Behavior
+- Provides 5 sliders for precise text boundary adjustments: body (top/bottom/left/right) and flavor padding.
+- Body boundaries: positive values expand outward, negative values shrink inward (-50px to +50px).
+- Flavor padding: controls padding value for flavor text (0px to 100px, default 20px).
+- Real-time updates with 0.5s debounced preview refresh.
+- Integrates with backend `_tidy_body_flavor` and `draw_text` boundary_offset parameters.
 
 ### FileTreePanel.vue
 Signature
@@ -389,7 +424,7 @@ Behavior
 ---
 
 Appendix: File Index
-- Editors: `FormEditPanel.vue`, `CardSideEditor.vue`, `IllustrationLayoutEditor.vue`, `DeckOptionEditor.vue`, `TtsScriptEditor.vue`, `DeckEditor.vue`, `PackageEditor.vue`, `TTSExportGuide.vue`
+- Editors: `FormEditPanel.vue`, `CardSideEditor.vue`, `IllustrationLayoutEditor.vue`, `TextBoundaryEditor.vue`, `DeckOptionEditor.vue`, `TtsScriptEditor.vue`, `DeckEditor.vue`, `PackageEditor.vue`, `TTSExportGuide.vue`
 - Panels: `FileTreePanel.vue`, `ImagePreviewPanel.vue`, `WorkspaceSidebar.vue`, `ResizeSplitter.vue`
 - Dialogs/Inputs: `FormField.vue`, `UniversalUploadDialog.vue`, `CardFileBrowser.vue`, `LanguageWelcomeModal.vue`
 

@@ -530,8 +530,69 @@ class Card:
             current_y += height
             current_y += gap
 
+    def _apply_boundary_offset(self, vertices, boundary, epsilon=1e-6):
+        """
+        应用边界偏移到多边形顶点坐标
+
+        该方法实现经Codex验证的边界偏移算法,支持矩形、梯形、六边形等不规则多边形。
+        算法核心思想:
+        1. 识别顶点所属边界(上/下/左/右)通过比较坐标与极值
+        2. 角点自动累加多个方向的偏移(例如左上角应用top+left)
+        3. 使用epsilon容差处理浮点精度问题
+
+        使用示例:
+            vertices = [(100, 200), (500, 200), (500, 600), (100, 600)]  # 矩形
+            boundary_offset = {'top': 5, 'left': -3}  # 上边扩展5px,左边收缩3px
+            # 结果: 左上角(100-(-3), 200-5)=(103, 195), 右上角(500, 195), 右下角(500, 600), 左下角(103, 600)
+
+        :param vertices: 多边形顶点坐标列表 [(x1, y1), (x2, y2), ...]
+        :param boundary: 边界偏移配置字典 {'top': int, 'bottom': int, 'left': int, 'right': int}
+                        单位为像素,正数表示向外扩展,负数表示向内收缩
+        :param epsilon: 浮点比较容差,默认1e-6
+        :return: 调整后的顶点坐标列表
+        """
+        # 提取偏移值(处理None和缺失键)
+        top_off = boundary.get('top', 0) or 0
+        bottom_off = boundary.get('bottom', 0) or 0
+        left_off = boundary.get('left', 0) or 0
+        right_off = boundary.get('right', 0) or 0
+
+        # 计算坐标极值,用于识别顶点所属边界
+        xs = [x for x, _ in vertices]
+        ys = [y for _, y in vertices]
+        min_x, max_x = min(xs), max(xs)
+        min_y, max_y = min(ys), max(ys)
+
+        # 定义浮点比较辅助函数(处理浮点精度问题)
+        def is_close(a, b):
+            return abs(a - b) <= epsilon
+
+        # 遍历每个顶点,应用边界偏移
+        adjusted_vertices = []
+        for x, y in vertices:
+            nx, ny = x, y  # 初始化调整后的坐标
+
+            # 判断顶点是否在边界上并应用偏移
+            # 左边界: x接近min_x
+            if is_close(x, min_x):
+                nx -= left_off  # 负数收缩,正数扩展
+            # 右边界: x接近max_x
+            if is_close(x, max_x):
+                nx += right_off
+            # 上边界: y接近min_y
+            if is_close(y, min_y):
+                ny -= top_off
+            # 下边界: y接近max_y
+            if is_close(y, max_y):
+                ny += bottom_off
+
+            # 角点会自动累加偏移(例如左上角同时满足min_x和min_y条件)
+            adjusted_vertices.append((nx, ny))
+
+        return adjusted_vertices
+
     def draw_text(self, text, vertices, default_font_name='simfang',
-                  default_size=12, color=(0, 0, 0), padding=10, draw_virtual_box=False):
+                  default_size=12, color=(0, 0, 0), padding=10, draw_virtual_box=False, boundary_offset=None):
         """
         在多边形区域内绘制格式化文本
 
@@ -542,7 +603,14 @@ class Card:
         :param color: 文字颜色
         :param padding: 内边距
         :param draw_virtual_box: 是否绘制调试框线
+        :param boundary_offset: 可选的边界偏移配置,格式: {'top': int, 'bottom': int, 'left': int, 'right': int}
+                               正数表示向外扩展边界,负数表示向内收缩边界,单位为像素
+                               不传或传None时保持原vertices不变,完全向后兼容
         """
+        # 应用边界偏移(如果提供)
+        if boundary_offset:
+            vertices = self._apply_boundary_offset(vertices, boundary_offset)
+
         # if self.font_manager.silence:
         #     return
         # 兼容旧格式

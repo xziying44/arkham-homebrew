@@ -74,6 +74,7 @@ export default {
 
     // Card info
     cardInfo: 'Card Information',
+    advancedTextLayout: 'Advanced Text Layout',
     illustrator: '🎨 Illustrator',
     encounterGroupNumber: '📋 Encounter Group',
     cardNumber: '📋 Card Number',
@@ -161,6 +162,8 @@ export default {
   // IllustrationLayoutEditor component
   illustrationLayout: {
     title: 'Illustration Layout Settings',
+    showSettings: '🎨 Show Layout Settings',
+    hideSettings: '🎨 Hide Layout Settings',
     layoutMode: 'Layout Mode',
     autoCenter: 'Auto Center',
     custom: 'Custom',
@@ -180,5 +183,23 @@ export default {
     flip: 'Flip',
     horizontal: 'Horizontal',
     vertical: 'Vertical'
+  },
+
+  // TextBoundaryEditor component
+  textBoundary: {
+    title: 'Text Boundary Adjustment',
+    body: {
+      title: 'Body Boundary',
+      top: 'Top Boundary',
+      bottom: 'Bottom Boundary',
+      left: 'Left Boundary',
+      right: 'Right Boundary'
+    },
+    flavor: {
+      title: 'Flavor Text Padding',
+      padding: 'Padding'
+    },
+    helpTitle: 'Usage Tips',
+    helpText: 'Body boundary: Positive values expand outward, negative values shrink inward (Range: -50px ~ +50px). Flavor padding: Controls the padding value for flavor text (Range: 0px ~ 100px)'
   }
 }

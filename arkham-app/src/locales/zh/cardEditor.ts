@@ -74,6 +74,7 @@ export default {
 
     // 卡牌信息
     cardInfo: '卡牌信息',
+    advancedTextLayout: '高级文本布局',
     illustrator: '🎨 插画作者',
     encounterGroupNumber: '📋 遭遇组序号',
     cardNumber: '📋 卡牌序号',
@@ -166,6 +167,8 @@ export default {
   // IllustrationLayoutEditor component
   illustrationLayout: {
     title: '插画布局设置',
+    showSettings: '🎨 展开插画布局设置',
+    hideSettings: '🎨 收起插画布局设置',
     layoutMode: '布局模式',
     autoCenter: '自动居中',
     custom: '自定义',
@@ -185,5 +188,23 @@ export default {
     flip: '镜像翻转 (Flip)',
     horizontal: '水平',
     vertical: '垂直'
+  },
+
+  // TextBoundaryEditor component
+  textBoundary: {
+    title: '文本边界调整',
+    body: {
+      title: '正文边界',
+      top: '上边界',
+      bottom: '下边界',
+      left: '左边界',
+      right: '右边界'
+    },
+    flavor: {
+      title: '风味文本边距',
+      padding: '内边距'
+    },
+    helpTitle: '使用提示',
+    helpText: '正文边界：正数向外扩展，负数向内收缩（范围: -50px ~ +50px）。风味内边距：控制风味文本的padding值（范围: 0px ~ 100px）'
   }
 }

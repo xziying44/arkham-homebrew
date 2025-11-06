@@ -144,6 +144,42 @@ export interface CardData {
   encounter_group?: string;    // 遭遇组
   encounter_sequence?: string; // 遭遇组序号
   card_sequence?: string;      // 卡牌序号
+
+  /**
+   * 文本边界偏移配置（可选）
+   * 用于精确控制正文和风味文本的渲染边界
+   * 数值单位：像素，正数表示扩展边界，负数表示收缩边界
+   */
+  text_boundary?: {
+    /**
+     * 正文文本边界偏移
+     */
+    body?: {
+      top: number;    // 上边界偏移（正数向上扩展，负数向下收缩）
+      bottom: number; // 下边界偏移（正数向下扩展，负数向上收缩）
+      left: number;   // 左边界偏移（正数向左扩展，负数向右收缩）
+      right: number;  // 右边界偏移（正数向右扩展，负数向左收缩）
+    };
+    /**
+     * 风味文本边界偏移
+     */
+    flavor?: {
+      top: number;    // 上边界偏移（正数向上扩展，负数向下收缩）
+      bottom: number; // 下边界偏移（正数向下扩展，负数向上收缩）
+      left: number;   // 左边界偏移（正数向左扩展，负数向右收缩）
+      right: number;  // 右边界偏移（正数向右扩展，负数向左收缩）
+    };
+  };
+
+  /**
+   * 风味文本内边距配置（可选）
+   * 用于控制风味文本与其边界框之间的间距
+   * 数值单位：像素
+   */
+  flavor_padding?: {
+    horizontal: number; // 水平内边距（左右）
+    vertical: number;   // 垂直内边距（上下）
+  };
 }
 
 // 生成卡图请求数据类型

@@ -2,9 +2,14 @@
 
 ## 变更记录 (Changelog)
 
+- **2025-11-06**:
+  - 前端：新增TextBoundaryEditor组件，支持正文边界和风味文本padding调整
+  - 前端：CardSideEditor添加可收展的插画布局设置按钮（默认收起）
+  - 后端：create_card.py添加flavor_padding参数支持，可配置风味文本内边距（默认20px）
+  - 后端：所有draw_text调用添加boundary_offset参数，支持文本框边界精确调整
+  - i18n：更新中英文本地化资源，添加TextBoundaryEditor和插画布局相关翻译
 - **2025-10-17**: 完成三阶段自适应扫描，更新模块结构图，发现并文档化remaek_card模块
 - **2025-10-12**: 初始化AI上下文，完成项目结构分析
-- 待添加更多变更记录...
 
 ## Purpose
 

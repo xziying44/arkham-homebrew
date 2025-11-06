@@ -71,6 +71,55 @@ class CardCreator:
         self.transparent_encounter = transparent_encounter
         self.transparent_background = transparent_background
 
+    def _get_text_boundary_offset(self, card_data: dict, boundary_type: str = 'body') -> Optional[dict]:
+        """
+        从卡牌数据中提取文本边界偏移配置
+
+        Args:
+            card_data: 卡牌数据字典
+            boundary_type: 边界类型 'body' 或 'flavor'
+
+        Returns:
+            边界偏移字典 {'top': int, 'bottom': int, 'left': int, 'right': int} 或 None
+        """
+        text_boundary = card_data.get('text_boundary')
+        if not text_boundary:
+            return None
+
+        boundary = text_boundary.get(boundary_type)
+        if not boundary:
+            return None
+
+        # 只返回有非零值的边界设置
+        result = {}
+        for key in ['top', 'bottom', 'left', 'right']:
+            value = boundary.get(key)
+            if value is not None and value != 0:
+                result[key] = value
+
+        return result if result else None
+
+    def _get_flavor_padding(self, card_data: dict) -> int:
+        """
+        从卡牌数据中提取风味文本padding值
+
+        Args:
+            card_data: 卡牌数据字典
+
+        Returns:
+            padding值（默认20）
+        """
+        text_boundary = card_data.get('text_boundary')
+        if not text_boundary:
+            return 20
+
+        flavor = text_boundary.get('flavor')
+        if not flavor:
+            return 20
+
+        padding = flavor.get('padding', 20)
+        return int(padding) if padding is not None else 0
+
     def _open_picture(self, card_json: dict, picture_path: Union[str, Image.Image, None]) -> Optional[Image.Image]:
         """打开图片 - 支持路径和PIL图片对象"""
         if picture_path is None:
@@ -194,14 +243,16 @@ class CardCreator:
         return paste_areas.get(card_type, (0, 0, 739, 1049))  # 默认全覆盖
 
     def _tidy_body_flavor(self, body: str, flavor: str, flavor_type: int = 0,
-                          align: str = 'center', quote: bool = False) -> str:
+                          align: str = 'center', quote: bool = False, flavor_padding: int = 0) -> str:
         """整理正文和风味，正确处理flavor字段中的<lr>标签"""
         body = body.strip()
         tag_name = 'flavor'
         if align == 'left':
-            tag_name = 'flavor align="left" flex="false" padding="0"'
+            tag_name = f'flavor align="left" flex="false" padding="0"'
+        else:
+            tag_name = f'flavor padding="{flavor_padding}"'
         if quote:
-            tag_name += ' quote="true" padding="20"'
+            tag_name += ' quote="true"'
 
         if flavor:
             flavor = flavor.strip()
@@ -424,7 +475,7 @@ class CardCreator:
         )
 
         # 整合body和flavor
-        body = self._tidy_body_flavor(data['body'], data['flavor'])
+        body = self._tidy_body_flavor(data['body'], data['flavor'], flavor_padding=self._get_flavor_padding(data))
 
         # 写正文和风味
         card.draw_text(
@@ -441,7 +492,8 @@ class CardCreator:
             default_font_name='正文字体',
             default_size=32,
             padding=18,
-            draw_virtual_box=False
+            draw_virtual_box=False,
+            boundary_offset=self._get_text_boundary_offset(data, 'body')
         )
 
         # 写隐藏值和线索值
@@ -538,7 +590,7 @@ class CardCreator:
         )
 
         # 整合body和flavor
-        body = self._tidy_body_flavor(data['body'], data['flavor'])
+        body = self._tidy_body_flavor(data['body'], data['flavor'], flavor_padding=self._get_flavor_padding(data))
 
         # 写正文和风味
         card.draw_text(
@@ -550,8 +602,8 @@ class CardCreator:
             default_font_name='正文字体',
             default_size=32,
             padding=18,
-            draw_virtual_box=False
-        )
+            draw_virtual_box=False,
+            boundary_offset=self._get_text_boundary_offset(data, 'body'))
 
         # 画胜利点
         card.draw_victory_points(
@@ -631,7 +683,7 @@ class CardCreator:
         )
 
         # 整合body和flavor
-        body = self._tidy_body_flavor(data['body'], data['flavor'])
+        body = self._tidy_body_flavor(data['body'], data['flavor'], flavor_padding=self._get_flavor_padding(data))
 
         # 写胜利点数和正文
         if data.get('victory') is not None:
@@ -648,8 +700,8 @@ class CardCreator:
                 default_font_name='正文字体',
                 default_size=32,
                 padding=15,
-                draw_virtual_box=False
-            )
+                draw_virtual_box=False,
+            boundary_offset=self._get_text_boundary_offset(data, 'body'))
         else:
             card.draw_text(
                 text=body,
@@ -660,8 +712,8 @@ class CardCreator:
                 default_font_name='正文字体',
                 default_size=32,
                 padding=15,
-                draw_virtual_box=False
-            )
+                draw_virtual_box=False,
+            boundary_offset=self._get_text_boundary_offset(data, 'body'))
 
         # 画生命值恐惧值
         health = data.get('enemy_damage', 0) if isinstance(data.get('enemy_damage'), int) else 0
@@ -712,8 +764,8 @@ class CardCreator:
             default_font_name='正文字体',
             default_size=32,
             padding=18,
-            draw_virtual_box=False
-        )
+            draw_virtual_box=False,
+            boundary_offset=self._get_text_boundary_offset(data, 'body'))
 
         # 写卡牌类型
         font_size = 22
@@ -745,7 +797,7 @@ class CardCreator:
             raise ValueError('卡牌类型错误')
 
         # 整合body和flavor
-        body = self._tidy_body_flavor(data['body'], data['flavor'])
+        body = self._tidy_body_flavor(data['body'], data['flavor'], flavor_padding=self._get_flavor_padding(data))
         dp = self._open_picture(card_json, picture_path)
 
         if data['type'] == '事件卡':
@@ -785,8 +837,8 @@ class CardCreator:
             body,
             vertices=[(38, 720), (704, 720), (706, 757), (704, 817), (680, 887), (670, 952),
                       (598, 980), (135, 980), (77, 949), (61, 907), (31, 793)],
-            default_font_name='正文字体', default_size=32, padding=18, draw_virtual_box=False
-        )
+            default_font_name='正文字体', default_size=32, padding=18, draw_virtual_box=False,
+            boundary_offset=self._get_text_boundary_offset(data, 'body'))
 
     def _create_weakness_support_card(self, card, data, body, dp):
         """创建弱点支援卡"""
@@ -817,7 +869,8 @@ class CardCreator:
             vertices = [(19, 658), (718, 658), (718, 920), (19, 920)]
 
         card.draw_text(body, vertices=vertices,
-                       default_font_name='正文字体', default_size=32, padding=15, draw_virtual_box=False)
+                       default_font_name='正文字体', default_size=32, padding=15, draw_virtual_box=False,
+            boundary_offset=self._get_text_boundary_offset(data, 'body'))
 
         if 'slots' in data and isinstance(data['slots'], str):
             card.add_slots(data['slots'])
@@ -857,8 +910,8 @@ class CardCreator:
             vertices=[(75, 758), (682 + offset, 758), (692 + offset, 770), (704 + offset, 838), (701 + offset, 914),
                       (679 + offset, 989),
                       (74, 989), (91, 920), (96, 844)],
-            default_font_name='正文字体', default_size=32, padding=15, draw_virtual_box=False
-        )
+            default_font_name='正文字体', default_size=32, padding=15, draw_virtual_box=False,
+            boundary_offset=self._get_text_boundary_offset(data, 'body'))
 
         if 'submit_icon' in data and isinstance(data['submit_icon'], list):
             for icon in data['submit_icon']:
@@ -884,7 +937,8 @@ class CardCreator:
                            (38, 726), (704, 726), (704, 960),
                            (519, 1010), (219, 1010), (38, 960),
                        ],
-                       default_font_name='正文字体', default_size=32, padding=18, draw_virtual_box=False)
+                       default_font_name='正文字体', default_size=32, padding=18, draw_virtual_box=False,
+            boundary_offset=self._get_text_boundary_offset(data, 'body'))
 
     def _create_weakness_enemy_card(self, card, data, body, dp):
         """创建弱点敌人卡"""
@@ -917,7 +971,8 @@ class CardCreator:
                         (538, 540), (190, 540), (20, 458), (20, 270)]
 
         card.draw_text(body, vertices=vertices, default_font_name='正文字体', default_size=32, padding=15,
-                       draw_virtual_box=False)
+                       draw_virtual_box=False,
+            boundary_offset=self._get_text_boundary_offset(data, 'body'))
 
         health = data.get('enemy_damage', 0) if isinstance(data.get('enemy_damage'), int) else 0
         horror = data.get('enemy_damage_horror', 0) if isinstance(data.get('enemy_damage_horror'), int) else 0
@@ -1022,7 +1077,7 @@ class CardCreator:
         if 'other' in card_back and card_back['other'] != '':
             test_text += card_back['other'] + '\n'
         if 'story' in card_back and card_back['story'] != '':
-            test_text = self._tidy_body_flavor(test_text, card_back['story'], align='left')
+            test_text = self._tidy_body_flavor(test_text, card_back['story'], align='left', flavor_padding=self._get_flavor_padding(data))
 
         # 根据职业设置不同的文本区域
         vertices_map = {
@@ -1036,7 +1091,8 @@ class CardCreator:
         vertices = vertices_map.get(data['class'], vertices_map['潜修者'])
 
         card.draw_text(test_text, vertices=vertices, default_font_name='正文字体', default_size=32,
-                       padding=15, draw_virtual_box=False)
+                       padding=15, draw_virtual_box=False,
+            boundary_offset=self._get_text_boundary_offset(data, 'body'))
 
         return card
 
@@ -1082,10 +1138,11 @@ class CardCreator:
         traits = self._integrate_traits_text(data.get('traits', []))
         card.draw_centered_text((810, 160), traits, "特性字体", 29, (0, 0, 0))
 
-        body = self._tidy_body_flavor(data['body'], data['flavor'])
+        body = self._tidy_body_flavor(data['body'], data['flavor'], flavor_padding=self._get_flavor_padding(data))
         card.draw_text(body, vertices=[(596, 178), (1016, 178),
                                        (1016, 600), (596, 600)],
-                       default_font_name='正文字体', default_size=32, padding=10, draw_virtual_box=False)
+                       default_font_name='正文字体', default_size=32, padding=10, draw_virtual_box=False,
+            boundary_offset=self._get_text_boundary_offset(data, 'body'))
 
         health = data.get('health', 0) if isinstance(data.get('health'), int) else 0
         horror = data.get('horror', 0) if isinstance(data.get('horror'), int) else 0
@@ -1182,7 +1239,7 @@ class CardCreator:
             card.set_card_level(-1)
 
         traits = self._integrate_traits_text(data.get('traits', []))
-        body = self._tidy_body_flavor(data['body'], data['flavor'])
+        body = self._tidy_body_flavor(data['body'], data['flavor'], flavor_padding=self._get_flavor_padding(data))
 
         if data['type'] == '技能卡':
             self._setup_skill_card_content(card, data, traits, body)
@@ -1207,8 +1264,8 @@ class CardCreator:
         card.draw_text(
             body,
             vertices=vertices,
-            default_font_name='正文字体', default_size=32, padding=15, draw_virtual_box=False
-        )
+            default_font_name='正文字体', default_size=32, padding=15, draw_virtual_box=False,
+            boundary_offset=self._get_text_boundary_offset(data, 'body'))
         card.draw_victory_points(
             position=(378, 973),
             victory_value=data.get('victory')
@@ -1228,8 +1285,8 @@ class CardCreator:
         card.draw_text(
             body,
             vertices=vertices,
-            default_font_name='正文字体', default_size=32, padding=18, draw_virtual_box=False
-        )
+            default_font_name='正文字体', default_size=32, padding=18, draw_virtual_box=False,
+            boundary_offset=self._get_text_boundary_offset(data, 'body'))
 
         if 'cost' in data and isinstance(data['cost'], int):
             card.set_card_cost(data['cost'])
@@ -1259,7 +1316,8 @@ class CardCreator:
         if data.get('flavor') or self.font_manager.lang not in ['zh', 'zh-CHT']:
             vertices = [(19, 658), (718, 658), (718, 920), (19, 920)]
         card.draw_text(body, vertices=vertices, default_font_name='正文字体', default_size=32, padding=15,
-                       draw_virtual_box=False)
+                       draw_virtual_box=False,
+            boundary_offset=self._get_text_boundary_offset(data, 'body'))
 
         if 'cost' in data and isinstance(data['cost'], int):
             card.set_card_cost(data['cost'])
@@ -1307,10 +1365,11 @@ class CardCreator:
         title_y = 513 if data['type'] == '场景卡-大画' else 464
         card.draw_centered_text((500, title_y), data['name'], "标题字体", 48, (0, 0, 0))
 
-        body = self._tidy_body_flavor(data['body'], data['flavor'], flavor_type=1)
+        body = self._tidy_body_flavor(data['body'], data['flavor'], flavor_type=1, flavor_padding=self._get_flavor_padding(data))
         text_y = 556 if data['type'] == '场景卡-大画' else 512
         card.draw_text(body, vertices=[(28, text_y), (1016, text_y), (1016, 686), (28, 686)],
-                       default_font_name='正文字体', default_size=32, padding=15, draw_virtual_box=False)
+                       default_font_name='正文字体', default_size=32, padding=15, draw_virtual_box=False,
+            boundary_offset=self._get_text_boundary_offset(data, 'body'))
 
         # 写阈值
         if 'threshold' in data and data['type'] == '密谋卡-大画':
@@ -1397,9 +1456,10 @@ class CardCreator:
                 ]
 
         # 写正文
-        body = self._tidy_body_flavor(data['body'], data['flavor'], flavor_type=1, align='left')
+        body = self._tidy_body_flavor(data['body'], data['flavor'], flavor_type=1, align='left', flavor_padding=self._get_flavor_padding(data))
         card.draw_text(body, vertices=vertices, default_font_name='正文字体', default_size=32,
-                       padding=15, draw_virtual_box=False)
+                       padding=15, draw_virtual_box=False,
+            boundary_offset=self._get_text_boundary_offset(data, 'body'))
 
         # 写阈值
         if 'threshold' in data:
@@ -1457,13 +1517,13 @@ class CardCreator:
             card.paste_image(title_img, (40, 208), 'cover')
 
         # 写正文
-        body = self._tidy_body_flavor(data['body'], data['flavor'], flavor_type=1, align='left', quote=True)
+        body = self._tidy_body_flavor(data['body'], data['flavor'], flavor_type=1, align='left', quote=True, flavor_padding=self._get_flavor_padding(data))
         offset = -8
         card.draw_text(
             body,
             vertices=[(210 + offset, 67), (977 + offset, 67), (977 + offset, 672), (210 + offset, 672)],
-            default_font_name='正文字体', default_size=32, padding=15, draw_virtual_box=False
-        )
+            default_font_name='正文字体', default_size=32, padding=15, draw_virtual_box=False,
+            boundary_offset=self._get_text_boundary_offset(data, 'body'))
 
         # 画胜利点
         card.draw_victory_points(
@@ -1496,9 +1556,10 @@ class CardCreator:
         card.draw_centered_text((313, 90), data['name'], "标题字体", 48, (0, 0, 0))
         card.draw_centered_text((370, 1012), self.font_manager.get_font_text('剧情'), "卡牌类型字体", 30, (0, 0, 0))
 
-        body = self._tidy_body_flavor(data['body'], data['flavor'], flavor_type=1, align='left', quote=True)
+        body = self._tidy_body_flavor(data['body'], data['flavor'], flavor_type=1, align='left', quote=True, flavor_padding=self._get_flavor_padding(data))
         card.draw_text(body, vertices=[(50, 207), (685, 207), (685, 960), (50, 960)],
-                       default_font_name='正文字体', default_size=32, padding=15, draw_virtual_box=False)
+                       default_font_name='正文字体', default_size=32, padding=15, draw_virtual_box=False,
+            boundary_offset=self._get_text_boundary_offset(data, 'body'))
 
         card.draw_victory_points(
             position=(386, 970),
@@ -1538,9 +1599,10 @@ class CardCreator:
         card.draw_centered_text((374, 85), data['name'], "标题字体", 48, (0, 0, 0))
         card.draw_centered_text((372, 980), '行动', "卡牌类型字体", 24, (0, 0, 0))
 
-        body = self._tidy_body_flavor(data['body'], data['flavor'])
+        body = self._tidy_body_flavor(data['body'], data['flavor'], flavor_padding=self._get_flavor_padding(data))
         card.draw_text(body, vertices, default_font_name='正文字体', default_size=32,
-                       padding=15, draw_virtual_box=False)
+                       padding=15, draw_virtual_box=False,
+            boundary_offset=self._get_text_boundary_offset(data, 'body'))
 
         card.draw_victory_points(
             position=(386, 970),
@@ -1577,12 +1639,13 @@ class CardCreator:
 
         if data.get('scenario_type', 0) == 2:
             # 辅助卡
-            body = self._tidy_body_flavor(data['body'], data['flavor'])
+            body = self._tidy_body_flavor(data['body'], data['flavor'], flavor_padding=self._get_flavor_padding(data))
             vertices = [(56, 250), (685, 250), (685, 920), (56, 920)]
             if not data['name']:
                 vertices = [(56, 210), (685, 210), (685, 920), (56, 920)]
             card.draw_text(body, vertices=vertices,
-                           default_font_name='正文字体', default_size=32, padding=15, draw_virtual_box=False)
+                           default_font_name='正文字体', default_size=32, padding=15, draw_virtual_box=False,
+            boundary_offset=self._get_text_boundary_offset(data, 'body'))
         else:
             # 写副标题
             if 'subtitle' in data and data['subtitle'] != '':
