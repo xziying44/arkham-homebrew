@@ -164,6 +164,17 @@ export default {
     versionConvertFailed: '版本转换失败'
   },
 
+  // 快速导航
+  nav: {
+    cardType: '卡牌类型',
+    properties: '卡牌属性',
+    illustration: '插画布局',
+    textLayout: '文本布局',
+    cardInfo: '卡牌信息',
+    ttsScript: 'TTS脚本',
+    deckOptions: '牌库选项'
+  },
+
   // IllustrationLayoutEditor component
   illustrationLayout: {
     title: '插画布局设置',

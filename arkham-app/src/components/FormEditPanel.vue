@@ -1,5 +1,57 @@
 <template>
     <div class="form-pane">
+        <!-- 快速导航条 - 收起状态：小圆圈按钮 -->
+        <div
+            class="quick-nav-toggle"
+            v-if="isNavCollapsed && selectedFile && selectedFile.type === 'card' && currentCardType"
+            @click="isNavCollapsed = false">
+            <n-tooltip placement="left">
+                <template #trigger>
+                    <n-icon :size="20">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+                            <path d="M64 144h384v48H64zm0 112h384v48H64zm0 112h384v48H64z" fill="currentColor"/>
+                        </svg>
+                    </n-icon>
+                </template>
+                展开导航
+            </n-tooltip>
+        </div>
+
+        <!-- 快速导航条 - 展开状态 -->
+        <div class="quick-nav" v-if="!isNavCollapsed && selectedFile && selectedFile.type === 'card' && currentCardType">
+            <!-- 收起按钮 -->
+            <n-tooltip placement="left">
+                <template #trigger>
+                    <div class="nav-item nav-collapse" @click="isNavCollapsed = true">
+                        <n-icon :size="16">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+                                <path d="M184 112l144 144-144 144" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="48"/>
+                            </svg>
+                        </n-icon>
+                    </div>
+                </template>
+                收起导航
+            </n-tooltip>
+
+            <!-- 分隔线 -->
+            <div class="nav-divider"></div>
+
+            <!-- 导航项 -->
+            <n-tooltip placement="left" v-for="navItem in navigationItems" :key="navItem.id">
+                <template #trigger>
+                    <div
+                        class="nav-item"
+                        :class="{ active: activeSection === navItem.id }"
+                        @click="scrollToSection(navItem.id)">
+                        <n-icon :size="16">
+                            <component :is="navItem.icon" />
+                        </n-icon>
+                    </div>
+                </template>
+                {{ navItem.label }}
+            </n-tooltip>
+        </div>
+
         <div class="pane-header">
             <n-space align="center" justify="space-between">
                 <n-space align="center" size="small">
@@ -76,32 +128,47 @@
 
                     <!-- 单面卡牌或当前选中面的编辑器 -->
                     <div v-if="!isDoubleSided || currentSide === 'front'">
-                        <CardSideEditor side="front" :card-data="currentCardData" :card-type-configs="cardTypeConfigs"
-                            :card-type-options="cardTypeOptions" :language-options="languageOptions"
-                            @update-card-data="updateCardSideData" @update-card-type="updateCardSideType"
+                        <CardSideEditor
+                            ref="frontCardSideEditorRef"
+                            side="front"
+                            :card-data="currentCardData"
+                            :card-type-configs="cardTypeConfigs"
+                            :card-type-options="cardTypeOptions"
+                            :language-options="languageOptions"
+                            @update-card-data="updateCardSideData"
+                            @update-card-type="updateCardSideType"
                             @trigger-preview="triggerDebouncedPreviewUpdate" />
                     </div>
 
                     <!-- 背面编辑器（仅在双面卡牌且选择背面时显示） -->
                     <div v-if="isDoubleSided && currentSide === 'back'">
-                        <CardSideEditor side="back"
+                        <CardSideEditor
+                            ref="backCardSideEditorRef"
+                            side="back"
                             :card-data="{ ...currentCardData.back || {}, quantity: currentCardData.quantity || 1 }"
-                            :card-type-configs="cardTypeConfigs" :card-type-options="cardTypeOptions"
-                            :language-options="languageOptions" @update-card-data="updateCardSideData"
-                            @update-card-type="updateCardSideType" @trigger-preview="triggerDebouncedPreviewUpdate" />
+                            :card-type-configs="cardTypeConfigs"
+                            :card-type-options="cardTypeOptions"
+                            :language-options="languageOptions"
+                            @update-card-data="updateCardSideData"
+                            @update-card-type="updateCardSideType"
+                            @trigger-preview="triggerDebouncedPreviewUpdate" />
                     </div>
 
                     <!-- 共享组件区域 -->
                     <div class="shared-components" v-if="hasAnyValidCardData">
                         <!-- TTS脚本编辑器 -->
-                        <TtsScriptEditor :card-data="currentCardData" :card-type="currentCardType"
-                            :is-double-sided="isDoubleSided" :current-side="currentSide"
-                            @update-tts-script="updateTtsScript" />
+                        <div ref="ttsScriptSection">
+                            <TtsScriptEditor :card-data="currentCardData" :card-type="currentCardType"
+                                :is-double-sided="isDoubleSided" :current-side="currentSide"
+                                @update-tts-script="updateTtsScript" />
+                        </div>
 
                         <!-- 牌库选项编辑器 -->
-                        <DeckOptionEditor :card-data="currentCardData" :card-type="currentSideType"
-                            :is-double-sided="isDoubleSided" :current-side="currentSide"
-                            @update-deck-options="updateDeckOptions" />
+                        <div ref="deckOptionsSection">
+                            <DeckOptionEditor :card-data="currentCardData" :card-type="currentSideType"
+                                :is-double-sided="isDoubleSided" :current-side="currentSide"
+                                @update-deck-options="updateDeckOptions" />
+                        </div>
                     </div>
 
                     <!-- 操作按钮 -->
@@ -225,7 +292,19 @@
 
 <script setup lang="ts">
 import { ref, computed, reactive, watch, onMounted, onUnmounted, nextTick } from 'vue';
-import { FolderOpenOutline, ImageOutline, WarningOutline, CopyOutline } from '@vicons/ionicons5';
+import {
+    FolderOpenOutline,
+    ImageOutline,
+    WarningOutline,
+    CopyOutline,
+    DocumentTextOutline,
+    ImagesOutline,
+    ColorPaletteOutline,
+    TextOutline,
+    InformationCircleOutline,
+    CodeSlashOutline,
+    OptionsOutline
+} from '@vicons/ionicons5';
 import { useMessage } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import type { TreeOption } from 'naive-ui';
@@ -382,6 +461,168 @@ const converting = ref(false);
 
 // 新增：图片预览加载状态
 const imagePreviewLoading = ref(false);
+
+// 快速导航相关
+const cardTypeSection = ref<HTMLElement | null>(null);
+const propertiesSection = ref<HTMLElement | null>(null);
+const illustrationSection = ref<HTMLElement | null>(null);
+const textLayoutSection = ref<HTMLElement | null>(null);
+const cardInfoSection = ref<HTMLElement | null>(null);
+const ttsScriptSection = ref<HTMLElement | null>(null);
+const deckOptionsSection = ref<HTMLElement | null>(null);
+const activeSection = ref<string>('cardType');
+const isNavCollapsed = ref<boolean>(true); // 导航条收起状态（默认收起）
+
+// CardSideEditor组件ref（用于访问暴露的section refs）
+const frontCardSideEditorRef = ref<any>(null);
+const backCardSideEditorRef = ref<any>(null);
+
+// 导航项配置
+const navigationItems = computed(() => {
+    if (!hasAnyValidCardData.value) return [];
+
+    const items = [
+        {
+            id: 'cardType',
+            label: t('cardEditor.nav.cardType'),
+            icon: DocumentTextOutline
+        },
+        {
+            id: 'properties',
+            label: t('cardEditor.nav.properties'),
+            icon: ColorPaletteOutline
+        }
+    ];
+
+    // 如果有图片，添加插画布局导航项
+    if (currentCardData.picture_base64 || (currentCardData.back?.picture_base64)) {
+        items.push({
+            id: 'illustration',
+            label: t('cardEditor.nav.illustration'),
+            icon: ImagesOutline
+        });
+    }
+
+    items.push(
+        {
+            id: 'textLayout',
+            label: t('cardEditor.nav.textLayout'),
+            icon: TextOutline
+        },
+        {
+            id: 'cardInfo',
+            label: t('cardEditor.nav.cardInfo'),
+            icon: InformationCircleOutline
+        },
+        {
+            id: 'ttsScript',
+            label: t('cardEditor.nav.ttsScript'),
+            icon: CodeSlashOutline
+        },
+        {
+            id: 'deckOptions',
+            label: t('cardEditor.nav.deckOptions'),
+            icon: OptionsOutline
+        }
+    );
+
+    return items;
+});
+
+// 辅助函数：从 ref 获取真实 DOM 元素（处理组件实例的情况）
+const getElementFromRef = (refValue: any): HTMLElement | null => {
+    if (!refValue) return null;
+    // 如果是组件实例（有 $el 属性），返回 $el
+    if (refValue.$el && refValue.$el instanceof HTMLElement) {
+        return refValue.$el;
+    }
+    // 如果已经是 DOM 元素，直接返回
+    if (refValue instanceof HTMLElement) {
+        return refValue;
+    }
+    return null;
+};
+
+// 滚动到指定区域
+const scrollToSection = async (sectionId: string) => {
+    const formContent = document.querySelector('.form-content');
+    if (!formContent) return;
+
+    // 获取当前活动的CardSideEditor（根据单双面和当前面）
+    const activeCardSideEditor = (!isDoubleSided.value || currentSide.value === 'front')
+        ? frontCardSideEditorRef.value
+        : backCardSideEditorRef.value;
+
+    // 特殊处理：如果是插画布局导航项，先展开插画布局编辑器
+    if (sectionId === 'illustration' && activeCardSideEditor?.expandIllustrationLayout) {
+        activeCardSideEditor.expandIllustrationLayout();
+        // 等待 DOM 更新完成
+        await nextTick();
+    }
+
+    // 构建section映射，优先从CardSideEditor获取子组件refs，并转换为真实 DOM 元素
+    // 注意：defineExpose 暴露的 ref 会被自动解包，所以不需要 .value
+    const sectionMap: Record<string, HTMLElement | null> = {
+        cardType: getElementFromRef(activeCardSideEditor?.cardTypeSection) || getElementFromRef(cardTypeSection.value),
+        properties: getElementFromRef(activeCardSideEditor?.propertiesSection) || getElementFromRef(propertiesSection.value),
+        illustration: getElementFromRef(activeCardSideEditor?.illustrationSection) || getElementFromRef(illustrationSection.value),
+        textLayout: getElementFromRef(activeCardSideEditor?.textLayoutSection) || getElementFromRef(textLayoutSection.value),
+        cardInfo: getElementFromRef(activeCardSideEditor?.cardInfoSection) || getElementFromRef(cardInfoSection.value),
+        ttsScript: getElementFromRef(ttsScriptSection.value),
+        deckOptions: getElementFromRef(deckOptionsSection.value)
+    };
+
+    const targetSection = sectionMap[sectionId];
+    if (targetSection) {
+        // 使用 scrollIntoView 滚动到目标位置
+        targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        activeSection.value = sectionId;
+
+        // 滚动完成后自动收起导航栏
+        isNavCollapsed.value = true;
+    }
+};
+
+// 监听滚动事件，更新当前激活的导航项
+const handleScroll = () => {
+    const formContent = document.querySelector('.form-content');
+    if (!formContent) return;
+
+    // 获取当前活动的CardSideEditor（根据单双面和当前面）
+    const activeCardSideEditor = (!isDoubleSided.value || currentSide.value === 'front')
+        ? frontCardSideEditorRef.value
+        : backCardSideEditorRef.value;
+
+    // 使用 getElementFromRef 转换所有 refs 为真实 DOM 元素
+    // 注意：defineExpose 暴露的 ref 会被自动解包，所以不需要 .value
+    const sections = [
+        { id: 'cardType', ref: getElementFromRef(activeCardSideEditor?.cardTypeSection) || getElementFromRef(cardTypeSection.value) },
+        { id: 'properties', ref: getElementFromRef(activeCardSideEditor?.propertiesSection) || getElementFromRef(propertiesSection.value) },
+        { id: 'illustration', ref: getElementFromRef(activeCardSideEditor?.illustrationSection) || getElementFromRef(illustrationSection.value) },
+        { id: 'textLayout', ref: getElementFromRef(activeCardSideEditor?.textLayoutSection) || getElementFromRef(textLayoutSection.value) },
+        { id: 'cardInfo', ref: getElementFromRef(activeCardSideEditor?.cardInfoSection) || getElementFromRef(cardInfoSection.value) },
+        { id: 'ttsScript', ref: getElementFromRef(ttsScriptSection.value) },
+        { id: 'deckOptions', ref: getElementFromRef(deckOptionsSection.value) }
+    ];
+
+    let currentActive = 'cardType';
+    const containerTop = formContent.getBoundingClientRect().top;
+
+    for (const section of sections) {
+        const sectionElement = section.ref;
+        if (sectionElement) {
+            const rect = sectionElement.getBoundingClientRect();
+            const relativeTop = rect.top - containerTop;
+
+            // 如果元素在视口内或已经滚过
+            if (relativeTop <= 100) {
+                currentActive = section.id;
+            }
+        }
+    }
+
+    activeSection.value = currentActive;
+};
 
 // 防抖相关状态
 const debounceTimer = ref<number | null>(null);
@@ -1406,6 +1647,10 @@ watch(() => props.selectedFile, async (newFile, oldFile) => {
                 delete currentCardData[key];
             });
 
+            // 6. 重置导航栏状态
+            activeSection.value = 'cardType';
+            isNavCollapsed.value = true;
+
             // 等待DOM更新，确保状态完全重置
             await nextTick();
 
@@ -1448,6 +1693,12 @@ watch(() => currentCardData, () => {
 // 组件挂载时添加键盘事件监听器
 onMounted(() => {
     document.addEventListener('keydown', handleKeydown);
+
+    // 添加滚动监听
+    const formContent = document.querySelector('.form-content');
+    if (formContent) {
+        formContent.addEventListener('scroll', handleScroll);
+    }
 });
 
 // 从外部设置当前编辑的面（用于图片预览同步）
@@ -1573,6 +1824,12 @@ defineExpose({
 onUnmounted(() => {
     document.removeEventListener('keydown', handleKeydown);
     clearDebounceTimer();
+
+    // 移除滚动监听
+    const formContent = document.querySelector('.form-content');
+    if (formContent) {
+        formContent.removeEventListener('scroll', handleScroll);
+    }
 });
 </script>
 
@@ -1587,7 +1844,120 @@ onUnmounted(() => {
     backdrop-filter: blur(10px);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
     box-sizing: border-box;
+    position: relative;
 }
+
+/* 快速导航条 */
+.quick-nav {
+    position: fixed;
+    right: 20px;
+    top: 80px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 6px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.nav-item {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #666;
+    background: transparent;
+}
+
+.nav-item:hover {
+    background: rgba(102, 126, 234, 0.1);
+    color: #667eea;
+    transform: scale(1.05);
+}
+
+.nav-item.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 1px 4px rgba(102, 126, 234, 0.3);
+}
+
+/* 收起按钮样式 */
+.nav-collapse {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* 分隔线样式 */
+.nav-divider {
+    height: 1px;
+    background: rgba(0, 0, 0, 0.08);
+    margin: 4px 0;
+}
+
+/* 快速导航条 - 收起状态的小圆圈按钮 */
+.quick-nav-toggle {
+    position: fixed;
+    right: 20px;
+    top: 80px;
+    z-index: 1000;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    transition: all 0.3s ease;
+}
+
+.quick-nav-toggle:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+    .quick-nav {
+        right: 10px;
+        top: 70px;
+        padding: 6px 4px;
+        gap: 6px;
+    }
+
+    .nav-item {
+        width: 28px;
+        height: 28px;
+    }
+
+    .quick-nav-toggle {
+        right: 10px;
+        top: 70px;
+        width: 36px;
+        height: 36px;
+    }
+}
+
+/* 响应式设计 - 小屏幕隐藏导航条 */
+@media (max-width: 480px) {
+    .quick-nav {
+        display: none;
+    }
+
+    .quick-nav-toggle {
+        display: none;
+    }
+}
+
 
 .pane-header {
     flex-shrink: 0;

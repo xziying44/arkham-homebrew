@@ -90,12 +90,26 @@ CardSideEditor(
     'trigger-preview'(): void;
   }
 )
+
+// Exposed methods (via defineExpose)
+{
+  cardTypeSection: Ref<HTMLElement | null>;
+  propertiesSection: Ref<HTMLElement | null>;
+  illustrationSection: Ref<HTMLElement | null>;
+  textLayoutSection: Ref<HTMLElement | null>;
+  cardInfoSection: Ref<HTMLElement | null>;
+  expandIllustrationLayout(): void;
+}
 ```
 Behavior
 - Manages a reactive clone of `cardData`; updates emit precise field changes and card type changes.
 - Integrates `FormField` for per‑field rendering and `IllustrationLayoutEditor` for art.
 - Features collapsible illustration layout settings with toggle button at bottom of card properties panel.
 - Integrates `TextBoundaryEditor` via left-side drawer (no mask overlay) for advanced text boundary adjustments.
+- Exposes section refs and `expandIllustrationLayout()` method for parent navigation:
+  - Uses function refs pattern (`setCardTypeSection`, `setPropertiesSection`, etc.) to capture DOM elements from `<n-card>` component instances
+  - Exposes refs via `defineExpose` (auto‑unwrapped by Vue 3, accessible without extra `.value` from parent)
+  - `expandIllustrationLayout()`: Programmatically expands illustration section when called from parent navigation
 
 ### TextBoundaryEditor.vue
 Signature
@@ -194,6 +208,12 @@ FormEditPanel(
 ```
 Behavior
 - Orchestrates card edit flow (single/double‑sided), live preview updates, caching, and i18n‑aware type configs.
+- Quick navigation bar (7 sections: cardType, properties, illustration, textLayout, cardInfo, ttsScript, deckOptions):
+  - Defaults to collapsed state (displays as floating circle button)
+  - Auto‑collapses after clicking any navigation item to scroll
+  - Resets to collapsed state when switching files
+  - Special handling for illustration: when collapsed, clicking its nav first expands the section (via `CardSideEditor.expandIllustrationLayout()`), then scrolls
+- Accesses child section refs correctly via Vue 3's `defineExpose` auto‑unwrapping (no extra `.value` needed)
 
 ### ResizeSplitter.vue
 Signature

@@ -1,7 +1,7 @@
 <template>
     <div class="card-side-editor">
         <!-- 卡牌类型选择 -->
-        <n-card :title="sideTitle" size="small" class="form-card">
+        <n-card :ref="setCardTypeSection" :title="sideTitle" size="small" class="form-card">
             <div class="form-row">
                 <!-- 语言选择 - 左列 -->
                 <div class="form-field layout-half">
@@ -23,7 +23,7 @@
         </n-card>
 
         <!-- 动态表单 -->
-        <n-card v-if="currentSideType && currentFormConfig" :title="$t('cardEditor.panel.cardProperties')"
+        <n-card :ref="setPropertiesSection" v-if="currentSideType && currentFormConfig" :title="$t('cardEditor.panel.cardProperties')"
             size="small" class="form-card">
             <n-form ref="dynamicFormRef" :model="sideCardData" label-placement="top" size="small">
                 <div v-for="(row, rowIndex) in formFieldRows" :key="rowIndex" class="form-row">
@@ -74,7 +74,7 @@
         </n-card>
 
         <!-- 插画布局编辑器 -->
-        <div v-if="sideCardData.picture_base64 && illustrationLayoutCollapsed.includes('illustration')"
+        <div ref="illustrationSection" v-if="sideCardData.picture_base64 && illustrationLayoutCollapsed.includes('illustration')"
              style="margin-top: 12px;">
             <IllustrationLayoutEditor
                 :image-src="sideCardData.picture_base64"
@@ -84,7 +84,7 @@
         </div>
 
         <!-- 高级文本布局编辑器 -->
-        <n-card v-if="currentSideType" :title="$t('cardEditor.panel.advancedTextLayout')" size="small"
+        <n-card :ref="setTextLayoutSection" v-if="currentSideType" :title="$t('cardEditor.panel.advancedTextLayout')" size="small"
             class="form-card">
             <n-button @click="showTextBoundaryModal = true" size="small" type="primary">
                 {{ $t('cardEditor.panel.advancedTextLayout') }}
@@ -92,7 +92,7 @@
         </n-card>
 
         <!-- 卡牌信息 -->
-        <n-card v-if="currentSideType" :title="$t('cardEditor.panel.cardInfo')" size="small"
+        <n-card :ref="setCardInfoSection" v-if="currentSideType" :title="$t('cardEditor.panel.cardInfo')" size="small"
             class="form-card">
             <n-form :model="sideCardData" label-placement="top" size="small">
                 <div class="form-row">
@@ -575,6 +575,13 @@ const toggleIllustrationLayout = () => {
     }
 };
 
+// 展开插画布局编辑器（用于导航跳转）
+const expandIllustrationLayout = () => {
+    if (!illustrationLayoutCollapsed.value.includes('illustration')) {
+        illustrationLayoutCollapsed.value = ['illustration'];
+    }
+};
+
 // 更新文本边界
 const updateTextBoundary = (newBoundary: any) => {
     sideCardData.text_boundary = newBoundary;
@@ -592,6 +599,40 @@ const updateSideData = (fieldKey: string, value: any) => {
 const removeImage = (field: FormField) => {
     setFieldValue(field, '');
 };
+
+// Section refs (用于父组件导航定位)
+const cardTypeSection = ref<HTMLElement | null>(null);
+const propertiesSection = ref<HTMLElement | null>(null);
+const illustrationSection = ref<HTMLElement | null>(null);
+const textLayoutSection = ref<HTMLElement | null>(null);
+const cardInfoSection = ref<HTMLElement | null>(null);
+
+// 函数 refs：捕获组件的 $el (DOM 元素) 而不是组件实例
+const setCardTypeSection = (el: any) => {
+    cardTypeSection.value = el?.$el ?? el;
+};
+
+const setPropertiesSection = (el: any) => {
+    propertiesSection.value = el?.$el ?? el;
+};
+
+const setTextLayoutSection = (el: any) => {
+    textLayoutSection.value = el?.$el ?? el;
+};
+
+const setCardInfoSection = (el: any) => {
+    cardInfoSection.value = el?.$el ?? el;
+};
+
+// 暴露section refs给父组件用于导航
+defineExpose({
+    cardTypeSection,
+    propertiesSection,
+    illustrationSection,
+    textLayoutSection,
+    cardInfoSection,
+    expandIllustrationLayout  // 暴露展开方法
+});
 </script>
 
 <style scoped>

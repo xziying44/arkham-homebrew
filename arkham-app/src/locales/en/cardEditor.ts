@@ -159,6 +159,17 @@ export default {
     versionConvertFailed: 'Version conversion failed'
   },
 
+  // Quick Navigation
+  nav: {
+    cardType: 'Card Type',
+    properties: 'Properties',
+    illustration: 'Illustration',
+    textLayout: 'Text Layout',
+    cardInfo: 'Card Info',
+    ttsScript: 'TTS Script',
+    deckOptions: 'Deck Options'
+  },
+
   // IllustrationLayoutEditor component
   illustrationLayout: {
     title: 'Illustration Layout Settings',
