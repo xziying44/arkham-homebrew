@@ -30,6 +30,9 @@ export default {
       newCard: '新建卡牌',
       quickExport: '快速导出',      // 新增
       advancedExport: '高级导出',   // 新增
+      addBookmark: '添加到书签',
+      removeBookmark: '从书签移除',
+      addTempWorkspace: '加入临时工作区',
       copy: '复制',
       copyRelativePath: '复制相对路径',
       copyImageTag: '复制图片标签',
@@ -267,7 +270,27 @@ export default {
       pasteFailed: '粘贴失败',
       pasteNoContent: '剪贴板中没有可粘贴的内容',
       pasteInvalidTarget: '只能在目录中粘贴文件',
-      pasteFileExists: '文件已存在，无法粘贴'
+      pasteFileExists: '文件已存在，无法粘贴',
+      bookmarkUnsupported: '仅支持为卡牌文件添加书签',
+      bookmarkExists: '{name} 已在书签中',
+      bookmarkAdded: '已为 {name} 添加书签',
+      bookmarkRemoved: '已从书签移除 {name}',
+      bookmarkSyncFailed: '同步书签失败，请稍后重试'
+    },
+    bookmarks: {
+      onlyLabel: '仅显示书签卡牌',
+      emptyHint: '暂无书签卡牌'
+    },
+    tempWorkspace: {
+      title: '临时工作区',
+      clear: '清空',
+      empty: '拖动卡牌到此处以建立临时列表',
+      unsupported: '仅支持将卡牌文件加入临时工作区',
+      duplicate: '{name} 已在临时工作区',
+      added: '{name} 已加入临时工作区',
+      removed: '{name} 已从临时工作区移除',
+      cleared: '临时工作区已清空',
+      missing: '无法在文件树中找到该卡牌'
     }
   },
   imagePreview: {

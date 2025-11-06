@@ -31,6 +31,9 @@ export default {
       newCard: 'New Card',
       quickExport: 'Quick Export',        // 新增
       advancedExport: 'Advanced Export',  // 新增
+      addBookmark: 'Add Bookmark',
+      removeBookmark: 'Remove Bookmark',
+      addTempWorkspace: 'Pin to Temporary Workspace',
       copy: 'Copy',
       copyRelativePath: 'Copy Relative Path',
       copyImageTag: 'Copy Image Tag',
@@ -269,7 +272,27 @@ export default {
       pasteFailed: 'Paste failed',
       pasteNoContent: 'No content to paste in clipboard',
       pasteInvalidTarget: 'Files can only be pasted in directories',
-      pasteFileExists: 'File already exists, cannot paste'
+      pasteFileExists: 'File already exists, cannot paste',
+      bookmarkUnsupported: 'Only card files support bookmarks',
+      bookmarkExists: '{name} is already bookmarked',
+      bookmarkAdded: '{name} bookmarked',
+      bookmarkRemoved: '{name} removed from bookmarks',
+      bookmarkSyncFailed: 'Failed to sync bookmarks, please try again'
+    },
+    bookmarks: {
+      onlyLabel: 'Show bookmarks only',
+      emptyHint: 'No bookmarked cards yet'
+    },
+    tempWorkspace: {
+      title: 'Temporary Workspace',
+      clear: 'Clear',
+      empty: 'Drag cards here to build a focused list',
+      unsupported: 'Only card files can be added to the temporary workspace',
+      duplicate: '{name} is already in the temporary workspace',
+      added: '{name} added to temporary workspace',
+      removed: '{name} removed from temporary workspace',
+      cleared: 'Temporary workspace cleared',
+      missing: 'Unable to locate this card in the file tree'
     }
   },
   imagePreview: {

@@ -60,6 +60,7 @@ class WorkspaceManager:
         "encounter_groups_dir",  # 遭遇组目录
         "footer_copyright",  # 页脚版权信息
         "footer_icon_dir",  # 页脚图标目录
+        "file_tree_bookmarks",  # 标签记录
         # 可以在这里添加更多工作空间级配置字段
     ]
 

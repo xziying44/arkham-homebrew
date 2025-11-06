@@ -25,13 +25,47 @@
     </div>
 
     <div class="file-tree-content">
+      <div class="file-tree-toolbar">
+        <n-space align="center" justify="space-between">
+          <n-space align="center" size="small">
+            <span class="toolbar-title">⭐</span>
+            <n-checkbox size="small" v-model:checked="showOnlyBookmarks" :disabled="!hasBookmarkedCards">
+              {{ $t('workspaceMain.fileTree.bookmarks.onlyLabel') }}
+            </n-checkbox>
+          </n-space>
+          <n-text depth="3" v-if="showOnlyBookmarks && !hasBookmarkedCards">
+            {{ $t('workspaceMain.fileTree.bookmarks.emptyHint') }}
+          </n-text>
+        </n-space>
+      </div>
       <n-spin :show="loading">
-        <n-tree v-if="fileTreeData && fileTreeData.length > 0" :data="fileTreeData" :render-label="renderTreeLabel"
-          :render-prefix="renderTreePrefix" selectable :expand-on-click="false" :expanded-keys="expandedKeys"
-          :selected-keys="selectedKeys" @update:selected-keys="handleFileSelect"
+        <n-tree v-if="displayedTreeData && displayedTreeData.length > 0" :data="displayedTreeData"
+          :render-label="renderTreeLabel" :render-prefix="renderTreePrefix" selectable :expand-on-click="false"
+          :expanded-keys="expandedKeys" :selected-keys="selectedKeys" @update:selected-keys="handleFileSelect"
           @update:expanded-keys="handleExpandedKeysChange" />
         <n-empty v-else :description="$t('workspaceMain.fileTree.emptyText')" />
       </n-spin>
+    </div>
+
+    <div class="temp-workspace-container" :class="{ 'is-drag-over': isTempWorkspaceDragOver }"
+      @dragover.prevent="handleTempWorkspaceDragOver" @dragleave="handleTempWorkspaceDragLeave"
+      @drop.prevent="handleTempWorkspaceDrop">
+      <div class="temp-workspace-header">
+        <span class="temp-workspace-title">{{ $t('workspaceMain.fileTree.tempWorkspace.title') }}</span>
+        <n-button size="tiny" quaternary @click="clearTemporaryWorkspace"
+          :disabled="temporaryWorkspaceItems.length === 0">
+          {{ $t('workspaceMain.fileTree.tempWorkspace.clear') }}
+        </n-button>
+      </div>
+      <div v-if="temporaryWorkspaceItems.length > 0" class="temp-workspace-list">
+        <n-tag v-for="item in temporaryWorkspaceItems" :key="item.path" type="info" size="small" closable
+          @click="openTemporaryWorkspaceItem(item.path)" @close="handleTempWorkspaceTagClose(item.path, $event)">
+          <span class="temp-workspace-tag">{{ item.label }}</span>
+        </n-tag>
+      </div>
+      <div v-else class="temp-workspace-empty">
+        {{ $t('workspaceMain.fileTree.tempWorkspace.empty') }}
+      </div>
     </div>
 
     <!-- 右键菜单 -->
@@ -573,7 +607,7 @@ import {
 } from '@vicons/ionicons5';
 
 // 导入API服务
-import { WorkspaceService, ApiError, CardService, TtsExportService, ArkhamDBService } from '@/api';
+import { WorkspaceService, ApiError, CardService, TtsExportService, ArkhamDBService, ConfigService } from '@/api';
 import type { CardData, ExportCardParams, ArkhamDBContentPack } from '@/api/types';
 
 interface Props {
@@ -703,6 +737,57 @@ const bleedModelOptions = computed(() => [
 
 // 文件树数据
 const fileTreeData = ref<TreeOption[]>([]);
+const BOOKMARK_CONFIG_KEY = 'file_tree_bookmarks';
+const bookmarkedPaths = ref<string[]>([]);
+const showOnlyBookmarks = ref(false);
+const previousExpandedKeys = ref<Array<string | number>>([]);
+const temporaryWorkspaceItems = ref<Array<{ path: string; label: string; key: string | number; type?: string }>>([]);
+const isTempWorkspaceDragOver = ref(false);
+
+const hasBookmarkedCards = computed(() => bookmarkedPaths.value.length > 0);
+const bookmarkSyncReady = ref(false);
+let lastPersistedBookmarksSnapshot = JSON.stringify([]);
+let bookmarkSyncRequestId = 0;
+
+const normalizeBookmarkPaths = (paths: unknown): string[] => {
+  if (!Array.isArray(paths)) return [];
+  const filtered = paths.filter((item): item is string => typeof item === 'string' && item.length > 0);
+  return Array.from(new Set(filtered));
+};
+
+const areStringArraysEqual = (a: string[], b: string[]) => {
+  if (a.length !== b.length) return false;
+  return a.every((value, index) => value === b[index]);
+};
+
+const loadBookmarksFromConfig = async () => {
+  bookmarkSyncReady.value = false;
+  try {
+    const stored = await ConfigService.getConfigItem<string[] | null>(BOOKMARK_CONFIG_KEY, []);
+    const normalized = normalizeBookmarkPaths(stored ?? []);
+    bookmarkedPaths.value = normalized;
+    lastPersistedBookmarksSnapshot = JSON.stringify(normalized);
+  } catch (error) {
+    console.warn('加载书签配置失败:', error);
+    bookmarkedPaths.value = [];
+    lastPersistedBookmarksSnapshot = JSON.stringify([]);
+  } finally {
+    bookmarkSyncReady.value = true;
+  }
+};
+
+const syncBookmarksToConfig = async (paths: string[]) => {
+  const requestId = ++bookmarkSyncRequestId;
+  try {
+    await ConfigService.updateConfigItem(BOOKMARK_CONFIG_KEY, paths);
+    if (requestId === bookmarkSyncRequestId) {
+      lastPersistedBookmarksSnapshot = JSON.stringify(paths);
+    }
+  } catch (error) {
+    console.error('同步文件树书签失败:', error);
+    message.error(t('workspaceMain.fileTree.messages.bookmarkSyncFailed'));
+  }
+};
 
 // 文件树展开和选中状态
 const expandedKeys = ref<Array<string | number>>([]);
@@ -852,6 +937,7 @@ const contextMenuOptions = computed(() => {
   const isImage = contextMenuTarget.value.type === 'image';
 
   const options = [];
+  const isBookmarked = isCard && typeof contextMenuTarget.value.path === 'string' && isPathBookmarked(contextMenuTarget.value.path);
 
   // 1. 新建卡牌（工作空间和目录）
   if (isWorkspace || isDirectory) {
@@ -886,6 +972,28 @@ const contextMenuOptions = computed(() => {
       label: t('workspaceMain.fileTree.contextMenu.advancedExport'),
       key: 'advanced-export',
       icon: () => h(NIcon, { component: SettingsOutline })
+    });
+  }
+
+  // 书签操作（仅卡牌）
+  if (isCard) {
+    options.push({
+      label: isBookmarked ? t('workspaceMain.fileTree.contextMenu.removeBookmark') : t('workspaceMain.fileTree.contextMenu.addBookmark'),
+      key: isBookmarked ? 'remove-bookmark' : 'add-bookmark',
+      icon: () => h('span', {
+        style: {
+          fontSize: '14px',
+          width: '16px',
+          display: 'inline-flex',
+          justifyContent: 'center'
+        }
+      }, '⭐')
+    });
+
+    options.push({
+      label: t('workspaceMain.fileTree.contextMenu.addTempWorkspace'),
+      key: 'add-temp-workspace',
+      icon: () => h(NIcon, { component: LayersOutline })
     });
   }
 
@@ -1019,6 +1127,149 @@ const convertFileTreeData = (node: any): ExtendedTreeOption => {
   return treeNode;
 };
 
+const isCardNode = (option: TreeOption | null) => option?.type === 'card';
+
+const collectCardPaths = (nodes: TreeOption[], bucket: Set<string>) => {
+  for (const node of nodes) {
+    if (node.type === 'card' && typeof node.path === 'string') {
+      bucket.add(node.path);
+    }
+    if (node.children && node.children.length > 0) {
+      collectCardPaths(node.children, bucket);
+    }
+  }
+};
+
+const pruneBookmarksAgainstTree = () => {
+  if (bookmarkedPaths.value.length === 0) return;
+  const validPaths = new Set<string>();
+  collectCardPaths(fileTreeData.value, validPaths);
+  const filtered = bookmarkedPaths.value.filter(path => validPaths.has(path));
+  if (filtered.length !== bookmarkedPaths.value.length) {
+    bookmarkedPaths.value = filtered;
+  }
+};
+
+const pruneTemporaryWorkspaceItems = () => {
+  if (temporaryWorkspaceItems.value.length === 0) return;
+  const validPaths = new Set<string>();
+  collectCardPaths(fileTreeData.value, validPaths);
+  const filtered = temporaryWorkspaceItems.value.filter(item => validPaths.has(item.path));
+  if (filtered.length !== temporaryWorkspaceItems.value.length) {
+    temporaryWorkspaceItems.value = filtered;
+  }
+};
+
+const isPathBookmarked = (path?: string) => {
+  if (!path) return false;
+  return bookmarkedPaths.value.includes(path);
+};
+
+const addBookmark = (option: TreeOption | null) => {
+  if (!option) return;
+  if (!isCardNode(option) || typeof option.path !== 'string') {
+    message.warning(t('workspaceMain.fileTree.messages.bookmarkUnsupported'));
+    return;
+  }
+  if (isPathBookmarked(option.path)) {
+    message.warning(t('workspaceMain.fileTree.messages.bookmarkExists', { name: option.label }));
+    return;
+  }
+  bookmarkedPaths.value = [...bookmarkedPaths.value, option.path];
+  message.success(t('workspaceMain.fileTree.messages.bookmarkAdded', { name: option.label }));
+};
+
+const removeBookmark = (option: TreeOption | null, silent = false) => {
+  if (!option || typeof option.path !== 'string') return;
+  if (!isPathBookmarked(option.path)) return;
+  bookmarkedPaths.value = bookmarkedPaths.value.filter(path => path !== option.path);
+  if (!silent) {
+    message.success(t('workspaceMain.fileTree.messages.bookmarkRemoved', { name: option.label }));
+  }
+};
+
+const removeBookmarksByPrefix = (prefix: string) => {
+  const normalized = `${prefix}`;
+  const filtered = bookmarkedPaths.value.filter(path => path !== normalized && !path.startsWith(`${normalized}/`));
+  if (filtered.length !== bookmarkedPaths.value.length) {
+    bookmarkedPaths.value = filtered;
+  }
+};
+
+const updateBookmarkPath = (oldPath: string, newPath: string) => {
+  if (!oldPath || !newPath) return;
+  let changed = false;
+  const updated: string[] = [];
+  const prefix = `${oldPath}/`;
+  const replacePrefix = `${newPath}/`;
+  for (const path of bookmarkedPaths.value) {
+    if (path === oldPath) {
+      updated.push(newPath);
+      changed = true;
+    } else if (path.startsWith(prefix)) {
+      updated.push(path.replace(prefix, replacePrefix));
+      changed = true;
+    } else {
+      updated.push(path);
+    }
+  }
+  if (changed) {
+    bookmarkedPaths.value = Array.from(new Set(updated));
+  }
+};
+
+const computeBookmarkExpandedKeys = () => {
+  const expanded = new Set<string | number>();
+  const traverse = (nodes: TreeOption[], ancestors: Array<string | number>) => {
+    for (const node of nodes) {
+      const currentAncestors = [...ancestors, node.key as string | number];
+      if (node.children && node.children.length > 0) {
+        traverse(node.children, currentAncestors);
+      }
+      if (node.type === 'card' && typeof node.path === 'string' && isPathBookmarked(node.path)) {
+        ancestors.forEach(a => expanded.add(a));
+      }
+    }
+  };
+
+  if (fileTreeData.value.length > 0) {
+    traverse(fileTreeData.value, []);
+    const rootKey = fileTreeData.value[0]?.key;
+    if (rootKey) expanded.add(rootKey);
+  }
+
+  return Array.from(expanded);
+};
+
+const filterTreeByBookmarks = (nodes: TreeOption[]): TreeOption[] => {
+  const result: TreeOption[] = [];
+
+  for (const node of nodes) {
+    const nextChildren = node.children ? filterTreeByBookmarks(node.children) : [];
+    const currentBookmarked = node.type === 'card' && typeof node.path === 'string' && isPathBookmarked(node.path);
+
+    if (node.type === 'workspace' && nextChildren.length === 0) {
+      continue;
+    }
+
+    if (currentBookmarked || nextChildren.length > 0 || node.type === 'workspace') {
+      const cloned: TreeOption = { ...node };
+      if (nextChildren.length > 0) {
+        cloned.children = nextChildren;
+      } else {
+        delete (cloned as any).children;
+      }
+      result.push(cloned);
+    }
+  }
+
+  return result;
+};
+
+const displayedTreeData = computed(() => {
+  return showOnlyBookmarks.value ? filterTreeByBookmarks(fileTreeData.value) : fileTreeData.value;
+});
+
 // 文件树操作辅助函数
 const findNodeByPath = (nodes: TreeOption[], path: string): TreeOption | null => {
   for (const node of nodes) {
@@ -1031,6 +1282,180 @@ const findNodeByPath = (nodes: TreeOption[], path: string): TreeOption | null =>
     }
   }
   return null;
+};
+
+const findAncestorKeys = (nodes: TreeOption[], targetPath: string, ancestors: Array<string | number> = []): Array<string | number> | null => {
+  for (const node of nodes) {
+    const nextAncestors = [...ancestors, node.key as string | number];
+    if (node.path === targetPath) {
+      return ancestors;
+    }
+    if (node.children && node.children.length > 0) {
+      const result = findAncestorKeys(node.children, targetPath, nextAncestors);
+      if (result) return result;
+    }
+  }
+  return null;
+};
+
+const addToTemporaryWorkspace = (option: TreeOption) => {
+  if (!isCardNode(option) || typeof option.path !== 'string') {
+    message.warning(t('workspaceMain.fileTree.tempWorkspace.unsupported'));
+    return;
+  }
+
+  if (temporaryWorkspaceItems.value.some(item => item.path === option.path)) {
+    message.info(t('workspaceMain.fileTree.tempWorkspace.duplicate'));
+    return;
+  }
+
+  temporaryWorkspaceItems.value = [
+    ...temporaryWorkspaceItems.value,
+    {
+      path: option.path,
+      label: option.label as string,
+      key: option.key as string | number,
+      type: option.type
+    }
+  ];
+
+  message.success(t('workspaceMain.fileTree.tempWorkspace.added', { name: option.label }));
+};
+
+const removeTemporaryWorkspaceItem = (path: string) => {
+  const target = temporaryWorkspaceItems.value.find(item => item.path === path);
+  if (!target) return;
+
+  temporaryWorkspaceItems.value = temporaryWorkspaceItems.value.filter(item => item.path !== path);
+  message.success(t('workspaceMain.fileTree.tempWorkspace.removed', { name: target.label }));
+};
+
+const handleTempWorkspaceTagClose = (path: string, event: MouseEvent) => {
+  event.stopPropagation();
+  removeTemporaryWorkspaceItem(path);
+};
+
+const removeTemporaryWorkspaceByPrefix = (prefix: string) => {
+  const normalized = `${prefix}`;
+  const filtered = temporaryWorkspaceItems.value.filter(item => item.path !== normalized && !item.path.startsWith(`${normalized}/`));
+  if (filtered.length !== temporaryWorkspaceItems.value.length) {
+    temporaryWorkspaceItems.value = filtered;
+  }
+};
+
+const updateTemporaryWorkspacePath = (oldPath: string, newPath: string, newLabel: string) => {
+  if (temporaryWorkspaceItems.value.length === 0) return;
+
+  const prefix = `${oldPath}/`;
+  const replacePrefix = `${newPath}/`;
+  let changed = false;
+
+  const updated = temporaryWorkspaceItems.value.map(item => {
+    if (item.path === oldPath) {
+      changed = true;
+      return {
+        ...item,
+        path: newPath,
+        label: newLabel
+      };
+    }
+    if (item.path.startsWith(prefix)) {
+      const updatedPath = item.path.replace(prefix, replacePrefix);
+      const node = findNodeByPath(fileTreeData.value, updatedPath);
+      if (node) {
+        changed = true;
+        return {
+          path: node.path as string,
+          label: node.label as string,
+          key: node.key as string | number,
+          type: node.type
+        };
+      }
+      changed = true;
+      return { ...item, path: updatedPath };
+    }
+    return item;
+  });
+
+  if (changed) {
+    temporaryWorkspaceItems.value = updated;
+  }
+};
+
+const clearTemporaryWorkspace = () => {
+  if (temporaryWorkspaceItems.value.length === 0) return;
+  temporaryWorkspaceItems.value = [];
+  message.success(t('workspaceMain.fileTree.tempWorkspace.cleared'));
+};
+
+const openTemporaryWorkspaceItem = (path: string) => {
+  const node = findNodeByPath(fileTreeData.value, path);
+  if (!node) {
+    message.warning(t('workspaceMain.fileTree.tempWorkspace.missing'));
+    return;
+  }
+
+  const key = node.key as string | number;
+  selectedKeys.value = [key];
+  const ancestorKeys = findAncestorKeys(fileTreeData.value, path);
+  if (ancestorKeys) {
+    const expandedSet = new Set<string | number>(expandedKeys.value);
+    ancestorKeys.forEach(k => expandedSet.add(k));
+    expandedKeys.value = Array.from(expandedSet);
+  }
+  emit('file-select', [key], node);
+};
+
+const handleTreeNodeDragStart = (event: DragEvent, option: TreeOption) => {
+  if (!isCardNode(option) || typeof option.path !== 'string') return;
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'copy';
+    event.dataTransfer.setData('application/x-arkham-node', JSON.stringify({ path: option.path }));
+    event.dataTransfer.setData('text/plain', option.path);
+  }
+};
+
+const handleTempWorkspaceDragOver = (event: DragEvent) => {
+  if (!event.dataTransfer) return;
+  const types = Array.from(event.dataTransfer.types || []);
+  if (types.includes('application/x-arkham-node') || types.includes('text/plain')) {
+    event.dataTransfer.dropEffect = 'copy';
+    isTempWorkspaceDragOver.value = true;
+  }
+};
+
+const handleTempWorkspaceDragLeave = () => {
+  isTempWorkspaceDragOver.value = false;
+};
+
+const handleTempWorkspaceDrop = (event: DragEvent) => {
+  isTempWorkspaceDragOver.value = false;
+  if (!event.dataTransfer) return;
+
+  let payloadPath = '';
+  const raw = event.dataTransfer.getData('application/x-arkham-node');
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      payloadPath = parsed?.path || '';
+    } catch (error) {
+      console.warn('Failed to parse drag payload', error);
+    }
+  }
+
+  if (!payloadPath) {
+    payloadPath = event.dataTransfer.getData('text/plain');
+  }
+
+  if (!payloadPath) return;
+
+  const targetNode = findNodeByPath(fileTreeData.value, payloadPath);
+  if (!targetNode) {
+    message.warning(t('workspaceMain.fileTree.tempWorkspace.missing'));
+    return;
+  }
+
+  addToTemporaryWorkspace(targetNode);
 };
 
 // 在指定父路径下添加新节点
@@ -1119,6 +1544,9 @@ const loadFileTree = async () => {
     if (data.fileTree) {
       fileTreeData.value = [convertFileTreeData(data.fileTree)];
 
+      pruneBookmarksAgainstTree();
+      pruneTemporaryWorkspaceItems();
+
       // 默认展开根节点
       if (fileTreeData.value.length > 0 && fileTreeData.value[0].key) {
         expandedKeys.value = [fileTreeData.value[0].key];
@@ -1151,9 +1579,23 @@ const renderTreeLabel = ({ option }: { option: TreeOption }) => {
   // 检查是否为未保存文件
   const isUnsaved = props.unsavedFilePaths?.includes(option.path as string) || false;
 
+  const isBookmarkedNode = isCardNode(option) && isPathBookmarked(option.path as string);
+  const draggable = isCardNode(option);
+
   return h('span', {
-    onContextmenu: (e: MouseEvent) => handleRightClick(e, option)
+    onContextmenu: (e: MouseEvent) => handleRightClick(e, option),
+    draggable,
+    onDragstart: draggable ? (e: DragEvent) => handleTreeNodeDragStart(e, option) : undefined,
+    style: {
+      display: 'inline-flex',
+      alignItems: 'center'
+    }
   }, [
+    isBookmarkedNode ? h('span', {
+      style: {
+        marginRight: '4px'
+      }
+    }, '⭐') : null,
     option.label as string,
     // 如果文件未保存，显示"*"标记
     isUnsaved ? h('span', {
@@ -1321,6 +1763,17 @@ const handleContextMenuSelect = (key: string) => {
     case 'copy-image-tag':
       handleCopyImageTag();
       break;
+    case 'add-bookmark':
+      addBookmark(contextMenuTarget.value);
+      break;
+    case 'remove-bookmark':
+      removeBookmark(contextMenuTarget.value);
+      break;
+    case 'add-temp-workspace':
+      if (contextMenuTarget.value) {
+        addToTemporaryWorkspace(contextMenuTarget.value);
+      }
+      break;
     case 'create-folder':
       createFolderForm.value.name = '';
       showCreateFolderDialog.value = true;
@@ -1482,6 +1935,9 @@ const handleRename = async () => {
       targetNode.type = getFileType(newName);
     }
 
+    updateBookmarkPath(oldPath, newPath);
+    updateTemporaryWorkspacePath(oldPath, newPath, newName);
+
     message.success(t('workspaceMain.fileTree.messages.renameSuccess'));
     showRenameDialog.value = false;
     renameForm.value.filename = '';
@@ -1512,6 +1968,8 @@ const handleDelete = async () => {
 
     // 直接从文件树中删除节点
     removeNodeFromTree(fileTreeData.value, pathToDelete);
+    removeBookmarksByPrefix(pathToDelete);
+    removeTemporaryWorkspaceByPrefix(pathToDelete);
 
     message.success(t('workspaceMain.fileTree.messages.deleteSuccess'));
     showDeleteDialog.value = false;
@@ -2309,6 +2767,42 @@ const closeArkhamDBImportDialog = () => {
   arkhamdbImportContent.value = null;
 };
 
+watch(bookmarkedPaths, (paths) => {
+  if (!bookmarkSyncReady.value) return;
+
+  const normalized = normalizeBookmarkPaths(paths);
+  if (!areStringArraysEqual(paths, normalized)) {
+    bookmarkedPaths.value = normalized;
+    return;
+  }
+
+  if (normalized.length === 0 && showOnlyBookmarks.value) {
+    showOnlyBookmarks.value = false;
+  }
+  if (showOnlyBookmarks.value) {
+    expandedKeys.value = computeBookmarkExpandedKeys();
+  }
+
+  const snapshot = JSON.stringify(normalized);
+  if (snapshot === lastPersistedBookmarksSnapshot) {
+    return;
+  }
+
+  void syncBookmarksToConfig(normalized);
+}, { deep: true });
+
+watch(showOnlyBookmarks, (value) => {
+  if (value) {
+    previousExpandedKeys.value = [...expandedKeys.value];
+    expandedKeys.value = computeBookmarkExpandedKeys();
+  } else if (previousExpandedKeys.value.length > 0) {
+    expandedKeys.value = [...previousExpandedKeys.value];
+    previousExpandedKeys.value = [];
+  } else {
+    previousExpandedKeys.value = [];
+  }
+});
+
 // 监听 selectedFile 的变化，同步 selectedKeys
 watch(() => props.selectedFile, (newFile) => {
   if (newFile && newFile.key) {
@@ -2322,6 +2816,7 @@ watch(() => props.selectedFile, (newFile) => {
 
 // 组件挂载时加载数据
 onMounted(() => {
+  void loadBookmarksFromConfig();
   loadFileTree();
   console.log(`检测到 CPU 核心数: ${cpuCores.value}`);
 });
@@ -2525,6 +3020,65 @@ defineExpose({
 
 .file-tree-content::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, #5a67d8 0%, #6b46c1 100%);
+}
+
+.file-tree-toolbar {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.toolbar-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: #f59e0b;
+}
+
+.temp-workspace-container {
+  padding: 12px 16px;
+  border-top: 1px solid rgba(102, 126, 234, 0.15);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(236, 233, 254, 0.95) 100%);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.temp-workspace-container.is-drag-over {
+  border-color: rgba(102, 126, 234, 0.45);
+  background: linear-gradient(180deg, rgba(236, 233, 254, 0.98) 0%, rgba(208, 196, 255, 0.98) 100%);
+}
+
+.temp-workspace-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.temp-workspace-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4c1d95;
+}
+
+.temp-workspace-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.temp-workspace-tag {
+  cursor: pointer;
+}
+
+.temp-workspace-empty {
+  font-size: 12px;
+  color: #6b7280;
 }
 
 /* 树组件样式优化 */
