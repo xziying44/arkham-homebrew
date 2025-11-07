@@ -183,7 +183,7 @@
       },
       "flavor": {
         "name": "ArnoPro-Italic",
-        "size_percent": 0.9,
+        "size_percent": 1.0,
         "vertical_offset": 0
       },
       "collection_info": {
@@ -257,7 +257,7 @@
       },
       "flavor": {
         "name": "ArnoPro-Italic",
-        "size_percent": 0.9,
+        "size_percent": 1.0,
         "vertical_offset": 0
       },
       "collection_info": {

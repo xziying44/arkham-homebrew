@@ -803,7 +803,8 @@ class RichTextRenderer:
 
     def draw_line(self, text: str, position: Tuple[int, int],
                   alignment: TextAlignment, options: DrawOptions,
-                  vertical: bool = False, vertical_line_spacing: float = 1.2) -> list[RenderItem]:
+                  vertical: bool = False, vertical_line_spacing: float = 1.2,
+                  max_length: Optional[int] = None, debug_draw_range: bool = False) -> list[RenderItem]:
         """
         绘制一行支持HTML语法的文本，支持水平和垂直两种模式。
 
@@ -829,123 +830,130 @@ class RichTextRenderer:
         # 预处理文本
         text = self._preprocess_text(text)
 
-        # 解析HTML标签
+        # 解析HTML标签（仅一次）
         parsed_items = self.rich_text_parser.parse(text)
 
-        # 创建字体缓存和字体栈
-        font_cache = FontCache(self.font_manager)
-        try:
-            base_font = font_cache.get_font(options.font_name, options.font_size)
-        except Exception as e:
-            print(f"字体加载失败: {e}")
-            return []
+        # 为不同的测试字号构建渲染片段并测量总长/尺寸
+        def build_segments_and_measure(base_font_size: int):
+            font_cache_local = FontCache(self.font_manager)
+            try:
+                base_font_local = font_cache_local.get_font(options.font_name, base_font_size)
+            except Exception as e:
+                print(f"字体加载失败: {e}")
+                return [], 0, 0, 0, 0
 
-        font_stack = FontStack(base_font, options.font_name)
+            font_stack_local = FontStack(base_font_local, options.font_name)
 
-        # 第一遍遍历：计算总宽度和高度，收集渲染信息
-        render_segments = []  # 存储每个文本片段的渲染信息
-        total_width = 0
-        total_height = 0
-        max_height = 0
-        max_width = 0
+            segments = []
+            t_width = 0
+            t_height = 0
+            m_height = 0
+            m_width = 0
 
-        for item in parsed_items:
-            if item.tag == "text":
-                font = font_stack.get_top()
-                font_name = font_stack.get_top_font_name()
-                text_content = item.content
+            for item in parsed_items:
+                if item.tag == "text":
+                    font_local = font_stack_local.get_top()
+                    font_name_local = font_stack_local.get_top_font_name()
+                    text_content = item.content
 
-                if item.type == TextType.OTHER or (vertical & (item.type == TextType.ENGLISH)):
-                    # 逐字符处理
-                    for char in text_content:
-                        text_box = self._get_text_box(char, font)
-                        char_height = text_box[1]
-                        char_width = text_box[0]
-
-                        # 在垂直模式下应用行间距
-                        if vertical:
-                            spaced_height = int(char_height * vertical_line_spacing)
-                        else:
-                            spaced_height = char_height
-
-                        render_segments.append({
-                            'text': char,
-                            'font': font,
-                            'font_name': font_name,
-                            'width': char_width,
-                            'height': char_height,  # 原始高度，用于绘制
-                            'spaced_height': spaced_height,  # 带间距的高度，用于布局
+                    if item.type == TextType.OTHER or (vertical & (item.type == TextType.ENGLISH)):
+                        for char in text_content:
+                            c_w, c_h = self._get_text_box(char, font_local)
+                            spaced_h = int(c_h * vertical_line_spacing) if vertical else c_h
+                            segments.append({
+                                'text': char,
+                                'font': font_local,
+                                'font_name': font_name_local,
+                                'width': c_w,
+                                'height': c_h,
+                                'spaced_height': spaced_h,
+                                'color': options.font_color
+                            })
+                            if vertical:
+                                t_height += spaced_h
+                                m_width = max(m_width, c_w)
+                            else:
+                                t_width += c_w
+                                m_height = max(m_height, c_h)
+                    else:
+                        c_w, c_h = self._get_text_box(text_content, font_local)
+                        spaced_h = int(c_h * vertical_line_spacing) if vertical else c_h
+                        segments.append({
+                            'text': text_content,
+                            'font': font_local,
+                            'font_name': font_name_local,
+                            'width': c_w,
+                            'height': c_h,
+                            'spaced_height': spaced_h,
                             'color': options.font_color
                         })
-
                         if vertical:
-                            total_height += spaced_height
-                            max_width = max(max_width, char_width)
+                            t_height += spaced_h
+                            m_width = max(m_width, c_w)
                         else:
-                            total_width += char_width
-                            max_height = max(max_height, char_height)
-                else:
-                    # 整块文本处理
-                    text_box = self._get_text_box(text_content, font)
-                    char_height = text_box[1]
-                    char_width = text_box[0]
+                            t_width += c_w
+                            m_height = max(m_height, c_h)
 
-                    # 在垂直模式下应用行间距
-                    if vertical:
-                        spaced_height = int(char_height * vertical_line_spacing)
-                    else:
-                        spaced_height = char_height
+                elif item.tag == "font":
+                    f_name = item.attributes.get('name', options.font_name)
+                    f_name = self.font_manager.get_lang_font(f_name).name
+                    f_add = int(item.attributes.get('addsize', '0'))
+                    try:
+                        font_stack_local.push(font_cache_local.get_font(f_name, base_font_size + f_add), f_name)
+                    except Exception as e:
+                        print(f"字体切换失败: {e}")
+                elif item.tag == "b":
+                    try:
+                        font_stack_local.push(FontCache(self.font_manager).get_font(self.default_fonts.bold, base_font_size),
+                                              self.default_fonts.bold)
+                    except Exception as e:
+                        print(f"粗体字体加载失败: {e}")
+                elif item.tag == "i":
+                    try:
+                        font_stack_local.push(FontCache(self.font_manager).get_font(self.default_fonts.italic, base_font_size),
+                                              self.default_fonts.italic)
+                    except Exception as e:
+                        print(f"斜体字体加载失败: {e}")
+                elif item.tag == "trait":
+                    try:
+                        font_stack_local.push(FontCache(self.font_manager).get_font(self.default_fonts.trait, base_font_size),
+                                              self.default_fonts.trait)
+                    except Exception as e:
+                        print(f"特质字体加载失败: {e}")
+                elif item.tag.startswith('/'):
+                    if item.tag in ["/font", "/b", "/i", '/trait']:
+                        font_stack_local.pop()
 
-                    render_segments.append({
-                        'text': text_content,
-                        'font': font,
-                        'font_name': font_name,
-                        'width': char_width,
-                        'height': char_height,  # 原始高度，用于绘制
-                        'spaced_height': spaced_height,  # 带间距的高度，用于布局
-                        'color': options.font_color
-                    })
+            return segments, t_width, t_height, m_height, m_width
 
-                    if vertical:
-                        total_height += spaced_height
-                        max_width = max(max_width, char_width)
-                    else:
-                        total_width += char_width
-                        max_height = max(max_height, char_height)
+        # 贪心缩放：当设置了最大绘制长度时，若超限则逐步减小字号
+        final_font_size = options.font_size
+        min_font_size = 8
+        max_steps = 8
+        steps_used = 0
 
-            elif item.tag == "font":
-                font_name = item.attributes.get('name', options.font_name)
-                font_name = self.font_manager.get_lang_font(font_name).name
-                font_addsize = int(item.attributes.get('addsize', '0'))
-                try:
-                    font_stack.push(font_cache.get_font(font_name, options.font_size + font_addsize), font_name)
-                except Exception as e:
-                    print(f"字体切换失败: {e}")
+        render_segments, total_width, total_height, max_height, max_width = build_segments_and_measure(final_font_size)
 
-            elif item.tag == "b":
-                try:
-                    font_stack.push(font_cache.get_font(self.default_fonts.bold, options.font_size),
-                                    self.default_fonts.bold)
-                except Exception as e:
-                    print(f"粗体字体加载失败: {e}")
+        def exceeds_limit():
+            if max_length is None:
+                return False
+            return (total_height > max_length) if vertical else (total_width > max_length)
 
-            elif item.tag == "i":
-                try:
-                    font_stack.push(font_cache.get_font(self.default_fonts.italic, options.font_size),
-                                    self.default_fonts.italic)
-                except Exception as e:
-                    print(f"斜体字体加载失败: {e}")
+        while exceeds_limit() and steps_used < max_steps and final_font_size > min_font_size:
+            final_font_size -= 2
+            steps_used += 1
+            render_segments, total_width, total_height, max_height, max_width = build_segments_and_measure(final_font_size)
 
-            elif item.tag == "trait":
-                try:
-                    font_stack.push(font_cache.get_font(self.default_fonts.trait, options.font_size),
-                                    self.default_fonts.trait)
-                except Exception as e:
-                    print(f"特质字体加载失败: {e}")
-
-            elif item.tag.startswith('/'):
-                if item.tag in ["/font", "/b", "/i", '/trait']:
-                    font_stack.pop()
+        # 使用最终字号进行绘制
+        options = DrawOptions(
+            font_name=options.font_name,
+            font_size=final_font_size,
+            font_color=options.font_color,
+            has_border=options.has_border,
+            border_color=options.border_color,
+            border_width=options.border_width,
+            has_underline=options.has_underline,
+        )
 
         # 根据对齐方式和垂直/水平模式计算起始位置
         x, y = position
@@ -986,6 +994,39 @@ class RichTextRenderer:
                 # 默认左对齐
                 start_x = x
                 start_y = y
+
+        # 可选：绘制调试范围（根据对齐与模式计算可用范围矩形）
+        if debug_draw_range and max_length is not None and not self.font_manager.silence:
+            if vertical:
+                # 计算允许的高度区域
+                if alignment == TextAlignment.CENTER:
+                    box_top = y - max_length // 2
+                elif alignment == TextAlignment.LEFT:
+                    # 垂直模式下 LEFT 作为底对齐
+                    box_top = y - max_length
+                elif alignment == TextAlignment.RIGHT:
+                    # 垂直模式下 RIGHT 作为顶对齐
+                    box_top = y
+                else:
+                    box_top = y - max_length // 2
+                box_left = start_x
+                box_right = start_x + max_width
+                box_bottom = box_top + max_length
+                self.draw.rectangle([(box_left, box_top), (box_right, box_bottom)], outline="red", width=1)
+            else:
+                # 水平模式
+                if alignment == TextAlignment.CENTER:
+                    box_left = x - max_length // 2
+                elif alignment == TextAlignment.LEFT:
+                    box_left = x
+                elif alignment == TextAlignment.RIGHT:
+                    box_left = x - max_length
+                else:
+                    box_left = x
+                box_top = start_y
+                box_right = box_left + max_length
+                box_bottom = start_y + max_height
+                self.draw.rectangle([(box_left, box_top), (box_right, box_bottom)], outline="red", width=1)
 
         # 第二遍：实际绘制文本，同时创建RenderItem列表
         current_x = start_x

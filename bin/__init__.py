@@ -24,7 +24,6 @@ __author__ = "Arkham Horror DIY Team"
 
 # 导出主要组件以便外部访问
 from .file_manager import QuickStart
-from .workspace_manager import WorkspaceManager
 from .deck_exporter import DeckExporter
 from .tts_card_converter import TTSCardConverter
 from .content_package_manager import ContentPackageManager
@@ -32,7 +31,6 @@ from .config_directory_manager import ConfigDirectoryManager
 
 __all__ = [
     'QuickStart',
-    'WorkspaceManager',
     'DeckExporter',
     'TTSCardConverter',
     'ContentPackageManager',
