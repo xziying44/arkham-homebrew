@@ -299,11 +299,11 @@ class CardCreator:
         if traits is None:
             return ''
         delimiter = '，'
-        if self.font_manager.lang == 'en':
+        if self.font_manager.lang not in ['zh', 'zh-CHT']:
             delimiter = '. '
 
         result = delimiter.join([self.font_manager.get_font_text(trait) for trait in traits])
-        if self.font_manager.lang == 'en' and result != '':
+        if self.font_manager.lang not in ['zh', 'zh-CHT'] and result != '':
             result += '.'
         return result
 
