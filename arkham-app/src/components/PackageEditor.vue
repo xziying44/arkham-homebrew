@@ -206,7 +206,7 @@
                 </n-empty>
               </div>
               <div v-else class="cards-grid">
-                <div v-for="(card, index) in packageData.cards" :key="card.filename" class="card-item"
+                <div v-for="(card, index) in sortedCards" :key="card.filename" class="card-item"
                   :class="{ 'unsupported': getCardStatus(card.filename).version !== '2.0' }">
                   <!-- 状态图标 - 左上角 -->
                   <div v-if="hasAnyUrls(card)" class="status-icon">
@@ -262,7 +262,7 @@
                     </div>
                   </div>
                   <div class="card-actions">
-                    <n-button circle size="tiny" type="error" @click="removeCard(index)">
+                    <n-button circle size="tiny" type="error" @click="removeCardByFilename(card.filename)">
                       <template #icon>
                         <n-icon :component="TrashOutline" />
                       </template>
@@ -1368,6 +1368,34 @@ const cardStatusMap = ref<Map<string, {
 // 用于触发依赖卡牌状态的计算属性/模板重新渲染的版本号
 const statusVersion = ref(0);
 
+// 计算属性：排序后的卡牌（按 card_number，再按名称）
+const sortedCards = computed(() => {
+  // 依赖版本号以响应本地状态更新
+  const _tick = statusVersion.value;
+  const cards = packageData.value?.cards || [];
+  const arr = [...cards];
+  arr.sort((a, b) => {
+    const sa: any = getCardStatus(a.filename);
+    const sb: any = getCardStatus(b.filename);
+    const numA = sa.cardNumber || '';
+    const numB = sb.cardNumber || '';
+
+    if (numA && numB) {
+      const cmp = numA.localeCompare(numB, undefined, { numeric: true, sensitivity: 'base' });
+      if (cmp !== 0) return cmp;
+    } else if (numA && !numB) {
+      return -1;
+    } else if (!numA && numB) {
+      return 1;
+    }
+
+    const nameA = (sa.name || a.filename) as string;
+    const nameB = (sb.name || b.filename) as string;
+    return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' });
+  });
+  return arr;
+});
+
 // 编辑表单数据
 const editForm = ref({
   name: '',
@@ -1617,7 +1645,10 @@ const getCardStatus = (filename: string) => {
         previewImage: undefined,
         // 补充：用于修改检测
         contentHash: undefined as string | undefined,
-        modified: false as boolean
+        modified: false as boolean,
+        // 排序所需
+        cardNumber: undefined as string | undefined,
+        name: undefined as string | undefined
       });
     }
     return cardStatusMap.value.get(filename)!;
@@ -1629,7 +1660,9 @@ const getCardStatus = (filename: string) => {
       generationError: undefined,
       previewImage: undefined,
       contentHash: undefined,
-      modified: false
+      modified: false,
+      cardNumber: undefined,
+      name: undefined
     };
   }
 };
@@ -2039,6 +2072,20 @@ const openCardBatchUploadPage = () => {
   isCurrentUploadBatch.value = true;
   isBatchModifiedUpload.value = false;
   showUploadPage.value = true;
+};
+
+// 新增：按文件名删除（用于排序后的显示列表）
+const removeCardByFilename = (filename: string) => {
+  const updatedPackage = {
+    ...packageData.value,
+    cards: [...(packageData.value?.cards || [])]
+  };
+  const idx = updatedPackage.cards?.findIndex(c => c.filename === filename) ?? -1;
+  if (idx >= 0) {
+    updatedPackage.cards?.splice(idx, 1);
+    emit('update:package', updatedPackage);
+    message.success(t('contentPackage.messages.cardDeleted'));
+  }
 };
 
 // 打开批量“已修改”卡牌上传页面
@@ -2482,19 +2529,25 @@ const checkCardVersion = async (filename: string): Promise<{
     const version = parsed.version || '1.0';
     const isV2 = version === '2.0';
     const contentHash = parsed.content_hash;
+    const name = parsed.name || '';
+    const cardNumber = parsed.card_number || parsed.card_sequence || '';
 
     return {
       version,
       isV2,
       error: undefined,
-      contentHash
+      contentHash,
+      name,
+      cardNumber
     };
   } catch (error) {
     return {
       version: '1.0',
       isV2: false,
       error: `读取文件失败: ${error.message}`,
-      contentHash: undefined
+      contentHash: undefined,
+      name: undefined,
+      cardNumber: undefined
     };
   }
 };
@@ -2524,7 +2577,9 @@ const refreshCardVersions = async () => {
         generationError: versionInfo.error,
         previewImage: undefined,
         contentHash: versionInfo.contentHash,
-        modified
+        modified,
+        cardNumber: versionInfo.cardNumber,
+        name: versionInfo.name
       });
 
       // 收集v2.0的卡牌用于预览生成
@@ -2538,7 +2593,9 @@ const refreshCardVersions = async () => {
         generationError: t('contentPackage.cards.status.versionCheckFailed'),
         previewImage: undefined,
         contentHash: undefined,
-        modified: false
+        modified: false,
+        cardNumber: undefined,
+        name: undefined
       });
     }
   }
@@ -2702,8 +2759,10 @@ const startPreviewGenerationForCurrentPackage = async () => {
 
     if (validCards.length === 0) return;
 
-    // 添加到队列
-    previewGenerationQueue.value.push(...validCards.map(card => card.filename));
+    // 按 sortedCards 的顺序添加到队列
+    const order = (sortedCards.value || []).map((c: any) => c.filename);
+    const ordered = order.filter((fn: string) => validCards.some(c => c.filename === fn));
+    previewGenerationQueue.value.push(...ordered);
 
     // 如果当前没有正在生成的，开始生成
     if (!isGeneratingPreview.value) {
@@ -2723,8 +2782,10 @@ const startPreviewGeneration = async (cards: ContentPackageCard[]) => {
 
   if (validCards.length === 0) return;
 
-  // 添加到队列
-  previewGenerationQueue.value.push(...validCards.map(card => card.filename));
+  // 按 sortedCards 的顺序添加到队列
+  const order = (sortedCards.value || []).map((c: any) => c.filename);
+  const ordered = order.filter((fn: string) => validCards.some(c => c.filename === fn));
+  previewGenerationQueue.value.push(...ordered);
 
   // 如果当前没有正在生成的，开始生成
   if (!isGeneratingPreview.value) {
