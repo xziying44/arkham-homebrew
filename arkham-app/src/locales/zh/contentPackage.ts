@@ -143,7 +143,8 @@ export default {
     batchUploadFailed: '批量上传失败',
     batchPreparing: '准备批量上传...',
     batchStarting: '开始批量上传...',
-    batchUploading: '正在上传: {filename} ({index}/{total})'
+    batchUploading: '正在上传: {filename} ({index}/{total})',
+    noModifiedCards: '没有已修改的卡牌'
   },
   cards: {
     empty: {
@@ -157,6 +158,7 @@ export default {
       generationStopped: '已中止',
       versionCheckFailed: '版本检查失败'
     },
+    modifiedTag: '已修改',
     actions: {
       addCard: '添加卡牌'
     },
@@ -352,6 +354,7 @@ export default {
       uploadEncounterToCloud: '上传遭遇组到云端',
       batchUploadToCloud: '批量上传卡牌到云端',
       batchUploadEncountersToCloud: '批量上传遭遇组到云端',
+      batchUploadModified: '批量上传已修改卡牌',
       configureBatchUpload: '配置批量上传'
     },
     info: {
@@ -426,6 +429,7 @@ export default {
     unknownAuthor: '未知作者',
     noDescription: '暂无描述',
     batchUpload: '批量上传',
+    batchUploadModified: '批量上传已修改',
     addCard: '添加卡牌',
     generationFailed: '生成失败',
     unsupported: '不支持',

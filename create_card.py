@@ -5,8 +5,8 @@ import re
 from typing import Union, Optional
 
 from PIL import Image, ImageEnhance
-
-from Card import Card, FontManager, ImageManager
+from ResourceManager import FontManager, ImageManager
+from Card import Card
 from card_cdapter import CardAdapter
 
 # 缩略图裁剪区域定义（从 images.ts 转换而来）
@@ -443,16 +443,18 @@ class CardCreator:
             text=self.font_manager.get_font_text("地点"),
             font_name="卡牌类型字体",
             font_size=26,
-            font_color=(0, 0, 0)
+            font_color=(0, 0, 0),
+            max_length=None, debug_line=False
         )
 
         # 写标题
         card.draw_centered_text(
-            position=(370, 32),
+            position=(370, 30),
             text=data['name'],
             font_name="标题字体",
             font_size=48,
-            font_color=(0, 0, 0)
+            font_color=(0, 0, 0),
+            max_length=540, debug_line=False
         )
 
         # 写副标题
@@ -462,16 +464,18 @@ class CardCreator:
                 text=data['subtitle'],
                 font_name="副标题字体",
                 font_size=32,
-                font_color=(0, 0, 0)
+                font_color=(0, 0, 0),
+                max_length=370, debug_line=False
             )
 
         # 写特性
         card.draw_centered_text(
-            position=(370, 610) if not is_enemy else (370, 690),
+            position=(370, 606) if not is_enemy else (370, 690),
             text=self._integrate_traits_text(data.get('traits', [])),
             font_name="特性字体",
             font_size=32,
-            font_color=(0, 0, 0)
+            font_color=(0, 0, 0),
+            max_length=530, debug_line=False
         )
 
         # 整合body和flavor
@@ -568,25 +572,28 @@ class CardCreator:
             text=self.font_manager.get_font_text("诡计"),
             font_name="卡牌类型字体",
             font_size=24,
-            font_color=(0, 0, 0)
+            font_color=(0, 0, 0),
+            max_length=None, debug_line=False
         )
 
         # 写标题
         card.draw_centered_text(
-            position=(370, 630),
+            position=(370, 628),
             text=data['name'],
             font_name="标题字体",
             font_size=48,
-            font_color=(0, 0, 0)
+            font_color=(0, 0, 0),
+            max_length=600, debug_line=False
         )
 
         # 写特性
         card.draw_centered_text(
-            position=(370, 690),
+            position=(370, 686),
             text=self._integrate_traits_text(data.get('traits', [])),
             font_name="特性字体",
             font_size=32,
-            font_color=(0, 0, 0)
+            font_color=(0, 0, 0),
+            max_length=620, debug_line=False
         )
 
         # 整合body和flavor
@@ -823,12 +830,14 @@ class CardCreator:
             self._paste_background_image(card, None, data, dp)
 
         card.paste_image(self.image_manager.get_image(f'{data["class"]}-{data["type"]}'), (0, 0), 'contain')
-        card.draw_centered_text((76, 133), self.font_manager.get_font_text("事件"), "卡牌类型字体", 22, (0, 0, 0))
-        card.draw_centered_text((370, 618), data['name'], "标题字体", 48, (0, 0, 0))
-        card.draw_centered_text((370, 672), self.font_manager.get_font_text(data['weakness_type']), "副标题字体", 28,
-                                (0, 0, 0))
+        card.draw_centered_text((76, 133), self.font_manager.get_font_text("事件"), "卡牌类型字体", 22, (0, 0, 0),
+                                 max_length=None, debug_line=False)
+        card.draw_centered_text((370, 618), data['name'], "标题字体", 48, (0, 0, 0),
+                                 max_length=600, debug_line=False)
+        card.draw_centered_text((370, 673), self.font_manager.get_font_text(data['weakness_type']), "副标题字体", 28,
+                                (0, 0, 0), max_length=None, debug_line=False)
         card.draw_centered_text((370, 705), self._integrate_traits_text(data.get('traits', [])), "特性字体", 32,
-                                (0, 0, 0))
+                                (0, 0, 0), max_length=620, debug_line=False)
 
         if 'cost' in data and isinstance(data['cost'], int):
             card.set_card_cost(data['cost'])
@@ -851,16 +860,19 @@ class CardCreator:
         else:
             card.paste_image(self.image_manager.get_image(f'{data["class"]}-{data["type"]}'), (0, 0), 'contain')
 
-        card.draw_centered_text((76, 131), self.font_manager.get_font_text("支援"), "卡牌类型字体", 22, (0, 0, 0))
-        card.draw_centered_text((370, 48), data['name'], "标题字体", 48, (0, 0, 0))
+        card.draw_centered_text((76, 131), self.font_manager.get_font_text("支援"), "卡牌类型字体", 22, (0, 0, 0),
+                                 max_length=None, debug_line=False)
+        card.draw_centered_text((370, 48), data['name'], "标题字体", 48, (0, 0, 0),
+                                 max_length=500, debug_line=False)
 
         if 'subtitle' in data and data['subtitle'] != '':
-            card.draw_centered_text((370, 103), data['subtitle'], "副标题字体", 31, (0, 0, 0))
+            card.draw_centered_text((370, 103), data['subtitle'], "副标题字体", 31, (0, 0, 0),
+                                     max_length=400, debug_line=False)
 
         card.draw_centered_text((370, 609), self.font_manager.get_font_text(data['weakness_type']), "卡牌类型字体", 28,
-                                (0, 0, 0))
-        card.draw_centered_text((370, 640), self._integrate_traits_text(data.get('traits', [])), "特性字体", 32,
-                                (0, 0, 0))
+                                (0, 0, 0), max_length=None, debug_line=False)
+        card.draw_centered_text((370, 642), self._integrate_traits_text(data.get('traits', [])), "特性字体", 32,
+                                (0, 0, 0), max_length=700, debug_line=False)
 
         if 'cost' in data and isinstance(data['cost'], int):
             card.set_card_cost(data['cost'])
@@ -893,16 +905,19 @@ class CardCreator:
         else:
             card.paste_image(self.image_manager.get_image(f'{data["class"]}-{data["type"]}'), (0, 0), 'contain')
 
-        card.draw_centered_text((76, 130), self.font_manager.get_font_text("技能"), "卡牌类型字体", 22, (0, 0, 0))
-        card.draw_left_text((140, 34), data['name'], "标题字体", 48, (0, 0, 0))
+        card.draw_centered_text((76, 130), self.font_manager.get_font_text("技能"), "卡牌类型字体", 22, (0, 0, 0),
+                                 max_length=None, debug_line=False)
+        card.draw_left_text((140, 28), data['name'], "标题字体", 48, (0, 0, 0),
+                            max_length=580, debug_line=False)
 
         if 'subtitle' in data and data['subtitle'] != '':
-            card.draw_centered_text((378, 106), data['subtitle'], "副标题字体", 32, (0, 0, 0))
+            card.draw_centered_text((378, 101), data['subtitle'], "副标题字体", 32, (0, 0, 0),
+                                     max_length=400, debug_line=False)
 
-        card.draw_centered_text((368, 700), self.font_manager.get_font_text(data['weakness_type']), "副标题字体", 28,
-                                (0, 0, 0))
+        card.draw_centered_text((368, 703), self.font_manager.get_font_text(data['weakness_type']), "副标题字体", 28,
+                                (0, 0, 0), max_length=None, debug_line=False)
         card.draw_centered_text((368, 742), self._integrate_traits_text(data.get('traits', [])), "特性字体", 30,
-                                (0, 0, 0))
+                                (0, 0, 0), max_length=580, debug_line=False)
 
         offset = 16
         card.draw_text(
@@ -924,13 +939,16 @@ class CardCreator:
             self._paste_background_image(card, None, data, dp)
 
         card.paste_image(self.image_manager.get_image(f'{data["class"]}-{data["type"]}'), (0, 0), 'contain')
-        card.draw_centered_text((370, 576), self.font_manager.get_font_text("诡计"), "卡牌类型字体", 24, (0, 0, 0))
-        card.draw_centered_text((370, 625), data['name'], "标题字体", 48, (0, 0, 0))
-        card.draw_centered_text((370, 678),
+        card.draw_centered_text((370, 580), self.font_manager.get_font_text("诡计"), "卡牌类型字体", 24, (0, 0, 0),
+                                 max_length=None, debug_line=False)
+        card.draw_centered_text((370, 625), data['name'], "标题字体", 48, (0, 0, 0),
+                                 max_length=600, debug_line=False)
+        card.draw_centered_text((370, 681),
                                 self.font_manager.get_font_text(data['weakness_type']),
-                                "副标题字体", 28, (0, 0, 0))
+                                "副标题字体", 28, (0, 0, 0),
+                                max_length=None, debug_line=False)
         card.draw_centered_text((370, 715), self._integrate_traits_text(data.get('traits', [])), "特性字体", 32,
-                                (0, 0, 0))
+                                (0, 0, 0), max_length=620, debug_line=False)
 
         card.draw_text(body,
                        vertices=[
@@ -951,13 +969,17 @@ class CardCreator:
         card.paste_image(self.image_manager.get_image(ui_name), (0, 0), 'contain')
 
         if data['weakness_type'] == '基础弱点':
-            card.draw_centered_text((367, 572), '0', "arkham-icons", 50, (0, 0, 0))
-        card.draw_centered_text((370, 618), self.font_manager.get_font_text("敌人"), "卡牌类型字体", 24, (0, 0, 0))
-        card.draw_centered_text((370, 28), data['name'], "标题字体", 48, (0, 0, 0))
+            card.draw_centered_text((367, 572), '0', "arkham-icons", 50, (0, 0, 0),
+                                     max_length=None, debug_line=False)
+        card.draw_centered_text((370, 618), self.font_manager.get_font_text("敌人"), "卡牌类型字体", 24, (0, 0, 0),
+                                 max_length=None, debug_line=False)
+        card.draw_centered_text((370, 28), data['name'], "标题字体", 48, (0, 0, 0),
+                                 max_length=520, debug_line=False)
         card.draw_centered_text((370, 79), self.font_manager.get_font_text(data['weakness_type'])
-                                , "副标题字体", 28, (0, 0, 0))
+                                , "副标题字体", 28, (0, 0, 0),
+                                max_length=None, debug_line=False)
         card.draw_centered_text((370, 212), self._integrate_traits_text(data.get('traits', [])), "特性字体", 32,
-                                (0, 0, 0))
+                                (0, 0, 0), max_length=530, debug_line=False)
 
         if data.get('victory') is not None:
             card.draw_victory_points(
@@ -1050,8 +1072,10 @@ class CardCreator:
             title_color = (255, 255, 255)
         ui_name += '-卡背'
         card.paste_image(self.image_manager.get_image(ui_name), (0, 0), 'contain')
-        card.draw_centered_text((750, 36), data['name'], "标题字体", 48, title_color)
-        card.draw_centered_text((750, 86), data['subtitle'], "副标题字体", 32, title_color)
+        card.draw_centered_text((750, 32), data['name'], "标题字体", 48, title_color,
+                                 max_length=520, debug_line=False)
+        card.draw_centered_text((750, 86), data['subtitle'], "副标题字体", 32, title_color,
+                                 max_length=340, debug_line=False)
 
         if card_json['body'] is not None and card_json['body'] != '':
             card_back['other'] = card_json['body']
@@ -1127,16 +1151,20 @@ class CardCreator:
             title_color = (255, 255, 255)
         else:
             card.paste_image(self.image_manager.get_image(f'{data["type"]}-{data["class"]}-UI'), (0, 0), 'contain')
-        card.draw_centered_text((320, 36), data['name'], "标题字体", 48, title_color)
-        card.draw_centered_text((320, 88), data['subtitle'], "副标题字体", 32, title_color)
+        card.draw_centered_text((320, 36), data['name'], "标题字体", 48, title_color,
+                                 max_length=460, debug_line=False)
+        card.draw_centered_text((320, 88), data['subtitle'], "副标题字体", 32, title_color,
+                                 max_length=340, debug_line=False)
 
         # 写四维
         if 'attribute' in data and isinstance(data['attribute'], list):
             for i, attr in enumerate(data['attribute']):
-                card.draw_centered_text((600 + 120 * i, 57), str(attr), "Bolton", 48, title_color)
+                card.draw_centered_text((600 + 120 * i, 57), str(attr), "Bolton", 48, title_color,
+                                         max_length=None, debug_line=False)
 
         traits = self._integrate_traits_text(data.get('traits', []))
-        card.draw_centered_text((810, 160), traits, "特性字体", 29, (0, 0, 0))
+        card.draw_centered_text((810, 160), traits, "特性字体", 32, (0, 0, 0),
+                                 max_length=400, debug_line=False)
 
         body = self._tidy_body_flavor(data['body'], data['flavor'], flavor_padding=self._get_flavor_padding(data))
         card.draw_text(body, vertices=[(596, 178), (1016, 178),
@@ -1194,7 +1222,8 @@ class CardCreator:
             self._paste_background_image(card, picture_path, data, dp)
 
         card.paste_image(self.image_manager.get_image(f'{data["type"]}-{data["class"]}'), (0, 0), 'contain')
-        card.draw_centered_text((73, 132), self.font_manager.get_font_text("技能"), "卡牌类型字体", 22, (0, 0, 0))
+        card.draw_centered_text((73, 134), self.font_manager.get_font_text("技能"), "卡牌类型字体", 22, (0, 0, 0),
+                                 max_length=None, debug_line=False)
 
     def _setup_event_card_base(self, card, data, picture_path):
         """设置事件卡基础"""
@@ -1205,7 +1234,8 @@ class CardCreator:
             self._paste_background_image(card, picture_path, data, dp)
 
         card.paste_image(self.image_manager.get_image(f'{data["type"]}-{data["class"]}'), (0, 0), 'contain')
-        card.draw_centered_text((73, 134), self.font_manager.get_font_text("事件"), "卡牌类型字体", 22, (0, 0, 0))
+        card.draw_centered_text((73, 134), self.font_manager.get_font_text("事件"), "卡牌类型字体", 22, (0, 0, 0),
+                                 max_length=None, debug_line=False)
 
     def _setup_support_card_base(self, card, data, picture_path):
         """设置支援卡基础"""
@@ -1221,7 +1251,8 @@ class CardCreator:
 
         transparency_list = [(690, 50, 46)] if self.transparent_encounter else None
         card.paste_image(self.image_manager.get_image(frame_name), (0, 0), 'contain', transparency_list)
-        card.draw_centered_text((73, 134), self.font_manager.get_font_text("支援"), "卡牌类型字体", 22, (0, 0, 0))
+        card.draw_centered_text((73, 134), self.font_manager.get_font_text("支援"), "卡牌类型字体", 22, (0, 0, 0),
+                                 max_length=None, debug_line=False)
 
     def _setup_player_card_content(self, card, data):
         """设置玩家卡内容"""
@@ -1254,8 +1285,10 @@ class CardCreator:
 
     def _setup_skill_card_content(self, card, data, traits, body):
         """设置技能卡内容"""
-        card.draw_left_text((140, 30), data['name'], "标题字体", 48, (0, 0, 0))
-        card.draw_centered_text((368, 707), traits, "特性字体", 32, (0, 0, 0))
+        card.draw_left_text((140, 30), data['name'], "标题字体", 48, (0, 0, 0),
+                            max_length=580, debug_line=False)
+        card.draw_centered_text((368, 707), traits, "特性字体", 32, (0, 0, 0),
+                                 max_length=580, debug_line=False)
         vertices = [(75, 725), (682, 725), (692, 770), (704, 838), (701, 914), (679, 995),
                     (74, 995), (91, 920), (96, 844)]
         if 'victory' in data and data.get('victory') is not None:
@@ -1274,8 +1307,10 @@ class CardCreator:
     def _setup_event_card_content(self, card, data, traits, body):
         """设置事件卡内容"""
         offset = {'潜修者': -3, '守护者': -1, '生存者': -1, '中立': -3}.get(data.get('class', ''), 0)
-        card.draw_centered_text((370, 621 + offset), data['name'], "标题字体", 48, (0, 0, 0))
-        card.draw_centered_text((368, 675), traits, "特性字体", 32, (0, 0, 0))
+        card.draw_centered_text((370, 621 + offset), data['name'], "标题字体", 48, (0, 0, 0),
+                                 max_length=600, debug_line=False)
+        card.draw_centered_text((368, 675), traits, "特性字体", 32, (0, 0, 0),
+                                 max_length=620, debug_line=False)
         vertices = [(45, 690), (694, 690), (706, 757), (704, 817), (680, 887), (670, 952),
                     (598, 992), (135, 992), (77, 949), (61, 907), (31, 793)]
 
@@ -1301,17 +1336,23 @@ class CardCreator:
 
         subclass = data.get('subclass', [])
         name_offset = 0
+        max_length = 500
         if len(subclass) == 3:
             name_offset = -80
+            max_length = 340
         elif len(subclass) == 2:
             name_offset = -40
+            max_length = 420
 
-        card.draw_centered_text((375 + name_offset, 46), data['name'], "标题字体", 48, (0, 0, 0))
+        card.draw_centered_text((375 + name_offset, 46), data['name'], "标题字体", 48, (0, 0, 0),
+                                 max_length=max_length, debug_line=False)
 
         if 'subtitle' in data and data['subtitle'] != '':
-            card.draw_centered_text((375, 98), data['subtitle'], "副标题字体", 31, (0, 0, 0))
+            card.draw_centered_text((378, 98), data['subtitle'], "副标题字体", 31, (0, 0, 0),
+                                     max_length=340, debug_line=False)
 
-        card.draw_centered_text((375, 640), traits, "特性字体", 32, (0, 0, 0))
+        card.draw_centered_text((375, 642), traits, "特性字体", 32, (0, 0, 0),
+                                 max_length=700, debug_line=False)
         vertices = [(19, 658), (718, 658), (718, 908), (290, 908), (73, 950), (19, 950)]
         if data.get('flavor') or self.font_manager.lang not in ['zh', 'zh-CHT']:
             vertices = [(19, 658), (718, 658), (718, 920), (19, 920)]
@@ -1362,8 +1403,9 @@ class CardCreator:
         card.paste_image(self.image_manager.get_image(f'{data["type"]}'), (0, 0), 'contain',
                          encounter_list if self.transparent_encounter else None)
 
-        title_y = 513 if data['type'] == '场景卡-大画' else 464
-        card.draw_centered_text((500, title_y), data['name'], "标题字体", 48, (0, 0, 0))
+        title_y = 510 if data['type'] == '场景卡-大画' else 461
+        card.draw_centered_text((520, title_y), data['name'], "标题字体", 48, (0, 0, 0),
+                                 max_length=660, debug_line=False)
 
         body = self._tidy_body_flavor(data['body'], data['flavor'], flavor_type=1, flavor_padding=self._get_flavor_padding(data))
         text_y = 556 if data['type'] == '场景卡-大画' else 512
@@ -1414,25 +1456,28 @@ class CardCreator:
             if data['type'] == '场景卡':
                 card.draw_centered_text((740 + 26, 30), f"{self.font_manager.get_font_text('场景')}"
                                                         f"{data.get('serial_number', '')}", "卡牌类型字体", 28,
-                                        (0, 0, 0))
+                                        (0, 0, 0), max_length=None, debug_line=False)
             else:
                 card.draw_centered_text((280 + 26, 38), f"{self.font_manager.get_font_text('密谋')}"
                                                         f"{data.get('serial_number', '')}", "卡牌类型字体", 28,
-                                        (0, 0, 0))
+                                        (0, 0, 0), max_length=None, debug_line=False)
         else:
             if data['type'] == '场景卡':
                 card.draw_centered_text((280, 30), f"{self.font_manager.get_font_text('场景')}"
-                                                   f"{data.get('serial_number', '')}", "卡牌类型字体", 28, (0, 0, 0))
+                                                   f"{data.get('serial_number', '')}", "卡牌类型字体", 28, (0, 0, 0),
+                                         max_length=None, debug_line=False)
             else:
                 card.draw_centered_text((740, 38), f"{self.font_manager.get_font_text('密谋')}"
-                                                   f"{data.get('serial_number', '')}", "卡牌类型字体", 28, (0, 0, 0))
+                                                   f"{data.get('serial_number', '')}", "卡牌类型字体", 28, (0, 0, 0),
+                                         max_length=None, debug_line=False)
 
         # 写标题
         if mirror:
             title_x = 740 + 26 if data['type'] == '场景卡' else 280 + 26
         else:
             title_x = 280 if data['type'] == '场景卡' else 740
-        card.draw_centered_text((title_x, 140), data['name'], "标题字体", 48, (0, 0, 0))
+        card.draw_centered_text((title_x, 140), data['name'], "标题字体", 48, (0, 0, 0),
+                                 max_length=520, debug_line=False)
 
         if mirror:
             offset_x = 12
@@ -1500,19 +1545,24 @@ class CardCreator:
             font_size = 21
             if self.font_manager.lang == 'pl':
                 font_size -= 4
-            card.draw_centered_text((98, 60), small_words.strip(), "卡牌类型字体", font_size, (0, 0, 0))
-            card.draw_centered_text((98, 78), data.get('serial_number', ''), "卡牌类型字体", font_size, (0, 0, 0))
+            card.draw_centered_text((98, 60), small_words.strip(), "卡牌类型字体", font_size, (0, 0, 0),
+                                     max_length=None, debug_line=False)
+            card.draw_centered_text((98, 78), data.get('serial_number', ''), "卡牌类型字体", font_size, (0, 0, 0),
+                                     max_length=None, debug_line=False)
         else:
             small_words += data.get('serial_number', '')
-            card.draw_centered_text((98, 68), small_words, "卡牌类型字体", 28, (0, 0, 0))
+            card.draw_centered_text((98, 68), small_words, "卡牌类型字体", 28, (0, 0, 0),
+                                     max_length=None, debug_line=False)
 
         # 写标题
         if self.font_manager.lang in ['zh', 'zh-CHT']:
-            card.draw_centered_text((98, 422), data['name'], "标题字体", 48, (0, 0, 0), vertical=True)
+            card.draw_centered_text((98, 422), data['name'], "标题字体", 48, (0, 0, 0), vertical=True,
+                                     max_length=None, debug_line=False)
             pass
         else:
             title = Card(450, 100, self.font_manager, self.image_manager)
-            title.draw_centered_text((225, 50), data['name'], "标题字体", 48, (0, 0, 0))
+            title.draw_centered_text((225, 50), data['name'], "标题字体", 48, (0, 0, 0),
+                                     max_length=None, debug_line=False)
             title_img = title.image.rotate(90, expand=True)
             card.paste_image(title_img, (40, 208), 'cover')
 
@@ -1553,8 +1603,10 @@ class CardCreator:
         if self.transparent_encounter and dp:
             card.copy_circle_to_image(dp, (643, 92, 42), (643, 99, 42))
 
-        card.draw_centered_text((313, 90), data['name'], "标题字体", 48, (0, 0, 0))
-        card.draw_centered_text((370, 1012), self.font_manager.get_font_text('剧情'), "卡牌类型字体", 30, (0, 0, 0))
+        card.draw_centered_text((328, 90), data['name'], "标题字体", 48, (0, 0, 0),
+                                 max_length=500, debug_line=False)
+        card.draw_centered_text((370, 1012), self.font_manager.get_font_text('剧情'), "卡牌类型字体", 30, (0, 0, 0),
+                                 max_length=None, debug_line=False)
 
         body = self._tidy_body_flavor(data['body'], data['flavor'], flavor_type=1, align='left', quote=True, flavor_padding=self._get_flavor_padding(data))
         card.draw_text(body, vertices=[(50, 207), (685, 207), (685, 960), (50, 960)],
@@ -1596,8 +1648,10 @@ class CardCreator:
         transparency_list = [(374, 180, 32)] if self.transparent_encounter else None
         card.paste_image(self.image_manager.get_image(ui_name), (0, 0), 'contain', transparency_list)
 
-        card.draw_centered_text((374, 85), data['name'], "标题字体", 48, (0, 0, 0))
-        card.draw_centered_text((372, 980), '行动', "卡牌类型字体", 24, (0, 0, 0))
+        card.draw_centered_text((374, 85), data['name'], "标题字体", 48, (0, 0, 0),
+                                 max_length=540, debug_line=False)
+        card.draw_centered_text((372, 980), '行动', "卡牌类型字体", 24, (0, 0, 0),
+                                 max_length=None, debug_line=False)
 
         body = self._tidy_body_flavor(data['body'], data['flavor'], flavor_padding=self._get_flavor_padding(data))
         card.draw_text(body, vertices, default_font_name='正文字体', default_size=32,
@@ -1635,7 +1689,8 @@ class CardCreator:
         if self.transparent_encounter and dp:
             card.copy_circle_to_image(dp, (368, 144, 34), (368, 147, 34))
 
-        card.draw_centered_text((369, 210), data['name'], "标题字体", 48, (0, 0, 0), underline=True)
+        card.draw_centered_text((369, 210), data['name'], "标题字体", 48, (0, 0, 0), underline=True,
+                                 max_length=600, debug_line=False)
 
         if data.get('scenario_type', 0) == 2:
             # 辅助卡
@@ -1651,7 +1706,7 @@ class CardCreator:
             if 'subtitle' in data and data['subtitle'] != '':
                 card.draw_centered_text((369, 265), data['subtitle'], "副标题字体",
                                         26 if self.font_manager.lang in ['zh', 'zh-CHT'] else 30
-                                        , (0, 0, 0))
+                                        , (0, 0, 0), max_length=600, debug_line=False) 
 
             # 画正文
             scenario_card = data.get('scenario_card', {})
@@ -1854,19 +1909,26 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "支援卡",
-        "name": "🏅The Elder Sign",
+        "type": "诡计卡",
+        "name": "🏅The Elder Sign The Elder The Elder The Elder",
         "id": "",
         "created_at": "",
         "version": "2.0",
         "language": "en",
         "subtitle": "Sigil of Kish",
         "class": "弱点",
+        "subclass":[
+            "守护者",
+            "生存者",
+            "探求者"
+        ],
         "level": 0,
         "cost": -1,
         "submit_icon": [],
         "traits": [
-            "Contract"
+            "Contract",
+            "Contract",
+            "Contract",
         ],
         "health": -1,
         "horror": -1,

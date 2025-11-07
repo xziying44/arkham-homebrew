@@ -788,21 +788,23 @@ def generate_card():
     import base64
 
     img_buffer = io.BytesIO()
-    card_image.save(img_buffer, format='PNG')
+    card_image = card_image.convert('RGB')
+    card_image.save(img_buffer, format='JPEG', quality=95)
     img_str = base64.b64encode(img_buffer.getvalue()).decode()
 
     # 构建响应数据
     response_data = {
-        "image": f"data:image/png;base64,{img_str}",
+        "image": f"data:image/jpeg;base64,{img_str}",
         "box_position": card.get_upgrade_card_box_position() if card else []
     }
 
     # 如果有背面图片，也转换为base64并添加到响应中
     if back_image is not None:
         back_buffer = io.BytesIO()
-        back_image.save(back_buffer, format='PNG')
+        back_image = back_image.convert('RGB')
+        back_image.save(back_buffer, format='JPEG', quality=95)
         back_str = base64.b64encode(back_buffer.getvalue()).decode()
-        response_data["back_image"] = f"data:image/png;base64,{back_str}"
+        response_data["back_image"] = f"data:image/jpeg;base64,{back_str}"
 
     logger_manager.info(f"卡图生成成功: {card_name}")
     return jsonify(create_response(

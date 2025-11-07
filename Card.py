@@ -340,6 +340,8 @@ class Card:
             border_color=(0, 0, 0),
             underline=False,
             vertical=False,
+            max_length: int | None = None,
+            debug_line: bool = False,
     ):
         """
         在指定位置居中绘制文字，可选外边框
@@ -376,12 +378,15 @@ class Card:
                 border_width=border_width,
                 has_underline=underline
             ),
-            vertical=vertical
+            vertical=vertical,
+            max_length=(max_length if max_length is not None else self.width),
+            debug_draw_range=debug_line
         ))
         pass
 
     def draw_left_text(self, position, text, font_name, font_size, font_color,
-                       has_border=False, border_width=1, border_color=(0, 0, 0)):
+                       has_border=False, border_width=1, border_color=(0, 0, 0),
+                       max_length: int | None = None, debug_line: bool = False):
         """
         在指定位置左对齐绘制文字，可选外边框
         :param position: 左上角坐标 (x, y)
@@ -410,6 +415,8 @@ class Card:
                 border_color=border_color,
                 border_width=border_width,
             ),
+            max_length=(max_length if max_length is not None else self.width),
+            debug_draw_range=debug_line
         ))
         pass
 

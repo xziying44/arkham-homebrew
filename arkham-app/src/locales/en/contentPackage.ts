@@ -138,7 +138,8 @@ export default {
     batchUploadFailed: 'Batch upload failed',
     batchPreparing: 'Preparing batch upload...',
     batchStarting: 'Starting batch upload...',
-    batchUploading: 'Uploading: {filename} ({index}/{total})'
+    batchUploading: 'Uploading: {filename} ({index}/{total})',
+    noModifiedCards: 'No modified cards'
   },
   cards: {
     empty: {
@@ -152,6 +153,7 @@ export default {
       generationStopped: 'Stopped',
       versionCheckFailed: 'Version check failed'
     },
+    modifiedTag: 'Modified',
     actions: {
       addCard: 'Add Card'
     },
@@ -344,6 +346,7 @@ export default {
       uploadEncounterToCloud: 'Upload Encounter Set to Cloud',
       batchUploadToCloud: 'Batch Upload Cards to Cloud',
       batchUploadEncountersToCloud: 'Batch Upload Encounter Sets to Cloud',
+      batchUploadModified: 'Batch Upload Modified Cards',
       configureBatchUpload: 'Configure Batch Upload'
     },
     info: {
@@ -418,6 +421,7 @@ export default {
     unknownAuthor: 'Unknown Author',
     noDescription: 'No Description',
     batchUpload: 'Batch Upload',
+    batchUploadModified: 'Batch Upload Modified',
     addCard: 'Add Card',
     generationFailed: 'Generation Failed',
     unsupported: 'Unsupported',

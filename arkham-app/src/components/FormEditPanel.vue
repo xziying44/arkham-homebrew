@@ -359,6 +359,68 @@ const cardTypeOptions = computed(() => {
     return locale.value === 'en' ? cardTypeOptionsEn : cardTypeOptionsZh;
 });
 
+// ============== 哈希计算辅助方法 ==============
+// 将对象进行深度排序（按键名排序），以获得稳定序列化结果
+const deepSortObject = (value: any): any => {
+    if (Array.isArray(value)) {
+        return value.map(v => deepSortObject(v));
+    }
+    if (value && typeof value === 'object') {
+        const sorted: Record<string, any> = {};
+        Object.keys(value).sort().forEach((k) => {
+            sorted[k] = deepSortObject(value[k]);
+        });
+        return sorted;
+    }
+    return value;
+};
+
+// 稳定序列化（排除根级 content_hash 字段）
+const stableStringifyExcludingHash = (data: any): string => {
+    try {
+        // 深拷贝并剔除根级 content_hash
+        const cloned = JSON.parse(JSON.stringify(data || {}));
+        if (cloned && typeof cloned === 'object') {
+            delete cloned.content_hash;
+        }
+        const sorted = deepSortObject(cloned);
+        return JSON.stringify(sorted);
+    } catch (e) {
+        // 回退到普通序列化
+        return JSON.stringify(data || {});
+    }
+};
+
+// 计算SHA-256（返回hex字符串），若不可用则回退轻量哈希
+const computeSHA256Hex = async (text: string): Promise<string> => {
+    try {
+        // @ts-ignore
+        const subtle = (globalThis.crypto && globalThis.crypto.subtle) ? globalThis.crypto.subtle : null;
+        if (subtle && typeof TextEncoder !== 'undefined') {
+            const enc = new TextEncoder();
+            const buf = enc.encode(text);
+            const hash = await subtle.digest('SHA-256', buf);
+            const bytes = Array.from(new Uint8Array(hash));
+            return bytes.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+        throw new Error('subtle crypto not available');
+    } catch {
+        // 简易回退（djb2）
+        let h = 5381;
+        for (let i = 0; i < text.length; i++) {
+            h = ((h << 5) + h) + text.charCodeAt(i);
+            h = h >>> 0;
+        }
+        return ('00000000' + h.toString(16)).slice(-8);
+    }
+};
+
+// 计算卡牌内容哈希（仅在保存时调用），排除 content_hash 自身
+const computeCardContentHash = async (cardObj: any): Promise<string> => {
+    const payload = stableStringifyExcludingHash(cardObj);
+    return await computeSHA256Hex(payload);
+};
+
 // 表单状态
 const currentCardData = reactive({
     type: '',
@@ -1227,6 +1289,15 @@ const saveCard = async () => {
             }
         }
 
+        // 在保存前计算并写入内容哈希（排除 content_hash 自身）
+        try {
+            const hash = await computeCardContentHash(currentCardData);
+            // 写回根级 content_hash
+            (currentCardData as any).content_hash = hash;
+        } catch (e) {
+            console.warn('计算卡牌内容哈希失败，将继续保存:', e);
+        }
+
         // 保存JSON文件
         const jsonContent = JSON.stringify(currentCardData, null, 2);
         await WorkspaceService.saveFileContent(fileToSave.path, jsonContent);
@@ -1777,6 +1848,14 @@ const saveAllUnsaved = async (unsavedPaths: string[], cacheMap: Map<string, any>
             if (!cachedData) {
                 console.warn(`⚠️ 文件 ${filePath} 没有暂存数据，跳过`);
                 continue;
+            }
+
+            // 在保存前计算并写入内容哈希（排除 content_hash 自身）
+            try {
+                const hash = await computeCardContentHash(cachedData);
+                (cachedData as any).content_hash = hash;
+            } catch (e) {
+                console.warn('计算卡牌内容哈希失败（批量保存）:', e);
             }
 
             // 直接保存JSON文件（不需要生成预览）

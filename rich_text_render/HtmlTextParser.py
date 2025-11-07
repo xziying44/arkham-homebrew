@@ -41,7 +41,7 @@ class RichTextParser:
         self.html_tag_pattern = r'<(/?)([a-zA-Z][a-zA-Z0-9]*)\s*([^>]*?)>'
         # 有效的HTML标签 - 新增par标签
         self.valid_tags = ['b', 'i', 'u', 'p', 'font', 'flavor', 'em', 'br', 'hr', 'par', 'flex', 'trait', 'nbsp',
-                           'center', 'img']
+                           'center', 'img', 'size']
 
         # 英文单词模式 - 改进版本，支持更多特殊字符
         self.english_word_pattern = r'\b[\w\'\-]+\b'
@@ -367,7 +367,7 @@ class RichTextParser:
                     attributes = self.parse_attributes(attr_string)
 
                     # 自闭合标签 - 新增par标签到自闭合标签列表
-                    if tag_name in ['br', 'hr', 'par', 'flex', 'nbsp'] or full_match.endswith('/>'):
+                    if tag_name in ['br', 'hr', 'par', 'flex', 'nbsp', 'size'] or full_match.endswith('/>'):
                         result.append(ParsedItem(
                             tag=tag_name,
                             type_=TextType.HTML_SELF_CLOSE,
