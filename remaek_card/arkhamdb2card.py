@@ -707,14 +707,14 @@ class ArkhamDBConverter:
             else:
                 card_data["serial_number"] = card_data["serial_number"].replace('a', 'e')
 
-        if card_code == '02292':
-            card_data["flavor"] = card_data["flavor"].replace(
-                "这<i>【不可能】</i>在这儿！",
-                '这<font name="江城斜宋体">不可能</font>在这儿！')
-        if card_code in ['03062', '03318'] and is_back:
-            card_data["flavor"] = card_data["flavor"].replace(
-                "现在【真正的】晚宴终于可以开始了",
-                '现在<font name="江城斜宋体">真正的</font>晚宴终于可以开始了')
+        # if card_code == '02292':
+        #     card_data["flavor"] = card_data["flavor"].replace(
+        #         "这<i>【不可能】</i>在这儿！",
+        #         '这<font name="江城斜宋体">不可能</font>在这儿！')
+        # if card_code in ['03062', '03318'] and is_back:
+        #     card_data["flavor"] = card_data["flavor"].replace(
+        #         "现在【真正的】晚宴终于可以开始了",
+        #         '现在<font name="江城斜宋体">真正的</font>晚宴终于可以开始了')
 
         # 密谋调查员数
         if card_code in ['03121', '03122', '03123'] and not is_back:

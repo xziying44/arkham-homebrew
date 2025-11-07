@@ -14,16 +14,18 @@ class CardMetadataScanner:
     用于扫描工作目录下的图片文件，并根据db_cards.json生成元数据
     """
 
-    def __init__(self, work_directory: str, code: str):
+    def __init__(self, work_directory: str, code: str, language: Optional[str] = None):
         """
         初始化扫描器
 
         Args:
             work_directory: 工作目录路径
             code: 项目代码，用于匹配db_cards中的card code前N位
+            language: 语言代码（例如：'pl'）。None/未指定时为默认中文流程
         """
         self.work_directory = Path(work_directory)
         self.code = code
+        self.language = language
         self.db_cards = []
 
         # 检查工作目录是否存在
@@ -34,9 +36,12 @@ class CardMetadataScanner:
         self._load_db_cards()
 
     def _load_db_cards(self):
-        """加载db_cards.json文件并应用翻译数据"""
+        """加载db_cards.json文件并应用翻译数据（支持多语言translation_data_{lang}.json）"""
         db_cards_path = "db_cards_en.json"
+        # 默认中文流程使用 translation_data.json；其他语言按 translation_data_{lang}.json
         translation_path = "translation_data.json"
+        if self.language and self.language.lower() != 'zh':
+            translation_path = f"translation_data_{self.language.lower()}.json"
 
         try:
             # 1. 加载英文数据库
@@ -529,6 +534,10 @@ class CardMetadataScanner:
                     skipped_count += 1
                     continue
 
+                # 多语言：为非中文流程注入 lang 字段（例如 'pl'）
+                if self.language and self.language.lower() != 'zh':
+                    card_object['language'] = self.language.lower()
+
                 # 处理图片并转换为base64
                 image_full_path = self.work_directory / file_path
                 if not image_full_path.exists():
@@ -566,6 +575,9 @@ class CardMetadataScanner:
                     json.dump(card_object, f, ensure_ascii=False, indent=2)
 
                 if customization_card:
+                    # 多语言：定制卡也注入 lang
+                    if self.language and self.language.lower() != 'zh':
+                        customization_card['lang'] = self.language.lower()
                     # 保存定制卡
                     customization_filename = filename + '-c.card'
                     with open(cards_dir / customization_filename, 'w', encoding='utf-8') as f:
@@ -608,7 +620,7 @@ class CardMetadataScanner:
         return metadata_list
 
     @staticmethod
-    def batch_process_all_folders(base_directory: str, folder_type: str = "重置玩家卡"):
+    def batch_process_all_folders(base_directory: str, folder_type: str = "重置玩家卡", language: Optional[str] = None):
         """
         批量处理01-54所有文件夹
         
@@ -678,7 +690,8 @@ class CardMetadataScanner:
                 # 创建扫描器实例
                 scanner = CardMetadataScanner(
                     work_directory=work_directory,
-                    code=code
+                    code=code,
+                    language=language
                 )
 
                 # 执行扫描并保存元数据
@@ -803,6 +816,37 @@ if __name__ == "__main__":
 
             # 执行批量处理
             results = CardMetadataScanner.batch_process_all_folders(base_directory, folder_type)
+
+        elif len(sys.argv) > 1 and sys.argv[1].lower() == "batch-lang":
+            # 多语言批量处理模式（不影响现有batch）
+            print("=" * 60)
+            print("多语言批量处理模式 (batch-lang)")
+            print("=" * 60)
+
+            # 语言代码（当前仅支持 'pl'）
+            lang = 'pl'
+            if len(sys.argv) > 2:
+                lang = sys.argv[2].lower()
+
+            # 文件夹类型（默认处理玩家卡）
+            folder_type = "重置玩家卡"
+            if len(sys.argv) > 3:
+                folder_type = sys.argv[3]
+
+            # 仅支持 pl；其他语言暂不开放
+            if lang != 'pl':
+                raise ValueError(f"当前仅支持波兰语(pl)，收到: {lang}")
+
+            # 硬编码基础目录到多语言/波兰语
+            base_directory = r"D:\\诡镇奇谈\\多语言\\波兰语"
+
+            print(f"语言: {lang}")
+            print(f"基础目录: {base_directory}")
+            print(f"文件夹类型: {folder_type}")
+            print("开始批量处理(多语言)...")
+
+            # 执行批量处理（携带语言参数）
+            results = CardMetadataScanner.batch_process_all_folders(base_directory, folder_type, language=lang)
 
         else:
             # 单个文件夹处理模式（原有逻辑）
