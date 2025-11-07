@@ -234,7 +234,58 @@ onMounted(() => {
   window.addEventListener('resize', checkIsMobile);
 });
 
-// 复制图片到剪贴板
+// 将 JPEG Blob 转为 PNG Blob（其他类型原样返回）
+const convertBlobToPng = async (blob: Blob): Promise<Blob> => {
+  // 仅在 JPG/JPEG 时进行转换
+  const isJpeg = /^image\/jpe?g$/i.test(blob.type);
+  if (!isJpeg) return blob;
+
+  // 优先使用 createImageBitmap，失败则回退到 <img>
+  try {
+    const bitmap = await (window as any).createImageBitmap?.(blob);
+    if (bitmap) {
+      const canvas = document.createElement('canvas');
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas context not available');
+      ctx.drawImage(bitmap, 0, 0);
+      const pngBlob: Blob = await new Promise((resolve, reject) => {
+        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('PNG conversion failed'))), 'image/png');
+      });
+      return pngBlob;
+    }
+  } catch (e) {
+    // fallthrough to <img> fallback
+  }
+
+  // Fallback: 使用 <img> + objectURL
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = new Image();
+    // 对于 blob: URL 跨域设置无影响，保持安全
+    const loadPromise = new Promise<HTMLImageElement>((resolve, reject) => {
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('Image load failed'));
+    });
+    img.src = url;
+    await loadPromise;
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth || img.width;
+    canvas.height = img.naturalHeight || img.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas context not available');
+    ctx.drawImage(img, 0, 0);
+    const pngBlob: Blob = await new Promise((resolve, reject) => {
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('PNG conversion failed'))), 'image/png');
+    });
+    return pngBlob;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+};
+
+// 复制图片到剪贴板（JPG 时自动转为 PNG）
 const copyImageToClipboard = async () => {
   if (!displayedImage.value || isCopying.value) return;
 
@@ -260,10 +311,13 @@ const copyImageToClipboard = async () => {
       throw new Error('不是有效的图片格式');
     }
 
+    // JPG 转 PNG（解决部分浏览器/站点复制 JPG 的限制）
+    const targetBlob = await convertBlobToPng(blob);
+
     // 复制到剪贴板
     await navigator.clipboard.write([
       new ClipboardItem({
-        [blob.type]: blob
+        [targetBlob.type]: targetBlob
       })
     ]);
 
