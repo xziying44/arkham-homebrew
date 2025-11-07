@@ -57,6 +57,7 @@ class CardAdapter:
         (r'(?<!\\)\{([^}]*)\}', r'<trait>\1</trait>'),
         (r'\n<par>\n', '<par>'),
         (r'(?<!\\)_(?![^<]*>)', '<nbsp>'),
+        (r'<size\s+"(\d+)">', r'<size relative="\1">'),
     ]
 
     # 需要转化的字段路径配置

@@ -85,6 +85,7 @@ Special tags:
 <hr> horizontal line
 <p></p> paragraph
 <center>Centered text</center>
+<size "2"> means the font size increases by 2 relative levels.
 
 Support direct use of emoji or corresponding tag format
 `;

@@ -85,6 +85,7 @@ const bodyTip = `输入格式：
 <br> 换行
 <hr> 横线
 <center>居中文本</center>
+<size "2"> 表示字体相对增加2号字体
 
 支持直接使用emoji或对应的标签格式
 `

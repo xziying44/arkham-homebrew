@@ -668,8 +668,17 @@ class RichTextRenderer:
             elif item.tag == "font":
                 font_name = item.attributes.get('name', base_options.font_name)
                 font_offset_y = int(item.attributes.get('offset', '0'))
-                font_addsize = int(item.attributes.get('addsize', '0'))
+                font_addsize = int(item.attributes.get('addsize', font_addsize))
                 font_name = self.font_manager.get_lang_font(font_name).name
+                font_stack.push(font_cache.get_font(font_name, size_to_test + font_addsize), font_name)
+            elif item.tag == "size":
+                relative_size = int(item.attributes.get('relative', '0'))
+                font_addsize = relative_size
+                font_name = font_stack.get_top_font_name()
+                print(f"调整字体大小 -> {relative_size} - {font_name} - {size_to_test + font_addsize}")
+                # 弹出当前字体
+                font_stack.pop()
+                # 压入相对字体大小字体
                 font_stack.push(font_cache.get_font(font_name, size_to_test + font_addsize), font_name)
             elif item.tag == "b":
                 font_stack.push(font_cache.get_font(self.default_fonts.bold, size_to_test), self.default_fonts.bold)
@@ -904,20 +913,23 @@ class RichTextRenderer:
                         print(f"字体切换失败: {e}")
                 elif item.tag == "b":
                     try:
-                        font_stack_local.push(FontCache(self.font_manager).get_font(self.default_fonts.bold, base_font_size),
-                                              self.default_fonts.bold)
+                        font_stack_local.push(
+                            FontCache(self.font_manager).get_font(self.default_fonts.bold, base_font_size),
+                            self.default_fonts.bold)
                     except Exception as e:
                         print(f"粗体字体加载失败: {e}")
                 elif item.tag == "i":
                     try:
-                        font_stack_local.push(FontCache(self.font_manager).get_font(self.default_fonts.italic, base_font_size),
-                                              self.default_fonts.italic)
+                        font_stack_local.push(
+                            FontCache(self.font_manager).get_font(self.default_fonts.italic, base_font_size),
+                            self.default_fonts.italic)
                     except Exception as e:
                         print(f"斜体字体加载失败: {e}")
                 elif item.tag == "trait":
                     try:
-                        font_stack_local.push(FontCache(self.font_manager).get_font(self.default_fonts.trait, base_font_size),
-                                              self.default_fonts.trait)
+                        font_stack_local.push(
+                            FontCache(self.font_manager).get_font(self.default_fonts.trait, base_font_size),
+                            self.default_fonts.trait)
                     except Exception as e:
                         print(f"特质字体加载失败: {e}")
                 elif item.tag.startswith('/'):
@@ -942,7 +954,8 @@ class RichTextRenderer:
         while exceeds_limit() and steps_used < max_steps and final_font_size > min_font_size:
             final_font_size -= 2
             steps_used += 1
-            render_segments, total_width, total_height, max_height, max_width = build_segments_and_measure(final_font_size)
+            render_segments, total_width, total_height, max_height, max_width = build_segments_and_measure(
+                final_font_size)
 
         # 使用最终字号进行绘制
         options = DrawOptions(
