@@ -1074,7 +1074,7 @@ class Card2ArkhamDBConverter:
             # 设置deck_limit
             flags = self._get_special_flags()
             card_id = self._extract_code_from_gmnotes()
-            is_signature = self._is_signature_card(card_id)
-            card_data["deck_limit"] = self._get_quantity() if is_signature else (1 if flags["is_unique"] else 2)
+            card_data["deck_limit"] = 1 if flags["exceptional"] else self._get_quantity()
+
 
         return card_data
