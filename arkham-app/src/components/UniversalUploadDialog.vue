@@ -736,14 +736,21 @@ const uploadCard = async (card: ContentPackageCard) => {
   const updatedPackage = { ...props.config };
   const cardIndex = updatedPackage.cards?.findIndex(c => c.filename === card.filename);
   if (cardIndex !== undefined && cardIndex >= 0) {
+    const existing = updatedPackage.cards![cardIndex] || {};
+    // 非本地模式上传成功后，记录当前卡牌文件的 content_hash 到 uploaded_hash
+    const newUploadedHash = (selectedHost.value !== 'local' && parsedCard?.content_hash)
+      ? parsedCard.content_hash
+      : existing.uploaded_hash;
+
     updatedPackage.cards![cardIndex] = {
-      ...updatedPackage.cards![cardIndex],
+      ...existing,
       front_url: uploadedUrls.front_url,
       back_url: uploadedUrls.back_url,
       original_front_url: uploadedUrls.original_front_url,
       original_back_url: uploadedUrls.original_back_url,
       front_thumbnail_url: uploadedUrls.front_thumbnail_url,
-      back_thumbnail_url: uploadedUrls.back_thumbnail_url
+      back_thumbnail_url: uploadedUrls.back_thumbnail_url,
+      uploaded_hash: newUploadedHash
     };
   }
 
@@ -1037,14 +1044,20 @@ const uploadCardInBatch = async (card: ContentPackageCard, updatedPackage: any, 
   // 更新卡牌的云端URL
   const cardIndex = updatedPackage.cards?.findIndex(c => c.filename === card.filename);
   if (cardIndex !== undefined && cardIndex >= 0) {
+    const existing = updatedPackage.cards![cardIndex] || {};
+    const newUploadedHash = (selectedHostType !== 'local' && parsedCard?.content_hash)
+      ? parsedCard.content_hash
+      : existing.uploaded_hash;
+
     updatedPackage.cards![cardIndex] = {
-      ...updatedPackage.cards![cardIndex],
+      ...existing,
       front_url: uploadedUrls.front_url,
       back_url: uploadedUrls.back_url,
       original_front_url: uploadedUrls.original_front_url,
       original_back_url: uploadedUrls.original_back_url,
       front_thumbnail_url: uploadedUrls.front_thumbnail_url,
-      back_thumbnail_url: uploadedUrls.back_thumbnail_url
+      back_thumbnail_url: uploadedUrls.back_thumbnail_url,
+      uploaded_hash: newUploadedHash
     };
   }
 };

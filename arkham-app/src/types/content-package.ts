@@ -33,6 +33,11 @@ export interface ContentPackageCard {
   exceptional?: boolean; // 卓越卡牌
   myriad?: boolean;    // 无数卡牌
   exile?: boolean;     // 可放逐
+  /**
+   * 最近一次成功上传（非本地模式）时记录的卡牌内容哈希
+   * 用于与卡牌文件中的 content_hash 进行对比，判断是否发生修改
+   */
+  uploaded_hash?: string;
 }
 
 /**

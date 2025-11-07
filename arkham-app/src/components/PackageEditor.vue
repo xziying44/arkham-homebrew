@@ -172,6 +172,18 @@
                   </template>
                   {{ t('contentPackage.common.batchUpload') }} ({{ v2CardsWithCloudUrls.length }}/{{ v2Cards.length }})
                 </n-button>
+                <n-button
+                  v-if="v2Cards.length > 0"
+                  type="warning"
+                  @click="openCardBatchUploadModifiedPage"
+                  size="small"
+                  :disabled="modifiedV2Cards.length === 0"
+                >
+                  <template #icon>
+                    <n-icon :component="CloudUploadOutline" />
+                  </template>
+                  {{ t('contentPackage.common.batchUploadModified') }} ({{ modifiedV2Cards.length }})
+                </n-button>
                 <n-button type="primary" @click="showAddCardDialog = true" size="small">
                   <template #icon>
                     <n-icon :component="AddOutline" />
@@ -236,6 +248,9 @@
                         </n-tag>
                         <n-tag v-if="card.exceptional" type="warning" size="tiny">
                           {{ t('contentPackage.common.exceptional') }}
+                        </n-tag>
+                        <n-tag v-if="getCardStatus(card.filename).modified" type="warning" size="tiny">
+                          {{ t('contentPackage.cards.modifiedTag') }}
                         </n-tag>
                         <n-tag v-if="card.myriad" type="success" size="tiny">
                           {{ t('contentPackage.common.myriad') }}
@@ -1191,6 +1206,8 @@ const currentUploadItem = ref<any>(null);
 const currentUploadItems = ref<any[]>([]);
 const isCurrentUploadBatch = ref(false);
 const uploadDialogRef = ref<any>(null);
+// 是否批量上传“已修改”卡牌
+const isBatchModifiedUpload = ref(false);
 
 // 上传云端状态 (保留用于兼容)
 const showUploadBannerDialog = ref(false);
@@ -1344,7 +1361,12 @@ const cardStatusMap = ref<Map<string, {
   previewImage?: string;
   isGenerating: boolean;
   generationError?: string;
+  contentHash?: string;
+  modified?: boolean;
 }>>(new Map());
+
+// 用于触发依赖卡牌状态的计算属性/模板重新渲染的版本号
+const statusVersion = ref(0);
 
 // 编辑表单数据
 const editForm = ref({
@@ -1592,7 +1614,10 @@ const getCardStatus = (filename: string) => {
         version: '1.0',
         isGenerating: false,
         generationError: undefined,
-        previewImage: undefined
+        previewImage: undefined,
+        // 补充：用于修改检测
+        contentHash: undefined as string | undefined,
+        modified: false as boolean
       });
     }
     return cardStatusMap.value.get(filename)!;
@@ -1602,7 +1627,9 @@ const getCardStatus = (filename: string) => {
       version: '1.0',
       isGenerating: false,
       generationError: undefined,
-      previewImage: undefined
+      previewImage: undefined,
+      contentHash: undefined,
+      modified: false
     };
   }
 };
@@ -1885,6 +1912,17 @@ const v2CardsWithoutCloudUrls = computed(() => {
   });
 });
 
+// 计算属性：已修改的 v2.0 卡牌
+const modifiedV2Cards = computed(() => {
+  // 依赖版本号以响应本地状态更新
+  const _tick = statusVersion.value;
+  if (!packageData.value?.cards) return [] as ContentPackageCard[];
+  return packageData.value.cards.filter(card => {
+    const status = getCardStatus(card.filename) as any;
+    return status.version === '2.0' && !!status.modified;
+  });
+});
+
 // 计算属性：检查是否有v2.0卡牌需要上传
 const hasV2CardsWithoutCloudUrls = computed(() => {
   return v2CardsWithoutCloudUrls.value.length > 0;
@@ -1999,6 +2037,21 @@ const openCardBatchUploadPage = () => {
   currentUploadItem.value = null;
   currentUploadItems.value = v2Cards.value;
   isCurrentUploadBatch.value = true;
+  isBatchModifiedUpload.value = false;
+  showUploadPage.value = true;
+};
+
+// 打开批量“已修改”卡牌上传页面
+const openCardBatchUploadModifiedPage = () => {
+  currentUploadType.value = 'card';
+  currentUploadItem.value = null;
+  currentUploadItems.value = modifiedV2Cards.value;
+  isCurrentUploadBatch.value = true;
+  isBatchModifiedUpload.value = true;
+  if (modifiedV2Cards.value.length === 0) {
+    message.warning(t('contentPackage.messages.noModifiedCards'));
+    return;
+  }
   showUploadPage.value = true;
 };
 
@@ -2028,6 +2081,7 @@ const closeUploadPage = () => {
   currentUploadItems.value = [];
   uploadingCard.value = null;
   uploadingEncounter.value = null;
+  isBatchModifiedUpload.value = false;
 };
 
 // 获取上传页面标题
@@ -2035,9 +2089,12 @@ const getUploadPageTitle = (): string => {
   if (currentUploadType.value === 'banner') {
     return t('contentPackage.upload.title.uploadBannerToCloud');
   } else if (currentUploadType.value === 'card') {
-    return isCurrentUploadBatch.value
-      ? t('contentPackage.upload.title.batchUploadToCloud')
-      : t('contentPackage.upload.title.uploadCardToCloud');
+    if (isCurrentUploadBatch.value) {
+      return isBatchModifiedUpload.value
+        ? t('contentPackage.upload.title.batchUploadModified')
+        : t('contentPackage.upload.title.batchUploadToCloud');
+    }
+    return t('contentPackage.upload.title.uploadCardToCloud');
   } else if (currentUploadType.value === 'encounter') {
     return isCurrentUploadBatch.value
       ? t('contentPackage.upload.title.batchUploadEncountersToCloud')
@@ -2096,6 +2153,27 @@ const handleUploadConfirm = (updatedPackage: any) => {
 
   // 更新包数据
   emit('update:package', updatedPackage);
+
+  // 即时刷新卡牌“已修改”状态（无需等待重读包）
+  if (currentUploadType.value === 'card') {
+    const targets: string[] = isCurrentUploadBatch.value
+      ? (currentUploadItems.value || []).map((c: any) => c.filename)
+      : (currentUploadItem.value?.filename ? [currentUploadItem.value.filename] : []);
+
+    targets.forEach((filename) => {
+      const status = getCardStatus(filename) as any;
+      // 在更新后的包中查找该卡的 uploaded_hash
+      const pkgCard = (updatedPackage.cards || []).find((c: any) => c.filename === filename);
+      const uploadedHash = pkgCard?.uploaded_hash;
+      const contentHash = status?.contentHash;
+      // 规则：有 content_hash 且缺少 uploaded_hash 或两者不等 -> 已修改
+      const modified = !!(contentHash && (!uploadedHash || uploadedHash !== contentHash));
+      status.modified = modified;
+    });
+
+    // 递增版本号以触发相关计算属性与模板更新
+    statusVersion.value++;
+  }
 
   // 更新本地遭遇组状态
   if (currentUploadType.value === 'encounter') {
@@ -2403,17 +2481,20 @@ const checkCardVersion = async (filename: string): Promise<{
     const parsed = JSON.parse(cardData);
     const version = parsed.version || '1.0';
     const isV2 = version === '2.0';
+    const contentHash = parsed.content_hash;
 
     return {
       version,
       isV2,
-      error: undefined
+      error: undefined,
+      contentHash
     };
   } catch (error) {
     return {
       version: '1.0',
       isV2: false,
-      error: `读取文件失败: ${error.message}`
+      error: `读取文件失败: ${error.message}`,
+      contentHash: undefined
     };
   }
 };
@@ -2433,11 +2514,17 @@ const refreshCardVersions = async () => {
       // 使用 checkCardVersion 函数来检查版本
       const versionInfo = await checkCardVersion(card.filename);
 
+      const uploadedHash = (card as any).uploaded_hash;
+      // 规则：有 content_hash 时，若 uploaded_hash 缺失或不同，则视为已修改
+      const modified = !!(versionInfo.contentHash && (!uploadedHash || versionInfo.contentHash !== uploadedHash));
+
       cardStatusMap.value.set(card.filename, {
         version: versionInfo.version,
         isGenerating: false,
         generationError: versionInfo.error,
-        previewImage: undefined
+        previewImage: undefined,
+        contentHash: versionInfo.contentHash,
+        modified
       });
 
       // 收集v2.0的卡牌用于预览生成
@@ -2449,7 +2536,9 @@ const refreshCardVersions = async () => {
         version: '1.0',
         isGenerating: false,
         generationError: t('contentPackage.cards.status.versionCheckFailed'),
-        previewImage: undefined
+        previewImage: undefined,
+        contentHash: undefined,
+        modified: false
       });
     }
   }
