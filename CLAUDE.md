@@ -1,300 +1,242 @@
-# CLAUDE.md
+# arkham-json-diy（根目录）
 
-## 变更记录 (Changelog)
+## Purpose and Scope
+本仓库提供“阿卡姆恐怖 LCG”自定义制卡的完整工作流：
+- 前端（arkham-app）完成卡牌编辑与管理；
+- 后端（Flask 服务）提供文件/工作空间/渲染/导出等接口；
+- 渲染内核（Pillow + rich_text_render）实现版式与中英混排；
+- 导出助手（export_helper）支持镜像/AI 出血、PDF/JPG/PNG 等制品导出。
+本文件聚焦根目录层的职责边界与对外接口：
+- 汇总根级 Python 模块（server/app/main/Card 等）的公共 API；
+- 描述与子模块的集成关系（bin、rich_text_render、export_helper 等）；
+- 指向各子目录的 CLAUDE.md，避免内容重复。
 
-- **2025-11-06**:
-  - 前端：新增TextBoundaryEditor组件，支持正文边界和风味文本padding调整
-  - 前端：CardSideEditor添加可收展的插画布局设置按钮（默认收起）
-  - 后端：create_card.py添加flavor_padding参数支持，可配置风味文本内边距（默认20px）
-  - 后端：所有draw_text调用添加boundary_offset参数，支持文本框边界精确调整
-  - i18n：更新中英文本地化资源，添加TextBoundaryEditor和插画布局相关翻译
-- **2025-10-17**: 完成三阶段自适应扫描，更新模块结构图，发现并文档化remaek_card模块
-- **2025-10-12**: 初始化AI上下文，完成项目结构分析
+## Structure Overview
+- 子目录（均有独立文档，详见其 CLAUDE.md）：
+  - `arkham-app/`（前端应用）→ arkham-app/CLAUDE.md
+  - `bin/`（后端核心业务：工作空间/导出/TTS/图床）→ bin/CLAUDE.md
+  - `export_helper/`（导出与出血算法封装）→ export_helper/CLAUDE.md
+  - `fonts/`（字体与语言映射）→ fonts/CLAUDE.md
+  - `images/`（UI 模板与美术资源）→ images/CLAUDE.md
+  - `prompt/`（提示与脚本片段）→ prompt/CLAUDE.md
+  - `remaek_card/`（ArkhamDB 数据转换）→ remaek_card/CLAUDE.md
+  - `rich_text_render/`（富文本渲染引擎）→ rich_text_render/CLAUDE.md
+  - `templates/`（TTS 模板）→ templates/CLAUDE.md
+- 根级主要代码文件：
+  - `server.py`：Flask Web 服务，统一对外 API 网关；
+  - `app.py`：桌面端（PyWebview）启动器；
+  - `main.py`：Android 端（Kivy）容器与权限/目录选取；
+  - `ArkhamCardBuilder.py`：从 ArkhamDB JSON 构建卡牌文件；
+  - `Card.py`：单卡绘制与版式实现；
+  - `ExportHelper.py`：导出规格/出血/质量参数计算与出血实现；
+  - `ResourceManager.py`：图片/字体资源与多语言配置；
+  - 其他脚本：`create_card.py`、`create_pdf.py`、`macapp.py` 等。
 
-## Purpose
+## Key Components
 
-arkham-json-diy 提供一套完整的“阿卡姆恐怖 LCG”自定义制卡工作流：
-- 前端（Vue 3 + TypeScript + Vite）用于卡牌设计、编辑与管理。
-- 后端（Python + Flask + PyWebview）负责渲染、资源管理与导出。
-- 渲染内核（Pillow + rich_text_render）支持中英混排、图文混排与版式布局。
-- 导出助手（export_helper）提供 AI 出血/镜像延伸，面向高质量打印与 TTS。
+### server.py（Flask 服务）
+- 描述：后端服务入口，承载文件树扫描、内容读写、制图导出、GitHub 图床、TTS 导出等接口。
+- 入口：`app = Flask(__name__)`
+- 关键装饰器：`@app.route` 路由；`@handle_api_error` 统一异常处理。
+- 公共接口（按功能分组，签名省略非关键字段，只列关键参数）：
+  - 工作目录/最近记录
+    - `GET /api/select-directory()`
+      - Purpose: 打开目录选择（Android 原生/pywebview/tk 回退）
+      - Returns: JSON{ code,msg,data:{directory?:string} }
+    - `GET /api/recent-directories()` → 最近目录列表
+    - `DELETE /api/recent-directories()` → 清空最近目录
+    - `DELETE /api/recent-directories/<directory_path>` → 移除单条记录
+    - `POST /api/open-workspace(body: {directory: string})`
+      - Returns: JSON{data:{directory}}
+  - 文件树与扫描
+    - `GET /api/file-tree(include_hidden?: boolean, include_card_type?: boolean, mode?: 'normal'|'snapshot')`
+      - Returns: JSON{data:{fileTree, scanId?, status, timestamp}}
+    - `GET /api/workspace/scan-progress/<scan_id>(limit?: number=200)`
+      - Returns: JSON{data:{status,progress,data[],timestamp}}
+    - `POST /api/workspace/report-visible-nodes(body: {scan_id: string, visible_paths: string[]})`
+    - `POST /api/workspace/refresh-cache(body: {paths?: string[]})`
+  - 文件与内容
+    - `POST /api/create-directory(body:{path:string,name:string})`
+    - `POST /api/create-file(body:{path:string,name:string,content?:string})`
+    - `PUT /api/rename-item(body:{old_path:string,new_name:string})`
+    - `DELETE /api/delete-item(body:{path:string})`
+    - `GET /api/file-content(path: string)` → Returns: JSON{content}
+    - `PUT /api/file-content(body:{path:string,content:string})`
+    - `GET /api/image-content(path: string)` → 返回图片二进制（Base64 包装见前端）
+    - `GET /api/file-info(path: string)` → stat 元数据
+    - `GET /api/status()` → 服务状态与工作区信息
+  - 卡图生成/保存
+    - `POST /api/generate-card(body:{json_data: CardJsonV1|V2})`
+      - Returns: JSON{data:{image: dataURL, back_image?: dataURL, box_position: number[]}}
+      - Example: 传入 V2（双面）自动生成正反面并返回 `back_image`
+    - `POST /api/save-card(body:{json_data:any, filename:string, parent_path?:string, format?:'PNG'|'JPG', quality?:1..100, rotate_landscape?:boolean})`
+      - Returns: JSON{data:{saved_files: string[]}}
+  - 配置项
+    - `GET /api/config()` → 全局或工作区配置（根据是否已打开工作区）
+    - `PUT /api/config(body:{config: object})`
+  - 遭遇组/内容包
+    - `GET /api/encounter-groups()`
+    - `POST /api/content-package/encounter-groups(body:{package_path:string})`
+    - `GET /api/content-package/all-encounter-groups()`
+  - 导出（牌组/PNP/TTS/ArkhamDB）
+    - `POST /api/export-deck-image(body:{...})` → 图片
+    - `POST /api/export-deck-pdf(body:{...})` → PDF
+    - `POST /api/export-tts(body:{deck_name:string,face_url:string,back_url:string})`
+    - `POST /api/content-package/export-tts(body:{package_path:string})`
+    - `POST /api/content-package/export-arkhamdb(body:{...})`
+    - `POST /api/content-package/generate-numbering-plan(body:{...})`
+    - `POST /api/content-package/apply-numbering(body:{...})`
+    - `POST /api/content-package/export-pnp(body:{...})`
+    - `GET  /api/content-package/export-pnp/logs/<task_id>`
+  - ArkhamDB 导入/校验
+    - `POST /api/arkhamdb/import(body:{...})`
+    - `GET  /api/arkhamdb/logs()`
+    - `POST /api/arkhamdb/validate(body:{...})`
+  - 图床（GitHub）
+    - `POST /api/github/login(body:{token?:string})`
+    - `POST /api/github/logout()`
+    - `GET  /api/github/repositories()`
+    - `POST /api/github/upload(body:{repo:string,branch:string,folder:string,images:Base64[]})`
+    - `GET  /api/github/status()`
+  - 单卡导出/图床检测
+    - `POST /api/export-card(body:{...})`
+    - `POST /api/image-host/upload(body:{...})`
+    - `POST /api/image-host/check(body:{url:string})`
 
-## Structure
+  返回值统一格式：`{ code:number, msg:string, data?:any }`；异常由 `@handle_api_error` 捕获并返回 `500/JSON`。
 
-项目采用前后端分离与多模块协作：
+### app.py（桌面端入口）
+- 描述：PyWebview 启动器，创建桌面窗口并承载 `server.app`。
+- 关键方法：
+  - `main()`（脚本入口）
+  - `webview.create_window(title:str, app:Flask, ...)` 创建窗口并托管 Flask 应用。
+- 环境：`ANDROID_ARGUMENT` 不存在时为桌面模式；`--debug/--mode` 控制调试与勘误模式。
 
-```mermaid
-graph TD
-    A["arkham-json-diy (root)"] --> FE["arkham-app (frontend)"];
-    A --> BIN["bin (backend core)"];
-    A --> EXH["export_helper (export assistant)"];
-    A --> RMK["remaek_card (ArkhamDB converters)"];
-    A --> RICH["rich_text_render (renderer)"];
-    A --> FONTS["fonts"];
-    A --> IMGS["images"];
-    A --> STATIC["static"];
-    A --> TPLS["templates"];
-    A --> ROOT["root python modules"];
+### main.py（Android 入口，Kivy）
+- 描述：Android 原生容器，申请权限、目录选择，后台线程启动 Flask，并以原生 `WebView` 加载前端。
+- 公开类与方法：
+  - `class AndroidWebView(url: str='http://127.0.0.1:5000')`
+    - `reload(): None` — 重新加载
+    - `go_back(): None` — 返回上一页
+    - `can_go_back(): bool` — 是否可返回
+  - `class AndroidDirectoryPicker`
+    - `pick_directory(callback: Callable[[str|None], None]): None`
+      - Purpose: 打开系统目录选择器并回调用户选择
+    - `get_real_path_from_uri(uri: Any): str`
+      - Purpose: 将 `content://` URI 解析为真实文件系统路径
+  - `class ArkhamCardMakerApp(App)`
+    - `start_flask_server(): None` — 后台线程启动 Flask
+    - `load_webview(dt: float): None` — 初始化并加载 `WebView`
+  - `def main(): None` — 应用主入口
 
-    subgraph RootPython["Root Python"]
-        APP["app.py"] --> SRV["server.py"];
-        SRV --> ACB["ArkhamCardBuilder.py"];
-        CRD["create_card.py"] --> CARD["Card.py"];
-        CRD --> CCD["card_cdapter.py"];
-        CARD --> RM["ResourceManager.py"];
-        CRP["create_pdf.py"] --> RM;
-        EH["ExportHelper.py"] --> EXH;
-        SRV --> BIN;
-        RM --> BIN;
-    end
+### ArkhamCardBuilder.py（内容包 → 卡牌文件）
+- 描述：从 ArkhamDB 内容包 JSON 构建卡牌对象，并按卡名/位置落盘为 `.card` 文件。
+- 关键类：
+  - `class ArkhamCardBuilder(content_pack_json: Dict[str,Any], work_dir: str)`
+    - `validate_content_pack_structure() -> tuple[bool, list[str]]`
+      - Parameters: 无
+      - Returns: (是否有效, 错误信息列表)
+    - `build_and_save_cards() -> int`
+      - Purpose: 边构建边保存（降内存压力）
+      - Returns: 成功保存数量
+    - `build_cards() -> list[dict]` — 构建对象但不落盘
+    - `save_cards(cards: list[dict]) -> int` — 批量保存
+    - `process_content_pack() -> tuple[int, list[dict], bool, list[str]]`
+      - Returns: (保存数, 空列表(兼容), 是否验证通过, 错误)
+    - `get_logs() -> str` — 返回内部累计日志
 
-    click FE "./arkham-app/CLAUDE.md" "前端模块文档"
-    click BIN "./bin/CLAUDE.md" "后端核心文档"
-    click EXH "./export_helper/CLAUDE.md" "导出助手文档"
-    click RMK "./remaek_card/CLAUDE.md" "ArkhamDB转换文档"
-    click RICH "./rich_text_render/CLAUDE.md" "富文本渲染文档"
-    click FONTS "./fonts/CLAUDE.md" "字体资源文档"
-    click IMGS "./images/CLAUDE.md" "图片模板文档"
-    click STATIC "./static/CLAUDE.md" "静态站点文档"
-    click TPLS "./templates/CLAUDE.md" "TTS模板文档"
-```
+### ResourceManager.py（资源/多语言）
+- 描述：图片与字体资源统一入口；支持“中文名 ↔ 英文文件名”映射与多语言文案。
+- 关键类与方法：
+  - `class ImageManager(image_folder: str='images')`
+    - `set_working_directory(directory_path: str): None`
+    - `get_working_directory() -> str`
+    - `get_image(image_name: str) -> Image|None` — 支持中/英文键
+    - `get_image_by_src(src_path: str) -> Image` — 支持以 `@` 开头的相对工作区路径
+  - `class FontManager(font_folder: str='fonts', lang: str='zh')`
+    - `set_lang(lang: str): None`
+    - `get_lang_font(font_type: str) -> FontInfo` — 如“标题字体/正文字体”等类型
+    - `get_font(font_name: str, size: int=20) -> ImageFont|None`
+    - `get_font_text(text_key: str) -> str` — 多语言文案映射（含标点适配）
 
-## Components
+### ExportHelper.py（导出规格/出血）
+- 描述：定义导出枚举（格式/规格/出血/模式/模型）并计算像素尺寸、触发镜像/LaMa 出血与文字层渲染。
+- 公共枚举：`ExportFormat` | `ExportSize` | `ExportBleed` | `BleedMode` | `BleedModel`
+- 关键类：
+  - `class ExportHelper(export_params: dict, workspace_manager: WorkspaceManager)`
+    - `calculate_pixel_dimensions(dpi: int=300, bleed: ExportBleed=ExportBleed.TWO_MM, size: ExportSize=ExportSize.SIZE_61_88) -> tuple[int,int]`
+    - `get_export_settings() -> dict`
+    - `__str__() -> str` — 人类可读配置摘要
 
-目录级模块一览（汇总子目录 CLAUDE.md）：
-
-| 模块路径 | 语言/类型 | 职责描述 | 入口/关键文件 | 文档 |
-|---------|-----------|----------|---------------|------|
-| arkham-app | TypeScript/Vue | 前端 UI：卡牌设计、编辑、管理与导出 | `src/main.ts` | [`arkham-app/CLAUDE.md`](arkham-app/CLAUDE.md) |
-| bin | Python | 后端核心业务：文件/工作空间、卡组导出、TTS转换、图床 | `file_manager.py`, `workspace_manager.py` | [`bin/CLAUDE.md`](bin/CLAUDE.md) |
-| export_helper | Python | 高质量导出：AI 出血（lama-cleaner）与镜像延伸 | `main.py`, `LamaCleaner.py` | [`export_helper/CLAUDE.md`](export_helper/CLAUDE.md) |
-| remaek_card | Python | ArkhamDB 数据转换与本地卡牌生成脚本 | `main.py`, `remaek_player_card.py` | [`remaek_card/CLAUDE.md`](remaek_card/CLAUDE.md) |
-| rich_text_render | Python 包 | 富文本解析与排版渲染（Pillow） | `HtmlTextParser.py`, `RichTextRenderer.py` | [`rich_text_render/CLAUDE.md`](rich_text_render/CLAUDE.md) |
-| static | Web 静态资源 | 构建产物（静态站点与 hashed 资源） | `index.html`, `assets/` | [`static/CLAUDE.md`](static/CLAUDE.md) |
-| fonts | 资源 | 多语言字体与映射配置 | `language_config.json` | [`fonts/CLAUDE.md`](fonts/CLAUDE.md) |
-| images | 资源 | 卡面模板与出血版本（命名规范驱动选择） | `*.png` | [`images/CLAUDE.md`](images/CLAUDE.md) |
-| templates | TTS 模板 | TTS 对象模板（General/Act/Investigator/Box） | `*.json` | [`templates/CLAUDE.md`](templates/CLAUDE.md) |
-| prompt | 文本/脚本 | 辅助提示与脚本片段 | `player_card_picture.txt` | [`prompt/CLAUDE.md`](prompt/CLAUDE.md) |
-
-根级 Python 模块索引（按导入关系归纳）：
-
-| 文件 | 角色概述 | 关键依赖 |
-|------|----------|----------|
-| `app.py` | 桌面启动器（PyWebview）与后端整合 | `server`, `webview`, `argparse` |
-| `server.py` | Flask API 服务（路由、线程、平台集成） | `flask`, `ArkhamCardBuilder`, `webview`, `PIL` |
-| `ArkhamCardBuilder.py` | 制卡协调器：调度资源与管线 | `requests`, `bin`, `json`, `pathlib` |
-| `Card.py` | 单卡渲染核心：文本/图文混排 | `PIL`, `rich_text_render`, `ResourceManager` |
-| `create_card.py` | 制卡脚本入口与流程 | `Card`, `card_cdapter`, `PIL` |
-| `card_cdapter.py` | 文本/标记预处理与适配 | `re`, `json`, `ResourceManager` |
-| `create_pdf.py` | 批量导出 PDF | `reportlab`, `PIL`, `ResourceManager` |
-| `ResourceManager.py` | 资源路径与配置桥接 | `bin`, `json`, `os` |
-| `ExportHelper.py` | 导出桥接（封装 export_helper 包） | `export_helper`, `numpy`, `PIL` |
-| `macapp.py` | macOS 打包/壳逻辑 | `webview`, `requests`, `server` |
-| `main.py` | Android/Kivy 入口（移动端） | `kivy`, `jnius`, `android`, `server` |
-| `setup.py` | Python 包装与分发 | `setuptools` |
-| `dmg_settings.py` | macOS DMG 配置 | `os` |
-
-> 注：以上概述依据实际源码与 AST 导入分析自动归纳，详细请查阅各文件与子模块文档。
+### Card.py（单卡绘制）
+- 描述：基于 Pillow 的版式排版与贴图/文字渲染封装，供 `WorkspaceManager` 调用。
+- 关键类：
+  - `class Card(width:int, height:int, font_manager?:FontManager, image_manager?:ImageManager, card_type:str='default', card_class:str='default', is_back:bool=False, is_mirror:bool=False, image?:Image)`
+    - `paste_image(img: Image, region: tuple[int,int,int,int], resize_mode: Literal['stretch','contain','cover']='stretch', transparent_list?: list[tuple[int,int,int]]|tuple[int,int,int]|None=None, extension:int=0) -> None`
+      - Purpose: 贴图到指定区域，支持拉伸/适应/覆盖与透明圆挖空、右侧延展
+    - `paste_image_with_transform(img: Image, region: tuple[int,int,int,int], transform_params: dict) -> None`
+      - Parameters: `scale:number`, `crop:{top,right,bottom,left}`, `rotation:number`, `flip_horizontal?:bool`, `flip_vertical?:bool`, `offset:{x,y}`
+    - `draw_centered_text(position: tuple[int,int], text:str, font_name:str, font_size:int, font_color:tuple, has_border:bool=False, border_width:int=1, border_color:tuple=(0,0,0), underline:bool=False, vertical:bool=False, max_length?:int=None, debug_line:bool=False) -> None`
+    - `draw_left_text(position: tuple[int,int], text:str, font_name:str, font_size:int, font_color:tuple, has_border:bool=False, border_width:int=1, border_color:tuple=(0,0,0), max_length?:int=None, debug_line:bool=False) -> None`
+    - 其他：`copy_circle_to_image(...)` 等内部工具；`last_render_list: list` 暴露最近一次渲染项用于前端交互。
 
 ## Dependencies
+### Internal Dependencies
+- `bin/`：
+  - `workspace_manager`（核心渲染与文件系统编排、配置读写、导出实现）
+  - `file_manager.QuickStart`（最近目录记录）
+  - `config_directory_manager`（跨平台可写配置目录）
+  - `gitHub_image.GitHubImageHost`（图床）
+  - 其他：扫描/进度追踪、导出/PNP、TTS、ArkhamDB 转换工具
+- `export_helper/`：LaMa/mirror 出血与文字层叠加、PDF 导出辅助
+- `rich_text_render/`：富文本解析与排版（统一文本绘制入口）
+- `fonts/`、`images/`：资源文件与映射配置
 
-- Python 栈：`flask`, `Pillow(PIL)`, `reportlab`, `requests`, `numpy`, `webview`,（可选移动端）`kivy`, `jnius`, `android`
-- Node 栈（前端）：Vue 3、Vite、TypeScript、Naive UI、Vue I18n、Axios
-- 外部服务：`lama-cleaner`（export_helper 的 AI 出血服务，可降级为本地镜像扩展）
-- 配置/数据：`global_config.json`, `recent_directories.json`（根级）；前端 `package.json`/`vite.config.ts`
-- 打包/构建：`app.spec`, `app-macos.spec`, `buildozer.spec`
+### External Dependencies
+- Web/服务：`Flask`（3.x），`pywebview`（桌面），`requests`
+- 图像：`Pillow`（>=10），`numpy`
+- 桌面/移动：`Kivy`、`jnius`（Android 原生交互）
+- PDF：`reportlab`
+- 其他：`tqdm`、`psutil` 等（详见 `requirements*.txt`）
 
-## Integration
+## Integration Points
+### Public APIs
+- Web API：见 “server.py（Flask 服务）” 小节完整列表，统一响应 `{code,msg,data}`。
+- 桌面端：`app.py` 创建 Webview 承载同一套 Flask 路由。
+- Android：`main.py` 后台启动 Flask，并以 `WebView` 加载前端，目录选择通过 `AndroidDirectoryPicker` 回调传回 `server.py`。
 
-- 前后端交互：`arkham-app` 通过 REST API 调用 `server.py`；后端调度 `ArkhamCardBuilder` → `Card`/`ResourceManager` 完成渲染。
-- 渲染链路：HTML-like 文本 → `rich_text_render` 解析与排版 → Pillow 绘制 → PNG/JPG →（可选）`create_pdf.py` 合成 PDF。
-- 导出链路：生成卡面 → `ExportHelper.py`/`export_helper` → `lama-cleaner` 出血或镜像延伸 → 输出到工作目录 `output/`。
-- 数据转换：`remaek_card` 将 ArkhamDB 数据/编号映射到本地制卡 JSON/资产。
-- 静态发布：前端构建产物写入 `static/`，由后端静态路由或外部服务器提供。
+### Data Flow
+- 前端（arkham-app）→ HTTP → `server.py` 路由 → `bin.workspace_manager` 编排 → `Card/ResourceManager/export_helper` → 产物（JPG/PNG/PDF/TTS）。
+- 内容包（.pack/ArkhamDB JSON）→ `ArkhamCardBuilder`/`ContentPackageManager` → 生成 `.card` 文件或导出 TTS/PNP。
 
-## Notes
+### Extension Points
+- 出血方式：`ExportHelper.BleedModel`（`MIRROR` / `LAMA`）与 `BleedMode`（`CROP` / `STRETCH`）。
+- 图床：`GitHubImageHost`，支持静默登录与仓库/分支/目录选择。
+- 多语言：`FontManager.set_lang` 与 `language_config.json` 驱动字体/文案。
 
-- 文件/资源路径尽量相对化，便于跨平台迁移；确保所有文本与 JSON 使用 UTF‑8（含中文）。
-- 图片模板命名遵循严格模式（类型/职业/等级/副标题等），以支持程序化选择与自动对齐。
-- 资源较大操作（出血、PDF 合成）建议批处理并关注内存/显存占用。
-- 模块级详细文档请参考对应子目录的 `CLAUDE.md`（见上表与结构图中的点击链接）。
+## Implementation Notes
+### Design Patterns
+- Facade：`server.py` 统一封装工作区/渲染/导出能力为 REST 接口。
+- Builder：`ArkhamCardBuilder` 分步构建（索引→正/背面→图片/TTS 元数据→写盘）。
+- Strategy：出血（镜像/LaMa）、导出规格/DPI、语言字体选择。
 
-## 项目愿景
+### Technical Decisions
+- 平台适配：
+  - 桌面（PyWebview）与 Android（Kivy+jnius）复用同一 Flask 服务；
+  - Android 11+ 使用 `Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION` 申请“管理所有文件”权限；
+  - 目录选择在 Android 使用原生 Intent，在桌面使用 pywebview/tk 回退。
+- 扫描优化：文件树“结构快返 + 后台异步扫描”，前端通过 `scanId` 轮询增量。
+- 统一错误处理：`@handle_api_error` 捕获并回传详细错误类型与栈信息（安全脱敏）。
 
-阿卡姆印牌姬 (arkham-json-diy) 是一个专为Arkham Horror卡牌游戏设计的自定义工具项目。它提供了一个强大的卡牌生成和管理平台，支持多种卡牌类型的创建、编辑和导出，特别是为Tabletop Simulator (TTS)提供优化支持。
+### Considerations
+- 性能：
+  - 图片操作尽量复用对象与缓存（字体缓存、资源映射）；
+  - 大型内容包采用“边构建边保存”避免占用峰值内存。
+- 安全：
+  - 路径校验仅允许工作区内的相对路径；
+  - GitHub Token 仅用于图床相关接口，错误信息脱敏；
+  - Android URI → 路径转换包含健壮性回退。
+- 限制：
+  - LaMa 出血依赖外部服务 `lama_baseurl`；
+  - 移动端 WebView 能力受系统版本限制（混合内容/缓存策略已按需放开）。
 
-## 架构总览
-
-本项目采用前后端分离的架构：
-- **前端**: Vue 3 + TypeScript + Vite + Naive UI，提供现代化的用户界面
-- **后端**: Python Flask + PyWebview，负责卡牌渲染、文件管理和导出功能
-- **核心功能**: 支持调查员卡、技能卡、支援卡、事件卡、弱点卡和升级卡等多种卡牌类型的生成
-
-### 技术栈
-
-- **前端技术**:
-  - Vue 3 (Composition API + `<script setup>`)
-  - TypeScript
-  - Vite (构建工具)
-  - Naive UI (UI组件库)
-  - Vue I18n (国际化)
-  - Axios (HTTP客户端)
-
-- **后端技术**:
-  - Python 3.9+
-  - Flask (Web框架)
-  - PyWebview (桌面应用封装)
-  - PIL/Pillow (图像处理)
-  - ReportLab (PDF生成)
-
-## ✨ 模块结构图
-
-```mermaid
-graph TD
-    A["arkham-json-diy (root)"] --> FE["arkham-app (frontend)"];
-    A --> BIN["bin (backend core)"];
-    A --> EXH["export_helper (export assistant)"];
-    A --> RMK["remaek_card (ArkhamDB converters)"];
-    A --> RICH["rich_text_render (renderer)"];
-    A --> FONTS["fonts"];
-    A --> IMGS["images"];
-    A --> STATIC["static"];
-    A --> TPLS["templates"];
-    A --> ROOT["root python modules"];
-
-    subgraph RootPython["Root Python"]
-        APP["app.py"] --> SRV["server.py"];
-        SRV --> ACB["ArkhamCardBuilder.py"];
-        CRD["create_card.py"] --> CARD["Card.py"];
-        CRD --> CCD["card_cdapter.py"];
-        CARD --> RM["ResourceManager.py"];
-        CRP["create_pdf.py"] --> RM;
-        EH["ExportHelper.py"] --> EXH;
-        SRV --> BIN;
-        RM --> BIN;
-    end
-
-    click FE "./arkham-app/CLAUDE.md" "查看前端模块文档"
-    click BIN "./bin/CLAUDE.md" "查看后端核心模块文档"
-    click EXH "./export_helper/CLAUDE.md" "查看导出助手文档"
-    click RMK "./remaek_card/CLAUDE.md" "查看卡牌处理模块文档"
-    click RICH "./rich_text_render/CLAUDE.md" "查看富文本渲染文档"
-    click FONTS "./fonts/CLAUDE.md" "查看字体资源文档"
-    click IMGS "./images/CLAUDE.md" "查看图片模板文档"
-    click STATIC "./static/CLAUDE.md" "查看静态站点文档"
-    click TPLS "./templates/CLAUDE.md" "查看 TTS 模板文档"
-```
-
-## 模块索引
-
-| 模块路径 | 语言 | 职责描述 | 入口文件 | 测试目录 | 配置文件 |
-|---------|------|---------|----------|----------|----------|
-| arkham-app | TypeScript/Vue | 前端用户界面，提供卡牌设计、编辑和管理功能 | src/main.ts | - | package.json, vite.config.ts |
-| bin | Python | 后端核心业务逻辑，包含文件管理、工作空间管理等功能 | - | - | - |
-| export_helper | Python | 高级导出功能，支持AI出血和图像处理优化 | main.py | - | - |
-| remaek_card | Python | 卡牌数据转换和处理模块，支持ArkhamDB数据转换 | main.py | - | - |
-| 核心模块 | Python | 应用程序主入口和服务器逻辑 | app.py, server.py | - | config.json |
-
-## 运行与开发
-
-### 环境要求
-- Python 3.9+
-- Node.js 16+ (用于前端开发)
-- 必要的字体文件 (fonts/)
-- 图片模板资源 (images/)
-
-### 启动方式
-
-1. **完整应用启动** (推荐):
-   ```bash
-   python app.py
-   ```
-
-2. **前端开发模式**:
-   ```bash
-   cd arkham-app
-   npm install
-   npm run dev
-   ```
-
-3. **仅后端服务器模式**:
-   ```bash
-   python server.py
-   ```
-
-### 开发工作流
-
-1. **前端开发**:
-   - 在 `arkham-app` 目录下使用 `npm run dev` 启动开发服务器
-   - 前端通过代理与后端Flask服务通信 (localhost:5000)
-   - 支持热重载和TypeScript类型检查
-
-2. **后端开发**:
-   - 直接运行 `python app.py` 启动完整应用
-   - 或使用 `python server.py` 仅启动后端服务
-   - 支持调试模式 (`-d` 参数)
-
-## 测试策略
-
-- **前端**: Vue组件单元测试 (待实现)
-- **后端**: Python单元测试 (待实现)
-- **集成测试**: 前后端接口测试 (待实现)
-- **E2E测试**: 端到端功能测试 (待实现)
-
-## 编码规范
-
-### Python规范
-- 遵循PEP 8编码规范
-- 使用类型提示 (Type Hints)
-- 函数和类需要包含文档字符串
-
-### TypeScript/Vue规范
-- 使用TypeScript严格模式
-- 遵循Vue 3 Composition API最佳实践
-- 使用 `<script setup>` 语法
-- 组件命名采用PascalCase
-
-## AI使用指引
-
-### 项目理解要点
-
-1. **核心功能**:
-   - 卡牌生成基于JSON数据和模板图片
-   - 支持多种Arkham Horror卡牌类型
-   - 提供高级导出功能，包括AI出血处理
-
-2. **前后端交互**:
-   - 前端通过RESTful API与后端通信
-   - 文件操作通过Flask后端处理
-   - 使用统一的数据交换格式
-
-3. **关键模块**:
-   - `Card.py`: 卡牌渲染核心逻辑
-   - `create_card.py`: 卡牌生成处理器
-   - `bin/workspace_manager.py`: 工作空间管理
-   - `arkham-app/src/api/`: 前端API服务层
-   - `remaek_card/`: ArkhamDB数据转换和卡牌处理
-
-### 开发建议
-
-1. **添加新功能时**:
-   - 先了解现有的数据模型和API结构
-   - 遵循前后端分离的开发模式
-   - 确保添加适当的错误处理和类型定义
-
-2. **修改卡牌类型时**:
-   - 需要同时修改前端UI和后端渲染逻辑
-   - 注意保持数据结构的一致性
-   - 更新相关的模板和配置文件
-
-3. **性能优化**:
-   - 图片处理操作可能较耗时，考虑异步处理
-   - 前端组件按需加载，避免一次性渲染大量卡牌
-   - 合理使用缓存机制
-
-## 重要提示
-
-- 所有文件操作都限制在工作空间目录内，确保安全性
-- 图片资源路径使用相对路径，便于项目移植
-- 配置文件 (`config.json`) 会在首次运行时自动生成
-- 项目支持中英双语，新增文本需要注意国际化处理
