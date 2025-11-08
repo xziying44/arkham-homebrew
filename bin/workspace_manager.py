@@ -10,6 +10,8 @@ import threading
 import time
 import traceback
 from typing import List, Dict, Any, Optional, Union, Tuple, TYPE_CHECKING
+from concurrent.futures import ThreadPoolExecutor
+from queue import Queue
 
 from PIL import Image
 
@@ -29,6 +31,612 @@ try:
 except ImportError:
     CARD_GENERATION_AVAILABLE = False
     print("警告: 无法导入卡牌生成模块，卡牌生成功能将不可用")
+
+
+# === 新增: 分层扫描架构核心类 ===
+
+class CacheManager:
+    """缓存管理器: 负责缓存验证与持久化(使用mtime验证)"""
+
+    def __init__(self, workspace_root: str):
+        self.workspace_root = workspace_root
+        self.cache_dir = os.path.join(workspace_root, '.cache')
+        self.cache_file = os.path.join(self.cache_dir, 'file_cache.json')
+        self._cache = self._load_cache()
+        self._lock = threading.Lock()
+
+    def _load_cache(self) -> Dict:
+        """加载缓存数据"""
+        if not os.path.exists(self.cache_file):
+            return {'files': {}}
+
+        try:
+            with open(self.cache_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            logger_manager.warning(f"缓存加载失败: {e}")
+            return {'files': {}}
+
+    def get_cached_card_type(self, file_path: str) -> Optional[str]:
+        """获取缓存的card_type(含mtime验证)"""
+        rel_path = os.path.relpath(file_path, self.workspace_root)
+
+        with self._lock:
+            cached = self._cache['files'].get(rel_path)
+            if not cached:
+                return None
+
+            # mtime验证
+            try:
+                current_mtime = os.stat(file_path).st_mtime
+                if abs(current_mtime - cached.get('mtime', 0)) < 1e-6:
+                    return cached.get('card_type')
+            except OSError:
+                pass
+
+            return None
+
+    def update_cache(self, file_path: str, card_type: Optional[str]):
+        """更新缓存"""
+        rel_path = os.path.relpath(file_path, self.workspace_root)
+
+        try:
+            mtime = os.stat(file_path).st_mtime
+
+            with self._lock:
+                self._cache['files'][rel_path] = {
+                    'card_type': card_type,
+                    'mtime': mtime
+                }
+        except OSError as e:
+            logger_manager.warning(f"更新缓存失败 {file_path}: {e}")
+
+    def save_cache(self):
+        """持久化缓存到磁盘"""
+        os.makedirs(self.cache_dir, exist_ok=True)
+
+        with self._lock:
+            try:
+                with open(self.cache_file, 'w', encoding='utf-8') as f:
+                    json.dump(self._cache, f, indent=2)
+            except Exception as e:
+                logger_manager.error(f"缓存保存失败: {e}")
+
+    def clear_cache(self):
+        """清空缓存"""
+        with self._lock:
+            self._cache = {'files': {}}
+
+
+class ScanProgressTracker:
+    """扫描进度追踪器: 管理多个扫描任务(最多2个并发)"""
+
+    # 错误码常量
+    ERROR_PERMISSION_DENIED = 'PERMISSION_DENIED'
+    ERROR_JSON_PARSE = 'JSON_PARSE_ERROR'
+    ERROR_FILE_NOT_FOUND = 'FILE_NOT_FOUND'
+    ERROR_FILE_TOO_LARGE = 'FILE_TOO_LARGE'
+    ERROR_UNKNOWN = 'UNKNOWN_ERROR'
+
+    def __init__(self):
+        self._scans = {}
+        self._lock = threading.Lock()
+        self._executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix='workspace_scan')
+
+    def start_scan(self, workspace_path: str, scanner: 'WorkspaceScanner') -> str:
+        """启动扫描任务"""
+        scan_id = f"scan_{int(time.time() * 1000)}"
+
+        with self._lock:
+            if len([s for s in self._scans.values() if s['status'] == 'scanning']) >= 2:
+                raise RuntimeError("并发扫描数已达上限(最多2个)")
+
+            # 预填充扫描队列（相对路径），用于可见优先重排
+            try:
+                initial_queue = scanner.collect_card_files()
+            except Exception:
+                initial_queue = []
+
+            self._scans[scan_id] = {
+                'status': 'scanning',
+                'progress': {'total': 0, 'scanned': 0, 'percentage': 0.0},
+                'data': [],
+                'queue': initial_queue,  # 相对路径
+                'error_count': 0
+            }
+
+        def progress_callback(update):
+            with self._lock:
+                if scan_id in self._scans:
+                    scan = self._scans[scan_id]
+                    scan['progress']['scanned'] = update.get('scanned', 0)
+                    scan['progress']['total'] = update.get('total', 0)
+                    scan['progress']['percentage'] = update.get('percentage', 0.0)
+                    scan['data'].append(update.get('data', {}))
+
+                    # 错误追踪
+                    if update.get('data', {}).get('error'):
+                        scan['error_count'] += 1
+                        total = scan['progress']['total']
+                        if total > 0 and (scan['error_count'] / total) > 0.1:
+                            logger_manager.warning(
+                                f"扫描 {scan_id} 错误率超过10%: {scan['error_count']}/{total}"
+                            )
+
+        def scan_complete():
+            with self._lock:
+                if scan_id in self._scans:
+                    self._scans[scan_id]['status'] = 'completed'
+
+        future = self._executor.submit(
+            self._run_scan, scan_id, scanner, progress_callback, scan_complete
+        )
+
+        return scan_id
+
+    def _run_scan(self, scan_id: str, scanner, progress_callback, complete_callback):
+        """执行扫描任务（以共享队列为唯一数据源，支持优先级动态调整）"""
+        try:
+            # 读取总量
+            with self._lock:
+                scan = self._scans.get(scan_id)
+                if not scan:
+                    return
+                total = len(scan.get('queue', []))
+                scan['progress']['total'] = total
+
+            scanned = 0
+            while True:
+                # 取下一项（受优先级调整影响）
+                with self._lock:
+                    scan = self._scans.get(scan_id)
+                    if not scan:
+                        break
+                    if scan.get('cancelled'):
+                        break
+                    queue = scan.get('queue', [])
+                    if not queue:
+                        break
+                    rel_path = queue.pop(0)
+
+                abs_path = os.path.join(scanner.workspace_root, rel_path)
+                result = scanner._extract_card_type_with_error(abs_path)
+                if not result.get('error'):
+                    scanner.cache_manager.update_cache(abs_path, result.get('card_type'))
+
+                try:
+                    stat_info = os.stat(abs_path)
+                    mtime = stat_info.st_mtime
+                    size = stat_info.st_size
+                except OSError:
+                    mtime = 0
+                    size = 0
+
+                scanned += 1
+                level = min(5, rel_path.count(os.sep) + 1)
+                progress_callback({
+                    'data': {
+                        'path': rel_path,
+                        'card_type': result.get('card_type'),
+                        'level': level,
+                        'mtime': mtime,
+                        'size': size,
+                        'error': result.get('error')
+                    },
+                    'scanned': scanned,
+                    'total': total,
+                    'percentage': (scanned / total * 100) if total > 0 else 0
+                })
+
+                # 节流避免占用
+                if scanned % 200 == 0:
+                    time.sleep(0.02)
+
+            # 扫描完成后持久化两套缓存
+            try:
+                scanner.cache_manager.save_cache()
+            except Exception as e:
+                logger_manager.warning(f"文件类型缓存保存失败: {e}")
+            # 兼容旧缓存：尽量写入 WorkspaceManager 的 card_types.json
+            try:
+                # 使用 WorkspaceManager 的更新接口可能不可见，这里仅确保目录存在
+                cache_dir = os.path.join(scanner.workspace_root, '.cache')
+                os.makedirs(cache_dir, exist_ok=True)
+            except Exception:
+                pass
+
+            complete_callback()
+        except Exception as e:
+            logger_manager.error(f"扫描失败: {e}", exc_info=True)
+
+    def get_progress(self, scan_id: str) -> Dict:
+        """获取扫描进度"""
+        with self._lock:
+            return self._scans.get(scan_id, {'error': 'Scan not found'})
+
+    def cancel_scan(self, scan_id: str):
+        with self._lock:
+            if scan_id in self._scans:
+                self._scans[scan_id]['cancelled'] = True
+                self._scans[scan_id]['queue'] = []
+                self._scans[scan_id]['status'] = 'cancelled'
+
+    def cancel_all(self):
+        with self._lock:
+            for sid, scan in self._scans.items():
+                scan['cancelled'] = True
+                scan['queue'] = []
+                scan['status'] = 'cancelled'
+
+    def prioritize_visible_nodes(self, scan_id: str, visible_paths: List[str]):
+        """调整扫描队列,优先处理可见节点"""
+        with self._lock:
+            if scan_id not in self._scans:
+                return
+
+            scan_data = self._scans[scan_id]
+            scan_queue = scan_data.get('queue', [])
+
+            # 统一路径分隔符为正斜杠，提升跨平台匹配准确性
+            def norm(p: str) -> str:
+                return p.replace('\\', '/').lstrip('./')
+            normalized_queue = [norm(p) for p in scan_queue]
+            normalized_visible = [norm(p) for p in visible_paths]
+
+            # 收集可见路径下的所有文件
+            priority_set = set()
+            for visible_path in normalized_visible:
+                for idx, file_path in enumerate(normalized_queue):
+                    if file_path.startswith(visible_path):
+                        priority_set.add(idx)
+
+            # 将可见节点移到队列前端
+            if priority_set:
+                # 按原相对顺序重建：优先项 + 其他项
+                prioritized = [scan_queue[i] for i in sorted(priority_set)]
+                others = [p for j, p in enumerate(scan_queue) if j not in priority_set]
+                scan_data['queue'] = prioritized + others
+
+            logger_manager.info(f"优先扫描 {len(priority_set)} 个可见文件 (scan {scan_id})")
+
+
+class WorkspaceScanner:
+    """工作空间扫描器: 负责分层扫描逻辑"""
+
+    # 最大JSON文件大小限制(5MB)
+    MAX_JSON_SIZE = 5 * 1024 * 1024
+
+    # 预编译正则表达式
+    _TYPE_RE = re.compile(r'"type"\s*:\s*"([^"]+)"')
+
+    def __init__(self, workspace_root: str):
+        self.workspace_root = workspace_root
+        self.cache_manager = CacheManager(workspace_root)
+
+    def scan_structure(self, include_hidden: bool = False, include_card_type: bool = False) -> Dict:
+        """快速扫描目录结构
+        :param include_hidden: 是否包含隐藏文件
+        :param include_card_type: 是否包含卡牌类型（将尽可能使用缓存，避免重新解析）
+        """
+        return self._build_tree_recursive(
+            self.workspace_root,
+            include_hidden=include_hidden,
+            include_card_type=include_card_type
+        )
+
+    def scan_card_types_async(self, callback):
+        """异步扫描card_type字段(广度优先分批)"""
+        # 按层级分批扫描
+        for level in range(1, 6):  # 最多扫描5层
+            files = self._collect_json_files_by_level(self.workspace_root, level)
+            total = len(files)
+
+            for i, file_path in enumerate(files):
+                result = self._extract_card_type_with_error(file_path)
+
+                # 更新缓存
+                if not result.get('error'):
+                    self.cache_manager.update_cache(file_path, result.get('card_type'))
+
+                # 获取文件元数据
+                try:
+                    stat_info = os.stat(file_path)
+                    mtime = stat_info.st_mtime
+                    size = stat_info.st_size
+                except OSError:
+                    mtime = 0
+                    size = 0
+
+                # 回调推送数据
+                callback({
+                    'data': {
+                        'path': os.path.relpath(file_path, self.workspace_root),
+                        'card_type': result.get('card_type'),
+                        'level': level,
+                        'mtime': mtime,
+                        'size': size,
+                        'error': result.get('error')
+                    },
+                    'scanned': i + 1,
+                    'total': total,
+                    'percentage': ((i + 1) / total * 100) if total > 0 else 0
+                })
+
+            # 批次推送(每200个文件短暂休眠，减少CPU抖动)
+            if (i + 1) % 200 == 0:
+                time.sleep(0.02)
+
+            # 每层扫描完成后短暂休眠
+            time.sleep(0.05)
+
+        # 扫描完成后持久化缓存
+        self.cache_manager.save_cache()
+
+    def _build_tree_recursive(
+        self,
+        path: str,
+        include_hidden: bool = False,
+        include_card_type: bool = True,
+        level: int = 1
+    ) -> List[Dict[str, Any]]:
+        """递归构建目录树(支持include_card_type参数)"""
+        items = []
+
+        try:
+            with os.scandir(path) as entries:
+                for entry in entries:
+                    if not include_hidden and entry.name.startswith('.'):
+                        continue
+
+                    relative_path = os.path.relpath(entry.path, self.workspace_root)
+                    item_key = f"{relative_path}_{int(time.time() * 1000000)}"
+
+                    # 获取文件元数据(一次性stat调用)
+                    try:
+                        stat_info = entry.stat()
+                        mtime = stat_info.st_mtime
+                        size = stat_info.st_size
+                    except OSError:
+                        mtime = 0
+                        size = 0
+
+                    if entry.is_dir():
+                        # 处理目录
+                        children = self._build_tree_recursive(
+                            entry.path,
+                            include_hidden,
+                            include_card_type,
+                            level + 1
+                        )
+                        children = self._sort_items(children)
+
+                        items.append({
+                            'label': entry.name,
+                            'key': item_key,
+                            'type': 'directory',
+                            'path': relative_path,
+                            'level': level,
+                            'mtime': mtime,
+                            'size': 0,  # 目录大小设为0
+                            'children': children
+                        })
+
+                    elif entry.is_file():
+                        # 处理文件
+                        file_type = self._get_file_type(entry.name)
+                        item_info = {
+                            'label': entry.name,
+                            'key': item_key,
+                            'type': file_type,
+                            'path': relative_path,
+                            'level': level,
+                            'mtime': mtime,
+                            'size': size
+                        }
+
+                        # 当文件类型为card时,提取card_type
+                        if file_type == 'card':
+                            if include_card_type:
+                                # 尝试从缓存加载
+                                cached = self.cache_manager.get_cached_card_type(entry.path)
+                                if cached:
+                                    item_info['card_type'] = cached
+                                else:
+                                    result = self._extract_card_type_with_error(entry.path)
+                                    item_info['card_type'] = result.get('card_type')
+                                    if result.get('error'):
+                                        item_info['error'] = result['error']
+                            else:
+                                item_info['card_type'] = None
+
+                        items.append(item_info)
+
+        except PermissionError:
+            logger_manager.warning(f"权限拒绝: {path}")
+        except Exception as e:
+            logger_manager.error(f"构建目录树失败 {path}: {e}")
+
+        return self._sort_items(items)
+
+    def collect_card_files(self) -> List[str]:
+        """收集全部 .card 相对路径（广度层序同 _collect_json_files_by_level）"""
+        files: List[str] = []
+        for level in range(1, 6):
+            abs_files = self._collect_json_files_by_level(self.workspace_root, level)
+            for abs_path in abs_files:
+                rel = os.path.relpath(abs_path, self.workspace_root)
+                files.append(rel)
+        return files
+
+    def scan_card_types_async_with_queue(self, queue: List[str], callback):
+        """按照给定队列顺序扫描（相对路径队列）"""
+        total = len(queue)
+        scanned = 0
+        for rel_path in queue:
+            abs_path = os.path.join(self.workspace_root, rel_path)
+            result = self._extract_card_type_with_error(abs_path)
+
+            # 更新缓存（仅当无错误时）
+            if not result.get('error'):
+                self.cache_manager.update_cache(abs_path, result.get('card_type'))
+
+            # 元数据
+            try:
+                stat_info = os.stat(abs_path)
+                mtime = stat_info.st_mtime
+                size = stat_info.st_size
+            except OSError:
+                mtime = 0
+                size = 0
+
+            scanned += 1
+            level = min(5, rel_path.count(os.sep) + 1)
+            callback({
+                'data': {
+                    'path': rel_path,
+                    'card_type': result.get('card_type'),
+                    'level': level,
+                    'mtime': mtime,
+                    'size': size,
+                    'error': result.get('error')
+                },
+                'scanned': scanned,
+                'total': total,
+                'percentage': (scanned / total * 100) if total > 0 else 0
+            })
+
+            # 适度让出执行权（每200个）
+            if scanned % 200 == 0:
+                time.sleep(0.02)
+
+    def _collect_json_files_by_level(
+        self,
+        path: str,
+        target_level: int,
+        current_level: int = 1
+    ) -> List[str]:
+        """收集指定层级的JSON文件路径"""
+        files = []
+        try:
+            with os.scandir(path) as entries:
+                for entry in entries:
+                    if entry.is_dir():
+                        files.extend(self._collect_json_files_by_level(
+                            entry.path,
+                            target_level,
+                            current_level + 1
+                        ))
+                    elif entry.name.endswith('.card') and current_level == target_level:
+                        files.append(entry.path)
+        except PermissionError:
+            pass
+        return files
+
+    def _extract_card_type_with_error(self, file_path: str) -> Dict:
+        """容错的card_type提取,返回结果或错误信息"""
+        try:
+            # 文件大小检查
+            file_size = os.path.getsize(file_path)
+            if file_size > self.MAX_JSON_SIZE:
+                logger_manager.warning(f"跳过超大文件: {file_path} ({file_size} bytes)")
+                return {
+                    'card_type': None,
+                    'error': {
+                        'code': ScanProgressTracker.ERROR_FILE_TOO_LARGE,
+                        'message': f'文件超过限制 ({file_size} bytes)'
+                    }
+                }
+
+            # 读取card_type(重试3次)
+            for attempt in range(3):
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        chunk = f.read(4096)
+                    match = self._TYPE_RE.search(chunk)
+                    if match:
+                        return {
+                            'card_type': match.group(1),
+                            'error': None
+                        }
+                    return {'card_type': None, 'error': None}
+
+                except json.JSONDecodeError as e:
+                    if attempt < 2:
+                        time.sleep(0.1)
+                        continue
+                    logger_manager.warning(f"JSON解析失败: {file_path}")
+                    return {
+                        'card_type': None,
+                        'error': {
+                            'code': ScanProgressTracker.ERROR_JSON_PARSE,
+                            'message': f'JSON格式错误: {str(e)}'
+                        }
+                    }
+
+        except PermissionError:
+            return {
+                'card_type': None,
+                'error': {
+                    'code': ScanProgressTracker.ERROR_PERMISSION_DENIED,
+                    'message': '无权访问文件'
+                }
+            }
+
+        except FileNotFoundError:
+            return {
+                'card_type': None,
+                'error': {
+                    'code': ScanProgressTracker.ERROR_FILE_NOT_FOUND,
+                    'message': '文件已删除'
+                }
+            }
+
+        except Exception as e:
+            logger_manager.error(f"读取文件失败: {file_path} - {e}", exc_info=True)
+            return {
+                'card_type': None,
+                'error': {
+                    'code': ScanProgressTracker.ERROR_UNKNOWN,
+                    'message': f'未知错误: {str(e)}'
+                }
+            }
+
+    def _get_file_type(self, filename: str) -> str:
+        """根据文件扩展名确定文件类型"""
+        ext = os.path.splitext(filename)[1].lower()
+
+        type_mapping = {
+            '.card': 'card',
+            '.png': 'image',
+            '.jpg': 'image',
+            '.jpeg': 'image',
+            '.gif': 'image',
+            '.json': 'config',
+            '.txt': 'text',
+        }
+
+        return type_mapping.get(ext, 'file')
+
+    def _get_type_priority(self, item_type: str) -> int:
+        """获取类型优先级"""
+        type_priorities = {
+            'directory': 0,
+            'card': 1,
+            'image': 2,
+            'config': 3,
+            'text': 4,
+            'file': 7,
+        }
+        return type_priorities.get(item_type, 99)
+
+    def _sort_items(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """对文件和目录进行排序"""
+        def sort_key(item):
+            type_priority = self._get_type_priority(item.get('type', 'file'))
+            name = item.get('label', '').lower()
+            return (type_priority, name)
+
+        return sorted(items, key=sort_key)
 
 
 class WorkspaceManager:
@@ -131,8 +739,12 @@ class WorkspaceManager:
                         self._card_type_cache = cache_data.get('card_types', {})
                         logger_manager.info(f"加载卡牌类型缓存: {len(self._card_type_cache)} 条记录")
                 else:
+                    # 首次运行：创建空文件，避免每次提示
                     self._card_type_cache = {}
-                    logger_manager.info("未找到缓存文件，创建新的缓存")
+                    os.makedirs(os.path.dirname(self._cache_file_path), exist_ok=True)
+                    with open(self._cache_file_path, 'w', encoding='utf-8') as f:
+                        json.dump({'card_types': {}, 'last_updated': time.time()}, f, ensure_ascii=False, indent=2)
+                    logger_manager.info("未找到缓存文件，已创建空的卡牌类型缓存")
         except Exception as e:
             logger_manager.error(f"加载卡牌类型缓存失败: {e}")
             self._card_type_cache = {}

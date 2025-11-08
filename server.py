@@ -5,6 +5,7 @@ import platform
 import queue
 import sys
 import threading
+import time
 import traceback
 from typing import Optional
 from functools import wraps
@@ -16,7 +17,7 @@ from bin.config_directory_manager import config_dir_manager
 from bin.file_manager import QuickStart
 from bin.gitHub_image import GitHubImageHost
 from bin.logger import logger_manager
-from bin.workspace_manager import WorkspaceManager
+from bin.workspace_manager import WorkspaceManager, ScanProgressTracker
 from bin.image_uploader import create_uploader
 
 mimetypes.init()
@@ -51,6 +52,7 @@ is_selecting = False
 quick_start = QuickStart(config_dir_manager.get_recent_directories_file_path())
 current_workspace: WorkspaceManager = None
 github_image_host = None
+scan_tracker = ScanProgressTracker()  # 全局扫描进度追踪器
 
 # ArkhamDB导入管理器
 arkham_builder = {}
@@ -379,6 +381,12 @@ def open_workspace():
             msg="目录不存在"
         )), 404
 
+    # 取消任何正在进行的扫描任务，避免并发上限与脏状态
+    try:
+        scan_tracker.cancel_all()
+    except Exception:
+        pass
+
     # 创建工作空间实例
     current_workspace = WorkspaceManager(directory)
 
@@ -397,20 +405,204 @@ def open_workspace():
 @app.route('/api/file-tree', methods=['GET'])
 @handle_api_error
 def get_file_tree():
-    """获取文件树"""
+    """获取文件树(分层扫描: 立即返回目录结构,启动后台异步扫描card_type)"""
+    global scan_tracker
+
     error_response = check_workspace()
     if error_response:
         return error_response
 
     include_hidden = request.args.get('include_hidden', 'false').lower() == 'true'
-    logger_manager.debug(f"获取文件树, include_hidden={include_hidden}")
+    include_card_type = request.args.get('include_card_type', 'false').lower() == 'true'
+    mode = request.args.get('mode', 'normal')  # normal: 启动扫描; snapshot: 仅返回当前快照
+    logger_manager.debug(f"获取文件树, include_hidden={include_hidden}, include_card_type={include_card_type}, mode={mode}")
 
-    file_tree = current_workspace.get_file_tree(include_hidden)
+    try:
+        from bin.workspace_manager import WorkspaceScanner
+
+        # 创建扫描器并快速返回目录结构(不含card_type)
+        scanner = WorkspaceScanner(current_workspace.workspace_path)
+        # 根据模式生成结构
+        structure = scanner.scan_structure(include_hidden, include_card_type)
+
+        # snapshot 模式下仅返回当前快照，不启动新的扫描任务
+        if mode == 'snapshot':
+            workspace_name = os.path.basename(current_workspace.workspace_path) or current_workspace.workspace_path
+            file_tree = {
+                'label': workspace_name,
+                'key': f"workspace_{int(time.time() * 1000000)}",
+                'type': 'workspace',
+                'path': '.',
+                'children': structure
+            }
+
+            return jsonify(create_response(
+                msg="获取文件树快照成功",
+                data={
+                    "fileTree": file_tree,
+                    "status": "snapshot",
+                    "timestamp": time.time()
+                }
+            ))
+
+        # 启动后台异步扫描（默认模式）
+        scan_id = scan_tracker.start_scan(current_workspace.workspace_path, scanner)
+
+        # 构建完整的根节点
+        workspace_name = os.path.basename(current_workspace.workspace_path) or current_workspace.workspace_path
+        file_tree = {
+            'label': workspace_name,
+            'key': f"workspace_{int(time.time() * 1000000)}",
+            'type': 'workspace',
+            'path': '.',
+            'children': structure
+        }
+
+        return jsonify(create_response(
+            msg="获取文件树成功",
+            data={
+                "fileTree": file_tree,
+                "scanId": scan_id,
+                "status": "scanning",
+                "timestamp": time.time()
+            }
+        ))
+
+    except Exception as e:
+        logger_manager.error(f"获取文件树失败: {e}", exc_info=True)
+        return jsonify(create_response(
+            code=500,
+            msg=f"获取文件树失败: {str(e)}"
+        ))
+
+
+@app.route('/api/workspace/scan-progress/<scan_id>', methods=['GET'])
+@handle_api_error
+def get_scan_progress(scan_id):
+    """获取扫描进度(轮询接口)"""
+    global scan_tracker
+
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    progress = scan_tracker.get_progress(scan_id)
+
+    if 'error' in progress:
+        return jsonify(create_response(
+            code=404,
+            msg=f"扫描任务未找到: {scan_id}"
+        ))
+
+    # 支持自定义返回增量条目数量，默认 200，最大 1000
+    try:
+        limit = int(request.args.get('limit', '200'))
+    except Exception:
+        limit = 200
+    limit = max(1, min(limit, 1000))
 
     return jsonify(create_response(
-        msg="获取文件树成功",
-        data={"fileTree": file_tree}
+        msg="获取扫描进度成功",
+        data={
+            "status": progress.get('status'),
+            "progress": progress.get('progress'),
+            "data": progress.get('data', [])[-limit:],
+            "timestamp": time.time()
+        }
     ))
+
+
+@app.route('/api/workspace/report-visible-nodes', methods=['POST'])
+@handle_api_error
+def report_visible_nodes():
+    """接收前端可见节点报告,调整扫描优先级(EP-002)"""
+    global scan_tracker
+
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    data = request.get_json()
+    scan_id = data.get('scan_id')
+    visible_paths = data.get('visible_paths', [])
+
+    if not scan_id or not visible_paths:
+        return jsonify(create_response(
+            code=400,
+            msg="缺少必需参数: scan_id 或 visible_paths"
+        ))
+
+    try:
+        scan_tracker.prioritize_visible_nodes(scan_id, visible_paths)
+    except Exception as e:
+        logger_manager.warning(f"优先级调整失败: {e}")
+
+    return jsonify(create_response(
+        msg="优先级调整成功",
+        data={
+            "status": "priority_updated",
+            "visible_count": len(visible_paths),
+            "timestamp": time.time()
+        }
+    ))
+
+
+@app.route('/api/workspace/refresh-cache', methods=['POST'])
+@handle_api_error
+def refresh_cache():
+    """强制刷新缓存并重新扫描"""
+    global scan_tracker
+
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    try:
+        from bin.workspace_manager import WorkspaceScanner
+
+        # 取消任何在跑的扫描任务
+        try:
+            scan_tracker.cancel_all()
+        except Exception:
+            pass
+
+        # 创建扫描器并清除缓存
+        scanner = WorkspaceScanner(current_workspace.workspace_path)
+        scanner.cache_manager.clear_cache()
+        scanner.cache_manager.save_cache()
+
+        # 快速返回目录结构
+        structure = scanner.scan_structure(include_hidden=False)
+
+        # 启动新的扫描任务
+        scan_id = scan_tracker.start_scan(current_workspace.workspace_path, scanner)
+
+        # 构建完整的根节点
+        workspace_name = os.path.basename(current_workspace.workspace_path) or current_workspace.workspace_path
+        file_tree = {
+            'label': workspace_name,
+            'key': f"workspace_{int(time.time() * 1000000)}",
+            'type': 'workspace',
+            'path': '.',
+            'children': structure
+        }
+
+        return jsonify(create_response(
+            msg="缓存刷新成功",
+            data={
+                "fileTree": file_tree,
+                "scanId": scan_id,
+                "status": "refreshing",
+                "timestamp": time.time()
+            }
+        ))
+
+    except Exception as e:
+        logger_manager.error(f"刷新缓存失败: {e}", exc_info=True)
+        return jsonify(create_response(
+            code=500,
+            msg=f"刷新缓存失败: {str(e)}"
+        ))
 
 
 @app.route('/api/create-directory', methods=['POST'])

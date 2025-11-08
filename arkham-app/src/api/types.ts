@@ -74,11 +74,66 @@ export interface TreeOption {
   type: 'directory' | 'folder' | 'card-category' | 'image-category' | 'other-category' | 'card' | 'image' | 'config' | 'text' | 'style' | 'data' | 'workspace' | 'error';
   path?: string;
   children?: TreeOption[];
+  // 强制元数据字段 (CON-002: mtime/size/level 必填)
+  level: number;        // 目录层级 (1-5)
+  mtime: number;        // 文件修改时间戳 (Unix timestamp)
+  size: number;         // 文件大小 (字节数)
+  // 可选字段
+  card_type?: string | null;  // 卡牌类型 (初始为null, 异步加载后更新)
+  error?: ErrorInfo;          // 错误信息 (仅失败节点)
 }
 
 // 文件树响应数据类型
 export interface FileTreeData {
   fileTree: TreeOption;
+  scanId?: string; // 扫描ID，用于渐进式加载
+}
+
+// 渐进式文件树更新响应数据类型
+/**
+ * @deprecated 请使用 FileScanResponse 作为统一的轮询返回结构。
+ * 前端应读取 `data: FileNodeData[]` 和 `status: 'scanning' | 'completed'`。
+ */
+export interface FileTreeIncrementalData {
+  updates: TreeOption[]; // 增量更新的节点列表（已废弃）
+  completed: boolean;    // 扫描是否完成（已废弃）
+  scanId: string;        // 当前扫描ID（已废弃）
+}
+
+// 文件扫描进度响应数据类型 (EP-001 完整Schema)
+export interface FileScanResponse {
+  status: 'scanning' | 'completed';  // 扫描状态
+  progress: {
+    total: number;        // 总文件数
+    scanned: number;      // 已扫描数
+    percentage: number;   // 完成百分比
+  };
+  data: FileNodeData[];   // 扫描结果数据
+  timestamp: number;      // 响应时间戳
+}
+
+// 文件节点数据类型 (EP-001)
+export interface FileNodeData {
+  path: string;                // 文件路径
+  card_type: string | null;    // 卡牌类型 (失败时为null)
+  level: number;               // 目录层级 (1-5)
+  mtime: number;               // 文件修改时间戳 (Unix timestamp)
+  size: number;                // 文件大小 (字节)
+  error?: ErrorInfo;           // 错误信息 (仅失败节点)
+}
+
+// 文件扫描错误码枚举 (EP-003)
+export type FileScanErrorCode =
+  | 'PERMISSION_DENIED'   // 权限拒绝
+  | 'JSON_PARSE_ERROR'    // JSON格式错误
+  | 'FILE_NOT_FOUND'      // 文件不存在
+  | 'FILE_TOO_LARGE'      // 文件过大
+  | 'UNKNOWN_ERROR';      // 未知错误
+
+// 错误信息接口 (EP-003)
+export interface ErrorInfo {
+  code: FileScanErrorCode;  // 错误码
+  message: string;          // 用户友好的错误描述
 }
 
 // 文件内容响应数据类型
@@ -239,6 +294,11 @@ export interface DeleteItemRequest {
   path: string;
 }
 
+export interface ReportVisibleNodesRequest {
+  scan_id?: string;
+  visible_paths: string[];
+}
+
 export interface FileContentRequest {
   path: string;
   content?: string; // 用于保存文件时
@@ -248,6 +308,11 @@ export interface FileContentRequest {
 export type DirectorySelectResponse = BaseResponse<DirectorySelectData>;
 export type RecentDirectoriesResponse = BaseResponse<RecentDirectoriesData>;
 export type FileTreeResponse = BaseResponse<FileTreeData>;
+/**
+ * @deprecated 请改用 FileScanProgressResponse。
+ */
+export type FileTreeIncrementalResponse = BaseResponse<FileTreeIncrementalData>;
+export type FileScanProgressResponse = BaseResponse<FileScanResponse>; // 新增扫描进度响应类型
 export type FileContentResponse = BaseResponse<FileContentData>;
 export type ImageContentResponse = BaseResponse<ImageContentData>;
 export type FileInfoResponse = BaseResponse<FileInfoData>;

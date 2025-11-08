@@ -41,7 +41,10 @@
       <n-spin :show="loading">
         <n-tree v-if="displayedTreeData && displayedTreeData.length > 0" :data="displayedTreeData"
           :render-label="renderTreeLabel" :render-prefix="renderTreePrefix" selectable :expand-on-click="false"
-          :expanded-keys="expandedKeys" :selected-keys="selectedKeys" @update:selected-keys="handleFileSelect"
+          :expanded-keys="expandedKeys" :selected-keys="selectedKeys"
+          virtual-scroll
+          :node-props="() => ({ style: 'height: 32px' })"
+          @update:selected-keys="handleFileSelect"
           @update:expanded-keys="handleExpandedKeysChange" />
         <n-empty v-else :description="$t('workspaceMain.fileTree.emptyText')" />
       </n-spin>
@@ -585,9 +588,10 @@ import { NIcon, useMessage, NText, NTag } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import type { TreeOption, FormInst, FormRules } from 'naive-ui';
 
-// 扩展TreeOption接口以支持卡牌类型
+// 扩展TreeOption接口以支持卡牌类型和加载状态
 interface ExtendedTreeOption extends TreeOption {
   card_type?: string; // 卡牌类型
+  loadingState?: 'skeleton' | 'loading' | 'completed' | null; // EP-003: 加载状态
 }
 import {
   FolderOpenOutline,
@@ -603,12 +607,15 @@ import {
   RefreshOutline,
   CreateOutline,
   TrashOutline,
-  WarningOutline
+  WarningOutline,
+  SkullOutline,
+  SyncOutline,
+  CheckmarkOutline
 } from '@vicons/ionicons5';
 
 // 导入API服务
 import { WorkspaceService, ApiError, CardService, TtsExportService, ArkhamDBService, ConfigService } from '@/api';
-import type { CardData, ExportCardParams, ArkhamDBContentPack } from '@/api/types';
+import type { CardData, ExportCardParams, ArkhamDBContentPack, FileNodeData } from '@/api/types';
 
 interface Props {
   width: number;
@@ -737,6 +744,12 @@ const bleedModelOptions = computed(() => [
 
 // 文件树数据
 const fileTreeData = ref<TreeOption[]>([]);
+// CON-003: pathToNodeMap索引优化 - 维护path到node的Map映射
+const pathToNodeMap = ref<Map<string, TreeOption>>(new Map());
+// EP-002: 可见区域上报相关状态
+const currentScanId = ref<string | undefined>(undefined);
+let reportVisibleNodesTimeout: NodeJS.Timeout | null = null;
+
 const BOOKMARK_CONFIG_KEY = 'file_tree_bookmarks';
 const bookmarkedPaths = ref<string[]>([]);
 const showOnlyBookmarks = ref(false);
@@ -1140,6 +1153,77 @@ const collectCardPaths = (nodes: TreeOption[], bucket: Set<string>) => {
   }
 };
 
+// CON-003: 构建path到node的索引映射
+const buildPathIndex = (nodes: TreeOption[]): void => {
+  const map = new Map<string, TreeOption>();
+  const traverse = (nodes: TreeOption[]) => {
+    for (const node of nodes) {
+      if (typeof node.path === 'string') {
+        map.set(node.path, node);
+      }
+      if (node.children && node.children.length > 0) {
+        traverse(node.children);
+      }
+    }
+  };
+  traverse(nodes);
+  pathToNodeMap.value = map;
+};
+
+// EP-002: 收集当前可见的“卡牌(.card)节点”路径（仅展开节点下的可见卡牌，递归到已展开的子目录）
+const collectVisiblePaths = (): string[] => {
+  const result: string[] = [];
+  const expandedSet = new Set(expandedKeys.value);
+
+  const traverse = (nodes: TreeOption[]) => {
+    for (const node of nodes) {
+      const path = typeof node.path === 'string' ? (node.path as string) : '';
+      const isRootOrExpanded = node.type === 'workspace' || expandedSet.has(node.key);
+      if (!isRootOrExpanded) continue;
+
+      if (node.children && node.children.length > 0) {
+        // 收集直接可见子节点中的卡牌文件
+        for (const child of node.children) {
+          if (child.type === 'card' && typeof child.path === 'string') {
+            result.push((child.path as string).replace(/\\\\/g, '/'));
+          }
+        }
+        // 对已展开的子目录递归
+        for (const child of node.children) {
+          if (child.type === 'directory' && expandedSet.has(child.key)) {
+            traverse([child]);
+          }
+        }
+      }
+    }
+  };
+
+  traverse(fileTreeData.value);
+  return Array.from(new Set(result));
+};
+
+// EP-002: 防抖上报可见节点
+const debouncedReportVisibleNodes = () => {
+  // 清除之前的定时器
+  if (reportVisibleNodesTimeout) {
+    clearTimeout(reportVisibleNodesTimeout);
+  }
+
+  // 设置新的定时器(500ms防抖)
+  reportVisibleNodesTimeout = setTimeout(async () => {
+    try {
+      if (!currentScanId.value) return; // 扫描已结束，不再上报
+      const visiblePaths = collectVisiblePaths();
+      if (visiblePaths.length === 0) return;
+      await WorkspaceService.reportVisibleNodes(currentScanId.value, visiblePaths);
+      console.log(`已上报 ${visiblePaths.length} 个可见节点路径`);
+    } catch (error) {
+      // 上报失败时仅记录日志,不影响UI交互
+      console.warn('上报可见节点失败:', error);
+    }
+  }, 500);
+};
+
 const pruneBookmarksAgainstTree = () => {
   if (bookmarkedPaths.value.length === 0) return;
   const validPaths = new Set<string>();
@@ -1218,22 +1302,32 @@ const updateBookmarkPath = (oldPath: string, newPath: string) => {
   }
 };
 
+// CON-003: 使用pathToNodeMap优化computeBookmarkExpandedKeys
 const computeBookmarkExpandedKeys = () => {
   const expanded = new Set<string | number>();
-  const traverse = (nodes: TreeOption[], ancestors: Array<string | number>) => {
-    for (const node of nodes) {
-      const currentAncestors = [...ancestors, node.key as string | number];
-      if (node.children && node.children.length > 0) {
-        traverse(node.children, currentAncestors);
-      }
-      if (node.type === 'card' && typeof node.path === 'string' && isPathBookmarked(node.path)) {
-        ancestors.forEach(a => expanded.add(a));
-      }
-    }
-  };
 
+  // 使用Map索引快速查找节点及其祖先
+  for (const bookmarkPath of bookmarkedPaths.value) {
+    const node = pathToNodeMap.value.get(bookmarkPath);
+    if (!node || node.type !== 'card') continue;
+
+    // 回溯收集所有祖先key
+    let currentPath = bookmarkPath;
+    while (currentPath) {
+      const lastSlash = currentPath.lastIndexOf('/');
+      if (lastSlash === -1) break;
+
+      const parentPath = currentPath.substring(0, lastSlash);
+      const parentNode = pathToNodeMap.value.get(parentPath);
+      if (parentNode && parentNode.key) {
+        expanded.add(parentNode.key);
+      }
+      currentPath = parentPath;
+    }
+  }
+
+  // 确保根节点展开
   if (fileTreeData.value.length > 0) {
-    traverse(fileTreeData.value, []);
     const rootKey = fileTreeData.value[0]?.key;
     if (rootKey) expanded.add(rootKey);
   }
@@ -1241,33 +1335,37 @@ const computeBookmarkExpandedKeys = () => {
   return Array.from(expanded);
 };
 
-const filterTreeByBookmarks = (nodes: TreeOption[]): TreeOption[] => {
-  const result: TreeOption[] = [];
-
-  for (const node of nodes) {
-    const nextChildren = node.children ? filterTreeByBookmarks(node.children) : [];
-    const currentBookmarked = node.type === 'card' && typeof node.path === 'string' && isPathBookmarked(node.path);
-
-    if (node.type === 'workspace' && nextChildren.length === 0) {
-      continue;
-    }
-
-    if (currentBookmarked || nextChildren.length > 0 || node.type === 'workspace') {
-      const cloned: TreeOption = { ...node };
-      if (nextChildren.length > 0) {
-        cloned.children = nextChildren;
-      } else {
-        delete (cloned as any).children;
-      }
-      result.push(cloned);
-    }
-  }
-
-  return result;
-};
-
+// CON-003: 使用computed缓存filterTreeByBookmarks,避免重复计算
 const displayedTreeData = computed(() => {
-  return showOnlyBookmarks.value ? filterTreeByBookmarks(fileTreeData.value) : fileTreeData.value;
+  if (!showOnlyBookmarks.value) return fileTreeData.value;
+
+  // 过滤树:仅保留包含书签卡牌的分支
+  const filterTree = (nodes: TreeOption[]): TreeOption[] => {
+    const result: TreeOption[] = [];
+
+    for (const node of nodes) {
+      const nextChildren = node.children ? filterTree(node.children) : [];
+      const currentBookmarked = node.type === 'card' && typeof node.path === 'string' && isPathBookmarked(node.path);
+
+      if (node.type === 'workspace' && nextChildren.length === 0) {
+        continue;
+      }
+
+      if (currentBookmarked || nextChildren.length > 0 || node.type === 'workspace') {
+        const cloned: TreeOption = { ...node };
+        if (nextChildren.length > 0) {
+          cloned.children = nextChildren;
+        } else {
+          delete (cloned as any).children;
+        }
+        result.push(cloned);
+      }
+    }
+
+    return result;
+  };
+
+  return filterTree(fileTreeData.value);
 });
 
 // 文件树操作辅助函数
@@ -1551,6 +1649,12 @@ const loadFileTree = async () => {
       if (fileTreeData.value.length > 0 && fileTreeData.value[0].key) {
         expandedKeys.value = [fileTreeData.value[0].key];
       }
+
+      // EP-003: 如果返回了scanId，启动渐进式加载轮询
+      if (data.scanId) {
+        currentScanId.value = data.scanId;
+        startProgressiveLoading(data.scanId);
+      }
     } else {
       fileTreeData.value = [];
       expandedKeys.value = [];
@@ -1569,8 +1673,177 @@ const loadFileTree = async () => {
   }
 };
 
+// EP-003: 渐进式加载状态
+let progressiveLoadingTimer: NodeJS.Timeout | null = null;
+const POLL_LIMIT = 200; // 每次最多拉取200条增量
+const POLL_INTERVAL_MS = 1200; // 轮询间隔 1.2s，降低开销
+const isProgressiveLoading = ref(false);
+
+// EP-003: 启动渐进式加载轮询（对齐 FileScanResponse 结构）
+const startProgressiveLoading = async (scanId: string) => {
+  // 清除之前的轮询
+  if (progressiveLoadingTimer) {
+    clearTimeout(progressiveLoadingTimer);
+    progressiveLoadingTimer = null;
+  }
+
+  isProgressiveLoading.value = true;
+
+  const pollUpdates = async () => {
+    try {
+      const response = await WorkspaceService.pollFileTreeUpdates(scanId, POLL_LIMIT);
+
+      // 应用增量更新（使用 FileScanResponse.data）
+      if (response.data && response.data.length > 0) {
+        applyIncrementalUpdates(response.data);
+      }
+
+      // 根据状态决定是否继续轮询
+      const completed = response.status === 'completed';
+      if (!completed) {
+        progressiveLoadingTimer = setTimeout(pollUpdates, POLL_INTERVAL_MS);
+      } else {
+        isProgressiveLoading.value = false;
+        currentScanId.value = undefined;
+
+        // 扫描完成后进行一次快照补齐: 使用缓存拿到完整的 card_type
+        try {
+          const snapshot = await WorkspaceService.getFileTreeSnapshot(false);
+          if (snapshot && snapshot.fileTree) {
+            const snapshotRoot = convertFileTreeData(snapshot.fileTree);
+            applyCardTypesFromSnapshot(snapshotRoot);
+            applyPendingCardTypes();
+          }
+        } catch (e) {
+          console.warn('获取文件树快照失败（非致命）:', e);
+          // 快照失败时，至少应用一次积压的待处理队列
+          applyPendingCardTypes();
+        }
+      }
+    } catch (error) {
+      console.error('轮询文件树更新失败:', error);
+      isProgressiveLoading.value = false;
+      currentScanId.value = undefined;
+    }
+  };
+
+  // 立即开始轮询
+  pollUpdates();
+};
+
+// 增量更新可见优先：暂存不可见节点的 card_type，完成或快照后统一应用
+const pendingCardTypes = ref<Map<string, string | undefined>>(new Map());
+
+const isPathVisible = (path: string): boolean => {
+  const node = pathToNodeMap.value.get(path);
+  if (!node) return false;
+  if (node.type === 'workspace') return true;
+  let currentPath = path;
+  while (true) {
+    const lastSlash = currentPath.lastIndexOf('/');
+    if (lastSlash === -1) break;
+    const parentPath = currentPath.substring(0, lastSlash);
+    const parentNode = pathToNodeMap.value.get(parentPath);
+    if (!parentNode) break;
+    if (parentNode.type === 'workspace') return true;
+    const key = parentNode.key as string | number | undefined;
+    if (!key || !expandedKeys.value.includes(key)) return false;
+    currentPath = parentPath;
+  }
+  return true;
+};
+
+// EP-003: 应用增量更新到文件树（仅更新已有节点的元数据，避免生成重复节点）
+const applyIncrementalUpdates = (updates: FileNodeData[]) => {
+  let touched = 0;
+  for (const item of updates) {
+    if (!item.path) continue;
+    const node = pathToNodeMap.value.get(item.path);
+    if (!node) {
+      // 未找到对应节点：跳过以避免在根外生成重复节点
+      continue;
+    }
+    const ext = node as ExtendedTreeOption;
+    const newType = item.card_type ?? undefined;
+    if (isPathVisible(item.path)) {
+      // 更新卡牌类型（null 视为未识别）
+      ext.card_type = newType;
+      // 若存在任何加载状态，切换为完成后清理，避免loading残留
+      if (ext.loadingState && ext.loadingState !== 'completed') {
+        ext.loadingState = 'completed';
+        setTimeout(() => { ext.loadingState = null; }, 800);
+      }
+      touched++;
+      pendingCardTypes.value.delete(item.path);
+    } else {
+      // 暂存不可见节点，等待完成或快照后统一应用
+      pendingCardTypes.value.set(item.path, newType);
+    }
+  }
+  if (touched > 0) {
+    // 触发视图更新
+    void nextTick();
+  }
+};
+
+// 使用快照补齐 card_type（保持节点与展开/选中状态不变）
+const applyCardTypesFromSnapshot = (snapshotRoot: TreeOption) => {
+  // 1) 构建 path -> card_type 映射
+  const map = new Map<string, string | undefined>();
+  const collect = (node?: TreeOption) => {
+    if (!node) return;
+    if (node.type === 'card' && typeof node.path === 'string') {
+      const ct = (node as ExtendedTreeOption).card_type as string | undefined;
+      map.set(node.path, ct);
+    }
+    if (node.children && node.children.length > 0) {
+      node.children.forEach(collect);
+    }
+  };
+  collect(snapshotRoot);
+
+  // 2) 在现有树上按 path 更新 card_type
+  const update = (nodes: TreeOption[]) => {
+    for (const node of nodes) {
+      if (node.type === 'card' && typeof node.path === 'string') {
+        const ct = map.get(node.path);
+        if (ct !== undefined) {
+          (node as ExtendedTreeOption).card_type = ct;
+          (node as ExtendedTreeOption).loadingState = null;
+        }
+      }
+      if (node.children && node.children.length > 0) update(node.children);
+    }
+  };
+  update(fileTreeData.value);
+};
+
+// 将待处理的 card_type 批量应用到现有树
+const applyPendingCardTypes = () => {
+  if (pendingCardTypes.value.size === 0) return;
+  let touched = 0;
+  for (const [path, ct] of pendingCardTypes.value.entries()) {
+    const node = pathToNodeMap.value.get(path);
+    if (!node) continue;
+    (node as ExtendedTreeOption).card_type = ct;
+    (node as ExtendedTreeOption).loadingState = null;
+    touched++;
+  }
+  if (touched > 0) void nextTick();
+  pendingCardTypes.value.clear();
+};
+
 // 刷新文件树
 const refreshFileTree = () => {
+  // EP-003: 停止现有的渐进式加载轮询
+  if (progressiveLoadingTimer) {
+    clearTimeout(progressiveLoadingTimer);
+    progressiveLoadingTimer = null;
+  }
+  isProgressiveLoading.value = false;
+  currentScanId.value = undefined;
+
+  // 重新加载文件树
   loadFileTree();
 };
 
@@ -1611,6 +1884,25 @@ const renderTreeLabel = ({ option }: { option: TreeOption }) => {
 // 渲染树节点前缀图标
 const renderTreePrefix = ({ option }: { option: TreeOption }) => {
   const iconStyle = { marginRight: '6px' };
+  const extOption = option as ExtendedTreeOption;
+
+  // EP-003: 渐进式加载状态图标
+  if (extOption.loadingState) {
+    const loadingIconMap = {
+      'skeleton': { component: SkullOutline, color: '#9ca3af', spinning: false },
+      'loading': { component: SyncOutline, color: '#3b82f6', spinning: true },
+      'completed': { component: CheckmarkOutline, color: '#10b981', spinning: false }
+    };
+
+    const loadingIcon = loadingIconMap[extOption.loadingState];
+    return h(NIcon, {
+      component: loadingIcon.component,
+      color: loadingIcon.color,
+      size: 14,
+      style: iconStyle,
+      class: loadingIcon.spinning ? 'icon-spin' : undefined
+    });
+  }
 
   // 基础文件类型图标映射
   const baseIconMap = {
@@ -1715,6 +2007,9 @@ const handleFileSelect = (keys: Array<string | number>, options: TreeOption[]) =
       expandedKeys.value = [...expandedKeys.value, key];
     }
 
+    // 目录展开/折叠后上报可见节点优先级（EP-002）
+    debouncedReportVisibleNodes();
+
     // 保持原有的选中状态，不改变选中项
     return;
   }
@@ -1727,6 +2022,8 @@ const handleFileSelect = (keys: Array<string | number>, options: TreeOption[]) =
 // 处理展开状态变化
 const handleExpandedKeysChange = (keys: Array<string | number>) => {
   expandedKeys.value = keys;
+  // EP-002: 展开状态变化时,触发可见区域上报(防抖500ms)
+  debouncedReportVisibleNodes();
 };
 
 // 处理右键点击
@@ -2767,6 +3064,19 @@ const closeArkhamDBImportDialog = () => {
   arkhamdbImportContent.value = null;
 };
 
+// CON-003: 监听文件树变更,自动重建索引（防抖，避免频繁重建引起卡顿）
+let buildIndexTimer: NodeJS.Timeout | null = null;
+watch(fileTreeData, (newTree) => {
+  if (buildIndexTimer) {
+    clearTimeout(buildIndexTimer);
+  }
+  buildIndexTimer = setTimeout(() => {
+    if (newTree && newTree.length > 0) {
+      buildPathIndex(newTree);
+    }
+  }, 200);
+}, { deep: true });
+
 watch(bookmarkedPaths, (paths) => {
   if (!bookmarkSyncReady.value) return;
 
@@ -2803,6 +3113,11 @@ watch(showOnlyBookmarks, (value) => {
   }
 });
 
+// 任何 expandedKeys 的变化（无论事件还是程序设值）都触发一次可见区域上报（由防抖控制频率）
+watch(expandedKeys, () => {
+  debouncedReportVisibleNodes();
+});
+
 // 监听 selectedFile 的变化，同步 selectedKeys
 watch(() => props.selectedFile, (newFile) => {
   if (newFile && newFile.key) {
@@ -2827,6 +3142,16 @@ onUnmounted(() => {
     clearInterval(logRefreshInterval.value);
     logRefreshInterval.value = null;
   }
+  // EP-002: 清理可见区域上报定时器
+  if (reportVisibleNodesTimeout) {
+    clearTimeout(reportVisibleNodesTimeout);
+    reportVisibleNodesTimeout = null;
+  }
+  // EP-003: 清理渐进式加载轮询定时器
+  if (progressiveLoadingTimer) {
+    clearTimeout(progressiveLoadingTimer);
+    progressiveLoadingTimer = null;
+  }
 });
 
 // 导出方法供父组件调用
@@ -2836,6 +3161,20 @@ defineExpose({
 </script>
 
 <style scoped>
+/* EP-003: 渐进式加载图标旋转动画 */
+:deep(.icon-spin) {
+  animation: icon-spin-animation 1s linear infinite;
+}
+
+@keyframes icon-spin-animation {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* 批量导出相关样式 */
 /* 进度相关样式 */
 .batch-export-status {
