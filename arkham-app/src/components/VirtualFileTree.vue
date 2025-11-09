@@ -247,19 +247,19 @@ const onToggleExpand = (payload: { status: boolean; node: VvtNode }) => {
 }
 
 :deep(.vir-tree-wrap::-webkit-scrollbar) {
-  width: 8px;
-  height: 8px;
+  width: 12px;  /* 滚动条宽度*/
+  height: 12px; /* 横向滚动条高度*/
 }
 
 :deep(.vir-tree-wrap::-webkit-scrollbar-track) {
   background: rgba(0, 0, 0, 0.05);
-  border-radius: 4px;
+  border-radius: 6px;  /* 轨道圆角*/
 }
 
 :deep(.vir-tree-wrap::-webkit-scrollbar-thumb) {
   background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
-  border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;  /* 手柄圆角：*/
+  border: 2px solid rgba(255, 255, 255, 0.2);  /* 边框：1px → 2px (2倍) */
 }
 
 :deep(.vir-tree-wrap::-webkit-scrollbar-thumb:hover) {
