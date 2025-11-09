@@ -82,3 +82,26 @@ Using the container (`Box.json`):
 - Orientation is controlled both by `SidewaysCard` and the `Transform.rot*` values; adjust only one axis at a time to avoid unintended rotations.
 - Ensure all remote asset URLs are publicly reachable by TTS; prefer HTTPS.
 - For localized metadata (e.g., Chinese), save files as UTF‑8 to avoid mojibake across platforms.
+
+## Lua Script Templates (backend‑driven)
+
+This repository also ships Lua script templates consumed by the backend TTS script generator to produce per‑card scripts:
+
+- `phase_buttons.lua` — Investigator phase‑button helper
+  - Placeholders:
+    - `-- BUTTON_PARAMS_PLACEHOLDER --` → injected with `buttonParams` (labels/ids/colors)
+    - `<!-- BUTTON_ID_INDEX_PLACEHOLDER -->` → `buttonIdToIndex` mapping
+    - `<!-- BUTTON_COUNT -->` → number of buttons
+  - Bundled modules included in‑template (via `__bundle_register`): `playercards/CardsWithHelper`, `playercards/CardsWithPhaseButtons`, `util/SideButtonCreator`
+
+- `upgrade_sheet.lua` — Customizable upgrade sheet (Power Word)
+  - Placeholders (front‑end syntax mirrored):
+    - `${xInitial.toFixed(4)}`
+    - `${xOffset.toFixed(4)}`
+    - `${customizations}`
+  - Bundled modules included in‑template: `core/GUIDReferenceApi`, `playermat/PlayermatApi`, `util/MathLib`, `util/SearchLib`
+  - The backend computes layout params from pixel coordinates (group by row/Y; derive scales/offsets; emit `customizations` table) to ensure parity with the front‑end generator.
+
+Consumption
+- The backend module `bin/tts_script_generator.py` loads these Lua templates and performs placeholder substitution to produce final scripts for TTS objects.
+- Prefer updating templates here rather than embedding large Lua strings in Python to keep maintenance simpler and front/back parity intact.

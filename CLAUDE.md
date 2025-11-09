@@ -220,6 +220,12 @@
 - Builder：`ArkhamCardBuilder` 分步构建（索引→正/背面→图片/TTS 元数据→写盘）。
 - Strategy：出血（镜像/LaMa）、导出规格/DPI、语言字体选择。
 
+### 新增：TTS 统一脚本生成端点
+- `POST /api/tts/generate(body:{ card_data })`
+  - Purpose: 统一后端生成 GMNotes 与 LuaScript（权威源）。
+  - 要求：已打开工作区（用于解析签名卡相对路径与升级表坐标）。
+  - 行为：优先使用 V2 `tts_config`；无 V2 回退旧 `tts_script`。支持调查员阶段按钮、升级表脚本（Power Word）、地点卡 front/back GMNotes 融合。
+
 ### Technical Decisions
 - 平台适配：
   - 桌面（PyWebview）与 Android（Kivy+jnius）复用同一 Flask 服务；
@@ -227,6 +233,11 @@
   - 目录选择在 Android 使用原生 Intent，在桌面使用 pywebview/tk 回退。
 - 扫描优化：文件树“结构快返 + 后台异步扫描”，前端通过 `scanId` 轮询增量。
 - 统一错误处理：`@handle_api_error` 捕获并回传详细错误类型与栈信息（安全脱敏）。
+
+#### TTS 数据与模板（V2）
+- 仅在卡文件保存 `tts_config`，去除冗余 `tts_script`。
+- 模板外置：`templates/phase_buttons.lua`（调查员阶段按钮）、`templates/upgrade_sheet.lua`（升级表脚本）。
+- 生成器：`bin/tts_script_generator.py` 作为权威脚本生成源，导出与预览一致。
 
 ### Considerations
 - 性能：
@@ -239,4 +250,3 @@
 - 限制：
   - LaMa 出血依赖外部服务 `lama_baseurl`；
   - 移动端 WebView 能力受系统版本限制（混合内容/缓存策略已按需放开）。
-

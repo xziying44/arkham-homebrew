@@ -30,7 +30,12 @@ This document provides a complete, multi‑layer reference for the Vue 3 compone
   - `IllustrationLayoutEditor.vue` – Visual crop/offset/scale/rotate/flip editor for card art
   - `TextBoundaryEditor.vue` – Advanced text boundary adjustment (body boundaries + flavor padding)
   - `DeckOptionEditor.vue` – Investigator deck building options editor
-  - `TtsScriptEditor.vue` – TTS scripting config editor (per card type), integrates file browser
+- `TtsScriptEditor.vue` – TTS scripting config editor (per card type), integrates file browser
+  - 行为（V2 改造）：
+    - 仅保存 `tts_config` 到卡文件（不再写入旧版 `tts_script` 字段）。
+    - 预览调用后端 `POST /api/tts/generate`（一次性首帧 + 250ms 防抖；父写回屏蔽避免循环）。
+    - 升级表脚本：将坐标保存到 `tts_config.upgrade.coordinates`，后端统一生成 Lua。
+    - 签名卡：按相对路径保存 `{ path, count }`；显示名称取文件树 `name`（或文件名）。后端按路径解析稳定脚本 ID，GMNotes 继续输出旧式 `signatures`（ID 聚合）。
   - `DeckEditor.vue` – Deck content arrangement and export integration
   - `PackageEditor.vue` – Content package metadata and assets editor
   - `TTSExportGuide.vue` – Step‑by‑step guide for TTS export from a deck

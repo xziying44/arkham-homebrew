@@ -119,6 +119,11 @@
   - Purpose: 生成包含 `ObjectStates` 的 TTS 盒子 JSON 与过程日志。
   - Returns: (Dict) `{ success, box_json?, logs, error? }`。
 
+  #### V2 改造要点（TTS 脚本生成与解析）
+  - 统一使用 `TtsScriptGenerator(workspace_manager)` 生成 GMNotes/LuaScript（导出与预览一致）。
+  - `_extract_gmnotes_id(card)` / `_parse_gmnotes(card)`：V2 优先（用生成器结果），旧数据回退解析 `tts_script.GMNotes`。
+  - 签名卡：V2 使用 `tts_config.signatures = [{ path, count }]`，生成器按相对路径解析卡文件获得稳定脚本 ID；路径不存在则跳过该条。
+
   #### `export_to_arkhamdb(output_path: str = None) -> Dict[str, Any]`（content_package_manager.py:270）
   - Purpose: 依据卡牌数据与编号生成 ArkhamDB 导出文件。
   - Parameters:
@@ -248,3 +253,9 @@
 ### 限制
 - 超过 5MB 的 JSON 文件跳过类型解析（WorkspaceScanner.MAX_JSON_SIZE）
 - 依赖外部渲染栈（FontManager/ImageManager/CardCreator）可用性；缺失时仅返回卡背或报警告
+### TtsScriptGenerator（tts_script_generator.py）
+- 描述：统一 GMNotes/LuaScript 生成器，权威生成源，导出与预览一致。
+- 入口：`generate(card_data) -> { GMNotes, LuaScript }`
+- 行为：
+  - V2：读取 `tts_config`；支持调查员阶段按钮/升级表脚本、地点卡 front/back GMNotes 融合；签名卡按相对路径解析出稳定 ID。
+  - 非 V2：回退读取 `card_data.tts_script` 并兼容地点卡旧数据结构。
