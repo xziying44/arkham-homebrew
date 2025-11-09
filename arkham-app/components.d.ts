@@ -74,6 +74,7 @@ declare module 'vue' {
     TTSExportGuide: typeof import('./src/components/TTSExportGuide.vue')['default']
     TtsScriptEditor: typeof import('./src/components/TtsScriptEditor.vue')['default']
     UniversalUploadDialog: typeof import('./src/components/UniversalUploadDialog.vue')['default']
+    VirtualFileTree: typeof import('./src/components/VirtualFileTree.vue')['default']
     WorkspaceSidebar: typeof import('./src/components/WorkspaceSidebar.vue')['default']
   }
 }

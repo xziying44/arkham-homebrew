@@ -16,7 +16,8 @@
     "uuid": "^11.1.0",
     "vfonts": "^0.0.3",
     "vue": "^3.5.18",
-    "vue-i18n": "^9.14.5"
+    "vue-i18n": "^9.14.5",
+    "vue-virtual-tree": "^4.0.7"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.1",

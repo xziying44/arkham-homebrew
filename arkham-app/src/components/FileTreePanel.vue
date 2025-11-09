@@ -39,13 +39,19 @@
         </n-space>
       </div>
       <n-spin :show="loading">
-        <n-tree v-if="displayedTreeData && displayedTreeData.length > 0" :data="displayedTreeData"
-          :render-label="renderTreeLabel" :render-prefix="renderTreePrefix" selectable :expand-on-click="false"
-          :expanded-keys="expandedKeys" :selected-keys="selectedKeys"
-          virtual-scroll
-          :node-props="() => ({ style: 'height: 32px' })"
+        <VirtualFileTree
+          v-if="displayedTreeData && displayedTreeData.length > 0"
+          :data="displayedTreeData"
+          :expanded-keys="expandedKeys"
+          :selected-keys="selectedKeys"
+          :render-label="renderTreeLabel"
+          :render-prefix="renderTreePrefix"
+          :node-height="32"
           @update:selected-keys="handleFileSelect"
-          @update:expanded-keys="handleExpandedKeysChange" />
+          @update:expanded-keys="handleExpandedKeysChange"
+          @contextmenu="(option, e) => handleRightClick(e, option)"
+          @dragstart="(option, e) => handleTreeNodeDragStart(e, option)"
+        />
         <n-empty v-else :description="$t('workspaceMain.fileTree.emptyText')" />
       </n-spin>
     </div>
@@ -584,6 +590,7 @@
 
 <script setup lang="ts">
 import { ref, h, onMounted, computed, nextTick, onUnmounted, watch } from 'vue';
+import VirtualFileTree from './VirtualFileTree.vue';
 import { NIcon, useMessage, NText, NTag } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import type { TreeOption, FormInst, FormRules } from 'naive-ui';
@@ -3332,8 +3339,10 @@ defineExpose({
 
 .file-tree-content {
   flex: 1;
-  overflow-y: auto;
-  padding: 12px;
+  display: flex;              /* 让工具栏占据内容区顶部，树区自适应剩余高度 */
+  flex-direction: column;
+  overflow: hidden; /* 由内部 n-spin-container 承担滚动，避免双滚动条 */
+  padding: 0; /* 避免产生额外溢出导致多余滚动条 */
   background: linear-gradient(145deg, #f8fafc 0%, #e2e8f0 100%);
   /* 移动端滚动优化 */
   -webkit-overflow-scrolling: touch;
@@ -3342,23 +3351,20 @@ defineExpose({
   height: 0;
 }
 
-.file-tree-content::-webkit-scrollbar {
-  width: 8px;
+/* n-spin 容器不再滚动，避免双滚动条；滚动在虚拟树内部 */
+:deep(.n-spin-container) {
+  /* 填充除工具栏以外的剩余空间 */
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  overflow: hidden; /* scroll handled by virtual list */
+  display: flex;
+  flex-direction: column;
 }
 
-.file-tree-content::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 4px;
-}
-
-.file-tree-content::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
-  border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.file-tree-content::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #5a67d8 0%, #6b46c1 100%);
+/* Ensure the spin content stretches to provide a definite height for children */
+:deep(.n-spin-content) {
+  height: 100%;
 }
 
 .file-tree-toolbar {
