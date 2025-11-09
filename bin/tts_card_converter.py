@@ -2,6 +2,7 @@ import json
 import os
 import random
 from typing import Dict, List, Any, Optional
+from bin.tts_script_generator import TtsScriptGenerator
 
 
 class TTSCardConverter:
@@ -136,22 +137,38 @@ class TTSCardConverter:
         card_type = card_data.get("type", "")
         tags = self.get_card_tags(card_type)
 
-        # 获取脚本信息
-        tts_script = card_data.get("tts_script", {})
-        gm_notes = tts_script.get("GMNotes", "")
-        lua_script = tts_script.get("LuaScript", "")
-
-        # 如果背面也有脚本且正面没有，则使用背面的
-        if back_card and not gm_notes:
-            back_script = back_card.get("tts_script", {})
-            gm_notes = back_script.get("GMNotes", "")
-
-        if back_card and not lua_script:
-            back_script = back_card.get("tts_script", {})
-            lua_script = back_script.get("LuaScript", "")
-
-        # 特殊处理地点卡的GMNotes
-        gm_notes = self.process_location_gm_notes(gm_notes, card_type, back_card)
+        # 生成/获取脚本信息（v2 优先）
+        gm_notes = ""
+        lua_script = ""
+        tts_config = card_data.get("tts_config") or {}
+        if isinstance(tts_config, dict) and str(tts_config.get("version", "")).lower() == 'v2':
+            # 若有背面卡数据，将其合并传入生成器以便地点卡生成 locationFront/locationBack
+            combined_card = dict(card_data)
+            if back_card:
+                combined_card['back'] = back_card
+            # 构建最小工作空间管理器以解析路径
+            class _WM:
+                def __init__(self, base):
+                    self.workspace_path = base
+                def _get_absolute_path(self, rel):
+                    return os.path.join(self.workspace_path, rel)
+            generator = TtsScriptGenerator(workspace_manager=_WM(self.work_directory))
+            result = generator.generate(combined_card)
+            gm_notes = result.get("GMNotes", "")
+            lua_script = result.get("LuaScript", "")
+        else:
+            # 旧数据：直接读取 tts_script，必要时使用背面脚本补充
+            tts_script = card_data.get("tts_script", {})
+            gm_notes = tts_script.get("GMNotes", "")
+            lua_script = tts_script.get("LuaScript", "")
+            if back_card and not gm_notes:
+                back_script = back_card.get("tts_script", {})
+                gm_notes = back_script.get("GMNotes", "")
+            if back_card and not lua_script:
+                back_script = back_card.get("tts_script", {})
+                lua_script = back_script.get("LuaScript", "")
+            # 特殊处理地点卡的GMNotes（合并 front/back）
+            gm_notes = self.process_location_gm_notes(gm_notes, card_type, back_card)
 
         # 判断是否为调查员卡（需要横置）
         is_investigator = card_type in ["调查员", "Investigator"]

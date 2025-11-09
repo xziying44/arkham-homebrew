@@ -387,13 +387,23 @@ class ContentPackageManager:
             }
 
     def _extract_gmnotes_id(self, card_data: Dict[str, Any]) -> str:
-        """从卡牌数据中提取GMNotes的ID"""
+        """从卡牌数据中提取GMNotes的ID（v2 优先，回退旧数据）"""
+        try:
+            tcfg = card_data.get('tts_config') or {}
+            if isinstance(tcfg, dict) and str(tcfg.get('version', '')).lower() == 'v2':
+                result = self.tts_generator.generate(card_data)
+                gm = result.get('GMNotes', '')
+                if gm:
+                    import json
+                    gmj = json.loads(gm)
+                    return gmj.get('id', '')
+        except Exception:
+            pass
+        # 旧数据回退
         tts_script = card_data.get("tts_script", {})
         gm_notes = tts_script.get("GMNotes", "")
-
         if not gm_notes:
             return ""
-
         try:
             import json
             gm_data = json.loads(gm_notes)
@@ -404,13 +414,22 @@ class ContentPackageManager:
             return id_match.group(1) if id_match else ""
 
     def _parse_gmnotes(self, card_data: Dict[str, Any]) -> Dict[str, Any]:
-        """解析GMNotes为字典"""
+        """解析GMNotes为字典（v2 优先，回退旧数据）"""
+        try:
+            tcfg = card_data.get('tts_config') or {}
+            if isinstance(tcfg, dict) and str(tcfg.get('version', '')).lower() == 'v2':
+                result = self.tts_generator.generate(card_data)
+                gm = result.get('GMNotes', '')
+                if gm:
+                    import json
+                    return json.loads(gm)
+        except Exception:
+            pass
+        # 旧数据回退
         tts_script = card_data.get("tts_script", {})
         gm_notes = tts_script.get("GMNotes", "")
-
         if not gm_notes:
             return {}
-
         try:
             import json
             return json.loads(gm_notes)
