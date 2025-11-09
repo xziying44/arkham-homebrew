@@ -163,6 +163,12 @@ export const API_ENDPOINTS = {
     method: HttpMethod.POST,
     timeout: 60000 // 60秒超时，TTS物品导出可能需要较长时间
   } as ApiConfig,
+  // TTS脚本生成预览
+  GENERATE_TTS_SCRIPT: {
+    url: '/api/tts/generate',
+    method: HttpMethod.POST,
+    timeout: 15000
+  } as ApiConfig,
   // GitHub 图床相关接口
   GITHUB_LOGIN: {
     url: '/api/github/login',

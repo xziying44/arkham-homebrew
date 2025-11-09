@@ -220,8 +220,8 @@
                     <n-space vertical size="medium">
                         <!-- 已选择的签名卡列表 -->
                         <div v-if="signatureConfig.length > 0" class="signature-list">
-                            <div v-for="(signature, index) in signatureConfig" :key="`${signature.id}-${index}`"
-                                class="signature-item">
+            <div v-for="(signature, index) in signatureConfig" :key="`${signature.path}-${index}`"
+                class="signature-item">
                                 <n-space align="center">
                                     <n-text>{{ signature.name }}</n-text>
                                     <n-input-number v-model:value="signature.count" :min="1" :max="9" size="small"
@@ -309,7 +309,7 @@ import {
     type PhaseButtonConfig,
     type PhaseButton
 } from '@/config/ttsScriptGenerator';
-import { WorkspaceService } from '@/api';
+import { WorkspaceService, TtsScriptService } from '@/api';
 import CardFileBrowser from './CardFileBrowser.vue';
 
 // --- 新增: i18n设置 ---
@@ -333,7 +333,7 @@ interface TtsScriptData {
         assetConfig: AssetConfig;
         locationConfig: LocationConfig;
         scriptConfig: ScriptConfig;
-        signatureConfig: Array<{ id: string; name: string; count: number }>;
+        signatureConfig: Array<{ path: string; name: string; count: number }>;
         entryTokensConfig: UseConfig[]; // 通用入场标记配置
         gameStartConfig: GameStartConfig; // 游戏开始位置配置
     };
@@ -425,7 +425,7 @@ const phaseButtonConfig = ref<PhaseButtonConfig>({
 });
 
 // 签名卡配置
-const signatureConfig = ref<Array<{ id: string; name: string; count: number }>>([]);
+const signatureConfig = ref<Array<{ path: string; name: string; count: number }>>([]);
 const showSignatureSelector = ref(false);
 
 // 通用入场标记配置 - 所有卡牌类型都支持
@@ -601,214 +601,81 @@ const getEditingCardData = () => {
     return props.cardData;
 };
 
-// 生成GMNotes
+// 后端预览结果
+const backendGMNotes = ref('');
+const backendLuaScript = ref('');
+
+// 统一的GMNotes（来自后端）
 const generatedGMNotes = computed(() => {
-    const cardType = props.cardType;
     if (!shouldShowTtsScript.value) return '';
-
-    // 对于双面卡牌，需要判断当前面的类型
-    const currentEditingData = getEditingCardData();
-    const currentCardType = currentEditingData.type || cardType;
-
-    // 基础数据 - 所有卡牌类型都包含这些字段
-    const baseData = {
-        id: scriptConfig.value.id || generateUUID(),
-        type: typeMapping[currentCardType] || getCardTypeMapping(currentCardType),
-        // 添加其他可能的字段
-        ...(currentEditingData.name && { name: currentEditingData.name }),
-        ...(currentEditingData.traits && Array.isArray(currentEditingData.traits) && currentEditingData.traits.length > 0 && {
-            traits: currentEditingData.traits.join('.') + '.'
-        }),
-        ...(currentEditingData.class && { class: classMapping[currentEditingData.class] || currentEditingData.class }),
-        ...(currentEditingData.level != null && { level: currentEditingData.level }),
-        ...(currentEditingData.cost != null && { cost: currentEditingData.cost }),
-        ...(currentEditingData.victory != null && { victory: currentEditingData.victory }),
-        // 通用入场标记配置 - 所有卡牌类型都支持
-        ...(entryTokensConfig.value.length > 0 && { uses: entryTokensConfig.value }),
-        // 游戏开始位置配置 - 所有卡牌类型都支持
-        ...(gameStartConfig.value.startsInPlay && { startsInPlay: true }),
-        ...(gameStartConfig.value.startsInHand && { startsInHand: true })
-    };
-
-    let gmNotesData: any;
-
-    // 对于有高级配置的卡牌类型，使用原来的逻辑
-    if (hasAdvancedConfig.value) {
-        switch (cardType) {
-            case '调查员':
-                gmNotesData = {
-                    ...baseData,
-                    type: 'Investigator',
-                    willpowerIcons: investigatorConfig.value.willpowerIcons,
-                    intellectIcons: investigatorConfig.value.intellectIcons,
-                    combatIcons: investigatorConfig.value.combatIcons,
-                    agilityIcons: investigatorConfig.value.agilityIcons,
-                    extraToken: investigatorConfig.value.extraToken.length > 0
-                        ? investigatorConfig.value.extraToken.join('|')
-                        : 'None'
-                };
-
-                // 添加签名卡配置
-                if (signatureConfig.value.length > 0) {
-                    const signatures: Record<string, number>[] = [{}];
-                    for (const signature of signatureConfig.value) {
-                        // 如果同一张卡牌出现多次，累加数量
-                        if (signatures[0][signature.id]) {
-                            signatures[0][signature.id] += signature.count;
-                        } else {
-                            signatures[0][signature.id] = signature.count;
-                        }
-                    }
-                    gmNotesData.signatures = signatures;
-                }
-                break;
-
-            case '支援卡':
-            case '事件卡':
-                gmNotesData = {
-                    ...baseData,
-                    ...(props.cardData.slot && { slot: props.cardData.slot }),
-                    ...(props.cardData.willpowerIcons && { willpowerIcons: props.cardData.willpowerIcons }),
-                    ...(props.cardData.intellectIcons && { intellectIcons: props.cardData.intellectIcons }),
-                    ...(props.cardData.combatIcons && { combatIcons: props.cardData.combatIcons }),
-                    ...(props.cardData.agilityIcons && { agilityIcons: props.cardData.agilityIcons })
-                };
-                break;
-
-            case '地点卡':
-                const locationData: any = {
-                    icons: locationIconMapping[currentEditingData.location_icon] || currentEditingData.location_icon || 'Diamond',
-                    connections: (currentEditingData.location_link || []).map(conn => locationIconMapping[conn] || conn).join('|'),
-                    ...(currentEditingData.victory != null && { victory: currentEditingData.victory })
-                };
-
-                // 构建uses数组：线索值 + 通用入场标记
-                const usesArray = [];
-
-                // 只有当地点类型为"已揭示"时才添加线索值
-                if (currentEditingData.location_type === '已揭示') {
-                    usesArray.push({
-                        ...(isPerInvestigator.value ? { countPerInvestigator: clueCount.value } : { count: clueCount.value }),
-                        type: 'Clue',
-                        token: 'clue'
-                    });
-                }
-
-                // 添加通用入场标记配置
-                if (entryTokensConfig.value.length > 0) {
-                    usesArray.push(...entryTokensConfig.value);
-                }
-
-                // 如果有uses配置，添加到locationData中
-                if (usesArray.length > 0) {
-                    locationData.uses = usesArray;
-                }
-
-                // 双面卡牌特殊处理：根据正背面存储到不同字段
-                if (props.isDoubleSided) {
-                    gmNotesData = {
-                        id: scriptConfig.value.id || generateUUID(),
-                        type: 'Location',
-                        traits: (currentEditingData.traits || []).join('.') + (currentEditingData.traits?.length ? '.' : ''),
-                    };
-
-                    // 根据当前编辑的面决定存储字段
-                    if (props.currentSide === 'back') {
-                        // 背面是地点卡，直接存储到locationBack
-                        gmNotesData.locationBack = locationData;
-
-                        // 如果正面也是地点卡，需要从原始数据中获取locationFront
-                        if (props.cardData.type === '地点卡') {
-                            const frontLocationData: any = {
-                                icons: locationIconMapping[props.cardData.location_icon] || props.cardData.location_icon || 'Diamond',
-                                connections: (props.cardData.location_link || []).map(conn => locationIconMapping[conn] || conn).join('|'),
-                                ...(props.cardData.victory != null && { victory: props.cardData.victory })
-                            };
-
-                            if (props.cardData.location_type === '已揭示') {
-                                frontLocationData.uses = [{
-                                    ...(isPerInvestigator.value ? { countPerInvestigator: clueCount.value } : { count: clueCount.value }),
-                                    type: 'Clue',
-                                    token: 'clue'
-                                }];
-                            }
-
-                            gmNotesData.locationFront = frontLocationData;
-                        }
-                    } else {
-                        // 正面是地点卡，存储到locationFront
-                        gmNotesData.locationFront = locationData;
-
-                        // 如果背面也是地点卡，需要从back数据中获取locationBack
-                        if (props.cardData.back && props.cardData.back.type === '地点卡') {
-                            const backLocationData: any = {
-                                icons: locationIconMapping[props.cardData.back.location_icon] || props.cardData.back.location_icon || 'Diamond',
-                                connections: (props.cardData.back.location_link || []).map(conn => locationIconMapping[conn] || conn).join('|'),
-                                ...(props.cardData.back.victory != null && { victory: props.cardData.back.victory })
-                            };
-
-                            if (props.cardData.back.location_type === '已揭示') {
-                                backLocationData.uses = [{
-                                    ...(isPerInvestigator.value ? { countPerInvestigator: clueCount.value } : { count: clueCount.value }),
-                                    type: 'Clue',
-                                    token: 'clue'
-                                }];
-                            }
-
-                            gmNotesData.locationBack = backLocationData;
-                        }
-                    }
-                } else {
-                    // 单面卡牌，使用原来的location字段
-                    gmNotesData = {
-                        id: scriptConfig.value.id || generateUUID(),
-                        type: 'Location',
-                        traits: (currentEditingData.traits || []).join('.') + (currentEditingData.traits?.length ? '.' : ''),
-                        location: locationData
-                    };
-                }
-                break;
-
-            default:
-                // 对于不支持高级配置的卡牌类型，使用基础数据
-                gmNotesData = baseData;
-                break;
-        }
-    } else {
-        // 不支持高级配置的卡牌类型，直接使用基础数据
-        gmNotesData = baseData;
-    }
-
-    try {
-        return JSON.stringify(gmNotesData, null, 2);
-    } catch (error) {
-        return '// JSON generation failed';
-    }
+    return backendGMNotes.value;
 });
 
 
-// 生成完整的Lua脚本
+// 生成完整的Lua脚本（来自后端）
 const generatedLuaScript = computed(() => {
-    if (props.cardType !== '调查员' || !enablePhaseButtons.value) return '';
-    return generatePhaseButtonScript(phaseButtonConfig.value);
+    return backendLuaScript.value || '';
 });
 
 // TTS脚本数据（包含配置）
+// 统一 v2 配置对象（将作为 tts_config 存储与传输）
+const tts_config = computed(() => ({
+    version: 'v2',
+    script_id: scriptConfig.value.id,
+    enablePhaseButtons: enablePhaseButtons.value,
+    phaseButtonConfig: phaseButtonConfig.value,
+    investigator: {
+        extraToken: investigatorConfig.value.extraToken,
+        willpowerIcons: investigatorConfig.value.willpowerIcons,
+        intellectIcons: investigatorConfig.value.intellectIcons,
+        combatIcons: investigatorConfig.value.combatIcons,
+        agilityIcons: investigatorConfig.value.agilityIcons,
+    },
+    signatures: signatureConfig.value.map(s => ({ path: s.path, count: s.count })),
+    entryTokens: entryTokensConfig.value,
+    gameStart: {
+        startsInPlay: gameStartConfig.value.startsInPlay,
+        startsInHand: gameStartConfig.value.startsInHand,
+    },
+}));
+
 const ttsScriptData = computed((): TtsScriptData => ({
     GMNotes: generatedGMNotes.value,
     LuaScript: generatedLuaScript.value,
-    config: {
-        enablePhaseButtons: enablePhaseButtons.value,
-        phaseButtonConfig: phaseButtonConfig.value,
-        investigatorConfig: investigatorConfig.value,
-        assetConfig: assetConfig.value,
-        locationConfig: locationConfig.value,
-        scriptConfig: scriptConfig.value,
-        signatureConfig: signatureConfig.value,
-        entryTokensConfig: entryTokensConfig.value,
-        gameStartConfig: gameStartConfig.value
-    }
+    // 复用原字段名 config 以兼容父组件处理，但内部已是 v2 的 tts_config 结构
+    config: tts_config.value as any,
 }));
+
+// 避免父子间同步引发的循环请求
+const isSyncingFromParent = ref(false);
+const hasInitPreview = ref(false);
+
+// 预览调用防抖
+let previewTimer: any = null;
+
+// 实际请求函数
+const updateBackendPreview = async () => {
+    try {
+        const cardPayload = JSON.parse(JSON.stringify(props.cardData || {}));
+        // 注入/覆盖 v2 tts_config，不修改原 props 对象
+        cardPayload.tts_config = tts_config.value;
+        const result = await TtsScriptService.generateFromCard(cardPayload);
+        backendGMNotes.value = result.GMNotes || '';
+        backendLuaScript.value = result.LuaScript || '';
+    } catch (err) {
+        console.warn('TTS 后端预览失败，使用空结果:', err);
+        backendGMNotes.value = '';
+        backendLuaScript.value = '';
+    }
+};
+
+// 防抖调度函数
+const scheduleBackendPreview = () => {
+    if (previewTimer) clearTimeout(previewTimer);
+    previewTimer = setTimeout(() => {
+        updateBackendPreview();
+    }, 250);
+};
 
 // 生成UUID
 const generateUUID = (): string => {
@@ -948,21 +815,28 @@ const onClueTypeChange = () => {
 };
 
 // 脚本配置变化处理
-const onScriptConfigChange = () => {
+const onScriptConfigChange = async () => {
+    // 如果当前是父组件写回引发的同步，不再触发预览与上行事件，避免循环
+    if (isSyncingFromParent.value) return;
+    scheduleBackendPreview();
     nextTick(() => {
         emit('update-tts-script', ttsScriptData.value);
     });
 };
 
 // 阶段按钮配置变化处理
-const onPhaseButtonConfigChange = () => {
+const onPhaseButtonConfigChange = async () => {
+    if (isSyncingFromParent.value) return;
+    scheduleBackendPreview();
     nextTick(() => {
         emit('update-tts-script', ttsScriptData.value);
     });
 };
 
 // 阶段按钮开关变化处理
-const onPhaseButtonToggle = () => {
+const onPhaseButtonToggle = async () => {
+    if (isSyncingFromParent.value) return;
+    scheduleBackendPreview();
     nextTick(() => {
         emit('update-tts-script', ttsScriptData.value);
     });
@@ -992,55 +866,13 @@ const onSignatureCardsSelected = async (selectedItems: any[]) => {
     console.log('📝 选中的签名卡:', selectedItems);
 
     try {
-        // 处理选中的卡牌文件 - 每张卡牌都单独添加
+        // 处理选中的卡牌文件 - 每张卡牌都单独添加（按相对路径保存）
         for (const item of selectedItems) {
-            // 只有卡牌类型才处理
             if (item.type === 'card') {
-                // 尝试从卡牌文件中读取ID，如果失败则使用文件名
-                let cardId = item.name; // 默认使用文件名
-                let cardName = item.name; // 默认使用文件名作为显示名称
-
-                try {
-                    // 读取卡牌文件内容以获取真实的ID
-                    const fileContent = await WorkspaceService.getFileContent(item.fullPath);
-                    const cardData = JSON.parse(fileContent);
-
-                    // 优先使用卡牌名称
-                    if (cardData.name) {
-                        cardName = cardData.name;
-                    }
-
-                    // 从TTS脚本的GMNotes中解析ID
-                    if (cardData.tts_script?.GMNotes) {
-                        try {
-                            const gmNotesData = JSON.parse(cardData.tts_script.GMNotes);
-                            if (gmNotesData.id) {
-                                cardId = gmNotesData.id;
-                                console.log('📖 从GMNotes解析卡牌ID成功:', { path: item.fullPath, id: cardId, name: cardName });
-                            }
-                        } catch (gmNotesError) {
-                            console.warn('解析GMNotes失败，尝试使用根级ID:', gmNotesError);
-                            // 如果GMNotes解析失败，尝试使用根级ID
-                            if (cardData.id) {
-                                cardId = cardData.id;
-                            }
-                        }
-                    } else if (cardData.id) {
-                        // 如果没有GMNotes，使用根级ID
-                        cardId = cardData.id;
-                    }
-
-                    console.log('📖 读取卡牌文件成功:', { path: item.fullPath, id: cardId, name: cardName });
-                } catch (error) {
-                    console.warn('无法读取卡牌文件内容，使用文件名:', error);
-                }
-
-                // 为每张选中的卡牌创建独立的条目
-                signatureConfig.value.push({
-                    id: cardId,
-                    name: cardName,
-                    count: 1
-                });
+                const cardPath: string = item.fullPath; // 相对工作目录路径
+                // 名称：优先文件树中的 name（文件名），不再强依赖读取文件
+                const displayName: string = item.name || cardPath.split('/').pop() || cardPath;
+                signatureConfig.value.push({ path: cardPath, name: displayName, count: 1 });
             }
         }
 
@@ -1142,6 +974,47 @@ const loadFromSavedConfig = (savedConfig: any) => {
     }
 };
 
+// 从 v2 tts_config 加载
+const loadFromTtsConfigV2 = (cfg: any) => {
+    if (!cfg) return;
+    // 基本
+    scriptConfig.value.id = cfg.script_id || scriptConfig.value.id || generateUUID();
+    // 调查员
+    if (cfg.investigator) {
+        investigatorConfig.value = {
+            extraToken: Array.isArray(cfg.investigator.extraToken) ? cfg.investigator.extraToken : [],
+            willpowerIcons: Number(cfg.investigator.willpowerIcons ?? 3),
+            intellectIcons: Number(cfg.investigator.intellectIcons ?? 3),
+            combatIcons: Number(cfg.investigator.combatIcons ?? 2),
+            agilityIcons: Number(cfg.investigator.agilityIcons ?? 2),
+        };
+    }
+    // 阶段按钮
+    enablePhaseButtons.value = !!cfg.enablePhaseButtons;
+    if (cfg.phaseButtonConfig && Array.isArray(cfg.phaseButtonConfig.buttons)) {
+        phaseButtonConfig.value = { buttons: [...cfg.phaseButtonConfig.buttons] };
+    }
+    // 入场标记
+    if (Array.isArray(cfg.entryTokens)) {
+        entryTokensConfig.value = [...cfg.entryTokens];
+    }
+    // 游戏开始位置
+    if (cfg.gameStart) {
+        gameStartConfig.value = {
+            startsInPlay: !!cfg.gameStart.startsInPlay,
+            startsInHand: !!cfg.gameStart.startsInHand,
+        };
+    }
+    // 签名卡
+    if (Array.isArray(cfg.signatures)) {
+        signatureConfig.value = cfg.signatures.map((s: any) => ({
+            path: s.path,
+            name: s.name || (typeof s.path === 'string' ? (s.path.split('/').pop() || s.path) : ''),
+            count: Number(s.count || 1)
+        }));
+    }
+};
+
 // 从旧数据格式兼容加载
 const loadFromLegacyFormat = (ttsScript: any) => {
     console.log('🔄 使用兼容模式加载TTS数据');
@@ -1230,26 +1103,46 @@ watch(
 
 // 监听TTS脚本数据变化，加载配置
 watch(
-    () => props.cardData.tts_script,
-    (newTtsScript) => {
-        console.log('📥 TTS脚本数据变化:', newTtsScript);
-        if (!newTtsScript) {
-            console.log('🧹 没有TTS脚本数据，初始化默认配置');
-            // 当没有TTS脚本数据时，初始化脚本ID
-            if (!scriptConfig.value.id) {
-                scriptConfig.value.id = generateUUID();
-                console.log('✅ 生成默认脚本ID:', scriptConfig.value.id);
-            }
-            return;
+() => props.cardData.tts_script,
+(newTtsScript) => {
+    // 仅用于旧数据向后兼容；若已存在 v2 配置，则忽略
+    if ((props.cardData as any)?.tts_config?.version === 'v2') return;
+    console.log('📥 旧版 TTS 脚本数据变化:', newTtsScript);
+    if (!newTtsScript) {
+        if (!scriptConfig.value.id) {
+            scriptConfig.value.id = generateUUID();
         }
-        if (newTtsScript.config) {
-            loadFromSavedConfig(newTtsScript.config);
-        } else {
-            loadFromLegacyFormat(newTtsScript);
+        return;
+    }
+    if (newTtsScript.config) {
+        loadFromSavedConfig(newTtsScript.config);
+    } else {
+        loadFromLegacyFormat(newTtsScript);
+    }
+    nextTick(() => {
+        onScriptConfigChange();
+    });
+},
+    { immediate: true }
+);
+
+// 监听 v2 tts_config
+watch(
+    () => (props.cardData as any)?.tts_config,
+    (cfg) => {
+        if (cfg?.version === 'v2') {
+            console.log('📥 加载 v2 tts_config');
+            isSyncingFromParent.value = true;
+            loadFromTtsConfigV2(cfg);
+            // 避免触发再次 emit 导致循环，仅在首次加载时进行一次预览
+            nextTick(async () => {
+                isSyncingFromParent.value = false;
+                if (!hasInitPreview.value) {
+                    hasInitPreview.value = true;
+                    await updateBackendPreview();
+                }
+            });
         }
-        nextTick(() => {
-            onScriptConfigChange();
-        });
     },
     { immediate: true }
 );
@@ -1263,7 +1156,7 @@ if (shouldShowTtsScript.value) {
             scriptConfig.value.id = generateUUID();
             console.log('✅ 初始化时生成默认脚本ID:', scriptConfig.value.id);
         }
-        onScriptConfigChange();
+        // 不在此处主动触发 onScriptConfigChange，首帧预览交由 tts_config / tts_script 的 watcher 负责
     });
 }
 </script>

@@ -18,6 +18,7 @@ export * from './arkhamdb-service'; // ArkhamDB导入服务
 export { default as DirectoryService } from './directory-service';
 export { default as WorkspaceService } from './workspace-service';
 export { default as CardService } from './card-service';
+export { default as TtsScriptService } from './tts-script-service';
 export { default as ConfigService } from './config-service';
 export { default as httpClient } from './http-client';
 export { default as TtsExportService } from './tts-export-service';

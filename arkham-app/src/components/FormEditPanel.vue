@@ -979,21 +979,15 @@ const updateTtsScript = (ttsData: { GMNotes: string; LuaScript: string; config?:
     // 防止循环更新
     if (saving.value) return;
 
-    // 更新currentCardData中的tts_script字段
-    if (!currentCardData.tts_script) {
-        currentCardData.tts_script = {};
-    }
-
-    currentCardData.tts_script.GMNotes = ttsData.GMNotes;
-    currentCardData.tts_script.LuaScript = ttsData.LuaScript;
-
-    // 新增：保存config配置
+    // v2：仅保存统一配置到顶层 tts_config；不再写入旧版 tts_script 字段
     if (ttsData.config) {
-        currentCardData.tts_script.config = ttsData.config;
+        currentCardData.tts_config = {
+            version: 'v2',
+            ...(ttsData.config as any),
+        };
     }
-
-    // 如果所有字段都为空，则删除tts_script字段
-    if (!ttsData.GMNotes && !ttsData.LuaScript && !ttsData.config) {
+    // 清理冗余旧数据
+    if ('tts_script' in currentCardData) {
         delete currentCardData.tts_script;
     }
 
@@ -1265,28 +1259,17 @@ const saveCard = async () => {
         // 生成卡片并检查box_position
         const result_card = await CardService.generateCard(currentCardData as CardData);
 
-        // 检查是否为定制卡且有box_position参数
+        // 检查是否为定制卡且有box_position参数 → 将坐标保存到 tts_config，由后端统一生成 Lua
         if (currentCardData.type === '定制卡' && result_card?.box_position && result_card.box_position.length > 0) {
-            console.log('🎯 定制卡检测到box_position，生成Lua脚本:', result_card.box_position);
-
-            try {
-                // 生成定制卡的Lua脚本
-                const luaScript = generateUpgradePowerWordScript(result_card.box_position);
-
-                // 更新TTS脚本数据
-                if (!currentCardData.tts_script) {
-                    currentCardData.tts_script = {};
-                }
-
-                // 保存生成的Lua脚本
-                currentCardData.tts_script.LuaScript = luaScript;
-
-                console.log('✅ 定制卡Lua脚本生成成功');
-                // message.success(t('cardEditor.panel.customCardLuaGenerated'));
-            } catch (error) {
-                console.error('❌ 生成定制卡Lua脚本失败:', error);
-                message.warning(`生成定制卡脚本失败: ${error.message || '未知错误'}`);
-            }
+            console.log('🎯 定制卡检测到 box_position，保存到 tts_config:', result_card.box_position);
+            (currentCardData as any).tts_config = {
+                ...((currentCardData as any).tts_config || {}),
+                version: 'v2',
+                upgrade: {
+                    coordinates: result_card.box_position,
+                },
+            };
+            if ('tts_script' in (currentCardData as any)) delete (currentCardData as any).tts_script;
         }
 
         // 在保存前计算并写入内容哈希（排除 content_hash 自身）

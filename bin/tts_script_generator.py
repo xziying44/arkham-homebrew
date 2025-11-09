@@ -1,0 +1,479 @@
+import json
+import re
+import uuid
+import os
+from typing import Any, Dict, List, Optional
+
+
+class TtsScriptGenerator:
+    """Generate GMNotes and LuaScript for a card based on card_data and tts_config.
+
+    Rules:
+    - Use card_data.tts_config when present; if tts_config.version == 'v2', ignore legacy fields
+      like card_data.tts_script and ad-hoc uses parsing.
+    - GMNotes are generated for all card types using unified mapping.
+    - LuaScript is generated only for Investigators when explicitly enabled.
+    """
+
+    _class_mapping = {
+        "守护者": "Guardian",
+        "探求者": "Seeker",
+        "流浪者": "Rogue",
+        "潜修者": "Mystic",
+        "生存者": "Survivor",
+        "中立": "Neutral",
+    }
+
+    _type_mapping = {
+        "调查员": "Investigator",
+        "支援卡": "Asset",
+        "事件卡": "Event",
+        "地点卡": "Location",
+        # extended types
+        "技能卡": "Skill",
+        "调查员背面": "InvestigatorBack",
+        "定制卡": "Custom",
+        "故事卡": "Story",
+        "诡计卡": "Treachery",
+        "敌人卡": "Enemy",
+        "密谋卡": "Agenda",
+        "密谋卡-大画": "Agenda",
+        "场景卡": "Act",
+        "场景卡-大画": "Act",
+        "冒险参考卡": "AgendaReference",
+        "玩家卡背": "PlayerCardBack",
+        "遭遇卡背": "EncounterCardBack",
+    }
+
+    _location_icon_mapping = {
+        "绿菱": "GreenDiamond",
+        "暗红漏斗": "DarkRedCrescent",
+        "橙心": "OrangeHeart",
+        "浅褐水滴": "LightBrownDroplet",
+        "深紫星": "DeepPurpleStar",
+        "深绿斜二": "DeepGreenSquare",
+        "深蓝T": "DeepBlueHourglass",
+        "紫月": "PurpleMoon",
+        "红十": "RedCross",
+        "红方": "RedSquare",
+        "蓝三角": "BlueTriangle",
+        "褐扭": "BrownSpiral",
+        "青花": "BlueFlower",
+        "黄圆": "YellowCircle",
+    }
+
+    def __init__(self, workspace_manager=None):
+        self.workspace_manager = workspace_manager
+
+    def _uuid8(self) -> str:
+        return uuid.uuid4().hex[:8].upper()
+
+    def _map_type(self, card_type: str) -> str:
+        return self._type_mapping.get(card_type, self._type_mapping.get("支援卡", "Asset"))
+
+    def _map_class(self, value: Optional[str]) -> Optional[str]:
+        if not value:
+            return None
+        return self._class_mapping.get(value, value)
+
+    def _map_icon(self, value: Optional[str]) -> Optional[str]:
+        if not value:
+            return None
+        return self._location_icon_mapping.get(value, value)
+
+    def _join_traits(self, traits: Any) -> Optional[str]:
+        if isinstance(traits, list) and traits:
+            return ".".join(traits) + "."
+        return None
+
+    def _parse_clues(self, clues: Any) -> Optional[Dict[str, Any]]:
+        """Parse clues string like '1<调查员>' or '4' into a uses entry.
+        Returns a dict: { count | countPerInvestigator, type: 'Clue', token: 'clue' }
+        """
+        if not isinstance(clues, str) or not clues:
+            return None
+        m = re.match(r"^(\d+)(<调查员>)?$", clues)
+        if not m:
+            return None
+        count = int(m.group(1))
+        per_investigator = bool(m.group(2))
+        entry: Dict[str, Any] = {
+            "type": "Clue",
+            "token": "clue",
+        }
+        if per_investigator:
+            entry["countPerInvestigator"] = count
+        else:
+            entry["count"] = count
+        return entry
+
+    def _ensure_script_id(self, card: Dict[str, Any]) -> str:
+        tts_config = card.get("tts_config") or {}
+        script_id = tts_config.get("script_id")
+        if script_id and isinstance(script_id, str):
+            return script_id
+        # fallback to stable from card id if exists
+        base = str(card.get("id", ""))
+        if base:
+            sid = base.replace("-", "").upper()
+            if len(sid) >= 8:
+                return sid[:8]
+        return self._uuid8()
+
+    def _aggregate_signatures_by_id(self, signatures: List[Dict[str, Any]]) -> List[Dict[str, int]]:
+        agg: Dict[str, int] = {}
+        for item in signatures or []:
+            cid = str(item.get("id", "")).strip()
+            count = int(item.get("count", 0) or 0)
+            if not cid or count <= 0:
+                continue
+            agg[cid] = agg.get(cid, 0) + count
+        return [agg] if agg else []
+
+    def _read_card_json_by_path(self, rel_path: str) -> Optional[Dict[str, Any]]:
+        wm = self.workspace_manager
+        if not wm or not isinstance(rel_path, str) or not rel_path:
+            return None
+        try:
+            # best-effort resolve absolute path
+            abs_path = None
+            if hasattr(wm, '_get_absolute_path'):
+                abs_path = wm._get_absolute_path(rel_path)
+            else:
+                # Fallback: join with workspace_path if available
+                base = getattr(wm, 'workspace_path', None)
+                if base:
+                    abs_path = os.path.join(base, rel_path)
+            if not abs_path or not os.path.exists(abs_path):
+                return None
+            with open(abs_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            return None
+
+    def _extract_script_id_from_card_json(self, card_json: Dict[str, Any]) -> Optional[str]:
+        # Prefer v2
+        tcfg = card_json.get('tts_config') or {}
+        sid = tcfg.get('script_id')
+        if isinstance(sid, str) and sid:
+            return sid
+        # Try GMNotes
+        tts_script = card_json.get('tts_script') or {}
+        gm = tts_script.get('GMNotes')
+        if isinstance(gm, str) and gm:
+            try:
+                gmj = json.loads(gm)
+                if isinstance(gmj, dict) and gmj.get('id'):
+                    return str(gmj.get('id'))
+            except Exception:
+                pass
+        # Try card id
+        raw = str(card_json.get('id', '')).replace('-', '').upper()
+        if raw:
+            return raw[:8] if len(raw) >= 8 else raw
+        return None
+
+    def _aggregate_signatures_from_paths(self, signatures: List[Dict[str, Any]]) -> List[Dict[str, int]]:
+        agg: Dict[str, int] = {}
+        for item in signatures or []:
+            rel_path = str(item.get('path', '')).strip()
+            count = int(item.get('count', 0) or 0)
+            if not rel_path or count <= 0:
+                continue
+            card_json = self._read_card_json_by_path(rel_path)
+            if not card_json:
+                continue  # skip non-existing files
+            sid = self._extract_script_id_from_card_json(card_json)
+            if not sid:
+                # fallback to uuid8 for this card instance if cannot derive stable id
+                sid = self._uuid8()
+            agg[sid] = agg.get(sid, 0) + count
+        return [agg] if agg else []
+
+    def _compose_uses(self, card: Dict[str, Any], tts_config: Dict[str, Any], is_location: bool,
+                       current_side: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        uses: List[Dict[str, Any]] = []
+        version = (tts_config.get("version") or "").lower()
+
+        # Location-specific: clues from current side
+        if is_location and current_side is not None:
+            clue_entry = self._parse_clues(current_side.get("clues"))
+            if clue_entry and (current_side.get("location_type") == "已揭示"):
+                uses.append(clue_entry)
+
+        # Entry tokens (v2)
+        entry_tokens = tts_config.get("entryTokens")
+        if isinstance(entry_tokens, list):
+            uses.extend([et for et in entry_tokens if isinstance(et, dict)])
+        elif version != "v2":
+            # legacy fallback: from top-level uses
+            legacy_uses = card.get("uses")
+            if isinstance(legacy_uses, list):
+                uses.extend([u for u in legacy_uses if isinstance(u, dict)])
+        return uses
+
+    # ---------------- GMNotes ----------------
+    def generate_gmnotes(self, card: Dict[str, Any]) -> str:
+        card_type = str(card.get("type", "")).strip()
+        tts_config = card.get("tts_config") or {}
+        script_id = self._ensure_script_id(card)
+
+        # base fields common for all
+        current = card
+        mapped_type = self._map_type(card_type)
+        base_data: Dict[str, Any] = {
+            "id": script_id,
+            "type": mapped_type,
+        }
+        if current.get("name"):
+            base_data["name"] = current["name"]
+        traits_joined = self._join_traits(current.get("traits"))
+        if traits_joined:
+            base_data["traits"] = traits_joined
+        mapped_class = self._map_class(current.get("class"))
+        if mapped_class:
+            base_data["class"] = mapped_class
+        for key in ("level", "cost", "victory"):
+            if key in current and current.get(key) is not None:
+                base_data[key] = current.get(key)
+
+        # Game start flags
+        game_start = tts_config.get("gameStart") or {}
+        if game_start.get("startsInPlay"):
+            base_data["startsInPlay"] = True
+        if game_start.get("startsInHand"):
+            base_data["startsInHand"] = True
+
+        # Unified entry tokens for non-location cards
+        if mapped_type != "Location":
+            uses = self._compose_uses(card, tts_config, is_location=False)
+            if uses:
+                base_data["uses"] = uses
+
+        gm: Dict[str, Any] = {}
+
+        # Advanced types
+        if mapped_type == "Investigator":
+            inv = tts_config.get("investigator") or {}
+            gm = {
+                **base_data,
+                "type": "Investigator",
+                "willpowerIcons": int(inv.get("willpowerIcons", 3)),
+                "intellectIcons": int(inv.get("intellectIcons", 3)),
+                "combatIcons": int(inv.get("combatIcons", 2)),
+                "agilityIcons": int(inv.get("agilityIcons", 2)),
+                "extraToken": "|".join(inv.get("extraToken", [])) if inv.get("extraToken") else "None",
+            }
+            # v2: signatures use file relative paths; convert to ID map for GMNotes
+            sig_entries = tts_config.get("signatures") or []
+            if sig_entries and isinstance(sig_entries, list):
+                # accept both legacy id-form and new path-form
+                if sig_entries and 'path' in sig_entries[0]:
+                    sigs = self._aggregate_signatures_from_paths(sig_entries)
+                else:
+                    sigs = self._aggregate_signatures_by_id(sig_entries)
+            else:
+                sigs = []
+            if sigs:
+                gm["signatures"] = sigs
+
+        elif mapped_type in ("Asset", "Event"):
+            gm = {
+                **base_data,
+            }
+            # Pass through some fields if exist on card
+            for k in ("slot", "willpowerIcons", "intellectIcons", "combatIcons", "agilityIcons"):
+                if card.get(k) is not None:
+                    gm[k] = card.get(k)
+
+        elif mapped_type == "Location":
+            # Build location data for front/back
+            def make_location(side: Dict[str, Any]) -> Dict[str, Any]:
+                loc: Dict[str, Any] = {
+                    "icons": self._map_icon(side.get("location_icon")) or side.get("location_icon") or "Diamond",
+                    "connections": "|".join([
+                        self._map_icon(x) or x for x in (side.get("location_link") or [])
+                    ]),
+                }
+                if side.get("victory") is not None:
+                    loc["victory"] = side.get("victory")
+                uses = self._compose_uses(card, tts_config, is_location=True, current_side=side)
+                if uses:
+                    loc["uses"] = uses
+                return loc
+
+            front = card
+            back = card.get("back") if isinstance(card.get("back"), dict) else None
+            front_is_loc = front.get("type") == "地点卡"
+            back_is_loc = bool(back and back.get("type") == "地点卡")
+
+            gm = {
+                "id": script_id,
+                "type": "Location",
+                "traits": self._join_traits(front.get("traits")) or "",
+            }
+            if front_is_loc:
+                gm["locationFront"] = make_location(front)
+            if back_is_loc:
+                gm["locationBack"] = make_location(back)
+            if not (front_is_loc or back_is_loc):
+                # single-face location-ish fallback
+                gm = {**base_data, "location": make_location(front)}
+
+        else:
+            gm = base_data
+
+        try:
+            return json.dumps(gm, ensure_ascii=False, indent=2)
+        except Exception:
+            return "// JSON generation failed"
+
+    # ---------------- LuaScript ----------------
+    def _generate_button_params(self, config: Dict[str, Any]) -> str:
+        buttons = config.get("buttons") or []
+        labels = ", ".join([f'"{btn.get("label", "w")}"' for btn in buttons])
+        ids = ", ".join([f'"{btn.get("id", f"Button{i+1}")}"' for i, btn in enumerate(buttons)])
+        colors = ",\n    ".join([f'"{btn.get("color", "#ffffff")}"' for btn in buttons])
+        return (
+            "local buttonParams      = {\n"
+            f"  buttonLabels = {{ {labels} }}, -- reaction symbols\n"
+            f"  buttonIds    = {{ {ids} }},\n"
+            "  buttonColors = {\n"
+            f"    {colors}\n"
+            "  }\n"
+            "}"
+        )
+
+    def _lua_base_script(self) -> str:
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        template_path = os.path.join(base_dir, 'templates', 'phase_buttons.lua')
+        with open(template_path, 'r', encoding='utf-8') as f:
+            return f.read()
+
+    def generate_lua(self, card: Dict[str, Any]) -> str:
+        card_type = str(card.get("type", "")).strip()
+        tts_config = card.get("tts_config") or {}
+
+        # 优先：升级表自定义脚本（Power Word 等）
+        upgrade = tts_config.get("upgrade") or {}
+        coords = upgrade.get("coordinates")
+        if isinstance(coords, list) and coords:
+            return self._generate_upgrade_lua(coords)
+
+        # 其次：调查员阶段按钮脚本
+        if self._map_type(card_type) != "Investigator":
+            return ""
+        if not tts_config.get("enablePhaseButtons"):
+            return ""
+        config = tts_config.get("phaseButtonConfig") or {}
+        buttons = config.get("buttons") or []
+        if not buttons:
+            buttons = [
+                {"id": "Mythos", "label": "u", "color": "#ffffff"},
+                {"id": "Investigation", "label": "u", "color": "#ff7800"},
+                {"id": "Enemy", "label": "u", "color": "#e011ff"},
+                {"id": "Upkeep", "label": "u", "color": "#ffe400"},
+            ]
+            config = {"buttons": buttons}
+
+        base = self._lua_base_script()
+        button_params = self._generate_button_params(config)
+        button_id_index_map = ",\n".join([f"  {btn.get('id')} = {i+1}" for i, btn in enumerate(buttons)])
+        script = base.replace("-- BUTTON_PARAMS_PLACEHOLDER --", button_params)
+        script = script.replace("<!-- BUTTON_ID_INDEX_PLACEHOLDER -->", button_id_index_map)
+        script = script.replace("<!-- BUTTON_COUNT -->", str(len(buttons)))
+        return script
+
+    def _upgrade_base_script(self) -> str:
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        template_path = os.path.join(base_dir, 'templates', 'upgrade_sheet.lua')
+        with open(template_path, 'r', encoding='utf-8') as f:
+            return f.read()
+
+    def _generate_upgrade_lua(self, coordinates: List[List[float]]) -> str:
+        # 1) 按 y 分组并排序
+        row_map: Dict[float, List[float]] = {}
+        for pt in coordinates:
+            if not isinstance(pt, (list, tuple)) or len(pt) < 2:
+                continue
+            x, y = float(pt[0]), float(pt[1])
+            row_map.setdefault(y, []).append(x)
+        sorted_rows = sorted([(y, sorted(xs)) for y, xs in row_map.items()], key=lambda t: t[0])
+        if not sorted_rows:
+            return ""
+
+        # 2) 计算变换参数（参考前端 CALIBRATION_DATA）
+        # 参考像素坐标
+        ref_px1 = (68.0, 206.0)
+        ref_px2 = (89.0, 580.0)
+        # 参考逻辑坐标
+        ref_lx1, ref_lz1 = (-0.933 + 1 * 0.069, -0.905)  # (-0.864, -0.905)
+        ref_lx2, ref_lz2 = (-0.933 + 2 * 0.069, 0.18)    # (-0.795, 0.18)
+
+        scale_x = (ref_px2[0] - ref_px1[0]) / (ref_lx2 - ref_lx1)
+        scale_y = (ref_px2[1] - ref_px1[1]) / (ref_lz2 - ref_lz1)
+        offset_x = ref_px1[0] - scale_x * ref_lx1
+        offset_y = ref_px1[1] - scale_y * ref_lz1
+
+        # 3) 计算 xOffset（像素间距→逻辑间距）
+        pixel_x_offset = 40.0
+        for _, xs in sorted_rows:
+            if len(xs) > 1:
+                pixel_x_offset = xs[1] - xs[0]
+                break
+        logic_x_offset = pixel_x_offset / 350.287211740
+
+        # 4) 计算 xInitial
+        first_pixel_x = sorted_rows[0][1][0]
+        first_logic_x = (first_pixel_x - offset_x) / scale_x
+        x_initial = first_logic_x - logic_x_offset
+
+        # 5) 生成 customizations 表
+        def pos_z(y_pixel: float) -> float:
+            return (y_pixel - offset_y) / scale_y
+
+        custom_rows: List[str] = []
+        for idx, (y, xs) in enumerate(sorted_rows, start=1):
+            count = len(xs)
+            pz = pos_z(y)
+            entry = (
+                f"  [{idx}] = {{\n"
+                f"    checkboxes = {{\n"
+                f"      posZ = {pz:.4f},\n"
+                f"      count = {count},\n"
+                f"    }}\n"
+                f"  }}"
+            )
+            custom_rows.append(entry)
+        customizations = "customizations = {\n" + ",\n".join(custom_rows) + "\n}"
+
+        # 6) 替换模板占位符
+        base = self._upgrade_base_script()
+        script = base
+        # Prefer replacing TS-style template placeholders first (keeps template identical to frontend)
+        script = script.replace("${xInitial.toFixed(4)}", f"{x_initial:.4f}")
+        script = script.replace("${xOffset.toFixed(4)}", f"{logic_x_offset:.4f}")
+        script = script.replace("${customizations}", customizations)
+        # Fallback to internal placeholders if present
+        script = script.replace("<!-- X_INITIAL -->", f"{x_initial:.4f}")
+        script = script.replace("<!-- X_OFFSET -->", f"{logic_x_offset:.4f}")
+        script = script.replace("-- CUSTOMIZATIONS_PLACEHOLDER --", customizations)
+        return script
+
+    def generate(self, card_data: Dict[str, Any]) -> Dict[str, str]:
+        """Unified entry for TTS script generation.
+        - If tts_config.version != 'v2': return legacy fields from card_data.tts_script directly.
+        - Else generate from v2 config.
+        """
+        tts_config = card_data.get("tts_config") or {}
+        version = str(tts_config.get("version", "")).lower()
+        if version != "v2":
+            legacy = card_data.get("tts_script") or {}
+            return {
+                "GMNotes": legacy.get("GMNotes", ""),
+                "LuaScript": legacy.get("LuaScript", ""),
+            }
+
+        gm = self.generate_gmnotes(card_data)
+        lua = self.generate_lua(card_data)
+        return {"GMNotes": gm, "LuaScript": lua}

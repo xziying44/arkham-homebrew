@@ -8,6 +8,7 @@ from datetime import datetime
 from bin.card2arkhamdb import Card2ArkhamDBConverter
 from bin import card_numbering
 from bin.pnp_exporter import PNPExporter
+from bin.tts_script_generator import TtsScriptGenerator
 
 
 class ContentPackageManager:
@@ -24,6 +25,7 @@ class ContentPackageManager:
         self.content_package = content_package_data
         self.workspace_manager = workspace_manager
         self.logs = []  # 日志记录
+        self.tts_generator = TtsScriptGenerator(workspace_manager=self.workspace_manager)
 
         # 卡牌类型标签映射
         self.card_type_tags = {
@@ -253,11 +255,15 @@ class ContentPackageManager:
                 "Type": 0
             }
 
-            # 读取原始卡牌对象中的LuaScript和GMNotes信息
-            tts_script = card_data.get("tts_script", {})
-            if tts_script:
-                template["LuaScript"] = tts_script.get("LuaScript", "")
-                template["GMNotes"] = tts_script.get("GMNotes", "")
+            # 统一使用后端生成器实时生成 GMNotes 与 LuaScript（忽略旧的 tts_script 字段）
+            try:
+                result = self.tts_generator.generate(card_data)
+                template["GMNotes"] = result.get("GMNotes", "")
+                lua_script = result.get("LuaScript", "")
+                if lua_script:
+                    template["LuaScript"] = lua_script
+            except Exception as gen_err:
+                self._add_log(f"生成TTS脚本失败: {gen_err}")
 
             return template
 

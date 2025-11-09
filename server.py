@@ -18,6 +18,7 @@ from bin.file_manager import QuickStart
 from bin.gitHub_image import GitHubImageHost
 from bin.logger import logger_manager
 from bin.workspace_manager import WorkspaceManager, ScanProgressTracker
+from bin.tts_script_generator import TtsScriptGenerator
 from bin.image_uploader import create_uploader
 
 mimetypes.init()
@@ -1670,6 +1671,33 @@ def export_tts():
             code=11004,
             msg="TTS物品导出失败"
         )), 500
+
+    
+@app.route('/api/tts/generate', methods=['POST'])
+@handle_api_error
+def generate_tts_scripts():
+    """根据 card_data 生成 GMNotes 与 LuaScript（后端权威生成）"""
+    data = request.get_json() or {}
+    card_data = data.get('card_data')
+    if not isinstance(card_data, dict):
+        return jsonify(create_response(
+            code=11010,
+            msg="请求体缺少 card_data 或格式错误"
+        )), 400
+
+    # 需要工作空间用于解析签名卡路径
+    if current_workspace is None:
+        return jsonify(create_response(
+            code=3001,
+            msg="请先选择或打开工作目录"
+        )), 400
+
+    generator = TtsScriptGenerator(workspace_manager=current_workspace)
+    result = generator.generate(card_data)
+    return jsonify(create_response(
+        msg="TTS脚本生成成功",
+        data=result
+    ))
 
 
 @app.route('/api/content-package/export-tts', methods=['POST'])
