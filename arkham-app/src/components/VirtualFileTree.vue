@@ -59,6 +59,7 @@ const emit = defineEmits<{
 const nodeHeight = computed(() => props.nodeHeight ?? 32)
 // Visible rows: computed from available height of the file-tree-content area
 const remain = ref(12)
+const overscanRows = 6
 const host = ref<HTMLDivElement | null>(null)
 let ro: ResizeObserver | null = null
 
@@ -75,7 +76,14 @@ const updateRemain = () => {
   const toolbarMB = toolbarEl ? px(getComputedStyle(toolbarEl).marginBottom) : 0
   const avail = Math.max(0, contentRect.height - (toolbarRect?.height || 0) - toolbarMB)
   const rows = Math.max(1, Math.ceil(avail / nodeHeight.value))
-  remain.value = rows
+  remain.value = rows + overscanRows
+}
+
+// 使用 rAF 节流尺寸更新，避免连续布局
+let roRaf: number | null = null
+const scheduleUpdateRemain = () => {
+  if (roRaf != null) return
+  roRaf = requestAnimationFrame(() => { roRaf = null; updateRemain() })
 }
 
 onMounted(async () => {
@@ -83,12 +91,12 @@ onMounted(async () => {
   updateRemain()
   // Watch container size changes
   try {
-    ro = new ResizeObserver(() => updateRemain())
+    ro = new ResizeObserver(() => scheduleUpdateRemain())
     const target = host.value?.closest('.file-tree-pane') as Element | undefined
     if (target) ro.observe(target)
   } catch {
     // fallback to window resize
-    window.addEventListener('resize', updateRemain)
+    window.addEventListener('resize', scheduleUpdateRemain)
   }
 })
 
@@ -97,25 +105,29 @@ onBeforeUnmount(() => {
     try { ro.disconnect() } catch {}
     ro = null
   }
-  window.removeEventListener('resize', updateRemain)
+  window.removeEventListener('resize', scheduleUpdateRemain)
 })
 
 // Map of nodeKey -> original option for event/render mapping
 const nodeMap = new Map<Key, TreeOption>()
+// Cache VirtualTree nodes by key to reduce allocations
+const vvtCache = new Map<Key, VvtNode>()
 
 const toVvtTree = (nodes: TreeOption[], parentKey: Key | null = null): VvtNode[] => {
   const result: VvtNode[] = []
   for (const n of nodes || []) {
     nodeMap.set(n.key, n)
-    const v: VvtNode = {
-      nodeKey: n.key,
-      name: String(n.label ?? ''),
-      hasChildren: Array.isArray(n.children) && n.children.length > 0,
-      parentKey
-    }
+    const cached = vvtCache.get(n.key)
+    const v: VvtNode = cached || { nodeKey: n.key, name: '', hasChildren: false, parentKey: null }
+    v.name = String(n.label ?? '')
+    v.hasChildren = Array.isArray(n.children) && n.children.length > 0
+    v.parentKey = parentKey
     if (n.children && n.children.length) {
       v.children = toVvtTree(n.children, n.key)
+    } else {
+      if (v.children) delete v.children
     }
+    if (!cached) vvtCache.set(n.key, v)
     result.push(v)
   }
   return result

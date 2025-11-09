@@ -589,7 +589,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, h, onMounted, computed, nextTick, onUnmounted, watch } from 'vue';
+import { ref, h, onMounted, computed, nextTick, onUnmounted, watch, markRaw } from 'vue';
 import VirtualFileTree from './VirtualFileTree.vue';
 import { NIcon, useMessage, NText, NTag } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
@@ -641,6 +641,37 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 const message = useMessage();
+
+// ---------- 渲染常量：图标映射与样式（外提 + markRaw，避免重复分配） ----------
+const ICON_STYLE = markRaw({ marginRight: '6px' });
+const BASE_ICON_MAP = markRaw({
+  'workspace': { component: LayersOutline, color: '#667eea' },
+  'directory': { component: FolderOpenOutline, color: '#ffa726' },
+  'image': { component: ImageOutline, color: '#66bb6a' },
+  'config': { component: GridOutline, color: '#ff7043' },
+  'data': { component: GridOutline, color: '#ff7043' },
+  'style': { component: SettingsOutline, color: '#ec407a' },
+  'text': { component: DocumentOutline, color: '#8d6e63' },
+  'file': { component: DocumentOutline, color: '#90a4ae' },
+  'default': { component: DocumentOutline, color: '#90a4ae' }
+} as const);
+const CARD_TYPE_ICON_MAP = markRaw({
+  '支援卡': { component: DocumentOutline, emoji: '📦' },
+  '事件卡': { component: DocumentOutline, emoji: '⚡' },
+  '技能卡': { component: DocumentOutline, emoji: '🎯' },
+  '调查员': { component: DocumentOutline, emoji: '👤' },
+  '调查员背面': { component: DocumentOutline, emoji: '🔄' },
+  '定制卡': { component: DocumentOutline, emoji: '🎨' },
+  '故事卡': { component: DocumentOutline, emoji: '📖' },
+  '诡计卡': { component: DocumentOutline, emoji: '🎭' },
+  '敌人卡': { component: DocumentOutline, emoji: '👹' },
+  '地点卡': { component: DocumentOutline, emoji: '📍' },
+  '密谋卡': { component: DocumentOutline, emoji: '🌙' },
+  '密谋卡-大画': { component: DocumentOutline, emoji: '🌕' },
+  '场景卡': { component: DocumentOutline, emoji: '🎬' },
+  '场景卡-大画': { component: DocumentOutline, emoji: '🎞️' },
+  '冒险参考卡': { component: DocumentOutline, emoji: '📋' }
+} as const);
 
 // 获取CPU核心数
 const cpuCores = ref(navigator.hardwareConcurrency || 4);
@@ -1251,9 +1282,11 @@ const pruneTemporaryWorkspaceItems = () => {
   }
 };
 
+// 使用 Set 加速 membership 判断
+const bookmarkedSet = computed(() => new Set(bookmarkedPaths.value));
 const isPathBookmarked = (path?: string) => {
   if (!path) return false;
-  return bookmarkedPaths.value.includes(path);
+  return bookmarkedSet.value.has(path);
 };
 
 const addBookmark = (option: TreeOption | null) => {
@@ -1346,34 +1379,36 @@ const computeBookmarkExpandedKeys = () => {
 const displayedTreeData = computed(() => {
   if (!showOnlyBookmarks.value) return fileTreeData.value;
 
-  // 过滤树:仅保留包含书签卡牌的分支
+  // 过滤树:仅保留包含书签卡牌的分支（尽量复用原节点，必要时才浅克隆）
   const filterTree = (nodes: TreeOption[]): TreeOption[] => {
-    const result: TreeOption[] = [];
-
+    const result: TreeOption[] = []
     for (const node of nodes) {
-      const nextChildren = node.children ? filterTree(node.children) : [];
-      const currentBookmarked = node.type === 'card' && typeof node.path === 'string' && isPathBookmarked(node.path);
+      const nextChildren = node.children ? filterTree(node.children) : []
+      const currentBookmarked = node.type === 'card' && typeof node.path === 'string' && isPathBookmarked(node.path)
 
-      if (node.type === 'workspace' && nextChildren.length === 0) {
-        continue;
-      }
+      if (node.type === 'workspace' && nextChildren.length === 0) continue
 
       if (currentBookmarked || nextChildren.length > 0 || node.type === 'workspace') {
-        const cloned: TreeOption = { ...node };
-        if (nextChildren.length > 0) {
-          cloned.children = nextChildren;
-        } else {
-          delete (cloned as any).children;
+        // 尝试复用原节点：当 children 引用未改变时直接复用
+        if (nextChildren.length > 0 && node.children && node.children.length === nextChildren.length) {
+          let same = true
+          for (let i = 0; i < nextChildren.length; i++) {
+            if (node.children[i] !== nextChildren[i]) { same = false; break }
+          }
+          if (same) { result.push(node); continue }
         }
-        result.push(cloned);
+        // 需要调整 children：浅克隆并写入/删除 children
+        const cloned: TreeOption = { ...node }
+        if (nextChildren.length > 0) cloned.children = nextChildren
+        else delete (cloned as any).children
+        result.push(cloned)
       }
     }
+    return result
+  }
 
-    return result;
-  };
-
-  return filterTree(fileTreeData.value);
-});
+  return filterTree(fileTreeData.value)
+})
 
 // 文件树操作辅助函数
 const findNodeByPath = (nodes: TreeOption[], path: string): TreeOption | null => {
@@ -1890,7 +1925,7 @@ const renderTreeLabel = ({ option }: { option: TreeOption }) => {
 
 // 渲染树节点前缀图标
 const renderTreePrefix = ({ option }: { option: TreeOption }) => {
-  const iconStyle = { marginRight: '6px' };
+  const iconStyle = ICON_STYLE as Record<string, string>;
   const extOption = option as ExtendedTreeOption;
 
   // EP-003: 渐进式加载状态图标
@@ -1911,37 +1946,9 @@ const renderTreePrefix = ({ option }: { option: TreeOption }) => {
     });
   }
 
-  // 基础文件类型图标映射
-  const baseIconMap = {
-    'workspace': { component: LayersOutline, color: '#667eea' },
-    'directory': { component: FolderOpenOutline, color: '#ffa726' },
-    'image': { component: ImageOutline, color: '#66bb6a' },
-    'config': { component: GridOutline, color: '#ff7043' },
-    'data': { component: GridOutline, color: '#ff7043' },
-    'style': { component: SettingsOutline, color: '#ec407a' },
-    'text': { component: DocumentOutline, color: '#8d6e63' },
-    'file': { component: DocumentOutline, color: '#90a4ae' },
-    'default': { component: DocumentOutline, color: '#90a4ae' }
-  };
-
-  // 卡牌类型图标映射
-  const cardTypeIconMap = {
-    '支援卡': { component: DocumentOutline, emoji: '📦' },
-    '事件卡': { component: DocumentOutline, emoji: '⚡' },
-    '技能卡': { component: DocumentOutline, emoji: '🎯' },
-    '调查员': { component: DocumentOutline, emoji: '👤' },
-    '调查员背面': { component: DocumentOutline, emoji: '🔄' },
-    '定制卡': { component: DocumentOutline, emoji: '🎨' },
-    '故事卡': { component: DocumentOutline, emoji: '📖' },
-    '诡计卡': { component: DocumentOutline, emoji: '🎭' },
-    '敌人卡': { component: DocumentOutline, emoji: '👹' },
-    '地点卡': { component: DocumentOutline, emoji: '📍' },
-    '密谋卡': { component: DocumentOutline, emoji: '🌙' },
-    '密谋卡-大画': { component: DocumentOutline, emoji: '🌕' },
-    '场景卡': { component: DocumentOutline, emoji: '🎬' },
-    '场景卡-大画': { component: DocumentOutline, emoji: '🎞️' },
-    '冒险参考卡': { component: DocumentOutline, emoji: '📋' }
-  };
+  // 基础图标与卡牌图标映射（外提常量）
+  const baseIconMap = BASE_ICON_MAP as any;
+  const cardTypeIconMap = CARD_TYPE_ICON_MAP as any;
 
   // 如果是卡牌类型且有card_type属性
   if (option.type === 'card' && (option as ExtendedTreeOption).card_type) {
@@ -2027,10 +2034,20 @@ const handleFileSelect = (keys: Array<string | number>, options: TreeOption[]) =
 };
 
 // 处理展开状态变化
+// 展开 keys 的 rAF 合批，减少同帧多次更新引发的多次计算
+let expandedKeysRaf: number | null = null;
+let nextExpandedKeys: Array<string | number> | null = null;
+const setExpandedKeysBatch = (keys: Array<string | number>) => {
+  nextExpandedKeys = keys;
+  if (expandedKeysRaf != null) return;
+  expandedKeysRaf = requestAnimationFrame(() => {
+    expandedKeys.value = nextExpandedKeys ? [...nextExpandedKeys] : [];
+    expandedKeysRaf = null;
+  });
+};
+
 const handleExpandedKeysChange = (keys: Array<string | number>) => {
-  expandedKeys.value = keys;
-  // EP-002: 展开状态变化时,触发可见区域上报(防抖500ms)
-  debouncedReportVisibleNodes();
+  setExpandedKeysBatch(keys);
 };
 
 // 处理右键点击
@@ -3073,15 +3090,28 @@ const closeArkhamDBImportDialog = () => {
 
 // CON-003: 监听文件树变更,自动重建索引（防抖，避免频繁重建引起卡顿）
 let buildIndexTimer: NodeJS.Timeout | null = null;
+let lastIndexNodeCount = -1;
+const countNodes = (nodes: TreeOption[]): number => {
+  let cnt = 0
+  const stack: TreeOption[] = [...nodes]
+  while (stack.length) {
+    const n = stack.pop()!
+    cnt++
+    if (n.children && n.children.length) stack.push(...n.children)
+  }
+  return cnt
+}
 watch(fileTreeData, (newTree) => {
   if (buildIndexTimer) {
     clearTimeout(buildIndexTimer);
   }
   buildIndexTimer = setTimeout(() => {
-    if (newTree && newTree.length > 0) {
-      buildPathIndex(newTree);
-    }
-  }, 200);
+    if (!newTree || newTree.length === 0) return;
+    const currentCount = countNodes(newTree as unknown as TreeOption[])
+    if (currentCount === lastIndexNodeCount) return; // 跳过结构未变的重建
+    buildPathIndex(newTree);
+    lastIndexNodeCount = currentCount;
+  }, 300);
 }, { deep: true });
 
 watch(bookmarkedPaths, (paths) => {
