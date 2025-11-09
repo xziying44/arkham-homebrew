@@ -74,7 +74,7 @@ class TtsScriptGenerator:
     def _map_class(self, value: Optional[str]) -> Optional[str]:
         if not value:
             return None
-        return self._class_mapping.get(value, value)
+        return self._class_mapping.get(value, None)
 
     def _map_icon(self, value: Optional[str]) -> Optional[str]:
         if not value:
@@ -83,7 +83,7 @@ class TtsScriptGenerator:
 
     def _join_traits(self, traits: Any) -> Optional[str]:
         if isinstance(traits, list) and traits:
-            return ".".join(traits) + "."
+            return ". ".join(traits) + "."
         return None
 
     def _parse_clues(self, clues: Any) -> Optional[Dict[str, Any]]:
@@ -191,7 +191,7 @@ class TtsScriptGenerator:
         return [agg] if agg else []
 
     def _compose_uses(self, card: Dict[str, Any], tts_config: Dict[str, Any], is_location: bool,
-                       current_side: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+                      current_side: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         uses: List[Dict[str, Any]] = []
         version = (tts_config.get("version") or "").lower()
 
@@ -225,8 +225,6 @@ class TtsScriptGenerator:
             "id": script_id,
             "type": mapped_type,
         }
-        if current.get("name"):
-            base_data["name"] = current["name"]
         traits_joined = self._join_traits(current.get("traits"))
         if traits_joined:
             base_data["traits"] = traits_joined
@@ -235,6 +233,8 @@ class TtsScriptGenerator:
             base_data["class"] = mapped_class
         for key in ("level", "cost", "victory"):
             if key in current and current.get(key) is not None:
+                if key in ['level', 'cost'] and current.get(key) < 0:
+                    continue
                 base_data[key] = current.get(key)
 
         # Game start flags
@@ -332,7 +332,7 @@ class TtsScriptGenerator:
     def _generate_button_params(self, config: Dict[str, Any]) -> str:
         buttons = config.get("buttons") or []
         labels = ", ".join([f'"{btn.get("label", "w")}"' for btn in buttons])
-        ids = ", ".join([f'"{btn.get("id", f"Button{i+1}")}"' for i, btn in enumerate(buttons)])
+        ids = ", ".join([f'"{btn.get("id", f"Button{i + 1}")}"' for i, btn in enumerate(buttons)])
         colors = ",\n    ".join([f'"{btn.get("color", "#ffffff")}"' for btn in buttons])
         return (
             "local buttonParams      = {\n"
@@ -378,7 +378,7 @@ class TtsScriptGenerator:
 
         base = self._lua_base_script()
         button_params = self._generate_button_params(config)
-        button_id_index_map = ",\n".join([f"  {btn.get('id')} = {i+1}" for i, btn in enumerate(buttons)])
+        button_id_index_map = ",\n".join([f"  {btn.get('id')} = {i + 1}" for i, btn in enumerate(buttons)])
         script = base.replace("-- BUTTON_PARAMS_PLACEHOLDER --", button_params)
         script = script.replace("<!-- BUTTON_ID_INDEX_PLACEHOLDER -->", button_id_index_map)
         script = script.replace("<!-- BUTTON_COUNT -->", str(len(buttons)))
@@ -408,7 +408,7 @@ class TtsScriptGenerator:
         ref_px2 = (89.0, 580.0)
         # 参考逻辑坐标
         ref_lx1, ref_lz1 = (-0.933 + 1 * 0.069, -0.905)  # (-0.864, -0.905)
-        ref_lx2, ref_lz2 = (-0.933 + 2 * 0.069, 0.18)    # (-0.795, 0.18)
+        ref_lx2, ref_lz2 = (-0.933 + 2 * 0.069, 0.18)  # (-0.795, 0.18)
 
         scale_x = (ref_px2[0] - ref_px1[0]) / (ref_lx2 - ref_lx1)
         scale_y = (ref_px2[1] - ref_px1[1]) / (ref_lz2 - ref_lz1)
