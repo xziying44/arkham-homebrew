@@ -269,7 +269,20 @@ class Card2ArkhamDBConverter:
     # ==================== 基础辅助方法 ====================
 
     def _get_gmnotes(self) -> Dict[str, Any]:
-        """获取TTS脚本中的GMNotes"""
+        """获取TTS脚本中的GMNotes（v2 优先，回退旧数据）"""
+        try:
+            from bin.tts_script_generator import TtsScriptGenerator
+            tcfg = self.card_data.get('tts_config') or {}
+            if isinstance(tcfg, dict) and str(tcfg.get('version', '')).lower() == 'v2':
+                gen = TtsScriptGenerator(workspace_manager=self.workspace_manager)
+                result = gen.generate(self.card_data)
+                gm = result.get('GMNotes', '')
+                if gm:
+                    import json
+                    return json.loads(gm)
+        except Exception:
+            pass
+        # 旧数据回退
         tts_script = self.card_data.get("tts_script", {})
         gm_notes = tts_script.get("GMNotes", "")
         try:
@@ -279,13 +292,21 @@ class Card2ArkhamDBConverter:
             return {}
 
     def _extract_code_from_gmnotes(self) -> str:
-        """从TTS脚本的GMNotes中提取卡牌ID"""
+        """提取卡牌脚本ID（v2 优先，回退旧 GMNotes 解析）"""
+        # v2：直接读 tts_config.script_id 或 fallback 到 card.id 规范化
+        tcfg = self.card_data.get('tts_config') or {}
+        if isinstance(tcfg, dict) and str(tcfg.get('version', '')).lower() == 'v2':
+            sid = tcfg.get('script_id')
+            if isinstance(sid, str) and sid:
+                return sid
+            raw = str(self.card_data.get('id', '')).replace('-', '').upper()
+            return raw[:8] if raw else ''
+
+        # 旧数据：从 GMNotes 解析
         tts_script = self.card_data.get("tts_script", {})
         gm_notes = tts_script.get("GMNotes", "")
-
         if not gm_notes:
             return ""
-
         try:
             import json
             gm_data = json.loads(gm_notes)

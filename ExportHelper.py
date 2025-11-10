@@ -298,11 +298,20 @@ class ExportHelper:
         return card_map
 
     def _bleeding(self, card_json: dict, card_map: Image.Image) -> Image:
-        # 判断为拉伸
-        if self.bleed_mode == BleedMode.STRETCH:
-            width, height = self.calculate_pixel_dimensions(bleed=self.bleed)
+        # 判断为拉伸并计算最终像素尺寸
+        # 对于调查员小卡，固定物理尺寸为 41x63mm（不受用户规格影响）
+        if card_json.get('type', '') == '调查员小卡':
+            bleed_mm_val = self.bleed.value
+            total_w_mm = 41.0 + 2 * bleed_mm_val
+            total_h_mm = 63.0 + 2 * bleed_mm_val
+            pixel_width = round((total_w_mm / self.MM_PER_INCH) * self.dpi)
+            pixel_height = round((total_h_mm / self.MM_PER_INCH) * self.dpi)
+            width, height = pixel_width, pixel_height
         else:
-            width, height = self.calculate_pixel_dimensions(bleed=self.bleed, size=self.size)
+            if self.bleed_mode == BleedMode.STRETCH:
+                width, height = self.calculate_pixel_dimensions(bleed=self.bleed)
+            else:
+                width, height = self.calculate_pixel_dimensions(bleed=self.bleed, size=self.size)
 
         if card_json.get('use_external_image', 0) != 1:
             # 标准出血
@@ -544,6 +553,23 @@ class ExportHelper:
                 back_json['language'] = card_json.get('language', 'zh')
 
             back_json = self.workspace_manager.creator._preprocessing_json(back_json)
+
+            # 背面共享正面插画与设置（调查员小卡等）
+            try:
+                share_flag = back_json.get('share_front_picture', 0)
+                if isinstance(share_flag, str):
+                    share_flag = 1 if share_flag == '1' else 0
+                if share_flag:
+                    if 'picture_base64' in card_json and card_json.get('picture_base64'):
+                        back_json['picture_base64'] = card_json.get('picture_base64')
+                    if 'picture_layout' in card_json and card_json.get('picture_layout'):
+                        back_json['picture_layout'] = card_json.get('picture_layout')
+                    back_json['is_back'] = True
+                    # 默认背面黑白
+                    if 'image_filter' not in back_json or not back_json.get('image_filter'):
+                        back_json['image_filter'] = 'grayscale'
+            except Exception:
+                pass
 
             back_layer = self.workspace_manager.generate_card_image(back_json, False)
             back_map = self.workspace_manager.generate_card_image(back_json, True)

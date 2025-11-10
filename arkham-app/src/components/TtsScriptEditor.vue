@@ -5,12 +5,30 @@
             <n-form-item :label="$t('ttsScriptEditor.scriptId.label')">
                 <n-space align="center">
                     <n-input v-model:value="scriptConfig.id" :placeholder="$t('ttsScriptEditor.scriptId.placeholder')"
-                        :allow-input="allowOnlyAlphaNumeric" style="flex: 1" @update:value="onScriptConfigChange" />
-                    <n-button @click="generateRandomId" size="small" type="primary">
+                        :allow-input="allowOnlyAlphaNumeric" :disabled="isMiniCardBound" style="flex: 1" @update:value="onScriptConfigChange" />
+                    <n-button @click="generateRandomId" size="small" type="primary" :disabled="isMiniCardBound">
                         {{ $t('ttsScriptEditor.scriptId.button') }}
                     </n-button>
                 </n-space>
             </n-form-item>
+
+            <!-- 调查员小卡：绑定调查员卡牌（用于脚本ID软链接） -->
+            <template v-if="props.cardType === '调查员小卡'">
+                <n-form-item label="绑定调查员卡牌">
+                    <n-space vertical size="small" style="width: 100%">
+                        <n-space align="center" justify="space-between">
+                            <n-text depth="3" style="font-size: 12px;">{{ miniBindPath || '未选择' }}</n-text>
+                            <n-space>
+                                <n-button size="small" type="primary" dashed @click="showMiniBindSelector = true">选择</n-button>
+                                <n-button size="small" quaternary type="error" @click="clearMiniBind" v-if="miniBindPath">清除</n-button>
+                            </n-space>
+                        </n-space>
+                        <n-alert type="info" v-if="isMiniCardBound">
+                            已绑定：脚本ID将自动设为绑定调查员的脚本ID并加后缀 “-m”。
+                        </n-alert>
+                    </n-space>
+                </n-form-item>
+            </template>
 
             <!-- 通用入场标记配置 - 所有卡牌类型都支持 -->
             <n-form-item :label="$t('ttsScriptEditor.entryTokens.label')">
@@ -64,6 +82,62 @@
                     </n-switch>
                 </n-space>
             </n-form-item>
+
+            <!-- 封印脚本配置 - 除调查员与定制卡外均可用 -->
+            <template v-if="supportsSealConfig">
+                <n-form-item :label="$t('ttsScriptEditor.seal.label')">
+                    <div class="seal-config">
+                        <n-space align="center" justify="space-between">
+                            <n-switch v-model:value="sealEnabled" @update:value="onSealConfigChange">
+                                <template #checked>{{ $t('ttsScriptEditor.seal.enable') }}</template>
+                                <template #unchecked>{{ $t('ttsScriptEditor.seal.enable') }}</template>
+                            </n-switch>
+                        </n-space>
+                        <div v-if="sealEnabled" class="seal-fields">
+                            <n-grid :cols="24" :x-gap="12" :y-gap="8" responsive="screen">
+                                <n-gi :span="24" :lg="16">
+                                    <div class="seal-field">
+                                        <n-checkbox class="seal-checkbox" size="large" v-model:checked="sealAllTokens" @update:checked="onSealAllToggle">
+                                            {{ $t('ttsScriptEditor.seal.all') }}
+                                        </n-checkbox>
+                                        <div v-if="!sealAllTokens" class="seal-select-wrap">
+                                            <n-select
+                                                v-model:value="sealTokens"
+                                                :options="sealTokenOptions"
+                                                multiple
+                                                filterable
+                                                :clearable="false"
+                                                :max-tag-count="5"
+                                                @update:value="onSealConfigChange"
+                                                class="seal-select"
+                                                :placeholder="$t('ttsScriptEditor.seal.tokensPlaceholder')"
+                                            />
+                                            <n-button v-if="sealTokens.length" size="tiny" tertiary class="seal-clear-btn" @click="() => { sealTokens = []; onSealConfigChange(); }">
+                                                {{ $t('ttsScriptEditor.seal.clear') }}
+                                            </n-button>
+                                        </div>
+                                    </div>
+                                </n-gi>
+                                <n-gi :span="24" :lg="8">
+                                    <div class="seal-field">
+                                        <n-text depth="3" style="font-size: 12px;">{{ $t('ttsScriptEditor.seal.max') }}</n-text>
+                                        <n-input-number
+                                            v-model:value="sealMaxDisplay"
+                                            :min="0"
+                                            :max="99"
+                                            :step="1"
+                                            size="small"
+                                            style="width: 180px"
+                                            @update:value="onSealConfigChange"
+                                        />
+                                        <n-text depth="3" style="font-size: 12px;">{{ $t('ttsScriptEditor.seal.maxHint') }}</n-text>
+                                    </div>
+                                </n-gi>
+                            </n-grid>
+                        </div>
+                    </div>
+                </n-form-item>
+            </template>
 
             <!-- 高级配置 - 仅支持的卡牌类型显示 -->
             <template v-if="hasAdvancedConfig">
@@ -220,8 +294,8 @@
                     <n-space vertical size="medium">
                         <!-- 已选择的签名卡列表 -->
                         <div v-if="signatureConfig.length > 0" class="signature-list">
-                            <div v-for="(signature, index) in signatureConfig" :key="`${signature.id}-${index}`"
-                                class="signature-item">
+            <div v-for="(signature, index) in signatureConfig" :key="`${signature.path}-${index}`"
+                class="signature-item">
                                 <n-space align="center">
                                     <n-text>{{ signature.name }}</n-text>
                                     <n-input-number v-model:value="signature.count" :min="1" :max="9" size="small"
@@ -293,6 +367,25 @@
             </n-space>
         </template>
     </n-modal>
+
+    <!-- 调查员小卡绑定选择器 -->
+    <n-modal v-model:show="showMiniBindSelector" style="width: 80%; max-width: 800px;" preset="card">
+        <template #header>
+            <div class="signature-selector-header">
+                <n-text>选择绑定的调查员卡牌</n-text>
+            </div>
+        </template>
+        <div class="signature-selector-content">
+            <CardFileBrowser :visible="showMiniBindSelector"
+                @update:visible="showMiniBindSelector = $event"
+                @confirm="onMiniBindSelected" />
+        </div>
+        <template #action>
+            <n-space>
+                <n-button @click="showMiniBindSelector = false">{{ $t('ttsScriptEditor.common.cancel') }}</n-button>
+            </n-space>
+        </template>
+    </n-modal>
 </template>
 
 <script setup lang="ts">
@@ -309,7 +402,7 @@ import {
     type PhaseButtonConfig,
     type PhaseButton
 } from '@/config/ttsScriptGenerator';
-import { WorkspaceService } from '@/api';
+import { WorkspaceService, TtsScriptService } from '@/api';
 import CardFileBrowser from './CardFileBrowser.vue';
 
 // --- 新增: i18n设置 ---
@@ -333,9 +426,10 @@ interface TtsScriptData {
         assetConfig: AssetConfig;
         locationConfig: LocationConfig;
         scriptConfig: ScriptConfig;
-        signatureConfig: Array<{ id: string; name: string; count: number }>;
+        signatureConfig: Array<{ path: string; name: string; count: number }>;
         entryTokensConfig: UseConfig[]; // 通用入场标记配置
         gameStartConfig: GameStartConfig; // 游戏开始位置配置
+        seal?: SealConfig; // 封印脚本配置
     };
 }
 
@@ -372,6 +466,13 @@ interface LocationConfig {
 interface GameStartConfig {
     startsInPlay: boolean;
     startsInHand: boolean;
+}
+
+interface SealConfig {
+    enabled: boolean;
+    allTokens: boolean;
+    tokens: string[];
+    max?: number | null;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -425,7 +526,7 @@ const phaseButtonConfig = ref<PhaseButtonConfig>({
 });
 
 // 签名卡配置
-const signatureConfig = ref<Array<{ id: string; name: string; count: number }>>([]);
+const signatureConfig = ref<Array<{ path: string; name: string; count: number }>>([]);
 const showSignatureSelector = ref(false);
 
 // 通用入场标记配置 - 所有卡牌类型都支持
@@ -474,13 +575,28 @@ const getCardTypeMapping = (cardType: string): string => {
         '密谋卡-大画': 'Agenda',
         '场景卡': 'Act',
         '场景卡-大画': 'Act',
-        '冒险参考卡': 'AgendaReference',
+        '冒险参考卡': 'ScenarioReference',
         '玩家卡背': 'PlayerCardBack',
         '遭遇卡背': 'EncounterCardBack'
     };
 
     return extendedMapping[cardType] || 'Asset'; // 默认为Asset
 };
+
+// Chaos Token 可选项（保持与后端Lua模板名称一致）
+const CHAOS_TOKENS = [
+    'Elder Sign', '+1', '0', '-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8',
+    'Skull', 'Cultist', 'Tablet', 'Elder Thing', 'Auto-fail', 'Bless', 'Curse', 'Frost'
+] as const;
+const TOKEN_EMOJI_MAP: Record<string, string> = {
+    'Elder Sign': '⭐',
+    '+1': '🔹', '0': '🔹', '-1': '🔹', '-2': '🔹', '-3': '🔹', '-4': '🔹', '-5': '🔹', '-6': '🔹', '-7': '🔹', '-8': '🔹',
+    'Skull': '💀', 'Cultist': '👤', 'Tablet': '📜', 'Elder Thing': '👹', 'Auto-fail': '🐙', 'Bless': '✨', 'Curse': '🌑', 'Frost': '❄️'
+};
+const sealTokenOptions = computed(() => CHAOS_TOKENS.map(name => ({
+    label: `${TOKEN_EMOJI_MAP[name] || '🔹'} ${t(`ttsScriptEditor.seal.tokenNames.${name}` as any) || name}`,
+    value: name
+})));
 
 // 地点图标中英文映射
 const locationIconMapping: Record<string, string> = {
@@ -587,6 +703,11 @@ const shouldShowTtsScript = computed(() => {
     return true;
 });
 
+// 是否允许封印脚本配置（排除调查员与定制卡）
+const supportsSealConfig = computed(() => {
+    return !(props.cardType === '调查员' || props.cardType === '定制卡');
+});
+
 // 判断是否有高级配置（调查员、支援卡、事件卡、地点卡）
 const hasAdvancedConfig = computed(() => {
     const advancedTypes = ['调查员', '支援卡', '事件卡', '地点卡'];
@@ -601,214 +722,111 @@ const getEditingCardData = () => {
     return props.cardData;
 };
 
-// 生成GMNotes
+// 后端预览结果
+const backendGMNotes = ref('');
+const backendLuaScript = ref('');
+
+// 统一的GMNotes（来自后端）
 const generatedGMNotes = computed(() => {
-    const cardType = props.cardType;
     if (!shouldShowTtsScript.value) return '';
-
-    // 对于双面卡牌，需要判断当前面的类型
-    const currentEditingData = getEditingCardData();
-    const currentCardType = currentEditingData.type || cardType;
-
-    // 基础数据 - 所有卡牌类型都包含这些字段
-    const baseData = {
-        id: scriptConfig.value.id || generateUUID(),
-        type: typeMapping[currentCardType] || getCardTypeMapping(currentCardType),
-        // 添加其他可能的字段
-        ...(currentEditingData.name && { name: currentEditingData.name }),
-        ...(currentEditingData.traits && Array.isArray(currentEditingData.traits) && currentEditingData.traits.length > 0 && {
-            traits: currentEditingData.traits.join('.') + '.'
-        }),
-        ...(currentEditingData.class && { class: classMapping[currentEditingData.class] || currentEditingData.class }),
-        ...(currentEditingData.level != null && { level: currentEditingData.level }),
-        ...(currentEditingData.cost != null && { cost: currentEditingData.cost }),
-        ...(currentEditingData.victory != null && { victory: currentEditingData.victory }),
-        // 通用入场标记配置 - 所有卡牌类型都支持
-        ...(entryTokensConfig.value.length > 0 && { uses: entryTokensConfig.value }),
-        // 游戏开始位置配置 - 所有卡牌类型都支持
-        ...(gameStartConfig.value.startsInPlay && { startsInPlay: true }),
-        ...(gameStartConfig.value.startsInHand && { startsInHand: true })
-    };
-
-    let gmNotesData: any;
-
-    // 对于有高级配置的卡牌类型，使用原来的逻辑
-    if (hasAdvancedConfig.value) {
-        switch (cardType) {
-            case '调查员':
-                gmNotesData = {
-                    ...baseData,
-                    type: 'Investigator',
-                    willpowerIcons: investigatorConfig.value.willpowerIcons,
-                    intellectIcons: investigatorConfig.value.intellectIcons,
-                    combatIcons: investigatorConfig.value.combatIcons,
-                    agilityIcons: investigatorConfig.value.agilityIcons,
-                    extraToken: investigatorConfig.value.extraToken.length > 0
-                        ? investigatorConfig.value.extraToken.join('|')
-                        : 'None'
-                };
-
-                // 添加签名卡配置
-                if (signatureConfig.value.length > 0) {
-                    const signatures: Record<string, number>[] = [{}];
-                    for (const signature of signatureConfig.value) {
-                        // 如果同一张卡牌出现多次，累加数量
-                        if (signatures[0][signature.id]) {
-                            signatures[0][signature.id] += signature.count;
-                        } else {
-                            signatures[0][signature.id] = signature.count;
-                        }
-                    }
-                    gmNotesData.signatures = signatures;
-                }
-                break;
-
-            case '支援卡':
-            case '事件卡':
-                gmNotesData = {
-                    ...baseData,
-                    ...(props.cardData.slot && { slot: props.cardData.slot }),
-                    ...(props.cardData.willpowerIcons && { willpowerIcons: props.cardData.willpowerIcons }),
-                    ...(props.cardData.intellectIcons && { intellectIcons: props.cardData.intellectIcons }),
-                    ...(props.cardData.combatIcons && { combatIcons: props.cardData.combatIcons }),
-                    ...(props.cardData.agilityIcons && { agilityIcons: props.cardData.agilityIcons })
-                };
-                break;
-
-            case '地点卡':
-                const locationData: any = {
-                    icons: locationIconMapping[currentEditingData.location_icon] || currentEditingData.location_icon || 'Diamond',
-                    connections: (currentEditingData.location_link || []).map(conn => locationIconMapping[conn] || conn).join('|'),
-                    ...(currentEditingData.victory != null && { victory: currentEditingData.victory })
-                };
-
-                // 构建uses数组：线索值 + 通用入场标记
-                const usesArray = [];
-
-                // 只有当地点类型为"已揭示"时才添加线索值
-                if (currentEditingData.location_type === '已揭示') {
-                    usesArray.push({
-                        ...(isPerInvestigator.value ? { countPerInvestigator: clueCount.value } : { count: clueCount.value }),
-                        type: 'Clue',
-                        token: 'clue'
-                    });
-                }
-
-                // 添加通用入场标记配置
-                if (entryTokensConfig.value.length > 0) {
-                    usesArray.push(...entryTokensConfig.value);
-                }
-
-                // 如果有uses配置，添加到locationData中
-                if (usesArray.length > 0) {
-                    locationData.uses = usesArray;
-                }
-
-                // 双面卡牌特殊处理：根据正背面存储到不同字段
-                if (props.isDoubleSided) {
-                    gmNotesData = {
-                        id: scriptConfig.value.id || generateUUID(),
-                        type: 'Location',
-                        traits: (currentEditingData.traits || []).join('.') + (currentEditingData.traits?.length ? '.' : ''),
-                    };
-
-                    // 根据当前编辑的面决定存储字段
-                    if (props.currentSide === 'back') {
-                        // 背面是地点卡，直接存储到locationBack
-                        gmNotesData.locationBack = locationData;
-
-                        // 如果正面也是地点卡，需要从原始数据中获取locationFront
-                        if (props.cardData.type === '地点卡') {
-                            const frontLocationData: any = {
-                                icons: locationIconMapping[props.cardData.location_icon] || props.cardData.location_icon || 'Diamond',
-                                connections: (props.cardData.location_link || []).map(conn => locationIconMapping[conn] || conn).join('|'),
-                                ...(props.cardData.victory != null && { victory: props.cardData.victory })
-                            };
-
-                            if (props.cardData.location_type === '已揭示') {
-                                frontLocationData.uses = [{
-                                    ...(isPerInvestigator.value ? { countPerInvestigator: clueCount.value } : { count: clueCount.value }),
-                                    type: 'Clue',
-                                    token: 'clue'
-                                }];
-                            }
-
-                            gmNotesData.locationFront = frontLocationData;
-                        }
-                    } else {
-                        // 正面是地点卡，存储到locationFront
-                        gmNotesData.locationFront = locationData;
-
-                        // 如果背面也是地点卡，需要从back数据中获取locationBack
-                        if (props.cardData.back && props.cardData.back.type === '地点卡') {
-                            const backLocationData: any = {
-                                icons: locationIconMapping[props.cardData.back.location_icon] || props.cardData.back.location_icon || 'Diamond',
-                                connections: (props.cardData.back.location_link || []).map(conn => locationIconMapping[conn] || conn).join('|'),
-                                ...(props.cardData.back.victory != null && { victory: props.cardData.back.victory })
-                            };
-
-                            if (props.cardData.back.location_type === '已揭示') {
-                                backLocationData.uses = [{
-                                    ...(isPerInvestigator.value ? { countPerInvestigator: clueCount.value } : { count: clueCount.value }),
-                                    type: 'Clue',
-                                    token: 'clue'
-                                }];
-                            }
-
-                            gmNotesData.locationBack = backLocationData;
-                        }
-                    }
-                } else {
-                    // 单面卡牌，使用原来的location字段
-                    gmNotesData = {
-                        id: scriptConfig.value.id || generateUUID(),
-                        type: 'Location',
-                        traits: (currentEditingData.traits || []).join('.') + (currentEditingData.traits?.length ? '.' : ''),
-                        location: locationData
-                    };
-                }
-                break;
-
-            default:
-                // 对于不支持高级配置的卡牌类型，使用基础数据
-                gmNotesData = baseData;
-                break;
-        }
-    } else {
-        // 不支持高级配置的卡牌类型，直接使用基础数据
-        gmNotesData = baseData;
-    }
-
-    try {
-        return JSON.stringify(gmNotesData, null, 2);
-    } catch (error) {
-        return '// JSON generation failed';
-    }
+    return backendGMNotes.value;
 });
 
 
-// 生成完整的Lua脚本
+// 生成完整的Lua脚本（来自后端）
 const generatedLuaScript = computed(() => {
-    if (props.cardType !== '调查员' || !enablePhaseButtons.value) return '';
-    return generatePhaseButtonScript(phaseButtonConfig.value);
+    return backendLuaScript.value || '';
 });
+
+// Mini card binding
+const showMiniBindSelector = ref(false);
+const miniBindPath = ref<string>('');
+const isMiniCardBound = computed(() => props.cardType === '调查员小卡' && !!miniBindPath.value);
+
+const onMiniBindSelected = (items: any[]) => {
+    if (Array.isArray(items) && items.length > 0) {
+        const first = items[0];
+        if (first && typeof first.path === 'string') {
+            miniBindPath.value = first.path;
+            showMiniBindSelector.value = false;
+            onScriptConfigChange();
+        }
+    }
+};
+
+const clearMiniBind = () => {
+    miniBindPath.value = '';
+    onScriptConfigChange();
+};
 
 // TTS脚本数据（包含配置）
+// 统一 v2 配置对象（将作为 tts_config 存储与传输）
+const tts_config = computed(() => ({
+    version: 'v2',
+    script_id: scriptConfig.value.id,
+    enablePhaseButtons: enablePhaseButtons.value,
+    phaseButtonConfig: phaseButtonConfig.value,
+    mini: {
+        bind: { path: miniBindPath.value || '' }
+    },
+    investigator: {
+        extraToken: investigatorConfig.value.extraToken,
+        willpowerIcons: investigatorConfig.value.willpowerIcons,
+        intellectIcons: investigatorConfig.value.intellectIcons,
+        combatIcons: investigatorConfig.value.combatIcons,
+        agilityIcons: investigatorConfig.value.agilityIcons,
+    },
+    signatures: signatureConfig.value.map(s => ({ path: s.path, count: s.count })),
+    entryTokens: entryTokensConfig.value,
+    gameStart: {
+        startsInPlay: gameStartConfig.value.startsInPlay,
+        startsInHand: gameStartConfig.value.startsInHand,
+    },
+    seal: {
+        enabled: sealEnabled.value,
+        allTokens: sealAllTokens.value,
+        tokens: [...sealTokens.value],
+        max: sealMax.value ?? null,
+    } as SealConfig,
+}));
+
 const ttsScriptData = computed((): TtsScriptData => ({
     GMNotes: generatedGMNotes.value,
     LuaScript: generatedLuaScript.value,
-    config: {
-        enablePhaseButtons: enablePhaseButtons.value,
-        phaseButtonConfig: phaseButtonConfig.value,
-        investigatorConfig: investigatorConfig.value,
-        assetConfig: assetConfig.value,
-        locationConfig: locationConfig.value,
-        scriptConfig: scriptConfig.value,
-        signatureConfig: signatureConfig.value,
-        entryTokensConfig: entryTokensConfig.value,
-        gameStartConfig: gameStartConfig.value
-    }
+    // 复用原字段名 config 以兼容父组件处理，但内部已是 v2 的 tts_config 结构
+    config: tts_config.value as any,
 }));
+
+// 避免父子间同步引发的循环请求
+const isSyncingFromParent = ref(false);
+const hasInitPreview = ref(false);
+
+// 预览调用防抖
+let previewTimer: any = null;
+
+// 实际请求函数
+const updateBackendPreview = async () => {
+    try {
+        const cardPayload = JSON.parse(JSON.stringify(props.cardData || {}));
+        // 注入/覆盖 v2 tts_config，不修改原 props 对象
+        cardPayload.tts_config = tts_config.value;
+        const result = await TtsScriptService.generateFromCard(cardPayload);
+        backendGMNotes.value = result.GMNotes || '';
+        backendLuaScript.value = result.LuaScript || '';
+    } catch (err) {
+        console.warn('TTS 后端预览失败，使用空结果:', err);
+        backendGMNotes.value = '';
+        backendLuaScript.value = '';
+    }
+};
+
+// 防抖调度函数
+const scheduleBackendPreview = () => {
+    if (previewTimer) clearTimeout(previewTimer);
+    previewTimer = setTimeout(() => {
+        updateBackendPreview();
+    }, 250);
+};
 
 // 生成UUID
 const generateUUID = (): string => {
@@ -948,21 +966,52 @@ const onClueTypeChange = () => {
 };
 
 // 脚本配置变化处理
-const onScriptConfigChange = () => {
+const onScriptConfigChange = async () => {
+    // 如果当前是父组件写回引发的同步，不再触发预览与上行事件，避免循环
+    if (isSyncingFromParent.value) return;
+    scheduleBackendPreview();
     nextTick(() => {
         emit('update-tts-script', ttsScriptData.value);
     });
 };
 
+// 封印脚本配置
+const sealEnabled = ref(false);
+const sealAllTokens = ref(true);
+const sealTokens = ref<string[]>([]);
+const sealMax = ref<number | null>(null);
+const sealMaxDisplay = computed<number>({
+    get() { return typeof sealMax.value === 'number' ? sealMax.value : 0 },
+    set(v: number) { sealMax.value = (!v || v === 0) ? null : v }
+});
+
+const onSealConfigChange = async () => {
+    if (isSyncingFromParent.value) return;
+    scheduleBackendPreview();
+    nextTick(() => emit('update-tts-script', ttsScriptData.value));
+};
+
+const onSealAllToggle = (checked: boolean) => {
+    sealAllTokens.value = checked;
+    if (checked) {
+        sealTokens.value = [];
+    }
+    onSealConfigChange();
+};
+
 // 阶段按钮配置变化处理
-const onPhaseButtonConfigChange = () => {
+const onPhaseButtonConfigChange = async () => {
+    if (isSyncingFromParent.value) return;
+    scheduleBackendPreview();
     nextTick(() => {
         emit('update-tts-script', ttsScriptData.value);
     });
 };
 
 // 阶段按钮开关变化处理
-const onPhaseButtonToggle = () => {
+const onPhaseButtonToggle = async () => {
+    if (isSyncingFromParent.value) return;
+    scheduleBackendPreview();
     nextTick(() => {
         emit('update-tts-script', ttsScriptData.value);
     });
@@ -992,55 +1041,13 @@ const onSignatureCardsSelected = async (selectedItems: any[]) => {
     console.log('📝 选中的签名卡:', selectedItems);
 
     try {
-        // 处理选中的卡牌文件 - 每张卡牌都单独添加
+        // 处理选中的卡牌文件 - 每张卡牌都单独添加（按相对路径保存）
         for (const item of selectedItems) {
-            // 只有卡牌类型才处理
             if (item.type === 'card') {
-                // 尝试从卡牌文件中读取ID，如果失败则使用文件名
-                let cardId = item.name; // 默认使用文件名
-                let cardName = item.name; // 默认使用文件名作为显示名称
-
-                try {
-                    // 读取卡牌文件内容以获取真实的ID
-                    const fileContent = await WorkspaceService.getFileContent(item.fullPath);
-                    const cardData = JSON.parse(fileContent);
-
-                    // 优先使用卡牌名称
-                    if (cardData.name) {
-                        cardName = cardData.name;
-                    }
-
-                    // 从TTS脚本的GMNotes中解析ID
-                    if (cardData.tts_script?.GMNotes) {
-                        try {
-                            const gmNotesData = JSON.parse(cardData.tts_script.GMNotes);
-                            if (gmNotesData.id) {
-                                cardId = gmNotesData.id;
-                                console.log('📖 从GMNotes解析卡牌ID成功:', { path: item.fullPath, id: cardId, name: cardName });
-                            }
-                        } catch (gmNotesError) {
-                            console.warn('解析GMNotes失败，尝试使用根级ID:', gmNotesError);
-                            // 如果GMNotes解析失败，尝试使用根级ID
-                            if (cardData.id) {
-                                cardId = cardData.id;
-                            }
-                        }
-                    } else if (cardData.id) {
-                        // 如果没有GMNotes，使用根级ID
-                        cardId = cardData.id;
-                    }
-
-                    console.log('📖 读取卡牌文件成功:', { path: item.fullPath, id: cardId, name: cardName });
-                } catch (error) {
-                    console.warn('无法读取卡牌文件内容，使用文件名:', error);
-                }
-
-                // 为每张选中的卡牌创建独立的条目
-                signatureConfig.value.push({
-                    id: cardId,
-                    name: cardName,
-                    count: 1
-                });
+                const cardPath: string = item.fullPath; // 相对工作目录路径
+                // 名称：优先文件树中的 name（文件名），不再强依赖读取文件
+                const displayName: string = item.name || cardPath.split('/').pop() || cardPath;
+                signatureConfig.value.push({ path: cardPath, name: displayName, count: 1 });
             }
         }
 
@@ -1140,6 +1147,68 @@ const loadFromSavedConfig = (savedConfig: any) => {
         gameStartConfig.value = { ...savedConfig.gameStartConfig };
         console.log('✅ 游戏开始位置配置已加载:', gameStartConfig.value);
     }
+    if (savedConfig?.seal) {
+        const s = savedConfig.seal;
+        sealEnabled.value = !!s.enabled;
+        sealAllTokens.value = !!s.allTokens;
+        sealTokens.value = Array.isArray(s.tokens) ? [...s.tokens] : [];
+        sealMax.value = (typeof s.max === 'number' && s.max > 0) ? s.max : null;
+        console.log('✅ 封印脚本配置已加载:', {
+            enabled: sealEnabled.value,
+            all: sealAllTokens.value,
+            tokens: sealTokens.value.length,
+            max: sealMax.value
+        });
+    }
+};
+
+// 从 v2 tts_config 加载
+const loadFromTtsConfigV2 = (cfg: any) => {
+    if (!cfg) return;
+    // 基本
+    scriptConfig.value.id = cfg.script_id || scriptConfig.value.id || generateUUID();
+    // 调查员
+    if (cfg.investigator) {
+        investigatorConfig.value = {
+            extraToken: Array.isArray(cfg.investigator.extraToken) ? cfg.investigator.extraToken : [],
+            willpowerIcons: Number(cfg.investigator.willpowerIcons ?? 3),
+            intellectIcons: Number(cfg.investigator.intellectIcons ?? 3),
+            combatIcons: Number(cfg.investigator.combatIcons ?? 2),
+            agilityIcons: Number(cfg.investigator.agilityIcons ?? 2),
+        };
+    }
+    // 阶段按钮
+    enablePhaseButtons.value = !!cfg.enablePhaseButtons;
+    if (cfg.phaseButtonConfig && Array.isArray(cfg.phaseButtonConfig.buttons)) {
+        phaseButtonConfig.value = { buttons: [...cfg.phaseButtonConfig.buttons] };
+    }
+    // 入场标记
+    if (Array.isArray(cfg.entryTokens)) {
+        entryTokensConfig.value = [...cfg.entryTokens];
+    }
+    // 游戏开始位置
+    if (cfg.gameStart) {
+        gameStartConfig.value = {
+            startsInPlay: !!cfg.gameStart.startsInPlay,
+            startsInHand: !!cfg.gameStart.startsInHand,
+        };
+    }
+    // 签名卡
+    if (Array.isArray(cfg.signatures)) {
+        signatureConfig.value = cfg.signatures.map((s: any) => ({
+            path: s.path,
+            name: s.name || (typeof s.path === 'string' ? (s.path.split('/').pop() || s.path) : ''),
+            count: Number(s.count || 1)
+        }));
+    }
+    // 封印脚本
+    if (cfg.seal) {
+        const s = cfg.seal;
+        sealEnabled.value = !!s.enabled;
+        sealAllTokens.value = !!s.allTokens;
+        sealTokens.value = Array.isArray(s.tokens) ? [...s.tokens] : [];
+        sealMax.value = (typeof s.max === 'number' && s.max > 0) ? s.max : null;
+    }
 };
 
 // 从旧数据格式兼容加载
@@ -1230,26 +1299,49 @@ watch(
 
 // 监听TTS脚本数据变化，加载配置
 watch(
-    () => props.cardData.tts_script,
-    (newTtsScript) => {
-        console.log('📥 TTS脚本数据变化:', newTtsScript);
-        if (!newTtsScript) {
-            console.log('🧹 没有TTS脚本数据，初始化默认配置');
-            // 当没有TTS脚本数据时，初始化脚本ID
-            if (!scriptConfig.value.id) {
-                scriptConfig.value.id = generateUUID();
-                console.log('✅ 生成默认脚本ID:', scriptConfig.value.id);
-            }
-            return;
+() => props.cardData.tts_script,
+(newTtsScript) => {
+    // 仅用于旧数据向后兼容；若已存在 v2 配置，则忽略
+    if ((props.cardData as any)?.tts_config?.version === 'v2') return;
+    console.log('📥 旧版 TTS 脚本数据变化:', newTtsScript);
+    if (!newTtsScript) {
+        if (!scriptConfig.value.id) {
+            scriptConfig.value.id = generateUUID();
         }
-        if (newTtsScript.config) {
-            loadFromSavedConfig(newTtsScript.config);
-        } else {
-            loadFromLegacyFormat(newTtsScript);
+        return;
+    }
+    if (newTtsScript.config) {
+        loadFromSavedConfig(newTtsScript.config);
+    } else {
+        loadFromLegacyFormat(newTtsScript);
+    }
+    nextTick(() => {
+        onScriptConfigChange();
+    });
+},
+    { immediate: true }
+);
+
+// 监听 v2 tts_config
+watch(
+    () => (props.cardData as any)?.tts_config,
+    (cfg) => {
+        if (cfg?.version === 'v2') {
+            console.log('📥 加载 v2 tts_config');
+            isSyncingFromParent.value = true;
+            loadFromTtsConfigV2(cfg);
+            // 加载 mini 绑定
+            const m = (cfg as any)?.mini?.bind?.path;
+            if (typeof m === 'string') miniBindPath.value = m;
+            // 避免触发再次 emit 导致循环，仅在首次加载时进行一次预览
+            nextTick(async () => {
+                isSyncingFromParent.value = false;
+                if (!hasInitPreview.value) {
+                    hasInitPreview.value = true;
+                    await updateBackendPreview();
+                }
+            });
         }
-        nextTick(() => {
-            onScriptConfigChange();
-        });
     },
     { immediate: true }
 );
@@ -1263,7 +1355,7 @@ if (shouldShowTtsScript.value) {
             scriptConfig.value.id = generateUUID();
             console.log('✅ 初始化时生成默认脚本ID:', scriptConfig.value.id);
         }
-        onScriptConfigChange();
+        // 不在此处主动触发 onScriptConfigChange，首帧预览交由 tts_config / tts_script 的 watcher 负责
     });
 }
 </script>
@@ -1339,6 +1431,43 @@ if (shouldShowTtsScript.value) {
     border-radius: 8px;
     border: 1px solid rgba(0, 0, 0, 0.1);
     margin-top: 8px;
+}
+
+.seal-config {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 14px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.seal-fields {
+    margin-top: 10px;
+}
+
+.seal-field {
+    min-width: 240px;
+}
+
+.seal-select { width: 100%; }
+.seal-select-wrap { margin-top: 6px; }
+.seal-clear-btn { margin-top: 6px; }
+
+.seal-checkbox :deep(.n-checkbox) {
+    display: inline-flex;
+    align-items: center;
+}
+.seal-checkbox :deep(.n-checkbox__label) {
+    display: inline-flex;
+    align-items: center;
+}
+.seal-checkbox {
+    padding: 6px 8px;
+}
+
+.seal-select :deep(.n-base-selection) {
+    width: 100%;
 }
 
 .button-config-row {

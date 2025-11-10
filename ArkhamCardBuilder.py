@@ -332,19 +332,25 @@ class ArkhamCardBuilder:
 
     def _add_tts_script_metadata(self, card_obj: Dict[str, Any], card_code: str):
         """
-        为卡牌正面添加TTS脚本元数据
-
+        为卡牌添加TTS元数据（v2优先）：
+        - v2：设置 tts_config.script_id（不再写入旧版 tts_script）
+        - 兼容：如需旧版，可在后续流水线生成时由后端生成器统一产生 GMNotes
         Args:
             card_obj: 卡牌对象
-            card_code: 卡牌代码
+            card_code: 卡牌代码（用于形成稳定脚本ID）
         """
-        if card_code:
-            # 构建TTS脚本元数据
-            gm_notes = json.dumps({"id": card_code})
-            card_obj['tts_script'] = {
-                "GMNotes": gm_notes
-            }
-            self.logger.debug(f"添加TTS脚本元数据: {card_code}")
+        if not card_code:
+            return
+        # v2 统一配置
+        tts_config = card_obj.get('tts_config') or {}
+        tts_config['version'] = 'v2'
+        # 直接使用 card_code 作为脚本ID（后端会在需要时截断/规范化为8位）
+        tts_config['script_id'] = str(card_code)
+        card_obj['tts_config'] = tts_config
+        # 不再写入旧版 tts_script 字段，避免数据冗余
+        if 'tts_script' in card_obj:
+            del card_obj['tts_script']
+        self.logger.debug(f"设置 v2 tts_config.script_id: {card_code}")
 
     def _add_language_and_version(self, card_obj: Dict[str, Any]):
         """

@@ -51,6 +51,13 @@ export const API_ENDPOINTS = {
     timeout: 60000
   } as ApiConfig,
 
+  // 渐进式文件树更新接口
+  POLL_FILE_TREE_UPDATES: {
+    url: '/api/workspace/scan-progress',
+    method: HttpMethod.GET,
+    timeout: 10000
+  } as ApiConfig,
+
   CREATE_DIRECTORY: {
     url: '/api/create-directory',
     method: HttpMethod.POST,
@@ -97,6 +104,12 @@ export const API_ENDPOINTS = {
   GET_FILE_INFO: {
     url: '/api/file-info',
     method: HttpMethod.GET,
+    timeout: 5000
+  } as ApiConfig,
+
+  REPORT_VISIBLE_NODES: {
+    url: '/api/workspace/report-visible-nodes',
+    method: HttpMethod.POST,
     timeout: 5000
   } as ApiConfig,
 
@@ -149,6 +162,12 @@ export const API_ENDPOINTS = {
     url: '/api/export-tts',
     method: HttpMethod.POST,
     timeout: 60000 // 60秒超时，TTS物品导出可能需要较长时间
+  } as ApiConfig,
+  // TTS脚本生成预览
+  GENERATE_TTS_SCRIPT: {
+    url: '/api/tts/generate',
+    method: HttpMethod.POST,
+    timeout: 15000
   } as ApiConfig,
   // GitHub 图床相关接口
   GITHUB_LOGIN: {

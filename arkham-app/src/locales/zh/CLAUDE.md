@@ -17,6 +17,8 @@
 - `cardEditor.ts`：卡牌编辑器
 - `contentPackage.ts`：内容包管理
 - `ttsItems.ts` / `ttsScriptEditor.ts`：TTS 物品与脚本编辑
+  - 更新：`ttsScriptEditor.ts` 新增 `seal.*` 键域，覆盖封印脚本配置的 UI 文案：
+    `label/enable/tokens/tokensPlaceholder/clear/all/max/maxHint/tokenNames.*`；与 `en/ttsScriptEditor.ts` 完全对齐。
 - `about.ts`、`languageWelcome.ts`、`arkhamdbImport.ts` 等
 
 ## Key Components

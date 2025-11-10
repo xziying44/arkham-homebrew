@@ -34,7 +34,7 @@
   - 目录/工作区：`/api/select-directory`, `/api/status`, `/api/file-tree`, `/api/create-file`, `/api/file-content`, ...
   - 卡牌：`/api/generate-card`, `/api/save-card`, `/api/export-card`
   - 配置：`/api/config`, `/api/encounter-groups`
-  - TTS：`/api/open-directory`, `/api/export-deck-image`, `/api/export-deck-pdf`, `/api/export-tts`
+  - TTS：`/api/open-directory`, `/api/export-deck-image`, `/api/export-deck-pdf`, `/api/export-tts`, `/api/tts/generate`
   - GitHub 图床：`/api/github/login`, `/api/github/repositories`, `/api/github/upload`, `/api/github/status`
   - 通用图床：`/api/image-host/upload`, `/api/image-host/check`
 
@@ -285,3 +285,15 @@ export const httpClient = new HttpClient();
   - `tts-export-service.ts`: `exportDeckPdf` 返回 `response`，签名为 `ExportDeckPdfData`（见 `tts-export-service.ts:53` 附近）
   - 集成时建议以签名为准，必要时在调用处做精简封装以统一返回层级
 
+X) tts-script-service.ts
+
+```ts
+class TtsScriptService {
+  static generateFromCard(cardData: any): Promise<{ GMNotes: string; LuaScript: string }>
+}
+// 用途：统一从后端生成 GMNotes 与 LuaScript（V2 优先）；前端编辑器预览调用。
+// 端点：POST /api/tts/generate（需要存在工作区以解析相对路径与升级表坐标）
+```
+
+- 端点与配置（新增）
+  - `endpoints.ts`: `GENERATE_TTS_SCRIPT = { url: '/api/tts/generate', method: POST, timeout: 15000 }`

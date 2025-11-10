@@ -69,6 +69,9 @@ en/
 #### `ttsScriptEditor.ts`
 - **用途**: TTS（Tabletop Simulator）脚本编辑器的UI文本
 - **包含**: 脚本编辑提示、语法帮助、操作指南
+ - **更新**: 新增 `seal.*` 键：
+   - `label`, `enable`, `tokens`, `tokensPlaceholder`, `clear`, `all`, `max`, `maxHint`, `tokenNames.*`
+   - 供封印脚本配置（allow-all、多选 Token、最大封印数）使用；与 `zh/ttsScriptEditor.ts` 保持键一致。
 
 #### `workspaceMain.ts`
 - **用途**: 工作空间主模块的核心UI文本（第二大文件）

@@ -1379,6 +1379,10 @@ class Card:
             return
         if self.font_manager.lang not in ['zh', 'zh-CHT']:
             position = (position[0] - 10, position[1])
+        if self.font_manager.lang in ['pl'] and self.card_type in ['地点卡']:
+            font_size = font_size - 6
+        if self.font_manager.lang in ['pl'] and self.card_type in ['支援卡']:
+            font_size = font_size - 8
 
         # 根据victory值的类型决定显示方式
         if isinstance(victory_value, int):

@@ -1,32 +1,52 @@
-# CLAUDE.md
+# prompt 目录
 
-## Purpose
-- Provide a single-layer documentation for the `prompt` module that converts natural-language card descriptions into a normalized Arkham Horror LCG JSON payload.
-- Ensure consistent field names, allowed values, and normalization rules so downstream builders/renderers (backend and frontend) consume a stable schema.
+## 用途与范围
+- 描述与约束：本目录用于定义将中文自然语言的卡牌描述转换为规范化 Arkham Horror LCG JSON 负载的“提示/规范”。
+- 主要职责：统一字段命名、取值范围与归一化规则，使后端制卡与前端渲染能够稳定消费同一份结构化数据。
+- 边界与定位：不直接包含执行代码，仅提供规范（Schema）与示例，作为上游录入与下游渲染之间的契约层。
 
-## Structure
-- Files
-  - `player_card_picture.txt` — Source prompt/spec (Chinese). Defines required/optional fields, controlled vocabularies, and normalization rules for card JSON.
-- Notes
-  - No child `CLAUDE.md` files were found under this directory; this document aggregates from the current directory specification and references repo integration points.
+## 结构概览
+- 目录结构（无子目录）：
+  - `CLAUDE.md` — 本文档（统一模板化说明）。
+  - `player_card_picture.txt` — 规范/提示源文档（中文），描述字段要求、受控词表与文本归一化规则。
+- 说明：当前目录无子目录，因此无需引用子目录的 CLAUDE.md。
 
-## Components
-- Prompt schema overview (core fields)
-  - Required: `type`, `name`, `traits` (string[]), `body` (use `<lr>` for newlines). When `type` is `调查员卡`, `attribute` is required: four integers `[意志, 智力, 战力, 敏捷]`.
-  - Common optional: `class`, `subclass` (多职阶时，可含['守护者','探求者','流浪者','潜修者','生存者']，最多2个不重复), `subtitle`, `flavor`, `level` (默认0; `-1`=无等级), `cost` (整数; 无费用填`-1`; X费用填`-2`), `submit_icon` (技能图标 list), `slots`/`slots2` (槽位枚举), `msg`, `image_prompt`。
-  - Encounter/scene specific: `serial_number` (如`1a`/`2b`), `threshold` (数字或`?`或`-`), `victory` (数字或字符串), `vengeance` (若存在，将转化到`victory`说明文本，见后端处理)。
-  - Location specific: `location_type`（地点卡必填：`已揭示` | `未揭示`）, `location_icon`, `location_link` (数组)。
-  - Enemy specific: `enemy_damage`, `enemy_damage_horror`, `attack`, `evade`, `enemy_health`。
-  - Investigator back side: `card_back` 对象：`{ size: number, option: string[], requirement: string, other: string, story: string }`；`story` 保持换行，后端会转换为`<lr>`。
+## 关键组件
+- 规范入口（公共接口）：本目录的“公共接口”即目标 JSON 结构（由上游文本经规范转换得到）。
 
-- Controlled vocabularies and normalization
-  - `type` allowed: `技能卡`、`支援卡`、`事件卡`、`调查员卡`、`调查员卡背`、`诡计卡`、`敌人卡`、`地点卡`、`升级卡`（定制卡）、`故事卡`、`场景卡`、`密谋卡`、`场景卡背`、`密谋卡背`。
-  - `class` allowed: `守护者`、`探求者`、`流浪者`、`潜修者`、`生存者`、`中立`、`弱点`、`多职阶`。常见同义纠正：`守卫者` → `守护者`；`调查员` → `调查员卡`；`调查员背面` → `调查员卡背`；`定制卡` → `升级卡`。
-  - `submit_icon` mapping（别名→标准）：`脑`→`意志`，`书`→`智力`，`拳`→`战力`，`腿/脚`→`敏捷`，`?`→`狂野`。后端会按固定顺序排序：意志→智力→战力→敏捷→狂野。
-  - `slots`/`slots2` allowed: `空`、`双手`、`双法术`、`塔罗`、`手部`、`法术`、`盟友`、`身体`、`饰品`（`空`表示空图标槽位，非“无槽位”）。
-  - Text handling: `body` 中换行转换为`<lr>`；`flavor` 文本保留`<lr>`作为制表符；部分全角符号将被标准化（见后端预处理）。
+- 核心字段（必填/条件必填）
+  - `type` (string)：卡牌类型。受控取值见“受控词表与归一化”。
+  - `name` (string)：卡牌名称。
+  - `traits` (string[])：特性列表。
+  - `body` (string)：卡牌规则文本；换行以 `<lr>` 表示。
+  - 当 `type` 为 `调查员卡` 时，`attribute` (number[4]) 为必填，顺序为 `[意志, 智力, 战力, 敏捷]`。
 
-- Minimal example
+- 常见可选字段
+  - `class` (string)：职阶，受控取值见下。
+  - `subclass` (string[])：多职阶时给出，最多两个且不重复。
+  - `subtitle` (string)：副标题。
+  - `flavor` (string)：风味文本，保留 `<lr>` 作为换行。
+  - `level` (number)：默认 0；`-1` 表示“无等级/基础”。
+  - `cost` (number)：费用；无费用填 `-1`；X 费用填 `-2`。
+  - `submit_icon` (string[])：技能图标列表（别名会被映射、排序）。
+  - `slots`/`slots2` (string|string[])：槽位枚举（`空` 表示占位空图标）。
+  - `msg` (string)：校验/提示信息。
+  - `image_prompt` (string)：图像生成相关的提示（如需）。
+
+- 类型特定字段
+  - 场景/密谋：`serial_number`（如 `1a`、`2b`）、`threshold`（数字/`?`/`-`）、`victory`（数字或字符串）、`vengeance`（可转化为 `victory` 描述）。
+  - 地点：`location_type`（必填 `已揭示` | `未揭示`）、`location_icon`、`location_link` (string[])。
+  - 敌人：`enemy_damage`、`enemy_damage_horror`、`attack`、`evade`、`enemy_health`。
+  - 调查员背面：`card_back` 对象 `{ size: number, option: string[], requirement: string, other: string, story: string }`；`story` 保持换行，由后端转换为 `<lr>`。
+
+- 受控词表与归一化
+  - `type`：`技能卡`、`支援卡`、`事件卡`、`调查员卡`、`调查员卡背`、`诡计卡`、`敌人卡`、`地点卡`、`升级卡`（定制卡）、`故事卡`、`场景卡`、`密谋卡`、`场景卡背`、`密谋卡背`。
+  - `class`：`守护者`、`探求者`、`流浪者`、`潜修者`、`生存者`、`中立`、`弱点`、`多职阶`；常见同义自动纠正如：`守卫者`→`守护者`、`调查员`→`调查员卡`、`调查员背面`→`调查员卡背`、`定制卡`→`升级卡`。
+  - `submit_icon` 别名映射：`脑`→`意志`，`书`→`智力`，`拳`→`战力`，`腿/脚`→`敏捷`，`?`→`狂野`；排序固定为：意志→智力→战力→敏捷→狂野。
+  - `slots`/`slots2`：`空`、`双手`、`双法术`、`塔罗`、`手部`、`法术`、`盟友`、`身体`、`饰品`（`空` 代表“空图标槽位”而非“无槽位”）。
+  - 文本处理：`body` 换行转换为 `<lr>`；`flavor` 保留 `<lr>`；常见全角/半角符号按后端规则标准化。
+
+- 最小示例 JSON
 ```json
 {
   "type": "支援卡",
@@ -42,37 +62,52 @@
 }
 ```
 
-## Dependencies
-- Backend usage
-  - `create_card.py:260` — Sorts `submit_icon` into canonical order and normalizes fields.
-  - `create_card.py:316` — Defaults `weakness_type` to `弱点` when `class` is `弱点` and not provided.
-  - `create_card.py:336` — Normalizes `card_back.story` newlines to `<lr>`.
-  - `ExportHelper.py:287` — Applies bleeding for `submit_icon` to export images.
-  - `ArkhamCardBuilder.py:367` — Chooses default card back type from front `type`/`class`.
+## 依赖关系
+### 内部依赖（同一项目内的相关模块）
+- 后端制卡/渲染脚本（例如 `create_card.py` 等）：
+  - 负责字段归一化（如 `submit_icon` 排序、同义词映射）。
+  - 在 `class` 为 `弱点` 且缺省 `weakness_type` 时设定默认值。
+  - 将 `card_back.story` 的换行标准化为 `<lr>`。
+- 导出/出图工具（例如 `ExportHelper.py`）：处理出图、流血边距等导出细节。
+- 构建器/装配器（例如 `ArkhamCardBuilder.py`）：根据正面 `type`/`class` 推断或选择默认背面类型。
 
-- Frontend configuration
-  - `arkham-app/src/config/cardTypeConfigs.ts:961` — Supports `weakness_type`.
-  - `arkham-app/src/config/cardTypeConfigs.ts:844, 850, 856, 862` — `card_back.option` / `card_back.requirement` / `card_back.other` / `card_back.story` form keys.
+### 外部依赖（第三方/其他仓库）
+- 前端配置（例如 `arkham-app` 中的 `cardTypeConfigs.ts`）：用于表单/渲染层的字段支持与呈现（如对 `weakness_type`、`card_back.*` 字段的配置）。
 
-## Integration
-- Authoring workflow
-  1) Compose natural-language card details in Chinese.
-  2) Convert to the target JSON using this prompt schema (respect allowed values and mappings).
-  3) Provide the JSON to backend renderers (e.g., `create_card.py`) to generate card images; optional bleeding and export handled by `ExportHelper.py`.
-  4) For Investigator cards, include `attribute` (四维) and `card_back` details when needed.
+## 集成点
+### 公共接口（对外可用）
+- 输出：符合本规范的 JSON 对象（见“最小示例 JSON”）。
+- 约束：字段类型、受控词表、默认值与归一化规则需严格遵循本规范，以确保后端/前端稳定处理。
 
-- Key behaviors to rely on
-  - Newlines in `card_back.story` are auto-converted to `<lr>` by backend (`create_card.py:336`).
-  - If `class` is `弱点` and `weakness_type` omitted, backend sets `弱点` (`create_card.py:316`).
-  - `submit_icon` is auto-sorted; duplicates allowed (`create_card.py:260`).
-  - Some punctuation/width normalization is applied before rendering (`create_card.py` preprocessing).
+### 数据流
+- 输入 → 处理 → 输出：
+  - 输入：中文自然语言卡牌描述。
+  - 处理：根据本目录规范组装/归一化为 JSON（包括字段映射、取值校验与文本标准化）。
+  - 输出：标准化 JSON；供后端制卡与前端渲染使用。
 
-## Notes
-- Encoding: Use UTF-8; keep Chinese punctuation where intended. In Windows terminals, ensure UTF-8 output/input to avoid mojibake.
-- Validation: Prefer controlled vocabularies exactly; when unspecified, rely on defaults (`level: 0`, `class: 中立`, etc.).
-- Edge cases:
-  - `cost`: `-1` for “无费用/无花费”，`-2` for “X费用”。
-  - `location_type` is mandatory when `type` is `地点卡`（`已揭示` | `未揭示`）。
-  - `serial_number`/`threshold` only apply to `场景卡`/`密谋卡`。
-  - Use `msg` to surface upstream validation errors; backend will raise on non-empty `msg` for certain builders.
+### 事件/回调与扩展点
+- 校验失败时可在 `msg` 字段中携带提示信息，供上游或工具链拦截/提示。
+- 可扩展字段如 `image_prompt` 可由下游工具按需消费。
+
+## 实现说明
+### 设计模式与思路
+- Schema-first（先定义结构与边界）：以受控词表+字段约束为核心，保证各阶段的一致性。
+- 归一化与容错：通过同义映射、排序、默认值，平衡录入便捷性与渲染稳定性。
+
+### 重要技术决策
+- `submit_icon` 使用“别名映射 + 固定顺序”统一处理，避免前端/出图的排列差异。
+- `level`、`cost`、`weakness_type` 等提供明确默认/哨兵值，减少遗漏导致的不确定性。
+- 文本换行统一以 `<lr>` 表示，降低跨端/跨平台字符差异的风险。
+
+### 配置与环境
+- 统一使用 UTF-8 编码；在 Windows 终端中亦应启用 UTF-8 以避免乱码。
+- 不依赖运行时环境变量；仅对输入 JSON 的字段与取值作校验/归一化约束。
+
+### 性能与安全
+- 性能：字段归一化与映射为轻量操作；整体为 I/O 绑定，非瓶颈路径。
+- 安全：不直接执行外部代码；注意对注入式内容（例如富文本标记）保持白名单式约束（仅允许 `<lr>`）。
+
+### 已知限制
+- 本目录不包含代码实现与测试用例；具体渲染/导出行为依赖下游工具链。
+- 依赖方的字段支持程度（例如前端表单配置）可能因版本不同而略有差异，需以实际环境为准。
 

@@ -3,6 +3,7 @@ import { httpClient, ApiError } from './http-client';
 import { API_ENDPOINTS } from './endpoints';
 import type {
     FileTreeData,
+    FileScanResponse,
     FileContentData,
     ImageContentData,
     FileInfoData,
@@ -11,7 +12,8 @@ import type {
     CreateFileRequest,
     RenameItemRequest,
     DeleteItemRequest,
-    FileContentRequest
+    FileContentRequest,
+    ReportVisibleNodesRequest
 } from './types';
 
 /**
@@ -21,7 +23,7 @@ export class WorkspaceService {
     /**
      * 获取文件树
      * @param includeHidden 是否包含隐藏文件，默认false
-     * @returns 文件树结构
+     * @returns 文件树结构（包含scanId用于渐进式加载）
      * @throws {ApiError} 当获取失败时抛出错误
      */
     public static async getFileTree(includeHidden: boolean = false): Promise<FileTreeData> {
@@ -36,6 +38,46 @@ export class WorkspaceService {
                 throw error;
             }
             throw new ApiError(3002, '获取文件树失败', error);
+        }
+    }
+
+    /**
+     * 获取包含 card_type 的文件树快照（不触发新扫描，使用服务端缓存填充卡牌类型）
+     * @param includeHidden 是否包含隐藏文件，默认false
+     */
+    public static async getFileTreeSnapshot(includeHidden: boolean = false): Promise<FileTreeData> {
+        try {
+            const url = `${API_ENDPOINTS.GET_FILE_TREE.url}?include_hidden=${includeHidden}&include_card_type=true&mode=snapshot`;
+            const response = await httpClient.get<FileTreeData>(url, {
+                timeout: API_ENDPOINTS.GET_FILE_TREE.timeout
+            });
+            return response.data.data!;
+        } catch (error) {
+            if (error instanceof ApiError) {
+                throw error;
+            }
+            throw new ApiError(3002, '获取文件树快照失败', error);
+        }
+    }
+
+    /**
+     * 轮询文件树增量更新
+     * @param scanId 扫描ID，用于跟踪特定扫描会话
+     * @returns 增量更新数据（包含新发现的节点和完成状态）
+     * @throws {ApiError} 当轮询失败时抛出错误
+     */
+    public static async pollFileTreeUpdates(scanId: string, limit: number = 200): Promise<FileScanResponse> {
+        try {
+            const url = `${API_ENDPOINTS.POLL_FILE_TREE_UPDATES.url}/${scanId}?limit=${encodeURIComponent(String(limit))}`;
+            const response = await httpClient.get<FileScanResponse>(url, {
+                timeout: API_ENDPOINTS.POLL_FILE_TREE_UPDATES.timeout
+            });
+            return response.data.data!;
+        } catch (error) {
+            if (error instanceof ApiError) {
+                throw error;
+            }
+            throw new ApiError(3002, '轮询文件树更新失败', error);
         }
     }
 
@@ -224,7 +266,7 @@ export class WorkspaceService {
                 path,
                 content
             };
-            
+
             await httpClient.put(
                 API_ENDPOINTS.SAVE_FILE_CONTENT.url,
                 requestData,
@@ -239,11 +281,41 @@ export class WorkspaceService {
             throw new ApiError(3008, '保存文件失败', error);
         }
     }
+
+    /**
+     * 上报可见节点路径列表
+     * @param scanId 扫描ID（可选）
+     * @param visiblePaths 可见节点路径列表
+     * @throws {ApiError} 当上报失败时抛出错误
+     */
+    public static async reportVisibleNodes(scanId: string | undefined, visiblePaths: string[]): Promise<void> {
+        try {
+            const requestData: ReportVisibleNodesRequest = {
+                scan_id: scanId,
+                visible_paths: visiblePaths
+            };
+
+            await httpClient.post(
+                API_ENDPOINTS.REPORT_VISIBLE_NODES.url,
+                requestData,
+                {
+                    timeout: API_ENDPOINTS.REPORT_VISIBLE_NODES.timeout
+                }
+            );
+        } catch (error) {
+            if (error instanceof ApiError) {
+                throw error;
+            }
+            throw new ApiError(3009, '上报可见节点失败', error);
+        }
+    }
 }
 
 // 导出便捷方法
 export const {
     getFileTree,
+    getFileTreeSnapshot,
+    pollFileTreeUpdates,
     createDirectory,
     createFile,
     renameItem,
@@ -251,7 +323,8 @@ export const {
     getFileContent,
     getImageContent,
     getFileInfo,
-    saveFileContent
+    saveFileContent,
+    reportVisibleNodes
 } = WorkspaceService;
 
 export default WorkspaceService;

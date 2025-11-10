@@ -791,6 +791,62 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       ...externalImageFields
     ]
   },
+  '调查员小卡': {
+    field_type_display: '🧩 调查员小卡',
+    card_category: 'player',
+    fields: [
+      {
+        key: 'is_back',
+        name: '📃 正面背面',
+        type: 'select',
+        layout: 'half',
+        defaultValue: false,
+        options: [
+          { label: '🔼 正面', value: false },
+          { label: '🔽 背面', value: true },
+        ]
+      },
+      {
+        key: 'image_filter',
+        name: '🎨 滤镜样式',
+        type: 'select',
+        layout: 'half',
+        defaultValue: 'normal',
+        options: [
+          { label: '🌈 正常', value: 'normal' },
+          { label: '⚫ 黑白', value: 'grayscale' }
+        ]
+      },
+      {
+        key: 'share_front_picture',
+        showCondition: {
+          field: 'is_back',
+          value: true
+        },
+        name: '🔗 共享正面插画与设置',
+        type: 'select',
+        layout: 'half',
+        defaultValue: 1,
+        options: [
+          { label: '✅ 使用共享', value: 1 },
+          { label: '❌ 不共享', value: 0 }
+        ]
+      },
+      {
+        key: 'picture_base64',
+        showCondition: {
+          field: 'share_front_picture',
+          value: 1,
+          operator: 'not-equals'
+        },
+        name: '🖼️ 插画',
+        type: 'image',
+        layout: 'half',
+        maxSize: 50 * 1024 * 1024,
+      },
+      // 调查员小卡为纯图片类型，不提供外部图片替换
+    ]
+  },
   '调查员背面': {
     field_type_display: '🔄 调查员背面',
     card_category: 'player',
@@ -1768,6 +1824,10 @@ export const getDefaultBackType = (frontType: string): { type: string; is_back?:
 
   if (frontType === '调查员') {
     return { type: '调查员背面' };
+  }
+
+  if (frontType === '调查员小卡') {
+    return { type: '调查员小卡', is_back: true };
   }
 
   if (frontType === '密谋卡') {

@@ -38,6 +38,7 @@ declare module 'vue' {
     NEmpty: typeof import('naive-ui')['NEmpty']
     NForm: typeof import('naive-ui')['NForm']
     NFormItem: typeof import('naive-ui')['NFormItem']
+    NGi: typeof import('naive-ui')['NGi']
     NGrid: typeof import('naive-ui')['NGrid']
     NGridItem: typeof import('naive-ui')['NGridItem']
     NIcon: typeof import('naive-ui')['NIcon']
@@ -65,7 +66,6 @@ declare module 'vue' {
     NText: typeof import('naive-ui')['NText']
     NThing: typeof import('naive-ui')['NThing']
     NTooltip: typeof import('naive-ui')['NTooltip']
-    NTree: typeof import('naive-ui')['NTree']
     NUpload: typeof import('naive-ui')['NUpload']
     NUploadDragger: typeof import('naive-ui')['NUploadDragger']
     PackageEditor: typeof import('./src/components/PackageEditor.vue')['default']
@@ -74,6 +74,7 @@ declare module 'vue' {
     TTSExportGuide: typeof import('./src/components/TTSExportGuide.vue')['default']
     TtsScriptEditor: typeof import('./src/components/TtsScriptEditor.vue')['default']
     UniversalUploadDialog: typeof import('./src/components/UniversalUploadDialog.vue')['default']
+    VirtualFileTree: typeof import('./src/components/VirtualFileTree.vue')['default']
     WorkspaceSidebar: typeof import('./src/components/WorkspaceSidebar.vue')['default']
   }
 }

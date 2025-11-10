@@ -39,10 +39,19 @@
         </n-space>
       </div>
       <n-spin :show="loading">
-        <n-tree v-if="displayedTreeData && displayedTreeData.length > 0" :data="displayedTreeData"
-          :render-label="renderTreeLabel" :render-prefix="renderTreePrefix" selectable :expand-on-click="false"
-          :expanded-keys="expandedKeys" :selected-keys="selectedKeys" @update:selected-keys="handleFileSelect"
-          @update:expanded-keys="handleExpandedKeysChange" />
+        <VirtualFileTree
+          v-if="displayedTreeData && displayedTreeData.length > 0"
+          :data="displayedTreeData"
+          :expanded-keys="expandedKeys"
+          :selected-keys="selectedKeys"
+          :render-label="renderTreeLabel"
+          :render-prefix="renderTreePrefix"
+          :node-height="32"
+          @update:selected-keys="handleFileSelect"
+          @update:expanded-keys="handleExpandedKeysChange"
+          @contextmenu="(option, e) => handleRightClick(e, option)"
+          @dragstart="(option, e) => handleTreeNodeDragStart(e, option)"
+        />
         <n-empty v-else :description="$t('workspaceMain.fileTree.emptyText')" />
       </n-spin>
     </div>
@@ -580,14 +589,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, h, onMounted, computed, nextTick, onUnmounted, watch } from 'vue';
+import { ref, h, onMounted, computed, nextTick, onUnmounted, watch, markRaw } from 'vue';
+import VirtualFileTree from './VirtualFileTree.vue';
 import { NIcon, useMessage, NText, NTag } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import type { TreeOption, FormInst, FormRules } from 'naive-ui';
 
-// 扩展TreeOption接口以支持卡牌类型
+// 扩展TreeOption接口以支持卡牌类型和加载状态
 interface ExtendedTreeOption extends TreeOption {
   card_type?: string; // 卡牌类型
+  loadingState?: 'skeleton' | 'loading' | 'completed' | null; // EP-003: 加载状态
 }
 import {
   FolderOpenOutline,
@@ -603,12 +614,15 @@ import {
   RefreshOutline,
   CreateOutline,
   TrashOutline,
-  WarningOutline
+  WarningOutline,
+  SkullOutline,
+  SyncOutline,
+  CheckmarkOutline
 } from '@vicons/ionicons5';
 
 // 导入API服务
 import { WorkspaceService, ApiError, CardService, TtsExportService, ArkhamDBService, ConfigService } from '@/api';
-import type { CardData, ExportCardParams, ArkhamDBContentPack } from '@/api/types';
+import type { CardData, ExportCardParams, ArkhamDBContentPack, FileNodeData } from '@/api/types';
 
 interface Props {
   width: number;
@@ -627,6 +641,38 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 const message = useMessage();
+
+// ---------- 渲染常量：图标映射与样式（外提 + markRaw，避免重复分配） ----------
+const ICON_STYLE = markRaw({ marginRight: '6px' });
+const BASE_ICON_MAP = markRaw({
+  'workspace': { component: LayersOutline, color: '#667eea' },
+  'directory': { component: FolderOpenOutline, color: '#ffa726' },
+  'image': { component: ImageOutline, color: '#66bb6a' },
+  'config': { component: GridOutline, color: '#ff7043' },
+  'data': { component: GridOutline, color: '#ff7043' },
+  'style': { component: SettingsOutline, color: '#ec407a' },
+  'text': { component: DocumentOutline, color: '#8d6e63' },
+  'file': { component: DocumentOutline, color: '#90a4ae' },
+  'default': { component: DocumentOutline, color: '#90a4ae' }
+} as const);
+const CARD_TYPE_ICON_MAP = markRaw({
+  '支援卡': { component: DocumentOutline, emoji: '📦' },
+  '事件卡': { component: DocumentOutline, emoji: '⚡' },
+  '技能卡': { component: DocumentOutline, emoji: '🎯' },
+  '调查员': { component: DocumentOutline, emoji: '👤' },
+  '调查员背面': { component: DocumentOutline, emoji: '🔄' },
+  '调查员小卡': { component: DocumentOutline, emoji: '🧩' },
+  '定制卡': { component: DocumentOutline, emoji: '🎨' },
+  '故事卡': { component: DocumentOutline, emoji: '📖' },
+  '诡计卡': { component: DocumentOutline, emoji: '🎭' },
+  '敌人卡': { component: DocumentOutline, emoji: '👹' },
+  '地点卡': { component: DocumentOutline, emoji: '📍' },
+  '密谋卡': { component: DocumentOutline, emoji: '🌙' },
+  '密谋卡-大画': { component: DocumentOutline, emoji: '🌕' },
+  '场景卡': { component: DocumentOutline, emoji: '🎬' },
+  '场景卡-大画': { component: DocumentOutline, emoji: '🎞️' },
+  '冒险参考卡': { component: DocumentOutline, emoji: '📋' }
+} as const);
 
 // 获取CPU核心数
 const cpuCores = ref(navigator.hardwareConcurrency || 4);
@@ -737,6 +783,12 @@ const bleedModelOptions = computed(() => [
 
 // 文件树数据
 const fileTreeData = ref<TreeOption[]>([]);
+// CON-003: pathToNodeMap索引优化 - 维护path到node的Map映射
+const pathToNodeMap = ref<Map<string, TreeOption>>(new Map());
+// EP-002: 可见区域上报相关状态
+const currentScanId = ref<string | undefined>(undefined);
+let reportVisibleNodesTimeout: NodeJS.Timeout | null = null;
+
 const BOOKMARK_CONFIG_KEY = 'file_tree_bookmarks';
 const bookmarkedPaths = ref<string[]>([]);
 const showOnlyBookmarks = ref(false);
@@ -1140,6 +1192,77 @@ const collectCardPaths = (nodes: TreeOption[], bucket: Set<string>) => {
   }
 };
 
+// CON-003: 构建path到node的索引映射
+const buildPathIndex = (nodes: TreeOption[]): void => {
+  const map = new Map<string, TreeOption>();
+  const traverse = (nodes: TreeOption[]) => {
+    for (const node of nodes) {
+      if (typeof node.path === 'string') {
+        map.set(node.path, node);
+      }
+      if (node.children && node.children.length > 0) {
+        traverse(node.children);
+      }
+    }
+  };
+  traverse(nodes);
+  pathToNodeMap.value = map;
+};
+
+// EP-002: 收集当前可见的“卡牌(.card)节点”路径（仅展开节点下的可见卡牌，递归到已展开的子目录）
+const collectVisiblePaths = (): string[] => {
+  const result: string[] = [];
+  const expandedSet = new Set(expandedKeys.value);
+
+  const traverse = (nodes: TreeOption[]) => {
+    for (const node of nodes) {
+      const path = typeof node.path === 'string' ? (node.path as string) : '';
+      const isRootOrExpanded = node.type === 'workspace' || expandedSet.has(node.key);
+      if (!isRootOrExpanded) continue;
+
+      if (node.children && node.children.length > 0) {
+        // 收集直接可见子节点中的卡牌文件
+        for (const child of node.children) {
+          if (child.type === 'card' && typeof child.path === 'string') {
+            result.push((child.path as string).replace(/\\\\/g, '/'));
+          }
+        }
+        // 对已展开的子目录递归
+        for (const child of node.children) {
+          if (child.type === 'directory' && expandedSet.has(child.key)) {
+            traverse([child]);
+          }
+        }
+      }
+    }
+  };
+
+  traverse(fileTreeData.value);
+  return Array.from(new Set(result));
+};
+
+// EP-002: 防抖上报可见节点
+const debouncedReportVisibleNodes = () => {
+  // 清除之前的定时器
+  if (reportVisibleNodesTimeout) {
+    clearTimeout(reportVisibleNodesTimeout);
+  }
+
+  // 设置新的定时器(500ms防抖)
+  reportVisibleNodesTimeout = setTimeout(async () => {
+    try {
+      if (!currentScanId.value) return; // 扫描已结束，不再上报
+      const visiblePaths = collectVisiblePaths();
+      if (visiblePaths.length === 0) return;
+      await WorkspaceService.reportVisibleNodes(currentScanId.value, visiblePaths);
+      console.log(`已上报 ${visiblePaths.length} 个可见节点路径`);
+    } catch (error) {
+      // 上报失败时仅记录日志,不影响UI交互
+      console.warn('上报可见节点失败:', error);
+    }
+  }, 500);
+};
+
 const pruneBookmarksAgainstTree = () => {
   if (bookmarkedPaths.value.length === 0) return;
   const validPaths = new Set<string>();
@@ -1160,9 +1283,11 @@ const pruneTemporaryWorkspaceItems = () => {
   }
 };
 
+// 使用 Set 加速 membership 判断
+const bookmarkedSet = computed(() => new Set(bookmarkedPaths.value));
 const isPathBookmarked = (path?: string) => {
   if (!path) return false;
-  return bookmarkedPaths.value.includes(path);
+  return bookmarkedSet.value.has(path);
 };
 
 const addBookmark = (option: TreeOption | null) => {
@@ -1218,22 +1343,32 @@ const updateBookmarkPath = (oldPath: string, newPath: string) => {
   }
 };
 
+// CON-003: 使用pathToNodeMap优化computeBookmarkExpandedKeys
 const computeBookmarkExpandedKeys = () => {
   const expanded = new Set<string | number>();
-  const traverse = (nodes: TreeOption[], ancestors: Array<string | number>) => {
-    for (const node of nodes) {
-      const currentAncestors = [...ancestors, node.key as string | number];
-      if (node.children && node.children.length > 0) {
-        traverse(node.children, currentAncestors);
-      }
-      if (node.type === 'card' && typeof node.path === 'string' && isPathBookmarked(node.path)) {
-        ancestors.forEach(a => expanded.add(a));
-      }
-    }
-  };
 
+  // 使用Map索引快速查找节点及其祖先
+  for (const bookmarkPath of bookmarkedPaths.value) {
+    const node = pathToNodeMap.value.get(bookmarkPath);
+    if (!node || node.type !== 'card') continue;
+
+    // 回溯收集所有祖先key
+    let currentPath = bookmarkPath;
+    while (currentPath) {
+      const lastSlash = currentPath.lastIndexOf('/');
+      if (lastSlash === -1) break;
+
+      const parentPath = currentPath.substring(0, lastSlash);
+      const parentNode = pathToNodeMap.value.get(parentPath);
+      if (parentNode && parentNode.key) {
+        expanded.add(parentNode.key);
+      }
+      currentPath = parentPath;
+    }
+  }
+
+  // 确保根节点展开
   if (fileTreeData.value.length > 0) {
-    traverse(fileTreeData.value, []);
     const rootKey = fileTreeData.value[0]?.key;
     if (rootKey) expanded.add(rootKey);
   }
@@ -1241,34 +1376,40 @@ const computeBookmarkExpandedKeys = () => {
   return Array.from(expanded);
 };
 
-const filterTreeByBookmarks = (nodes: TreeOption[]): TreeOption[] => {
-  const result: TreeOption[] = [];
+// CON-003: 使用computed缓存filterTreeByBookmarks,避免重复计算
+const displayedTreeData = computed(() => {
+  if (!showOnlyBookmarks.value) return fileTreeData.value;
 
-  for (const node of nodes) {
-    const nextChildren = node.children ? filterTreeByBookmarks(node.children) : [];
-    const currentBookmarked = node.type === 'card' && typeof node.path === 'string' && isPathBookmarked(node.path);
+  // 过滤树:仅保留包含书签卡牌的分支（尽量复用原节点，必要时才浅克隆）
+  const filterTree = (nodes: TreeOption[]): TreeOption[] => {
+    const result: TreeOption[] = []
+    for (const node of nodes) {
+      const nextChildren = node.children ? filterTree(node.children) : []
+      const currentBookmarked = node.type === 'card' && typeof node.path === 'string' && isPathBookmarked(node.path)
 
-    if (node.type === 'workspace' && nextChildren.length === 0) {
-      continue;
-    }
+      if (node.type === 'workspace' && nextChildren.length === 0) continue
 
-    if (currentBookmarked || nextChildren.length > 0 || node.type === 'workspace') {
-      const cloned: TreeOption = { ...node };
-      if (nextChildren.length > 0) {
-        cloned.children = nextChildren;
-      } else {
-        delete (cloned as any).children;
+      if (currentBookmarked || nextChildren.length > 0 || node.type === 'workspace') {
+        // 尝试复用原节点：当 children 引用未改变时直接复用
+        if (nextChildren.length > 0 && node.children && node.children.length === nextChildren.length) {
+          let same = true
+          for (let i = 0; i < nextChildren.length; i++) {
+            if (node.children[i] !== nextChildren[i]) { same = false; break }
+          }
+          if (same) { result.push(node); continue }
+        }
+        // 需要调整 children：浅克隆并写入/删除 children
+        const cloned: TreeOption = { ...node }
+        if (nextChildren.length > 0) cloned.children = nextChildren
+        else delete (cloned as any).children
+        result.push(cloned)
       }
-      result.push(cloned);
     }
+    return result
   }
 
-  return result;
-};
-
-const displayedTreeData = computed(() => {
-  return showOnlyBookmarks.value ? filterTreeByBookmarks(fileTreeData.value) : fileTreeData.value;
-});
+  return filterTree(fileTreeData.value)
+})
 
 // 文件树操作辅助函数
 const findNodeByPath = (nodes: TreeOption[], path: string): TreeOption | null => {
@@ -1551,6 +1692,12 @@ const loadFileTree = async () => {
       if (fileTreeData.value.length > 0 && fileTreeData.value[0].key) {
         expandedKeys.value = [fileTreeData.value[0].key];
       }
+
+      // EP-003: 如果返回了scanId，启动渐进式加载轮询
+      if (data.scanId) {
+        currentScanId.value = data.scanId;
+        startProgressiveLoading(data.scanId);
+      }
     } else {
       fileTreeData.value = [];
       expandedKeys.value = [];
@@ -1569,8 +1716,177 @@ const loadFileTree = async () => {
   }
 };
 
+// EP-003: 渐进式加载状态
+let progressiveLoadingTimer: NodeJS.Timeout | null = null;
+const POLL_LIMIT = 200; // 每次最多拉取200条增量
+const POLL_INTERVAL_MS = 1200; // 轮询间隔 1.2s，降低开销
+const isProgressiveLoading = ref(false);
+
+// EP-003: 启动渐进式加载轮询（对齐 FileScanResponse 结构）
+const startProgressiveLoading = async (scanId: string) => {
+  // 清除之前的轮询
+  if (progressiveLoadingTimer) {
+    clearTimeout(progressiveLoadingTimer);
+    progressiveLoadingTimer = null;
+  }
+
+  isProgressiveLoading.value = true;
+
+  const pollUpdates = async () => {
+    try {
+      const response = await WorkspaceService.pollFileTreeUpdates(scanId, POLL_LIMIT);
+
+      // 应用增量更新（使用 FileScanResponse.data）
+      if (response.data && response.data.length > 0) {
+        applyIncrementalUpdates(response.data);
+      }
+
+      // 根据状态决定是否继续轮询
+      const completed = response.status === 'completed';
+      if (!completed) {
+        progressiveLoadingTimer = setTimeout(pollUpdates, POLL_INTERVAL_MS);
+      } else {
+        isProgressiveLoading.value = false;
+        currentScanId.value = undefined;
+
+        // 扫描完成后进行一次快照补齐: 使用缓存拿到完整的 card_type
+        try {
+          const snapshot = await WorkspaceService.getFileTreeSnapshot(false);
+          if (snapshot && snapshot.fileTree) {
+            const snapshotRoot = convertFileTreeData(snapshot.fileTree);
+            applyCardTypesFromSnapshot(snapshotRoot);
+            applyPendingCardTypes();
+          }
+        } catch (e) {
+          console.warn('获取文件树快照失败（非致命）:', e);
+          // 快照失败时，至少应用一次积压的待处理队列
+          applyPendingCardTypes();
+        }
+      }
+    } catch (error) {
+      console.error('轮询文件树更新失败:', error);
+      isProgressiveLoading.value = false;
+      currentScanId.value = undefined;
+    }
+  };
+
+  // 立即开始轮询
+  pollUpdates();
+};
+
+// 增量更新可见优先：暂存不可见节点的 card_type，完成或快照后统一应用
+const pendingCardTypes = ref<Map<string, string | undefined>>(new Map());
+
+const isPathVisible = (path: string): boolean => {
+  const node = pathToNodeMap.value.get(path);
+  if (!node) return false;
+  if (node.type === 'workspace') return true;
+  let currentPath = path;
+  while (true) {
+    const lastSlash = currentPath.lastIndexOf('/');
+    if (lastSlash === -1) break;
+    const parentPath = currentPath.substring(0, lastSlash);
+    const parentNode = pathToNodeMap.value.get(parentPath);
+    if (!parentNode) break;
+    if (parentNode.type === 'workspace') return true;
+    const key = parentNode.key as string | number | undefined;
+    if (!key || !expandedKeys.value.includes(key)) return false;
+    currentPath = parentPath;
+  }
+  return true;
+};
+
+// EP-003: 应用增量更新到文件树（仅更新已有节点的元数据，避免生成重复节点）
+const applyIncrementalUpdates = (updates: FileNodeData[]) => {
+  let touched = 0;
+  for (const item of updates) {
+    if (!item.path) continue;
+    const node = pathToNodeMap.value.get(item.path);
+    if (!node) {
+      // 未找到对应节点：跳过以避免在根外生成重复节点
+      continue;
+    }
+    const ext = node as ExtendedTreeOption;
+    const newType = item.card_type ?? undefined;
+    if (isPathVisible(item.path)) {
+      // 更新卡牌类型（null 视为未识别）
+      ext.card_type = newType;
+      // 若存在任何加载状态，切换为完成后清理，避免loading残留
+      if (ext.loadingState && ext.loadingState !== 'completed') {
+        ext.loadingState = 'completed';
+        setTimeout(() => { ext.loadingState = null; }, 800);
+      }
+      touched++;
+      pendingCardTypes.value.delete(item.path);
+    } else {
+      // 暂存不可见节点，等待完成或快照后统一应用
+      pendingCardTypes.value.set(item.path, newType);
+    }
+  }
+  if (touched > 0) {
+    // 触发视图更新
+    void nextTick();
+  }
+};
+
+// 使用快照补齐 card_type（保持节点与展开/选中状态不变）
+const applyCardTypesFromSnapshot = (snapshotRoot: TreeOption) => {
+  // 1) 构建 path -> card_type 映射
+  const map = new Map<string, string | undefined>();
+  const collect = (node?: TreeOption) => {
+    if (!node) return;
+    if (node.type === 'card' && typeof node.path === 'string') {
+      const ct = (node as ExtendedTreeOption).card_type as string | undefined;
+      map.set(node.path, ct);
+    }
+    if (node.children && node.children.length > 0) {
+      node.children.forEach(collect);
+    }
+  };
+  collect(snapshotRoot);
+
+  // 2) 在现有树上按 path 更新 card_type
+  const update = (nodes: TreeOption[]) => {
+    for (const node of nodes) {
+      if (node.type === 'card' && typeof node.path === 'string') {
+        const ct = map.get(node.path);
+        if (ct !== undefined) {
+          (node as ExtendedTreeOption).card_type = ct;
+          (node as ExtendedTreeOption).loadingState = null;
+        }
+      }
+      if (node.children && node.children.length > 0) update(node.children);
+    }
+  };
+  update(fileTreeData.value);
+};
+
+// 将待处理的 card_type 批量应用到现有树
+const applyPendingCardTypes = () => {
+  if (pendingCardTypes.value.size === 0) return;
+  let touched = 0;
+  for (const [path, ct] of pendingCardTypes.value.entries()) {
+    const node = pathToNodeMap.value.get(path);
+    if (!node) continue;
+    (node as ExtendedTreeOption).card_type = ct;
+    (node as ExtendedTreeOption).loadingState = null;
+    touched++;
+  }
+  if (touched > 0) void nextTick();
+  pendingCardTypes.value.clear();
+};
+
 // 刷新文件树
 const refreshFileTree = () => {
+  // EP-003: 停止现有的渐进式加载轮询
+  if (progressiveLoadingTimer) {
+    clearTimeout(progressiveLoadingTimer);
+    progressiveLoadingTimer = null;
+  }
+  isProgressiveLoading.value = false;
+  currentScanId.value = undefined;
+
+  // 重新加载文件树
   loadFileTree();
 };
 
@@ -1610,39 +1926,30 @@ const renderTreeLabel = ({ option }: { option: TreeOption }) => {
 
 // 渲染树节点前缀图标
 const renderTreePrefix = ({ option }: { option: TreeOption }) => {
-  const iconStyle = { marginRight: '6px' };
+  const iconStyle = ICON_STYLE as Record<string, string>;
+  const extOption = option as ExtendedTreeOption;
 
-  // 基础文件类型图标映射
-  const baseIconMap = {
-    'workspace': { component: LayersOutline, color: '#667eea' },
-    'directory': { component: FolderOpenOutline, color: '#ffa726' },
-    'image': { component: ImageOutline, color: '#66bb6a' },
-    'config': { component: GridOutline, color: '#ff7043' },
-    'data': { component: GridOutline, color: '#ff7043' },
-    'style': { component: SettingsOutline, color: '#ec407a' },
-    'text': { component: DocumentOutline, color: '#8d6e63' },
-    'file': { component: DocumentOutline, color: '#90a4ae' },
-    'default': { component: DocumentOutline, color: '#90a4ae' }
-  };
+  // EP-003: 渐进式加载状态图标
+  if (extOption.loadingState) {
+    const loadingIconMap = {
+      'skeleton': { component: SkullOutline, color: '#9ca3af', spinning: false },
+      'loading': { component: SyncOutline, color: '#3b82f6', spinning: true },
+      'completed': { component: CheckmarkOutline, color: '#10b981', spinning: false }
+    };
 
-  // 卡牌类型图标映射
-  const cardTypeIconMap = {
-    '支援卡': { component: DocumentOutline, emoji: '📦' },
-    '事件卡': { component: DocumentOutline, emoji: '⚡' },
-    '技能卡': { component: DocumentOutline, emoji: '🎯' },
-    '调查员': { component: DocumentOutline, emoji: '👤' },
-    '调查员背面': { component: DocumentOutline, emoji: '🔄' },
-    '定制卡': { component: DocumentOutline, emoji: '🎨' },
-    '故事卡': { component: DocumentOutline, emoji: '📖' },
-    '诡计卡': { component: DocumentOutline, emoji: '🎭' },
-    '敌人卡': { component: DocumentOutline, emoji: '👹' },
-    '地点卡': { component: DocumentOutline, emoji: '📍' },
-    '密谋卡': { component: DocumentOutline, emoji: '🌙' },
-    '密谋卡-大画': { component: DocumentOutline, emoji: '🌕' },
-    '场景卡': { component: DocumentOutline, emoji: '🎬' },
-    '场景卡-大画': { component: DocumentOutline, emoji: '🎞️' },
-    '冒险参考卡': { component: DocumentOutline, emoji: '📋' }
-  };
+    const loadingIcon = loadingIconMap[extOption.loadingState];
+    return h(NIcon, {
+      component: loadingIcon.component,
+      color: loadingIcon.color,
+      size: 14,
+      style: iconStyle,
+      class: loadingIcon.spinning ? 'icon-spin' : undefined
+    });
+  }
+
+  // 基础图标与卡牌图标映射（外提常量）
+  const baseIconMap = BASE_ICON_MAP as any;
+  const cardTypeIconMap = CARD_TYPE_ICON_MAP as any;
 
   // 如果是卡牌类型且有card_type属性
   if (option.type === 'card' && (option as ExtendedTreeOption).card_type) {
@@ -1715,6 +2022,9 @@ const handleFileSelect = (keys: Array<string | number>, options: TreeOption[]) =
       expandedKeys.value = [...expandedKeys.value, key];
     }
 
+    // 目录展开/折叠后上报可见节点优先级（EP-002）
+    debouncedReportVisibleNodes();
+
     // 保持原有的选中状态，不改变选中项
     return;
   }
@@ -1725,8 +2035,20 @@ const handleFileSelect = (keys: Array<string | number>, options: TreeOption[]) =
 };
 
 // 处理展开状态变化
+// 展开 keys 的 rAF 合批，减少同帧多次更新引发的多次计算
+let expandedKeysRaf: number | null = null;
+let nextExpandedKeys: Array<string | number> | null = null;
+const setExpandedKeysBatch = (keys: Array<string | number>) => {
+  nextExpandedKeys = keys;
+  if (expandedKeysRaf != null) return;
+  expandedKeysRaf = requestAnimationFrame(() => {
+    expandedKeys.value = nextExpandedKeys ? [...nextExpandedKeys] : [];
+    expandedKeysRaf = null;
+  });
+};
+
 const handleExpandedKeysChange = (keys: Array<string | number>) => {
-  expandedKeys.value = keys;
+  setExpandedKeysBatch(keys);
 };
 
 // 处理右键点击
@@ -2767,6 +3089,32 @@ const closeArkhamDBImportDialog = () => {
   arkhamdbImportContent.value = null;
 };
 
+// CON-003: 监听文件树变更,自动重建索引（防抖，避免频繁重建引起卡顿）
+let buildIndexTimer: NodeJS.Timeout | null = null;
+let lastIndexNodeCount = -1;
+const countNodes = (nodes: TreeOption[]): number => {
+  let cnt = 0
+  const stack: TreeOption[] = [...nodes]
+  while (stack.length) {
+    const n = stack.pop()!
+    cnt++
+    if (n.children && n.children.length) stack.push(...n.children)
+  }
+  return cnt
+}
+watch(fileTreeData, (newTree) => {
+  if (buildIndexTimer) {
+    clearTimeout(buildIndexTimer);
+  }
+  buildIndexTimer = setTimeout(() => {
+    if (!newTree || newTree.length === 0) return;
+    const currentCount = countNodes(newTree as unknown as TreeOption[])
+    if (currentCount === lastIndexNodeCount) return; // 跳过结构未变的重建
+    buildPathIndex(newTree);
+    lastIndexNodeCount = currentCount;
+  }, 300);
+}, { deep: true });
+
 watch(bookmarkedPaths, (paths) => {
   if (!bookmarkSyncReady.value) return;
 
@@ -2803,6 +3151,11 @@ watch(showOnlyBookmarks, (value) => {
   }
 });
 
+// 任何 expandedKeys 的变化（无论事件还是程序设值）都触发一次可见区域上报（由防抖控制频率）
+watch(expandedKeys, () => {
+  debouncedReportVisibleNodes();
+});
+
 // 监听 selectedFile 的变化，同步 selectedKeys
 watch(() => props.selectedFile, (newFile) => {
   if (newFile && newFile.key) {
@@ -2827,6 +3180,16 @@ onUnmounted(() => {
     clearInterval(logRefreshInterval.value);
     logRefreshInterval.value = null;
   }
+  // EP-002: 清理可见区域上报定时器
+  if (reportVisibleNodesTimeout) {
+    clearTimeout(reportVisibleNodesTimeout);
+    reportVisibleNodesTimeout = null;
+  }
+  // EP-003: 清理渐进式加载轮询定时器
+  if (progressiveLoadingTimer) {
+    clearTimeout(progressiveLoadingTimer);
+    progressiveLoadingTimer = null;
+  }
 });
 
 // 导出方法供父组件调用
@@ -2836,6 +3199,20 @@ defineExpose({
 </script>
 
 <style scoped>
+/* EP-003: 渐进式加载图标旋转动画 */
+:deep(.icon-spin) {
+  animation: icon-spin-animation 1s linear infinite;
+}
+
+@keyframes icon-spin-animation {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* 批量导出相关样式 */
 /* 进度相关样式 */
 .batch-export-status {
@@ -2993,8 +3370,10 @@ defineExpose({
 
 .file-tree-content {
   flex: 1;
-  overflow-y: auto;
-  padding: 12px;
+  display: flex;              /* 让工具栏占据内容区顶部，树区自适应剩余高度 */
+  flex-direction: column;
+  overflow: hidden; /* 由内部 n-spin-container 承担滚动，避免双滚动条 */
+  padding: 0; /* 避免产生额外溢出导致多余滚动条 */
   background: linear-gradient(145deg, #f8fafc 0%, #e2e8f0 100%);
   /* 移动端滚动优化 */
   -webkit-overflow-scrolling: touch;
@@ -3003,23 +3382,20 @@ defineExpose({
   height: 0;
 }
 
-.file-tree-content::-webkit-scrollbar {
-  width: 8px;
+/* n-spin 容器不再滚动，避免双滚动条；滚动在虚拟树内部 */
+:deep(.n-spin-container) {
+  /* 填充除工具栏以外的剩余空间 */
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  overflow: hidden; /* scroll handled by virtual list */
+  display: flex;
+  flex-direction: column;
 }
 
-.file-tree-content::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 4px;
-}
-
-.file-tree-content::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
-  border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.file-tree-content::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #5a67d8 0%, #6b46c1 100%);
+/* Ensure the spin content stretches to provide a definite height for children */
+:deep(.n-spin-content) {
+  height: 100%;
 }
 
 .file-tree-toolbar {

@@ -299,11 +299,11 @@ class CardCreator:
         if traits is None:
             return ''
         delimiter = '，'
-        if self.font_manager.lang == 'en':
+        if self.font_manager.lang not in ['zh', 'zh-CHT']:
             delimiter = '. '
 
         result = delimiter.join([self.font_manager.get_font_text(trait) for trait in traits])
-        if self.font_manager.lang == 'en' and result != '':
+        if self.font_manager.lang not in ['zh', 'zh-CHT'] and result != '':
             result += '.'
         return result
 
@@ -412,27 +412,50 @@ class CardCreator:
             # 贴底图
             self._paste_background_image(card, picture_path, data, dp)
 
-            if 'location_type' not in data or data['location_type'] not in ['未揭示', '已揭示']:
-                data['location_type'] = '已揭示'
+            # 1. 安全地获取和设置默认值
+            # 使用 .get() 方法，如果键不存在则返回默认值，代码更简洁
+            location_type = data.get('location_type')
+            if location_type not in ['未揭示', '已揭示']:
+                location_type = '已揭示'
 
+            has_subtitle = data.get('subtitle', '') != ''
+            is_virtual = card_json.get('virtual', False)
+            is_no_encounter = not data.get('encounter_group', '')  # 新增：从card_json获取无遭遇状态
+
+            # 2. 使用列表构建图片名称的各个部分
+            image_name_parts = [
+                data['type'],  # 基础类型，如 "地点卡"
+                location_type  # "已揭示" 或 "未揭示"
+            ]
+
+            # 3. 根据条件向列表中添加组件
             if is_enemy:
-                if 'subtitle' in data and data['subtitle'] != '':
-                    card.paste_image(
-                        self.image_manager.get_image(f'{data["type"]}-{data["location_type"]}-敌人-副标题'), (0, 0),
-                        'contain')
-                else:
-                    card.paste_image(self.image_manager.get_image(f'{data["type"]}-{data["location_type"]}-敌人'),
-                                     (0, 0), 'contain')
+                image_name_parts.append('敌人')
+                if has_subtitle:
+                    image_name_parts.append('副标题')
             else:
-                if 'subtitle' in data and data['subtitle'] != '':
-                    card.paste_image(self.image_manager.get_image(
-                        f'{data["type"]}-{data["location_type"]}-副标题{"-虚拟" if card_json.get("virtual", False) else ""}'),
-                        (0, 0), 'contain')
-                else:
-                    card.paste_image(self.image_manager.get_image(
-                        f'{data["type"]}-{data["location_type"]}'
-                        f'{"-半" if card_json.get("virtual", False) == "半" else ""}'
-                        f'{"-虚拟" if card_json.get("virtual", False) else ""}'), (0, 0), 'contain')
+                # 非敌人卡片的逻辑
+                if has_subtitle:
+                    image_name_parts.append('副标题')
+
+                # 根据 virtual 的值添加 "-半" 或 "-虚拟"
+                if is_virtual == '半':
+                    image_name_parts.append('半')
+                    image_name_parts.append('虚拟')  # 假设“半虚拟”对应文件名 "地点卡-已揭示-半-虚拟.png"
+                elif is_virtual:
+                    image_name_parts.append('虚拟')
+
+            # 4. 新增：根据“无遭遇”条件添加组件
+            # 这个判断可以放在 subtitle 等组件之后，以匹配文件名 "xx-xx-副标题-无遭遇.png"
+            if is_no_encounter:
+                image_name_parts.append('无遭遇')
+
+            # 5. 将所有部分用连字符'-'连接起来，生成最终的图片名称
+            image_name = '-'.join(image_name_parts)
+
+            # 6. 调用图片管理器
+            # 无论逻辑多复杂，最终都只需要调用一次
+            card.paste_image(self.image_manager.get_image(image_name), (0, 0), 'contain')
 
         if self.transparent_encounter and dp:
             card.copy_circle_to_image(dp, (370, 518, 30), (370, 518, 30))
@@ -1828,6 +1851,45 @@ class CardCreator:
             card = Card(0, 0, image=dp)
             return card
 
+    def _apply_image_filter(self, img: Image.Image, image_filter: Optional[str]) -> Image.Image:
+        """根据 image_filter 应用滤镜（支持 grayscale）"""
+        try:
+            if not image_filter or image_filter == 'normal':
+                return img
+            if image_filter == 'grayscale':
+                # 转为灰度并保持 Alpha 通道（无Alpha时填充不透明）
+                if img.mode != 'RGBA':
+                    img = img.convert('RGBA')
+                l = img.convert('L')
+                a = img.getchannel('A') if 'A' in img.getbands() else Image.new('L', img.size, 255)
+                gray = Image.merge('RGBA', (l, l, l, a))
+                return gray
+        except Exception:
+            pass
+        return img
+
+    def create_investigator_mini_card(self, card_json: dict, picture_path: Union[str, Image.Image, None] = None) -> Card:
+        """制作调查员小卡（固定 484x744）"""
+        width, height = 484, 744
+        card = Card(width, height, self.font_manager, self.image_manager, card_json.get('type', '调查员小卡'))
+
+        dp = self._open_picture(card_json, picture_path)
+        if dp is None:
+            return card
+
+        # 应用滤镜
+        image_filter = card_json.get('image_filter', 'normal')
+        dp = self._apply_image_filter(dp, image_filter)
+
+        # 粘贴插画
+        picture_layout = card_json.get('picture_layout', {})
+        if picture_layout.get('mode') == 'custom':
+            card.paste_image_with_transform(dp, (0, 0, width, height), picture_layout)
+        else:
+            card.paste_image(dp, (0, 0, width, height), 'cover')
+
+        return card
+
     def create_card(self, card_json: dict, picture_path: Union[str, Image.Image, None] = None) -> Card:
         """
         入口函数 - 根据卡牌类型创建对应的卡牌
@@ -1896,6 +1958,8 @@ class CardCreator:
                 return self.create_act_back_card(card_json, picture_path)
             elif card_type == '特殊图片':
                 return self.create_special_pictures(card_json, picture_path)
+            elif card_type == '调查员小卡':
+                return self.create_investigator_mini_card(card_json, picture_path)
             else:
                 if 'class' not in card_json:
                     card_json['class'] = '中立'

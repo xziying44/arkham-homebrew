@@ -374,6 +374,63 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       ...externalImageFields
     ]
   },
+  '调查员小卡': {
+    field_type_en: 'Investigator Mini',
+    field_type_display: '🧩 Investigator Mini',
+    card_category: 'player',
+    fields: [
+      {
+        key: 'is_back',
+        name: '📃 Front/Back',
+        type: 'select',
+        layout: 'half',
+        defaultValue: false,
+        options: [
+          { label: '🔼 Front', value: false },
+          { label: '🔽 Back', value: true },
+        ]
+      },
+      {
+        key: 'image_filter',
+        name: '🎨 Filter Style',
+        type: 'select',
+        layout: 'half',
+        defaultValue: 'normal',
+        options: [
+          { label: '🌈 Normal', value: 'normal' },
+          { label: '⚫ Grayscale', value: 'grayscale' }
+        ]
+      },
+      {
+        key: 'share_front_picture',
+        showCondition: {
+          field: 'is_back',
+          value: true
+        },
+        name: '🔗 Share Front Image & Settings',
+        type: 'select',
+        layout: 'half',
+        defaultValue: 1,
+        options: [
+          { label: '✅ Share', value: 1 },
+          { label: "❌ Don't Share", value: 0 }
+        ]
+      },
+      {
+        key: 'picture_base64',
+        showCondition: {
+          field: 'share_front_picture',
+          value: 1,
+          operator: 'not-equals'
+        },
+        name: '🖼️ Artwork',
+        type: 'image',
+        layout: 'half',
+        maxSize: 50 * 1024 * 1024,
+      },
+      // Investigator mini is pure image, no external image replacement
+    ]
+  },
   '事件卡': {
     field_type_en: 'Event Card',
     field_type_display: '⚡ Event Card',
@@ -1782,6 +1839,10 @@ export const getDefaultBackType = (frontType: string): { type: string; is_back?:
 
   if (frontType === '调查员') {
     return { type: '调查员背面' };
+  }
+
+  if (frontType === '调查员小卡') {
+    return { type: '调查员小卡', is_back: true };
   }
 
   if (frontType === '地点卡') {

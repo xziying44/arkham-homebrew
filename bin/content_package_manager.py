@@ -8,6 +8,7 @@ from datetime import datetime
 from bin.card2arkhamdb import Card2ArkhamDBConverter
 from bin import card_numbering
 from bin.pnp_exporter import PNPExporter
+from bin.tts_script_generator import TtsScriptGenerator
 
 
 class ContentPackageManager:
@@ -24,6 +25,7 @@ class ContentPackageManager:
         self.content_package = content_package_data
         self.workspace_manager = workspace_manager
         self.logs = []  # 日志记录
+        self.tts_generator = TtsScriptGenerator(workspace_manager=self.workspace_manager)
 
         # 卡牌类型标签映射
         self.card_type_tags = {
@@ -212,6 +214,8 @@ class ContentPackageManager:
             # 选择模板
             if is_investigator:
                 template_name = "Investigator.json"
+            elif card_type == '调查员小卡':
+                template_name = "InvestigatorMini.json"
             elif is_act_card:
                 template_name = "Act.json"
             else:
@@ -253,11 +257,15 @@ class ContentPackageManager:
                 "Type": 0
             }
 
-            # 读取原始卡牌对象中的LuaScript和GMNotes信息
-            tts_script = card_data.get("tts_script", {})
-            if tts_script:
-                template["LuaScript"] = tts_script.get("LuaScript", "")
-                template["GMNotes"] = tts_script.get("GMNotes", "")
+            # 统一使用后端生成器实时生成 GMNotes 与 LuaScript（忽略旧的 tts_script 字段）
+            try:
+                result = self.tts_generator.generate(card_data)
+                template["GMNotes"] = result.get("GMNotes", "")
+                lua_script = result.get("LuaScript", "")
+                if lua_script:
+                    template["LuaScript"] = lua_script
+            except Exception as gen_err:
+                self._add_log(f"生成TTS脚本失败: {gen_err}")
 
             return template
 
@@ -381,13 +389,23 @@ class ContentPackageManager:
             }
 
     def _extract_gmnotes_id(self, card_data: Dict[str, Any]) -> str:
-        """从卡牌数据中提取GMNotes的ID"""
+        """从卡牌数据中提取GMNotes的ID（v2 优先，回退旧数据）"""
+        try:
+            tcfg = card_data.get('tts_config') or {}
+            if isinstance(tcfg, dict) and str(tcfg.get('version', '')).lower() == 'v2':
+                result = self.tts_generator.generate(card_data)
+                gm = result.get('GMNotes', '')
+                if gm:
+                    import json
+                    gmj = json.loads(gm)
+                    return gmj.get('id', '')
+        except Exception:
+            pass
+        # 旧数据回退
         tts_script = card_data.get("tts_script", {})
         gm_notes = tts_script.get("GMNotes", "")
-
         if not gm_notes:
             return ""
-
         try:
             import json
             gm_data = json.loads(gm_notes)
@@ -398,13 +416,22 @@ class ContentPackageManager:
             return id_match.group(1) if id_match else ""
 
     def _parse_gmnotes(self, card_data: Dict[str, Any]) -> Dict[str, Any]:
-        """解析GMNotes为字典"""
+        """解析GMNotes为字典（v2 优先，回退旧数据）"""
+        try:
+            tcfg = card_data.get('tts_config') or {}
+            if isinstance(tcfg, dict) and str(tcfg.get('version', '')).lower() == 'v2':
+                result = self.tts_generator.generate(card_data)
+                gm = result.get('GMNotes', '')
+                if gm:
+                    import json
+                    return json.loads(gm)
+        except Exception:
+            pass
+        # 旧数据回退
         tts_script = card_data.get("tts_script", {})
         gm_notes = tts_script.get("GMNotes", "")
-
         if not gm_notes:
             return {}
-
         try:
             import json
             return json.loads(gm_notes)
@@ -447,7 +474,7 @@ class ContentPackageManager:
                 "types": meta_info.get("types", []),
                 "status": meta_info.get("status", "final"),
                 "date_updated": datetime.now().isoformat() + 'Z',
-                "generator": "Arkham Card Maker 3.1.3"
+                "generator": "Arkham Card Maker 3.2"
             },
             "data": {
                 "cards": cards,

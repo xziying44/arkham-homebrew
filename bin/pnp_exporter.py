@@ -649,18 +649,33 @@ class PNPExporter:
             # 获取图片路径
             image_path = card_info['front_path'] if side == 'front' else card_info['back_path']
 
-            # 绘制卡牌
-            c.drawImage(image_path, x * mm, y * mm, width=card_width_mm * mm, height=card_height_mm * mm)
+            # 读取实际图片尺寸（像素）并转换为mm（按导出DPI）
+            try:
+                from PIL import Image as PILImage
+                with PILImage.open(image_path) as im:
+                    iw_px, ih_px = im.size
+            except Exception:
+                iw_px, ih_px = int(card_width_mm * self.export_helper.dpi / 25.4), int(card_height_mm * self.export_helper.dpi / 25.4)
 
-            # 判断是否在边缘，只在边缘卡牌绘制外侧裁剪线
+            dpi = self.export_helper.dpi
+            iw_mm = (iw_px / dpi) * 25.4
+            ih_mm = (ih_px / dpi) * 25.4
+
+            # 在单元格中居中绘制，不拉伸变形；保持正反面对准
+            draw_x = x + (card_width_mm - iw_mm) / 2
+            draw_y = y + (card_height_mm - ih_mm) / 2
+
+            c.drawImage(image_path, draw_x * mm, draw_y * mm, width=iw_mm * mm, height=ih_mm * mm)
+
+            # 判断是否在边缘，只在边缘卡牌绘制外侧裁剪线（按实际卡牌尺寸绘制）
             is_left_edge = (col == 0)
             is_right_edge = (col == actual_cols - 1)
             is_top_edge = (row == 0)
             is_bottom_edge = (row == actual_rows - 1)
 
-            # 绘制裁剪线（在出血线位置）
+            # 绘制裁剪线（在出血线位置，基于实际卡牌尺寸）
             self._draw_cut_marks(
-                c, x, y, card_width_mm, card_height_mm,
+                c, draw_x, draw_y, iw_mm, ih_mm,
                 bleed_mm,  # 传入出血尺寸
                 draw_left=is_left_edge,
                 draw_right=is_right_edge,

@@ -85,3 +85,9 @@ Exports from `index.ts`:
 > For detailed keys and domains within each language, see:
 > - `en/CLAUDE.md`
 > - `zh/CLAUDE.md`
+
+### Updates (Seal script editor keys)
+- 新增 `ttsScriptEditor.seal.*` 键域（中/英均已对齐）：
+  - `label`, `enable`, `tokens`, `tokensPlaceholder`, `clear`, `all`, `max`, `maxHint`
+  - `tokenNames.<Elder Sign|Auto-fail|Skull|Cultist|Tablet|Elder Thing|Bless|Curse|Frost|+1|0|-1...>`
+- 用途：TTS 脚本编辑器的“封印脚本”配置 UI（多选可封印 Token、全部 Token 勾选、数量上限与提示）。
