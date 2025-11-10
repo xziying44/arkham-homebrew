@@ -36,6 +36,19 @@ This document provides a complete, multi‑layer reference for the Vue 3 compone
     - 预览调用后端 `POST /api/tts/generate`（一次性首帧 + 250ms 防抖；父写回屏蔽避免循环）。
     - 升级表脚本：将坐标保存到 `tts_config.upgrade.coordinates`，后端统一生成 Lua。
     - 签名卡：按相对路径保存 `{ path, count }`；显示名称取文件树 `name`（或文件名）。后端按路径解析稳定脚本 ID，GMNotes 继续输出旧式 `signatures`（ID 聚合）。
+  - 封印脚本（新增）：
+    - 适用范围：除“调查员”“定制卡（升级表）”以外的所有卡牌类型。
+    - 前端配置：
+      - 开关：`seal.enabled`
+      - 可封印的标记：
+        • 选项一：`seal.allTokens = true`（允许所有 Token）
+        • 选项二：`seal.tokens: string[]`（从混沌标记集合多选：Elder Sign/+1/0/-1…/Skull/Cultist/Tablet/Elder Thing/Auto-fail/Bless/Curse/Frost）
+      - 数量上限：`seal.max`（空/0 表示不限制；后端不注入 MAX_SEALED，从封印库默认 99 继承）
+      - UI 细节：
+        • 多选下拉全宽、带 emoji 与 i18n 标签；清空为独立按钮避免与下拉箭头冲突
+        • “可封印所有 Token”复选框扩大点击区域并文本垂直居中
+    - 预览：更改任何配置都会 250ms 防抖触发后端预览；结果回显到 GMNotes/LuaScript 预览框。
+    - 运行时语言：菜单语言与标记名会根据卡片 `language` 传给后端，由 Lua 脚本内置 i18n（zh/英文）。
   - `DeckEditor.vue` – Deck content arrangement and export integration
   - `PackageEditor.vue` – Content package metadata and assets editor
   - `TTSExportGuide.vue` – Step‑by‑step guide for TTS export from a deck

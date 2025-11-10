@@ -256,6 +256,24 @@
 ### TtsScriptGenerator（tts_script_generator.py）
 - 描述：统一 GMNotes/LuaScript 生成器，权威生成源，导出与预览一致。
 - 入口：`generate(card_data) -> { GMNotes, LuaScript }`
-- 行为：
-  - V2：读取 `tts_config`；支持调查员阶段按钮/升级表脚本、地点卡 front/back GMNotes 融合；签名卡按相对路径解析出稳定 ID。
-  - 非 V2：回退读取 `card_data.tts_script` 并兼容地点卡旧数据结构。
+- 行为（V2 专用）：
+  - 优先级：
+    1) 升级表脚本（`tts_config.upgrade.coordinates`）→ `templates/upgrade_sheet.lua`
+    2) 封印脚本（`tts_config.seal`）→ `templates/seal.lua`
+    3) 调查员阶段按钮（仅调查员）→ `templates/phase_buttons.lua`
+  - 封印脚本配置结构：
+    ```jsonc
+    tts_config: {
+      seal?: {
+        enabled: boolean;            // 开关
+        allTokens: boolean;          // 允许所有 Token（与 INVALID_TOKENS 协同）
+        tokens: string[];            // 指定允许的 Token 名称（Elder Sign, Skull, …）
+        max?: number | null;         // 最大封印数；空/0 表示不限制（库默认 99）
+      },
+      language?: string;             // 'zh' | 'zh-CHT' | 'zh-cn' | 'zh-tw' → 中文菜单；其他 → 英文
+    }
+    ```
+  - 模板占位符：注入 VALID_TOKENS / INVALID_TOKENS / UPDATE_ON_HOVER / MAX_SEALED / RESOLVE_TOKEN；并注入菜单 i18n（Release/Resolve/Seal/Return/…）与 TOKEN_DISPLAY（标记名汉化）。
+  - 直达菜单：当只配置一种可封印类型时，自动显示“释放 <Token> / 结算 <Token>”。
+  - 地点/场景/密谋等 GMNotes：保持原有解析（线索/毁灭阈值、参考卡 token 修饰解析）。
+- 行为（非 V2）：回退读取 `card_data.tts_script` 并兼容地点卡旧数据结构。

@@ -102,6 +102,29 @@ This repository also ships Lua script templates consumed by the backend TTS scri
   - Bundled modules included in‑template: `core/GUIDReferenceApi`, `playermat/PlayermatApi`, `util/MathLib`, `util/SearchLib`
   - The backend computes layout params from pixel coordinates (group by row/Y; derive scales/offsets; emit `customizations` table) to ensure parity with the front‑end generator.
 
+- `seal.lua` — Sealable chaos token helper (cards that seal tokens)
+  - Origin: based on upstream "封印.lua" with full bundled modules. This project keeps it as a single template with placeholders injected by the backend.
+  - Placeholders (injected by `TtsScriptGenerator`):
+    - Core config
+      - `-- VALID_TOKENS_PLACEHOLDER --` → either `{}` (allow all with hover‑update) or `{ ["Skull"] = true, ... }`
+      - `-- INVALID_TOKENS_PLACEHOLDER --` → `{}` or `nil` (used with allow‑all + hover)
+      - `-- UPDATE_ON_HOVER_PLACEHOLDER --` → `UPDATE_ON_HOVER = true`
+      - `-- MAX_SEALED_PLACEHOLDER --` → optional `MAX_SEALED = <n>` (omit → defaults to 99 in library)
+      - `-- RESOLVE_TOKEN_PLACEHOLDER --` → `RESOLVE_TOKEN = true` (always enabled)
+    - Menu i18n
+      - `-- MENU_RELEASE_ONE_PLACEHOLDER --` / `-- MENU_RELEASE_ONE_PREFIX_PLACEHOLDER --`
+      - `-- MENU_RELEASE_ALL_PLACEHOLDER --`
+      - `-- MENU_RELEASE_MULTI_PREFIX_PLACEHOLDER --`
+      - `-- MENU_RETURN_MULTI_PREFIX_PLACEHOLDER --` / `-- MENU_RETURN_ALL_PLACEHOLDER --`
+      - `-- MENU_TOKEN_SUFFIX_PLACEHOLDER --`
+      - `-- MENU_RESOLVE_PREFIX_PLACEHOLDER --` / `-- MENU_RESOLVE_ONE_PLACEHOLDER --` / `-- MENU_RESOLVE_ONE_PREFIX_PLACEHOLDER --`
+      - `-- MENU_SEAL_PREFIX_PLACEHOLDER --` / `-- MENU_SEAL_MULTI_PREFIX_PLACEHOLDER --` / `-- MENU_SEAL_MULTI_INFIX_PLACEHOLDER --`
+      - `-- TOKEN_DISPLAY_FUNC_PLACEHOLDER --` / `-- TOKEN_DISPLAY_OR_DEFAULT_FUNC_PLACEHOLDER --`
+      - `-- GENERIC_TOKEN_LABEL_PLACEHOLDER --` (fallback for resolve menu when no single token can be inferred)
+  - Behavior additions in template:
+    - If exactly one valid token type is configured, menus show direct actions: "释放/结算 <Token>"; otherwise show generic "释放一个标记/结算一个标记" and prompt selection when needed.
+    - Token display names are localized in Lua (zh: 旧印/自动失败/骷髅/异教徒/石板/古神/祝福/诅咒/寒霜; en: original names).
+
 Consumption
 - The backend module `bin/tts_script_generator.py` loads these Lua templates and performs placeholder substitution to produce final scripts for TTS objects.
 - Prefer updating templates here rather than embedding large Lua strings in Python to keep maintenance simpler and front/back parity intact.
