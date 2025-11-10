@@ -16,6 +16,7 @@ class TTSCardConverter:
         self.work_directory = work_directory
         self.card_type_tags = {
             "调查员": ["Investigator", "PlayerCard"],
+            "调查员小卡": ["PlayerCard"],
             "调查员背面": ["Investigator", "PlayerCard"],
             "定制卡": ["PlayerCard"],
             "技能卡": ["PlayerCard"],

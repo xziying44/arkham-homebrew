@@ -1559,33 +1559,35 @@ class WorkspaceManager:
 
                 encounter_group_number = json_data.get('encounter_group_number', '')
                 card_number = json_data.get('card_number', '')
-            # 画图标
-            footer_icon_name = json_data.get('footer_icon_path', '')
-            if not footer_icon_name:
-                footer_icon_name = self.config.get('footer_icon_dir', '')
-            footer_icon_font = json_data.get('footer_icon_font', '')
-            if not footer_icon_font or footer_icon_font == '':
-                footer_icon = None
-                if footer_icon_name:
-                    footer_icon_path = self._get_absolute_path(footer_icon_name)
-                    if os.path.exists(footer_icon_path):
-                        footer_icon = Image.open(footer_icon_path)
+            # 调查员小卡为纯图片卡牌，不绘制页脚信息
+            if card_type != '调查员小卡':
+                # 画图标
+                footer_icon_name = json_data.get('footer_icon_path', '')
+                if not footer_icon_name:
+                    footer_icon_name = self.config.get('footer_icon_dir', '')
+                footer_icon_font = json_data.get('footer_icon_font', '')
+                if not footer_icon_font or footer_icon_font == '':
+                    footer_icon = None
+                    if footer_icon_name:
+                        footer_icon_path = self._get_absolute_path(footer_icon_name)
+                        if os.path.exists(footer_icon_path):
+                            footer_icon = Image.open(footer_icon_path)
 
-                card.set_footer_information(
-                    illustrator,
-                    footer_copyright,
-                    encounter_group_number,
-                    card_number,
-                    footer_icon=footer_icon
-                )
-            else:
-                card.set_footer_information(
-                    illustrator,
-                    footer_copyright,
-                    encounter_group_number,
-                    card_number,
-                    footer_icon_font=footer_icon_font
-                )
+                    card.set_footer_information(
+                        illustrator,
+                        footer_copyright,
+                        encounter_group_number,
+                        card_number,
+                        footer_icon=footer_icon
+                    )
+                else:
+                    card.set_footer_information(
+                        illustrator,
+                        footer_copyright,
+                        encounter_group_number,
+                        card_number,
+                        footer_icon_font=footer_icon_font
+                    )
             return card
 
         except Exception as e:
@@ -1624,6 +1626,25 @@ class WorkspaceManager:
             # 继承其他必要字段
             if 'version' not in back_json_data:
                 back_json_data['version'] = json_data.get('version', '2.0')
+
+            # 在生成背面卡牌前，处理共享正面插画与设置
+            try:
+                share_flag = back_json_data.get('share_front_picture', 0)
+                if isinstance(share_flag, str):
+                    share_flag = 1 if share_flag == '1' else 0
+                if share_flag:
+                    # 复制插画与插画布局设置
+                    if 'picture_base64' in json_data and json_data.get('picture_base64'):
+                        back_json_data['picture_base64'] = json_data.get('picture_base64')
+                    if 'picture_layout' in json_data and json_data.get('picture_layout'):
+                        back_json_data['picture_layout'] = json_data.get('picture_layout')
+                    # 默认将背面标记为背面
+                    back_json_data['is_back'] = True
+                    # 若未设置滤镜，默认黑白
+                    if 'image_filter' not in back_json_data or not back_json_data.get('image_filter'):
+                        back_json_data['image_filter'] = 'grayscale'
+            except Exception:
+                pass
 
             # 生成背面卡牌
             back_card = self.generate_card_image(back_json_data, silence)

@@ -1851,6 +1851,45 @@ class CardCreator:
             card = Card(0, 0, image=dp)
             return card
 
+    def _apply_image_filter(self, img: Image.Image, image_filter: Optional[str]) -> Image.Image:
+        """根据 image_filter 应用滤镜（支持 grayscale）"""
+        try:
+            if not image_filter or image_filter == 'normal':
+                return img
+            if image_filter == 'grayscale':
+                # 转为灰度并保持 Alpha 通道（无Alpha时填充不透明）
+                if img.mode != 'RGBA':
+                    img = img.convert('RGBA')
+                l = img.convert('L')
+                a = img.getchannel('A') if 'A' in img.getbands() else Image.new('L', img.size, 255)
+                gray = Image.merge('RGBA', (l, l, l, a))
+                return gray
+        except Exception:
+            pass
+        return img
+
+    def create_investigator_mini_card(self, card_json: dict, picture_path: Union[str, Image.Image, None] = None) -> Card:
+        """制作调查员小卡（固定 484x744）"""
+        width, height = 484, 744
+        card = Card(width, height, self.font_manager, self.image_manager, card_json.get('type', '调查员小卡'))
+
+        dp = self._open_picture(card_json, picture_path)
+        if dp is None:
+            return card
+
+        # 应用滤镜
+        image_filter = card_json.get('image_filter', 'normal')
+        dp = self._apply_image_filter(dp, image_filter)
+
+        # 粘贴插画
+        picture_layout = card_json.get('picture_layout', {})
+        if picture_layout.get('mode') == 'custom':
+            card.paste_image_with_transform(dp, (0, 0, width, height), picture_layout)
+        else:
+            card.paste_image(dp, (0, 0, width, height), 'cover')
+
+        return card
+
     def create_card(self, card_json: dict, picture_path: Union[str, Image.Image, None] = None) -> Card:
         """
         入口函数 - 根据卡牌类型创建对应的卡牌
@@ -1919,6 +1958,8 @@ class CardCreator:
                 return self.create_act_back_card(card_json, picture_path)
             elif card_type == '特殊图片':
                 return self.create_special_pictures(card_json, picture_path)
+            elif card_type == '调查员小卡':
+                return self.create_investigator_mini_card(card_json, picture_path)
             else:
                 if 'class' not in card_json:
                     card_json['class'] = '中立'

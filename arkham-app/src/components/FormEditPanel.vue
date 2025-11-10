@@ -794,6 +794,22 @@ const updateCardSideType = (side: string, newType: string) => {
                 }
                 console.log(`🔄 自动设置背面类型: ${defaultBackConfig.type}, is_back: ${defaultBackConfig.is_back}`);
             }
+
+            // 针对调查员小卡：自动设置默认参数（前：正常；背：黑白+共享正面插画）
+            if (newType === '调查员小卡') {
+                // 确保背面标记
+                currentCardData.back.type = '调查员小卡';
+                currentCardData.back.is_back = true;
+                // 前面默认滤镜
+                if (!currentCardData.image_filter) {
+                    currentCardData.image_filter = 'normal';
+                }
+                // 背面默认共享插画与设置 + 黑白滤镜
+                currentCardData.back.share_front_picture = 1;
+                if (!currentCardData.back.image_filter) {
+                    currentCardData.back.image_filter = 'grayscale';
+                }
+            }
         }
     }
     // 触发防抖预览更新
@@ -938,6 +954,11 @@ const hasValidCardData = computed(() => {
 
 // 检查是否有未保存的卡牌数据（用于共享组件显示）
 const hasAnyValidCardData = computed(() => {
+    // 允许调查员小卡在未填写名称时也显示 TTS 配置，用于快速绑定调查员卡
+    if ((currentCardData.type || '').trim() === '调查员小卡') {
+        return true;
+    }
+
     const hasValidFront = currentCardData.name && currentCardData.name.trim() !== '' &&
         currentCardData.type && currentCardData.type.trim() !== '';
 

@@ -26,6 +26,7 @@ class TtsScriptGenerator:
 
     _type_mapping = {
         "调查员": "Investigator",
+        "调查员小卡": "Minicard",
         "支援卡": "Asset",
         "事件卡": "Event",
         "地点卡": "Location",
@@ -170,6 +171,21 @@ class TtsScriptGenerator:
 
     def _ensure_script_id(self, card: Dict[str, Any]) -> str:
         tts_config = card.get("tts_config") or {}
+        # Minicard: if bound to an investigator, use its script id with '-m' suffix
+        card_type = str(card.get('type', '')).strip()
+        if card_type == '调查员小卡':
+            try:
+                mini_cfg = tts_config.get('mini') or {}
+                bind = mini_cfg.get('bind') or {}
+                rel_path = bind.get('path')
+                if isinstance(rel_path, str) and rel_path:
+                    ref_json = self._read_card_json_by_path(rel_path)
+                    base_sid = self._extract_script_id_from_card_json(ref_json) if ref_json else None
+                    if base_sid:
+                        return f"{base_sid}-m"
+            except Exception:
+                pass
+        # general: use provided script_id when present
         script_id = tts_config.get("script_id")
         if script_id and isinstance(script_id, str):
             return script_id

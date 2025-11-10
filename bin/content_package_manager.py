@@ -214,6 +214,8 @@ class ContentPackageManager:
             # 选择模板
             if is_investigator:
                 template_name = "Investigator.json"
+            elif card_type == '调查员小卡':
+                template_name = "InvestigatorMini.json"
             elif is_act_card:
                 template_name = "Act.json"
             else:
