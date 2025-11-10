@@ -40,7 +40,8 @@ class TtsScriptGenerator:
         "密谋卡-大画": "Agenda",
         "场景卡": "Act",
         "场景卡-大画": "Act",
-        "冒险参考卡": "AgendaReference",
+        # Scenario reference card
+        "冒险参考卡": "ScenarioReference",
         "玩家卡背": "PlayerCardBack",
         "遭遇卡背": "EncounterCardBack",
     }
@@ -106,6 +107,66 @@ class TtsScriptGenerator:
         else:
             entry["count"] = count
         return entry
+
+    # ---- Optimization helpers ----
+    def _parse_threshold(self, text: Any, investigator_tag: str = "<调查员>") -> Optional[Dict[str, Any]]:
+        """Parse a threshold string.
+        Rules: pick the first positive integer; if investigator tag present, mark per-investigator.
+        Returns: { 'value': int, 'per': bool } or None when not parsable.
+        """
+        if not isinstance(text, str) or not text.strip():
+            return None
+        m = re.search(r"(\d+)", text)
+        if not m:
+            return None
+        val = int(m.group(1))
+        per = investigator_tag in text
+        return {"value": val, "per": per}
+
+    def _parse_modifier(self, desc: Any) -> int:
+        """Pick first integer (may be negative) from description for token modifier; default 0."""
+        if not isinstance(desc, str):
+            return 0
+        m = re.search(r"-?\d+", desc)
+        return int(m.group(0)) if m else 0
+
+    _SCENARIO_TOKEN_KEYS = (
+        ("Skull", "skull"),
+        ("Cultist", "cultist"),
+        ("Tablet", "tablet"),
+        ("Elder Thing", "elder_thing"),
+    )
+
+    def _build_scenario_tokens(self, side: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+        """Build tokens object for ScenarioReference side.
+        Only generate when scenario_type in (0, 1). Supports nested object 'scenario_card' or flat keys.
+        """
+        tokens: Dict[str, Dict[str, Any]] = {}
+        st = side.get("scenario_type", 0)
+        try:
+            st_int = int(st)
+        except Exception:
+            st_int = 0
+        if st_int not in (0, 1):
+            return tokens
+
+        sc = side.get("scenario_card") if isinstance(side.get("scenario_card"), dict) else None
+
+        def get_value(flat_key: str, nested_key: str) -> Optional[str]:
+            v = side.get(flat_key)
+            if isinstance(v, str) and v:
+                return v
+            if sc:
+                nv = sc.get(nested_key)
+                if isinstance(nv, str) and nv:
+                    return nv
+            return None
+
+        for label, nk in self._SCENARIO_TOKEN_KEYS:
+            txt = get_value(f"scenario_card.{nk}", nk)
+            if txt:
+                tokens[label] = {"description": txt, "modifier": self._parse_modifier(txt)}
+        return tokens
 
     def _ensure_script_id(self, card: Dict[str, Any]) -> str:
         tts_config = card.get("tts_config") or {}
@@ -231,6 +292,9 @@ class TtsScriptGenerator:
         mapped_class = self._map_class(current.get("class"))
         if mapped_class:
             base_data["class"] = mapped_class
+        # 固定三类遭遇卡的 class 为 Mythos
+        if mapped_type in ("Act", "Agenda", "ScenarioReference"):
+            base_data["class"] = "Mythos"
         for key in ("level", "cost", "victory"):
             if key in current and current.get(key) is not None:
                 if key in ['level', 'cost'] and current.get(key) < 0:
@@ -319,6 +383,41 @@ class TtsScriptGenerator:
             if not (front_is_loc or back_is_loc):
                 # single-face location-ish fallback
                 gm = {**base_data, "location": make_location(front)}
+
+        elif mapped_type == "Act":
+            # 场景卡：解析线索阈值（front 侧）
+            gm = {**base_data, "type": "Act"}
+            parsed = self._parse_threshold(card.get("threshold"))
+            if parsed:
+                if parsed["per"]:
+                    gm["clueThresholdPerInvestigator"] = parsed["value"]
+                else:
+                    gm["clueThreshold"] = parsed["value"]
+
+        elif mapped_type == "Agenda":
+            # 密谋卡：解析毁灭阈值（front 侧）
+            gm = {**base_data, "type": "Agenda"}
+            parsed = self._parse_threshold(card.get("threshold"))
+            if parsed:
+                if parsed["per"]:
+                    gm["doomThresholdPerInvestigator"] = parsed["value"]
+                else:
+                    gm["doomThreshold"] = parsed["value"]
+
+        elif mapped_type == "ScenarioReference":
+            # 冒险参考卡：根据 scenario_type 生成 tokens（0/1 才生成），front/back 均检测
+            gm = {**base_data, "type": "ScenarioReference"}
+            tokens_obj: Dict[str, Any] = {}
+            front_tokens = self._build_scenario_tokens(card)
+            if front_tokens:
+                tokens_obj["front"] = front_tokens
+            back = card.get("back") if isinstance(card.get("back"), dict) else None
+            if back and back.get("type") == "冒险参考卡":
+                back_tokens = self._build_scenario_tokens(back)
+                if back_tokens:
+                    tokens_obj["back"] = back_tokens
+            if tokens_obj:
+                gm["tokens"] = tokens_obj
 
         else:
             gm = base_data

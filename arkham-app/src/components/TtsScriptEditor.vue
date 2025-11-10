@@ -474,7 +474,7 @@ const getCardTypeMapping = (cardType: string): string => {
         '密谋卡-大画': 'Agenda',
         '场景卡': 'Act',
         '场景卡-大画': 'Act',
-        '冒险参考卡': 'AgendaReference',
+        '冒险参考卡': 'ScenarioReference',
         '玩家卡背': 'PlayerCardBack',
         '遭遇卡背': 'EncounterCardBack'
     };
