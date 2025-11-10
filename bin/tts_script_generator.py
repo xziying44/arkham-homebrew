@@ -504,7 +504,7 @@ class TtsScriptGenerator:
 
         # i18n for menu labels based on language
         lang = (language or '').lower()
-        is_zh = lang in ('zh', 'zh-cht', 'zh_cn', 'zh-cn', 'zh_tw', 'zh-tw')
+        is_zh = lang in ('zh', 'zh-cht')
         if is_zh:
             menu_release_one = 'local MENU_RELEASE_ONE = "释放一个标记"'
             menu_release_one_prefix = 'local MENU_RELEASE_ONE_PREFIX = "释放 "'
