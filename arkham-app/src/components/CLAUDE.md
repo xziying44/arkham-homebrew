@@ -30,7 +30,7 @@ This document provides a complete, multi‑layer reference for the Vue 3 compone
   - `IllustrationLayoutEditor.vue` – Visual crop/offset/scale/rotate/flip editor for card art
   - `TextBoundaryEditor.vue` – Advanced text boundary adjustment (body boundaries + flavor padding)
   - `DeckOptionEditor.vue` – Investigator deck building options editor
-- `TtsScriptEditor.vue` – TTS scripting config editor (per card type), integrates file browser
+  - `TtsScriptEditor.vue` – TTS scripting config editor (per card type), integrates file browser
   - 行为（V2 改造）：
     - 仅保存 `tts_config` 到卡文件（不再写入旧版 `tts_script` 字段）。
     - 预览调用后端 `POST /api/tts/generate`（一次性首帧 + 250ms 防抖；父写回屏蔽避免循环）。
@@ -176,6 +176,11 @@ FileTreePanel(
 ```
 Behavior
 - Hosts project tree interactions, export actions, and integrations with services (`WorkspaceService`, `CardService`, etc.).
+
+Changelog (2025‑11‑10)
+- FormEditPanel.vue: 当正面选择“调查员小卡”时，自动初始化背面为同类型，默认前=normal、后=grayscale 且共享插画。
+- TtsScriptEditor.vue: 新增“调查员小卡”绑定调查员卡牌（选择路径）；绑定后脚本ID禁用，后端生成 `<investigator_id>-m`。
+- FileTreePanel.vue: 文件树卡牌类型图标映射增加“调查员小卡”（🧩）。
 
 ### FormField.vue
 Signature

@@ -32,6 +32,10 @@
   - `ResourceManager.py`：图片/字体资源与多语言配置；
   - 其他脚本：`create_card.py`、`create_pdf.py`、`macapp.py` 等。
 
+## Changelog (2025‑11‑10)
+- ExportHelper.py：固定“调查员小卡”出血导出为 41×63mm（不受用户规格影响，按出血 mm 叠加），并在双面导出路径补齐背面共享正面插画与布局逻辑；
+- create_card.py：新增“调查员小卡”纯图片生成（484×744），支持 normal/grayscale 滤镜（保 Alpha，无 Alpha 时填充 255）。
+
 ## Key Components
 
 ### server.py（Flask 服务）

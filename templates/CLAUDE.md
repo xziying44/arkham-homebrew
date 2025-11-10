@@ -7,6 +7,7 @@ This directory provides self‑contained Tabletop Simulator (TTS) object templat
 - `General.json` — Baseline upright card template (`CardCustom`) with a hidden back; suitable for most standard cards.
 - `Act.json` — Sideways card variant (`CardCustom`) tuned for act/agenda style layouts.
 - `Investigator.json` — Sideways card variant (`CardCustom`) with enlarged X/Z scale for investigator boards.
+- `InvestigatorMini.json` — Baseline upright mini‑card template derived from `General.json` for investigator mini cards.
 - `Box.json` — A container save with a single `Custom_Model_Bag` mesh to hold or display generated cards.
 
 # Components
@@ -68,6 +69,7 @@ Using the card templates (`General.json`, `Act.json`, `Investigator.json`):
   - Standard upright cards → `General.json`.
   - Sideways cards (acts/agendas) → `Act.json`.
   - Investigator boards (wider) → `Investigator.json`.
+  - Investigator mini cards → `InvestigatorMini.json`.
 - If assembling into a single TTS save, add each card object to `Box.json`’s `ContainedObjects` or merge into a larger `ObjectStates` array as needed by your build process.
 
 Using the container (`Box.json`):
@@ -128,3 +130,5 @@ This repository also ships Lua script templates consumed by the backend TTS scri
 Consumption
 - The backend module `bin/tts_script_generator.py` loads these Lua templates and performs placeholder substitution to produce final scripts for TTS objects.
 - Prefer updating templates here rather than embedding large Lua strings in Python to keep maintenance simpler and front/back parity intact.
+## Changelog (2025‑11‑10)
+- Added `InvestigatorMini.json` for investigator mini cards; selected by backend when exporting TTS objects for type "调查员小卡".

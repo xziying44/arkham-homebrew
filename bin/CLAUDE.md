@@ -277,3 +277,9 @@
   - 直达菜单：当只配置一种可封印类型时，自动显示“释放 <Token> / 结算 <Token>”。
   - 地点/场景/密谋等 GMNotes：保持原有解析（线索/毁灭阈值、参考卡 token 修饰解析）。
 - 行为（非 V2）：回退读取 `card_data.tts_script` 并兼容地点卡旧数据结构。
+## Changelog (2025‑11‑10)
+- workspace_manager.py：新增“调查员小卡”纯图片分支：取消页脚绘制；背面共享正面插画与布局在 WorkspaceManager/ExportHelper 两处路径补齐。
+- pnp_exporter.py：打印纸模式对卡面按实际尺寸（含出血）白底居中绘制，切线基于实际出血线，保持正反面对准。
+- content_package_manager.py：为“调查员小卡”选择 `templates/InvestigatorMini.json` TTS 模板。
+- tts_script_generator.py：映射“调查员小卡 → Minicard”；若绑定调查员卡，脚本 ID 采用 `<investigator_id>-m`。
+- tts_card_converter.py：补充“调查员小卡”标签归类（PlayerCard）。

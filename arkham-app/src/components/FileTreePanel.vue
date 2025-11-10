@@ -661,6 +661,7 @@ const CARD_TYPE_ICON_MAP = markRaw({
   '技能卡': { component: DocumentOutline, emoji: '🎯' },
   '调查员': { component: DocumentOutline, emoji: '👤' },
   '调查员背面': { component: DocumentOutline, emoji: '🔄' },
+  '调查员小卡': { component: DocumentOutline, emoji: '🧩' },
   '定制卡': { component: DocumentOutline, emoji: '🎨' },
   '故事卡': { component: DocumentOutline, emoji: '📖' },
   '诡计卡': { component: DocumentOutline, emoji: '🎭' },
