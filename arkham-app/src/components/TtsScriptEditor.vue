@@ -65,6 +65,62 @@
                 </n-space>
             </n-form-item>
 
+            <!-- 封印脚本配置 - 除调查员与定制卡外均可用 -->
+            <template v-if="supportsSealConfig">
+                <n-form-item :label="$t('ttsScriptEditor.seal.label')">
+                    <div class="seal-config">
+                        <n-space align="center" justify="space-between">
+                            <n-switch v-model:value="sealEnabled" @update:value="onSealConfigChange">
+                                <template #checked>{{ $t('ttsScriptEditor.seal.enable') }}</template>
+                                <template #unchecked>{{ $t('ttsScriptEditor.seal.enable') }}</template>
+                            </n-switch>
+                        </n-space>
+                        <div v-if="sealEnabled" class="seal-fields">
+                            <n-grid :cols="24" :x-gap="12" :y-gap="8" responsive="screen">
+                                <n-gi :span="24" :lg="16">
+                                    <div class="seal-field">
+                                        <n-checkbox class="seal-checkbox" size="large" v-model:checked="sealAllTokens" @update:checked="onSealAllToggle">
+                                            {{ $t('ttsScriptEditor.seal.all') }}
+                                        </n-checkbox>
+                                        <div v-if="!sealAllTokens" class="seal-select-wrap">
+                                            <n-select
+                                                v-model:value="sealTokens"
+                                                :options="sealTokenOptions"
+                                                multiple
+                                                filterable
+                                                :clearable="false"
+                                                :max-tag-count="5"
+                                                @update:value="onSealConfigChange"
+                                                class="seal-select"
+                                                :placeholder="$t('ttsScriptEditor.seal.tokensPlaceholder')"
+                                            />
+                                            <n-button v-if="sealTokens.length" size="tiny" tertiary class="seal-clear-btn" @click="() => { sealTokens = []; onSealConfigChange(); }">
+                                                {{ $t('ttsScriptEditor.seal.clear') }}
+                                            </n-button>
+                                        </div>
+                                    </div>
+                                </n-gi>
+                                <n-gi :span="24" :lg="8">
+                                    <div class="seal-field">
+                                        <n-text depth="3" style="font-size: 12px;">{{ $t('ttsScriptEditor.seal.max') }}</n-text>
+                                        <n-input-number
+                                            v-model:value="sealMaxDisplay"
+                                            :min="0"
+                                            :max="99"
+                                            :step="1"
+                                            size="small"
+                                            style="width: 180px"
+                                            @update:value="onSealConfigChange"
+                                        />
+                                        <n-text depth="3" style="font-size: 12px;">{{ $t('ttsScriptEditor.seal.maxHint') }}</n-text>
+                                    </div>
+                                </n-gi>
+                            </n-grid>
+                        </div>
+                    </div>
+                </n-form-item>
+            </template>
+
             <!-- 高级配置 - 仅支持的卡牌类型显示 -->
             <template v-if="hasAdvancedConfig">
                 <!-- 调查员专用配置 -->
@@ -336,6 +392,7 @@ interface TtsScriptData {
         signatureConfig: Array<{ path: string; name: string; count: number }>;
         entryTokensConfig: UseConfig[]; // 通用入场标记配置
         gameStartConfig: GameStartConfig; // 游戏开始位置配置
+        seal?: SealConfig; // 封印脚本配置
     };
 }
 
@@ -372,6 +429,13 @@ interface LocationConfig {
 interface GameStartConfig {
     startsInPlay: boolean;
     startsInHand: boolean;
+}
+
+interface SealConfig {
+    enabled: boolean;
+    allTokens: boolean;
+    tokens: string[];
+    max?: number | null;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -482,6 +546,21 @@ const getCardTypeMapping = (cardType: string): string => {
     return extendedMapping[cardType] || 'Asset'; // 默认为Asset
 };
 
+// Chaos Token 可选项（保持与后端Lua模板名称一致）
+const CHAOS_TOKENS = [
+    'Elder Sign', '+1', '0', '-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8',
+    'Skull', 'Cultist', 'Tablet', 'Elder Thing', 'Auto-fail', 'Bless', 'Curse', 'Frost'
+] as const;
+const TOKEN_EMOJI_MAP: Record<string, string> = {
+    'Elder Sign': '⭐',
+    '+1': '🔹', '0': '🔹', '-1': '🔹', '-2': '🔹', '-3': '🔹', '-4': '🔹', '-5': '🔹', '-6': '🔹', '-7': '🔹', '-8': '🔹',
+    'Skull': '💀', 'Cultist': '👤', 'Tablet': '📜', 'Elder Thing': '👹', 'Auto-fail': '🐙', 'Bless': '✨', 'Curse': '🌑', 'Frost': '❄️'
+};
+const sealTokenOptions = computed(() => CHAOS_TOKENS.map(name => ({
+    label: `${TOKEN_EMOJI_MAP[name] || '🔹'} ${t(`ttsScriptEditor.seal.tokenNames.${name}` as any) || name}`,
+    value: name
+})));
+
 // 地点图标中英文映射
 const locationIconMapping: Record<string, string> = {
     '绿菱': 'GreenDiamond',
@@ -587,6 +666,11 @@ const shouldShowTtsScript = computed(() => {
     return true;
 });
 
+// 是否允许封印脚本配置（排除调查员与定制卡）
+const supportsSealConfig = computed(() => {
+    return !(props.cardType === '调查员' || props.cardType === '定制卡');
+});
+
 // 判断是否有高级配置（调查员、支援卡、事件卡、地点卡）
 const hasAdvancedConfig = computed(() => {
     const advancedTypes = ['调查员', '支援卡', '事件卡', '地点卡'];
@@ -637,6 +721,12 @@ const tts_config = computed(() => ({
         startsInPlay: gameStartConfig.value.startsInPlay,
         startsInHand: gameStartConfig.value.startsInHand,
     },
+    seal: {
+        enabled: sealEnabled.value,
+        allTokens: sealAllTokens.value,
+        tokens: [...sealTokens.value],
+        max: sealMax.value ?? null,
+    } as SealConfig,
 }));
 
 const ttsScriptData = computed((): TtsScriptData => ({
@@ -824,6 +914,30 @@ const onScriptConfigChange = async () => {
     });
 };
 
+// 封印脚本配置
+const sealEnabled = ref(false);
+const sealAllTokens = ref(true);
+const sealTokens = ref<string[]>([]);
+const sealMax = ref<number | null>(null);
+const sealMaxDisplay = computed<number>({
+    get() { return typeof sealMax.value === 'number' ? sealMax.value : 0 },
+    set(v: number) { sealMax.value = (!v || v === 0) ? null : v }
+});
+
+const onSealConfigChange = async () => {
+    if (isSyncingFromParent.value) return;
+    scheduleBackendPreview();
+    nextTick(() => emit('update-tts-script', ttsScriptData.value));
+};
+
+const onSealAllToggle = (checked: boolean) => {
+    sealAllTokens.value = checked;
+    if (checked) {
+        sealTokens.value = [];
+    }
+    onSealConfigChange();
+};
+
 // 阶段按钮配置变化处理
 const onPhaseButtonConfigChange = async () => {
     if (isSyncingFromParent.value) return;
@@ -972,6 +1086,19 @@ const loadFromSavedConfig = (savedConfig: any) => {
         gameStartConfig.value = { ...savedConfig.gameStartConfig };
         console.log('✅ 游戏开始位置配置已加载:', gameStartConfig.value);
     }
+    if (savedConfig?.seal) {
+        const s = savedConfig.seal;
+        sealEnabled.value = !!s.enabled;
+        sealAllTokens.value = !!s.allTokens;
+        sealTokens.value = Array.isArray(s.tokens) ? [...s.tokens] : [];
+        sealMax.value = (typeof s.max === 'number' && s.max > 0) ? s.max : null;
+        console.log('✅ 封印脚本配置已加载:', {
+            enabled: sealEnabled.value,
+            all: sealAllTokens.value,
+            tokens: sealTokens.value.length,
+            max: sealMax.value
+        });
+    }
 };
 
 // 从 v2 tts_config 加载
@@ -1012,6 +1139,14 @@ const loadFromTtsConfigV2 = (cfg: any) => {
             name: s.name || (typeof s.path === 'string' ? (s.path.split('/').pop() || s.path) : ''),
             count: Number(s.count || 1)
         }));
+    }
+    // 封印脚本
+    if (cfg.seal) {
+        const s = cfg.seal;
+        sealEnabled.value = !!s.enabled;
+        sealAllTokens.value = !!s.allTokens;
+        sealTokens.value = Array.isArray(s.tokens) ? [...s.tokens] : [];
+        sealMax.value = (typeof s.max === 'number' && s.max > 0) ? s.max : null;
     }
 };
 
@@ -1232,6 +1367,43 @@ if (shouldShowTtsScript.value) {
     border-radius: 8px;
     border: 1px solid rgba(0, 0, 0, 0.1);
     margin-top: 8px;
+}
+
+.seal-config {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 14px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.seal-fields {
+    margin-top: 10px;
+}
+
+.seal-field {
+    min-width: 240px;
+}
+
+.seal-select { width: 100%; }
+.seal-select-wrap { margin-top: 6px; }
+.seal-clear-btn { margin-top: 6px; }
+
+.seal-checkbox :deep(.n-checkbox) {
+    display: inline-flex;
+    align-items: center;
+}
+.seal-checkbox :deep(.n-checkbox__label) {
+    display: inline-flex;
+    align-items: center;
+}
+.seal-checkbox {
+    padding: 6px 8px;
+}
+
+.seal-select :deep(.n-base-selection) {
+    width: 100%;
 }
 
 .button-config-row {

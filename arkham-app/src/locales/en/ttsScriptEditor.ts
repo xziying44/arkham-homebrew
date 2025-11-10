@@ -100,6 +100,39 @@ export default {
     cancel: 'Cancel',
   },
 
+  // Seal Script
+  seal: {
+    label: '🔒 Seal Script',
+    enable: 'Enable Seal Script',
+    tokens: 'Allowed Chaos Tokens',
+    tokensPlaceholder: 'Select tokens to allow',
+    clear: 'Clear',
+    all: 'Allow All Tokens',
+    max: 'Max Sealed Count',
+    maxHint: '0 or empty means unlimited (~99)',
+    tokenNames: {
+      'Elder Sign': 'Elder Sign',
+      '+1': '+1',
+      '0': '0',
+      '-1': '-1',
+      '-2': '-2',
+      '-3': '-3',
+      '-4': '-4',
+      '-5': '-5',
+      '-6': '-6',
+      '-7': '-7',
+      '-8': '-8',
+      'Skull': 'Skull',
+      'Cultist': 'Cultist',
+      'Tablet': 'Tablet',
+      'Elder Thing': 'Elder Thing',
+      'Auto-fail': 'Auto-fail',
+      'Bless': 'Bless',
+      'Curse': 'Curse',
+      'Frost': 'Frost'
+    }
+  },
+
   // Dropdown Options
   options: {
     extraToken: {

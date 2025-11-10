@@ -449,6 +449,133 @@ class TtsScriptGenerator:
         with open(template_path, 'r', encoding='utf-8') as f:
             return f.read()
 
+    # ------ Seal template helpers ------
+    def _seal_base_script(self) -> str:
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        template_path = os.path.join(base_dir, 'templates', 'seal.lua')
+        with open(template_path, 'r', encoding='utf-8') as f:
+            return f.read()
+
+    _ALLOWED_CHAOS_TOKENS = [
+        'Elder Sign', '+1', '0', '-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8',
+        'Skull', 'Cultist', 'Tablet', 'Elder Thing', 'Auto-fail', 'Bless', 'Curse', 'Frost'
+    ]
+
+    def _generate_seal_lua(self, seal_cfg: Dict[str, Any], language: Optional[str]) -> str:
+        base = self._seal_base_script()
+
+        enabled = bool(seal_cfg.get('enabled'))
+        if not enabled:
+            return ''
+
+        all_tokens = bool(seal_cfg.get('allTokens'))
+        tokens = seal_cfg.get('tokens') or []
+        max_count = seal_cfg.get('max')
+
+        # sanitize tokens
+        allowed = set(self._ALLOWED_CHAOS_TOKENS)
+        filtered = [t for t in tokens if isinstance(t, str) and t in allowed]
+
+        # VALID_TOKENS
+        if all_tokens:
+            valid_tokens_lua = 'VALID_TOKENS = {}'
+            invalid_tokens_lua = 'INVALID_TOKENS = {}'
+            update_on_hover_lua = 'UPDATE_ON_HOVER = true'
+        else:
+            if not filtered:
+                # nothing selected -> default to allow-all
+                valid_tokens_lua = 'VALID_TOKENS = {}'
+                invalid_tokens_lua = 'INVALID_TOKENS = {}'
+                update_on_hover_lua = 'UPDATE_ON_HOVER = true'
+            else:
+                entries = ',\n  '.join([f'["{name}"] = true' for name in filtered])
+                valid_tokens_lua = f'VALID_TOKENS = {{\n  {entries}\n}}'
+                invalid_tokens_lua = 'INVALID_TOKENS = nil'
+                update_on_hover_lua = 'UPDATE_ON_HOVER = true'
+
+        # MAX_SEALED
+        max_lua = ''
+        try:
+            m = int(max_count) if max_count is not None else 0
+            if m > 0:
+                max_lua = f'MAX_SEALED = {m}'
+        except Exception:
+            pass
+
+        # i18n for menu labels based on language
+        lang = (language or '').lower()
+        is_zh = lang in ('zh', 'zh-cht', 'zh_cn', 'zh-cn', 'zh_tw', 'zh-tw')
+        if is_zh:
+            menu_release_one = 'local MENU_RELEASE_ONE = "释放一个标记"'
+            menu_release_one_prefix = 'local MENU_RELEASE_ONE_PREFIX = "释放 "'
+            menu_release_all = 'local MENU_RELEASE_ALL = "释放所有标记"'
+            menu_release_multi_prefix = 'local MENU_RELEASE_MULTI_PREFIX = "释放 "'
+            menu_return_multi_prefix = 'local MENU_RETURN_MULTI_PREFIX = "归还 "'
+            menu_token_suffix = 'local MENU_TOKEN_SUFFIX = " 个标记"'
+            menu_return_all = 'local MENU_RETURN_ALL = "归还所有标记"'
+            menu_resolve_prefix = 'local MENU_RESOLVE_PREFIX = "结算 "'
+            menu_resolve_one = 'local MENU_RESOLVE_ONE = "结算一个标记"'
+            menu_resolve_one_prefix = 'local MENU_RESOLVE_ONE_PREFIX = "结算 "'
+            menu_seal_prefix = 'local MENU_SEAL_PREFIX = "封印 "'
+            menu_seal_multi_prefix = 'local MENU_SEAL_MULTI_PREFIX = "封印 "'
+            menu_seal_multi_infix = 'local MENU_SEAL_MULTI_INFIX = " 个 "'
+            token_display = (
+                'local TOKEN_NAME_MAP = {\n'
+                '  ["Elder Sign"] = "旧印",\n'
+                '  ["Auto-fail"] = "自动失败",\n'
+                '  ["Skull"] = "骷髅",\n'
+                '  ["Cultist"] = "异教徒",\n'
+                '  ["Tablet"] = "石板",\n'
+                '  ["Elder Thing"] = "古神",\n'
+                '  ["Bless"] = "祝福",\n'
+                '  ["Curse"] = "诅咒",\n'
+                '  ["Frost"] = "寒霜",\n'
+                '}\n'
+                'local function TOKEN_DISPLAY(name) return TOKEN_NAME_MAP[name] or name end\n'
+                'local function TOKEN_DISPLAY_OR_DEFAULT(name, default) return (name and TOKEN_DISPLAY(name)) or default end'
+            )
+            generic_token_label = 'local GENERIC_TOKEN_LABEL = "标记"'
+        else:
+            menu_release_one = 'local MENU_RELEASE_ONE = "Release one token"'
+            menu_release_one_prefix = 'local MENU_RELEASE_ONE_PREFIX = "Release "'
+            menu_release_all = 'local MENU_RELEASE_ALL = "Release all tokens"'
+            menu_release_multi_prefix = 'local MENU_RELEASE_MULTI_PREFIX = "Release "'
+            menu_return_multi_prefix = 'local MENU_RETURN_MULTI_PREFIX = "Return "'
+            menu_token_suffix = 'local MENU_TOKEN_SUFFIX = " token(s)"'
+            menu_return_all = 'local MENU_RETURN_ALL = "Return all tokens"'
+            menu_resolve_prefix = 'local MENU_RESOLVE_PREFIX = "Resolve "'
+            menu_resolve_one = 'local MENU_RESOLVE_ONE = "Resolve one token"'
+            menu_resolve_one_prefix = 'local MENU_RESOLVE_ONE_PREFIX = "Resolve "'
+            menu_seal_prefix = 'local MENU_SEAL_PREFIX = "Seal "'
+            menu_seal_multi_prefix = 'local MENU_SEAL_MULTI_PREFIX = "Seal "'
+            menu_seal_multi_infix = 'local MENU_SEAL_MULTI_INFIX = " "'
+            token_display = 'local function TOKEN_DISPLAY(name) return name end\nlocal function TOKEN_DISPLAY_OR_DEFAULT(name, default) return (name and TOKEN_DISPLAY(name)) or default end'
+            generic_token_label = 'local GENERIC_TOKEN_LABEL = "token"'
+
+        script = base.replace('-- VALID_TOKENS_PLACEHOLDER --', valid_tokens_lua)
+        script = script.replace('-- INVALID_TOKENS_PLACEHOLDER --', invalid_tokens_lua)
+        script = script.replace('-- UPDATE_ON_HOVER_PLACEHOLDER --', update_on_hover_lua)
+        script = script.replace('-- MAX_SEALED_PLACEHOLDER --', max_lua)
+        script = script.replace('-- TOKEN_DISPLAY_FUNC_PLACEHOLDER --', token_display)
+        script = script.replace('-- TOKEN_DISPLAY_OR_DEFAULT_FUNC_PLACEHOLDER --', '')
+        script = script.replace('-- GENERIC_TOKEN_LABEL_PLACEHOLDER --', generic_token_label)
+        script = script.replace('-- MENU_RELEASE_ONE_PREFIX_PLACEHOLDER --', menu_release_one_prefix)
+        script = script.replace('-- MENU_RESOLVE_ONE_PREFIX_PLACEHOLDER --', menu_resolve_one_prefix)
+        script = script.replace('-- MENU_RELEASE_ONE_PLACEHOLDER --', menu_release_one)
+        script = script.replace('-- MENU_RESOLVE_ONE_PLACEHOLDER --', menu_resolve_one)
+        script = script.replace('-- MENU_RELEASE_ALL_PLACEHOLDER --', menu_release_all)
+        script = script.replace('-- MENU_RELEASE_MULTI_PREFIX_PLACEHOLDER --', menu_release_multi_prefix)
+        script = script.replace('-- MENU_RETURN_MULTI_PREFIX_PLACEHOLDER --', menu_return_multi_prefix)
+        script = script.replace('-- MENU_TOKEN_SUFFIX_PLACEHOLDER --', menu_token_suffix)
+        script = script.replace('-- MENU_RETURN_ALL_PLACEHOLDER --', menu_return_all)
+        script = script.replace('-- MENU_RESOLVE_PREFIX_PLACEHOLDER --', menu_resolve_prefix)
+        script = script.replace('-- MENU_SEAL_PREFIX_PLACEHOLDER --', menu_seal_prefix)
+        script = script.replace('-- MENU_SEAL_MULTI_PREFIX_PLACEHOLDER --', menu_seal_multi_prefix)
+        script = script.replace('-- MENU_SEAL_MULTI_INFIX_PLACEHOLDER --', menu_seal_multi_infix)
+        # Always enable resolve menu
+        script = script.replace('-- RESOLVE_TOKEN_PLACEHOLDER --', 'RESOLVE_TOKEN = true')
+        return script
+
     def generate_lua(self, card: Dict[str, Any]) -> str:
         card_type = str(card.get("type", "")).strip()
         tts_config = card.get("tts_config") or {}
@@ -458,6 +585,11 @@ class TtsScriptGenerator:
         coords = upgrade.get("coordinates")
         if isinstance(coords, list) and coords:
             return self._generate_upgrade_lua(coords)
+
+        # 封印脚本：除调查员与定制卡外可用
+        seal_cfg = tts_config.get('seal') or {}
+        if seal_cfg.get('enabled') and self._map_type(card_type) not in ("Investigator", "Custom"):
+            return self._generate_seal_lua(seal_cfg, card.get('language'))
 
         # 其次：调查员阶段按钮脚本
         if self._map_type(card_type) != "Investigator":
