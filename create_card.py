@@ -412,27 +412,50 @@ class CardCreator:
             # 贴底图
             self._paste_background_image(card, picture_path, data, dp)
 
-            if 'location_type' not in data or data['location_type'] not in ['未揭示', '已揭示']:
-                data['location_type'] = '已揭示'
+            # 1. 安全地获取和设置默认值
+            # 使用 .get() 方法，如果键不存在则返回默认值，代码更简洁
+            location_type = data.get('location_type')
+            if location_type not in ['未揭示', '已揭示']:
+                location_type = '已揭示'
 
+            has_subtitle = data.get('subtitle', '') != ''
+            is_virtual = card_json.get('virtual', False)
+            is_no_encounter = not data.get('encounter_group', '')  # 新增：从card_json获取无遭遇状态
+
+            # 2. 使用列表构建图片名称的各个部分
+            image_name_parts = [
+                data['type'],  # 基础类型，如 "地点卡"
+                location_type  # "已揭示" 或 "未揭示"
+            ]
+
+            # 3. 根据条件向列表中添加组件
             if is_enemy:
-                if 'subtitle' in data and data['subtitle'] != '':
-                    card.paste_image(
-                        self.image_manager.get_image(f'{data["type"]}-{data["location_type"]}-敌人-副标题'), (0, 0),
-                        'contain')
-                else:
-                    card.paste_image(self.image_manager.get_image(f'{data["type"]}-{data["location_type"]}-敌人'),
-                                     (0, 0), 'contain')
+                image_name_parts.append('敌人')
+                if has_subtitle:
+                    image_name_parts.append('副标题')
             else:
-                if 'subtitle' in data and data['subtitle'] != '':
-                    card.paste_image(self.image_manager.get_image(
-                        f'{data["type"]}-{data["location_type"]}-副标题{"-虚拟" if card_json.get("virtual", False) else ""}'),
-                        (0, 0), 'contain')
-                else:
-                    card.paste_image(self.image_manager.get_image(
-                        f'{data["type"]}-{data["location_type"]}'
-                        f'{"-半" if card_json.get("virtual", False) == "半" else ""}'
-                        f'{"-虚拟" if card_json.get("virtual", False) else ""}'), (0, 0), 'contain')
+                # 非敌人卡片的逻辑
+                if has_subtitle:
+                    image_name_parts.append('副标题')
+
+                # 根据 virtual 的值添加 "-半" 或 "-虚拟"
+                if is_virtual == '半':
+                    image_name_parts.append('半')
+                    image_name_parts.append('虚拟')  # 假设“半虚拟”对应文件名 "地点卡-已揭示-半-虚拟.png"
+                elif is_virtual:
+                    image_name_parts.append('虚拟')
+
+            # 4. 新增：根据“无遭遇”条件添加组件
+            # 这个判断可以放在 subtitle 等组件之后，以匹配文件名 "xx-xx-副标题-无遭遇.png"
+            if is_no_encounter:
+                image_name_parts.append('无遭遇')
+
+            # 5. 将所有部分用连字符'-'连接起来，生成最终的图片名称
+            image_name = '-'.join(image_name_parts)
+
+            # 6. 调用图片管理器
+            # 无论逻辑多复杂，最终都只需要调用一次
+            card.paste_image(self.image_manager.get_image(image_name), (0, 0), 'contain')
 
         if self.transparent_encounter and dp:
             card.copy_circle_to_image(dp, (370, 518, 30), (370, 518, 30))
