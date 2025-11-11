@@ -48,20 +48,21 @@ class TtsScriptGenerator:
     }
 
     _location_icon_mapping = {
-        "绿菱": "GreenDiamond",
-        "暗红漏斗": "DarkRedCrescent",
-        "橙心": "OrangeHeart",
-        "浅褐水滴": "LightBrownDroplet",
-        "深紫星": "DeepPurpleStar",
-        "深绿斜二": "DeepGreenSquare",
-        "深蓝T": "DeepBlueHourglass",
-        "紫月": "PurpleMoon",
-        "红十": "RedCross",
-        "红方": "RedSquare",
-        "蓝三角": "BlueTriangle",
-        "褐扭": "BrownSpiral",
-        "青花": "BlueFlower",
-        "黄圆": "YellowCircle",
+        "绿菱": "diamond",
+        "暗红漏斗": "hourglass",
+        "橙心": "heart",
+        "浅褐水滴": "blob",
+        "深紫星": "star",
+        "深绿斜二": "equals",
+        "深蓝T": "T",
+        "紫月": "crescent",
+        "红十": "plus",
+        "红方": "square.svg",
+        "蓝三角": "triangle",
+        "褐扭": "wave",
+        "青花": "3circles",
+        "黄圆": "circle",
+        "粉桃": "spades",
     }
 
     def __init__(self, workspace_manager=None):

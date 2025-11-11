@@ -281,10 +281,28 @@
                 <!-- 默认模式：只读展示（自动同步卡面） -->
                 <template v-if="!locationAdvancedEnabled">
                     <n-form-item :label="$t('ttsScriptEditor.location.locationIconLabel')">
-                        <n-input :value="defaultLocationIconDisplay" readonly />
+                        <div class="loc-readonly">
+                            <template v-if="getEditingCardData().location_icon">
+                                <img v-if="getIconUrlByChinese(getEditingCardData().location_icon)" :src="getIconUrlByChinese(getEditingCardData().location_icon) as string" class="loc-icon" style="width:14px;height:14px;display:inline-block;vertical-align:middle;object-fit:contain;" />
+                                <span>{{ defaultLocationIconDisplay }}</span>
+                            </template>
+                            <template v-else>
+                                <span>{{ $t('ttsScriptEditor.location.notSet') }}</span>
+                            </template>
+                        </div>
                     </n-form-item>
                     <n-form-item :label="$t('ttsScriptEditor.location.connectionIconLabel')">
-                        <n-input :value="defaultLocationConnectionsDisplay" readonly />
+                        <div class="loc-readonly">
+                            <template v-if="Array.isArray(getEditingCardData().location_link) && getEditingCardData().location_link.length">
+                                <span v-for="(x, idx) in getEditingCardData().location_link" :key="idx" class="loc-chip">
+                                    <img v-if="getIconUrlByChinese(x)" :src="getIconUrlByChinese(x) as string" class="loc-icon" style="width:14px;height:14px;display:inline-block;vertical-align:middle;object-fit:contain;" />
+                                    <span>{{ toDisplayLabel(String(x)) }}</span>
+                                </span>
+                            </template>
+                            <template v-else>
+                                <span>{{ $t('ttsScriptEditor.location.notSet') }}</span>
+                            </template>
+                        </div>
                     </n-form-item>
                     <n-space v-if="props.isDoubleSided">
                         <n-button size="small" @click="applyToOtherSide" tertiary>
@@ -302,15 +320,23 @@
                             filterable
                             tag
                             clearable
+                            :render-label="renderLocationOptionLabel"
                             :placeholder="t('ttsScriptEditor.location.addPlaceholder', '输入或选择图标，例如 arkham_world')"
                             @update:value="onLocationIconChange"
                         />
                     </n-form-item>
                     <n-form-item :label="$t('ttsScriptEditor.location.connectionIconLabel')">
-                        <n-dynamic-tags
-                            :value="locationConnectionsAdvancedDisplay"
-                            @update:value="onLocationConnectionsChange"
+                        <n-select
+                            multiple
+                            tag
+                            clearable
+                            filterable
+                            :options="locationIconSelectOptions"
+                            :value="locationConnectionsAdvanced"
+                            :render-label="renderLocationOptionLabel"
+                            :render-tag="renderLocationTag"
                             :placeholder="t('ttsScriptEditor.location.addPlaceholder', '输入或选择连接图标')"
+                            @update:value="onLocationConnectionsChange"
                         />
                     </n-form-item>
                     <n-space>
@@ -449,6 +475,9 @@ import {
 } from '@/config/ttsScriptGenerator';
 import { WorkspaceService, TtsScriptService } from '@/api';
 import { cardTypeConfigs } from '@/config/cardTypeConfigsEn';
+import { getIconUrlByChinese } from '@/config/locationIcons';
+import { h } from 'vue';
+import { NTag } from 'naive-ui';
 import CardFileBrowser from './CardFileBrowser.vue';
 import BindCardField from './BindCardField.vue';
 
@@ -659,9 +688,7 @@ const defaultLocationConnectionsDisplay = computed<string>(() => {
     return arr.map(x => toDisplayLabel(String(x))).join(', ');
 });
 
-const locationConnectionsAdvancedDisplay = computed<string[]>(() =>
-    (locationConnectionsAdvanced.value || []).map(v => toDisplayLabel(v))
-);
+// 显示直接由 NSelect 的 render-label 控制，无需额外 display 计算
 
 // 规范化输入：英文→中文，保留未知值（自定义）
 const normalizeIconInput = (input: string): string => {
@@ -695,6 +722,28 @@ const locationIconSelectOptions = computed(() => {
     });
     return arr;
 });
+
+const renderLocationOptionLabel = (option: any) => {
+    const src = getIconUrlByChinese(option.value as string);
+    const text = toDisplayLabel(option.value as string);
+    const imgStyle = 'width:14px;height:14px;display:inline-block;vertical-align:middle;object-fit:contain;';
+    return h('div', { class: 'loc-opt', style: 'display:inline-flex;align-items:center;gap:6px;' }, [
+        src ? h('img', { src, class: 'loc-icon', style: imgStyle }) : null,
+        h('span', { style: 'line-height:1;display:inline-block;vertical-align:middle;' }, text)
+    ]);
+};
+const renderLocationTag = ({ option, handleClose }: any) => {
+    const value = option?.value as string;
+    const src = getIconUrlByChinese(value || '');
+    const text = toDisplayLabel(value || '');
+    const imgStyle = 'width:14px;height:14px;display:inline-block;vertical-align:middle;object-fit:contain;';
+    const content = [src ? h('img', { src, class: 'loc-icon', style: imgStyle }) : null, h('span', { style: 'line-height:1;display:inline-block;vertical-align:middle;' }, text)];
+    return h(
+        NTag,
+        { closable: true, onClose: handleClose, size: 'small' },
+        { default: () => h('span', { class: 'loc-opt', style: 'display:inline-flex;align-items:center;gap:6px;' }, content) }
+    );
+};
 
 const onLocationIconChange = (val: string | null) => {
     const normalized = normalizeIconInput(val || '');
@@ -1607,6 +1656,49 @@ if (shouldShowTtsScript.value) {
 .tts-card {
     background: linear-gradient(135deg, rgba(74, 144, 226, 0.05) 0%, rgba(80, 200, 120, 0.05) 100%);
     border: 2px solid rgba(74, 144, 226, 0.2);
+}
+
+.loc-readonly {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.loc-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: 8px;
+}
+.loc-icon {
+    width: 14px;
+    height: 14px;
+    vertical-align: middle;
+    display: inline-block;
+}
+.loc-opt {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+:deep(.loc-opt) {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+:deep(.loc-icon) {
+    width: 14px;
+    height: 14px;
+    vertical-align: middle;
+    display: inline-block;
+}
+/* Reduce option height in dropdown */
+:deep(.n-base-select-menu .n-base-select-option) {
+    padding: 4px 8px;
+}
+:deep(.n-base-select-menu .n-base-select-option__content) {
+    display: inline-flex;
+    align-items: center;
 }
 
 .attribute-input {
