@@ -89,6 +89,31 @@
     • work_directory (str): 工作根路径。
   - Returns: (None)
 
+### TtsScriptGenerator（tts_script_generator.py）
+- 描述：统一从卡文件（含 `tts_config v2`）生成 GMNotes 与 LuaScript 的权威生成器，被 `/api/tts/generate` 路由调用。
+- 版本与兼容：
+  - 当 `tts_config.version != 'v2'`：直接回退并返回卡文件中旧版 `tts_script` 内容（兼容路径）。
+  - 当 `v2`：完全依据 `tts_config` 生成；若未提供特定配置，按旧字段回退。
+- 地点卡（Location）
+  - 支持每面单独配置：`tts_config.locationFront` / `locationBack`，字段：`icons?: string`、`connections?: string[]`。
+  - 若对应面未提供（或字段为空）：回退到该面的卡面字段 `location_icon`（单值）与 `location_link`（数组）。
+  - 映射表（中文 → 英文/代号）已更新：
+    ```py
+    _location_icon_mapping = {
+        '绿菱': 'diamond', '暗红漏斗': 'hourglass', '橙心': 'heart', '浅褐水滴': 'blob',
+        '深紫星': 'star', '深绿斜二': 'equals', '深蓝T': 'T', '紫月': 'crescent',
+        '红十': 'plus', '红方': 'square.svg', '蓝三角': 'triangle', '褐扭': 'wave',
+        '青花': '3circles', '黄圆': 'circle', '粉桃': 'spades',
+    }
+    ```
+  - 线索值：当面为“已揭示”且 `clues` 形如 `1<调查员>` / `4` 时，生成对应 `uses`（每调查员/固定）。
+- 调查员阶段按钮/封印脚本：
+  - `phaseButtonConfig` 与 `enablePhaseButtons` 控制 Lua 阶段按钮；
+  - `seal` 支持全量/白名单、最大封印数量、i18n 菜单文本。
+- 其他：
+  - Mini/custom 绑定：若 `mini.bind.path`/`custom.bind.path` 指向卡，脚本 ID 继承目标并追加 `-m`/`-c`。
+  - 签名卡聚合：v2 接受 `{ path, count }`，解析脚本 ID 后按 ID 聚合计数输出到 GMNotes。
+
   #### `convert_deck_to_tts(deck_config: Dict[str, Any], face_url: str, back_url: str) -> Dict[str, Any]`（tts_card_converter.py:260）
   - Purpose: 生成符合 TTS 的完整对象 JSON（ObjectStates）。
   - Parameters:

@@ -506,3 +506,32 @@ Appendix: File Index
    - Introduced `BindCardField` for unified binding UI; `CardFileBrowser` adds `singleSelect`.
    - Investigator mini/custom use light-mode TTS (GMNotes-only), hide entry tokens and game-start configs.
    - Full i18n coverage for file browser and bind fields; confirm label supports count.
+
+## 7) TTS Editor – Location Icons (V2)
+
+Summary
+- Dual mode per side (front/back) for Location cards:
+  - Default mode: read-only, auto-synced from card face fields `location_icon`/`location_link`, preview auto-refresh.
+  - Advanced mode: editable per-side config; writes to `tts_config.locationFront|locationBack` when non-empty.
+- Empty semantics: if `icons` is empty string and `connections` is empty array, omit the side object entirely to fall back to face fields.
+
+UI Details
+- Icon sources: SVG files under `src/assets/location-icons/` (diamond, hourglass, heart, blob, star, equals, T, crescent, plus, square, triangle, wave, 3circles, circle, spades).
+- Rendering:
+  - Card editor FormField: options and selected values render as SVG + text (no emoji). Uses inline styles (14px, vertical-align: middle, inline-flex align-items: center) to ensure consistent alignment in Naive UI teleport menus.
+  - TtsScriptEditor: default-mode readonly chips and advanced-mode selects both render SVG + text; multiple select uses custom tag renderer; custom values render as text only.
+- Apply-to-other-side shortcuts:
+  - In CardSideEditor: button under the `location_link` field copies face fields to the other side (face data).
+  - In TtsScriptEditor: button copies current side config to the other side (advanced config), enabling that side if needed.
+
+Persistence
+- `tts_config` shape (only when advanced enabled and any value present):
+  - `locationFront?: { icons?: string; connections?: string[] }`
+  - `locationBack?: {  icons?: string; connections?: string[] }`
+- Preview pipeline injects `tts_config` into payload; server `/api/tts/generate` returns GMNotes/Lua.
+
+Internationalization
+- English display names for options derive from `src/config/cardTypeConfigsEn.ts` (kept consistent with backend mapping); runtime display localizes text while internal values persist as Chinese keys.
+
+Compatibility
+- Legacy `tts_config.location` is still read (treated as front), and backend falls back to `location_icon/location_link` when per-side config absent.
