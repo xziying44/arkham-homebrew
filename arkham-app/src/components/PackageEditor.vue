@@ -12,12 +12,12 @@
         <h3>{{ getUploadPageTitle() }}</h3>
       </div>
       <div class="upload-page-content">
-        <UniversalUploadDialog
+<UniversalUploadDialog
           ref="uploadDialogRef"
           :upload-type="currentUploadType"
           :current-item="currentUploadItem"
           :upload-items="currentUploadItems"
-          :config="packageData"
+          :config="uploadConfigSnapshot || packageData"
           :is-batch="isCurrentUploadBatch"
           @confirm="handleUploadConfirm"
           @cancel="closeUploadPage"
@@ -956,8 +956,8 @@
       <UniversalUploadDialog
         ref="bannerUploadDialogRef"
         upload-type="banner"
-        :current-item="{ banner_base64: packageData.banner_base64, meta: packageData.meta }"
-        :config="packageData"
+        :current-item="{ banner_base64: (uploadConfigSnapshot || packageData).banner_base64, meta: (uploadConfigSnapshot || packageData).meta }"
+        :config="uploadConfigSnapshot || packageData"
         @confirm="handleUploadBanner"
         @cancel="showUploadBannerDialog = false" />
       <template #action>
@@ -976,7 +976,7 @@
         ref="cardUploadDialogRef"
         upload-type="card"
         :current-item="uploadingCard"
-        :config="packageData"
+        :config="uploadConfigSnapshot || packageData"
         @confirm="handleUploadCard"
         @cancel="showUploadCardDialog = false; uploadingCard = null" />
       <template #action>
@@ -996,7 +996,7 @@
         ref="batchUploadDialogRef"
         upload-type="card"
         :upload-items="v2Cards"
-        :config="packageData"
+        :config="uploadConfigSnapshot || packageData"
         :is-batch="true"
         @confirm="handleBatchUpload"
         @cancel="showBatchUploadDialog = false" />
@@ -1208,6 +1208,11 @@ const isCurrentUploadBatch = ref(false);
 const uploadDialogRef = ref<any>(null);
 // 是否批量上传“已修改”卡牌
 const isBatchModifiedUpload = ref(false);
+
+// 上传会话隔离：在打开上传页瞬间冻结包配置，避免切包导致上传写错目标包
+const uploadConfigSnapshot = ref<any>(null);
+
+const deepClone = <T>(obj: T): T => JSON.parse(JSON.stringify(obj));
 
 // 上传云端状态 (保留用于兼容)
 const showUploadBannerDialog = ref(false);
@@ -2048,7 +2053,8 @@ const isAnyUploading = computed(() => {
 // 打开封面上传页面
 const openBannerUploadPage = () => {
   currentUploadType.value = 'banner';
-  currentUploadItem.value = { banner_base64: packageData.value.banner_base64, meta: packageData.value.meta };
+  uploadConfigSnapshot.value = deepClone(packageData.value);
+  currentUploadItem.value = { banner_base64: uploadConfigSnapshot.value.banner_base64, meta: uploadConfigSnapshot.value.meta };
   currentUploadItems.value = [];
   isCurrentUploadBatch.value = false;
   showUploadPage.value = true;
@@ -2057,6 +2063,7 @@ const openBannerUploadPage = () => {
 // 打开单个卡牌上传页面
 const openCardUploadPage = (card: ContentPackageCard) => {
   currentUploadType.value = 'card';
+  uploadConfigSnapshot.value = deepClone(packageData.value);
   currentUploadItem.value = card;
   currentUploadItems.value = [];
   isCurrentUploadBatch.value = false;
@@ -2067,6 +2074,7 @@ const openCardUploadPage = (card: ContentPackageCard) => {
 // 打开批量卡牌上传页面
 const openCardBatchUploadPage = () => {
   currentUploadType.value = 'card';
+  uploadConfigSnapshot.value = deepClone(packageData.value);
   currentUploadItem.value = null;
   currentUploadItems.value = v2Cards.value;
   isCurrentUploadBatch.value = true;
@@ -2105,6 +2113,7 @@ const openCardBatchUploadModifiedPage = () => {
 // 打开单个遭遇组上传页面
 const openEncounterUploadPage = (encounter: EncounterSet) => {
   currentUploadType.value = 'encounter';
+  uploadConfigSnapshot.value = deepClone(packageData.value);
   currentUploadItem.value = encounter;
   currentUploadItems.value = [];
   isCurrentUploadBatch.value = false;
@@ -2115,6 +2124,7 @@ const openEncounterUploadPage = (encounter: EncounterSet) => {
 // 打开批量遭遇组上传页面
 const openEncounterBatchUploadPage = () => {
   currentUploadType.value = 'encounter';
+  uploadConfigSnapshot.value = deepClone(packageData.value);
   currentUploadItem.value = null;
   currentUploadItems.value = encounters.value;
   isCurrentUploadBatch.value = true;
@@ -2129,6 +2139,7 @@ const closeUploadPage = () => {
   uploadingCard.value = null;
   uploadingEncounter.value = null;
   isBatchModifiedUpload.value = false;
+  uploadConfigSnapshot.value = null;
 };
 
 // 获取上传页面标题
@@ -2182,6 +2193,10 @@ const triggerUpload = () => {
 
 // 处理上传确认
 const handleUploadConfirm = (updatedPackage: any) => {
+  // 保险丝：若存在上传快照，则强制将输出指向快照的包路径
+  if (uploadConfigSnapshot.value?.path && updatedPackage) {
+    updatedPackage.path = uploadConfigSnapshot.value.path;
+  }
   if (currentUploadType.value === 'banner') {
     isBannerUploading.value = false;
   } else if (currentUploadType.value === 'card') {

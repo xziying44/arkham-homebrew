@@ -48,7 +48,7 @@
       </div>
 
       <!-- 右侧内容包编辑器 -->
-      <PackageEditor v-if="selectedPackage" :package="selectedPackage" :saving="saving"
+      <PackageEditor v-if="selectedPackage" :key="selectedPackage.path" :package="selectedPackage" :saving="saving"
         @save="savePackage" @update:package="updateSelectedPackage" />
 
       <!-- 当没有选择内容包时显示的提示 -->
