@@ -20,7 +20,7 @@ This document provides a complete, multi‑layer reference for the Vue 3 compone
   - `CardSideEditor.vue` → `FormField.vue`, `IllustrationLayoutEditor.vue`, `TextBoundaryEditor.vue`
   - `DeckEditor.vue` → `TTSExportGuide.vue`
   - `PackageEditor.vue` → `UniversalUploadDialog.vue`
-  - `TtsScriptEditor.vue` → `CardFileBrowser.vue`
+- `TtsScriptEditor.vue` → `CardFileBrowser.vue`, `BindCardField.vue`
 - External libraries used across components: Naive UI (`n-*` components), `@vicons/ionicons5`, `vue-i18n`, and project API services under `@/api`.
 
 ## 3) Component Catalog
@@ -60,7 +60,8 @@ This document provides a complete, multi‑layer reference for the Vue 3 compone
 - Dialogs/Inputs
   - `FormField.vue` – Field renderer for many input types; emits rich edit events
   - `UniversalUploadDialog.vue` – Multi‑host image upload (banner/card/encounter) dialog
-  - `CardFileBrowser.vue` – Directory/card picker dialog
+- `CardFileBrowser.vue` – Directory/card picker dialog
+- `BindCardField.vue` – Reusable bind-card field (wraps CardFileBrowser)
   - `LanguageWelcomeModal.vue` – First‑run language selection modal
 
 ## 4) Component APIs (Props, Emits, Signatures)
@@ -328,7 +329,8 @@ type TtsScriptData = {
 }
 ```
 Behavior
-- Generates per‑type TTS Lua/GMNotes with optional phase buttons, location/asset/investigator options; integrates `CardFileBrowser`.
+- Generates per‑type TTS Lua/GMNotes with optional phase buttons, location/asset/investigator options; integrates `CardFileBrowser` and `BindCardField`.
+- Light mode (Mini/Custom): show GMNotes preview only; hide entry tokens and game-start configs; script ID locked when bound (`<investigator_id>-m` for mini, `<base_id>-c` for custom).
 
 ### TTSExportGuide.vue
 Signature
@@ -413,7 +415,7 @@ Signature
 type BrowserItem = { name: string; path: string; type: 'directory' | 'card'; fullPath: string };
 
 CardFileBrowser(
-  props: { visible: boolean },
+  props: { visible: boolean; singleSelect?: boolean },
   emits: {
     'update:visible'(value: boolean): void;
     'confirm'(items: BrowserItem[]): void;
@@ -422,6 +424,25 @@ CardFileBrowser(
 ```
 Behavior
 - Directory and card selection tool used by editors to attach files.
+- i18n‑first labels; confirm supports count template `Confirm ({count})`.
+- `singleSelect` enables one‑item selection for binding scenarios.
+
+### BindCardField.vue
+Signature
+```ts
+BindCardField(
+  props: {
+    path: string;                         // v-model:path
+    label: string; noneText: string;
+    chooseText: string; clearText: string;
+    modalTitle: string; cancelText: string;
+    info?: string; singleSelect?: boolean;
+  },
+  emits: { 'update:path'(value: string): void }
+)
+```
+Behavior
+- Wraps CardFileBrowser with i18n‑ready label/buttons; default single‑select.
 
 ## 5) Composition Patterns & Conventions
 - Script setup + TS: All components use `<script setup lang="ts">` with typed `defineProps`/`defineEmits` (and `withDefaults` where appropriate).
@@ -481,3 +502,7 @@ Appendix: File Index
 - Panels: `FileTreePanel.vue`, `ImagePreviewPanel.vue`, `WorkspaceSidebar.vue`, `ResizeSplitter.vue`
 - Dialogs/Inputs: `FormField.vue`, `UniversalUploadDialog.vue`, `CardFileBrowser.vue`, `LanguageWelcomeModal.vue`
 
+ - TtsScriptEditor.vue / BindCardField.vue / CardFileBrowser.vue
+   - Introduced `BindCardField` for unified binding UI; `CardFileBrowser` adds `singleSelect`.
+   - Investigator mini/custom use light-mode TTS (GMNotes-only), hide entry tokens and game-start configs.
+   - Full i18n coverage for file browser and bind fields; confirm label supports count.
