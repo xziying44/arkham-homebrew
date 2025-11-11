@@ -94,6 +94,30 @@ export default {
     refreshBtn: '🔄 Refresh',
   },
 
+  // Custom card binding
+  custom: {
+    bind: {
+      label: '🔗 Bind Card',
+      choose: 'Choose',
+      clear: 'Clear',
+      noneSelected: 'None',
+      infoBound: 'Bound: Script ID will be the bound card\'s ID with “-c”.',
+      modalTitle: 'Select Card to Bind',
+    }
+  },
+
+  // Investigator mini binding
+  mini: {
+    bind: {
+      label: '🔗 Bind Investigator Card',
+      choose: 'Choose',
+      clear: 'Clear',
+      noneSelected: 'None',
+      infoBound: 'Bound: Script ID will be the investigator\'s ID with “-m”.',
+      modalTitle: 'Select Investigator Card',
+    }
+  },
+
   // Common Buttons
   common: {
     deleteBtn: '🗑️ Delete',

@@ -289,6 +289,7 @@ class ContentPackageManager:
             pack_code = self._get_pack_code()
             self._add_log(f"包代码: {pack_code}")
             signature_to_investigator = {}  # 签名卡ID -> 调查员ID的映射
+            customization_text_map = {}     # 绑定卡脚本ID -> 定制卡正文
 
             cards = self.content_package.get("cards", [])
             self._add_log(f"第一遍扫描：查找调查员的签名卡...")
@@ -319,6 +320,43 @@ class ContentPackageManager:
 
             self._add_log(f"签名卡映射完成，共找到 {len(signature_to_investigator)} 张签名卡")
 
+            # 第二遍扫描：收集定制卡绑定（所有卡牌可作为绑定目标）
+            self._add_log("第二遍扫描：收集定制卡绑定 → customization_text 映射...")
+            for card_meta in cards:
+                card_filename = card_meta.get("filename", "")
+                if not card_filename:
+                    continue
+                card_data = self._read_card_json(card_filename)
+                if not card_data or card_data.get('type') != '定制卡':
+                    continue
+                try:
+                    tcfg = (card_data or {}).get('tts_config') or {}
+                    bind_path = ((tcfg.get('custom') or {}).get('bind') or {}).get('path')
+                    if not isinstance(bind_path, str) or not bind_path:
+                        # 未绑定的定制卡：按普通卡处理，不注入 customization_text
+                        continue
+                    if not self.workspace_manager._is_path_in_workspace(bind_path):
+                        self._add_log(f"  跳过定制卡绑定：路径不在工作空间内 {bind_path}")
+                        continue
+                    base_json = self._read_card_json(bind_path)
+                    if not base_json:
+                        self._add_log(f"  跳过定制卡绑定：找不到绑定卡 {bind_path}")
+                        continue
+                    # 提取绑定卡脚本ID（与后端一致的规则）
+                    base_id = self.tts_generator.extract_script_id_from_card_json(base_json)
+                    if not base_id:
+                        self._add_log(f"  跳过定制卡绑定：无法解析脚本ID {bind_path}")
+                        continue
+                    # 冲突策略：仅保留首个，后续告警
+                    if base_id in customization_text_map:
+                        self._add_log(f"⚠️ 警告：存在多个定制卡同时绑定 {base_id}，仅采用首个")
+                        continue
+                    body = (card_data or {}).get('body', '') or ''
+                    customization_text_map[base_id] = body
+                    self._add_log(f"  映射 customization_text：{base_id} ← 定制卡 [{card_data.get('name','')}]")
+                except Exception as e:
+                    self._add_log(f"  处理定制卡绑定失败：{e}")
+
             # 转换卡牌
             converted_cards = []
             cards = self.content_package.get("cards", [])
@@ -346,7 +384,8 @@ class ContentPackageManager:
                         pack_code=pack_code,
                         encounter_sets=encounter_sets,
                         workspace_manager=self.workspace_manager,
-                        signature_to_investigator=signature_to_investigator
+                        signature_to_investigator=signature_to_investigator,
+                        customization_text_map=customization_text_map
                     )
                     converted_card = converter.convert()
                     converted_cards.extend(converted_card)

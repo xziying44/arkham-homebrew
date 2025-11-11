@@ -5,8 +5,8 @@
             <n-form-item :label="$t('ttsScriptEditor.scriptId.label')">
                 <n-space align="center">
                     <n-input v-model:value="scriptConfig.id" :placeholder="$t('ttsScriptEditor.scriptId.placeholder')"
-                        :allow-input="allowOnlyAlphaNumeric" :disabled="isMiniCardBound" style="flex: 1" @update:value="onScriptConfigChange" />
-                    <n-button @click="generateRandomId" size="small" type="primary" :disabled="isMiniCardBound">
+                        :allow-input="allowOnlyAlphaNumeric" :disabled="isScriptIdLocked" style="flex: 1" @update:value="onScriptConfigChange" />
+                    <n-button @click="generateRandomId" size="small" type="primary" :disabled="isScriptIdLocked">
                         {{ $t('ttsScriptEditor.scriptId.button') }}
                     </n-button>
                 </n-space>
@@ -14,24 +14,36 @@
 
             <!-- 调查员小卡：绑定调查员卡牌（用于脚本ID软链接） -->
             <template v-if="props.cardType === '调查员小卡'">
-                <n-form-item label="绑定调查员卡牌">
-                    <n-space vertical size="small" style="width: 100%">
-                        <n-space align="center" justify="space-between">
-                            <n-text depth="3" style="font-size: 12px;">{{ miniBindPath || '未选择' }}</n-text>
-                            <n-space>
-                                <n-button size="small" type="primary" dashed @click="showMiniBindSelector = true">选择</n-button>
-                                <n-button size="small" quaternary type="error" @click="clearMiniBind" v-if="miniBindPath">清除</n-button>
-                            </n-space>
-                        </n-space>
-                        <n-alert type="info" v-if="isMiniCardBound">
-                            已绑定：脚本ID将自动设为绑定调查员的脚本ID并加后缀 “-m”。
-                        </n-alert>
-                    </n-space>
-                </n-form-item>
+                <BindCardField
+                    v-model:path="miniBindPath"
+                    :label="$t('ttsScriptEditor.mini.bind.label')"
+                    :none-text="$t('ttsScriptEditor.mini.bind.noneSelected')"
+                    :choose-text="$t('ttsScriptEditor.mini.bind.choose')"
+                    :clear-text="$t('ttsScriptEditor.mini.bind.clear')"
+                    :modal-title="$t('ttsScriptEditor.mini.bind.modalTitle')"
+                    :cancel-text="$t('ttsScriptEditor.common.cancel')"
+                    :info="$t('ttsScriptEditor.mini.bind.infoBound')"
+                    :single-select="true"
+                />
+            </template>
+
+            <!-- 定制卡：绑定任意卡牌（用于脚本ID软链接，后端生成 <base>-c） -->
+            <template v-if="props.cardType === '定制卡'">
+                <BindCardField
+                    v-model:path="customBindPath"
+                    :label="$t('ttsScriptEditor.custom.bind.label')"
+                    :none-text="$t('ttsScriptEditor.custom.bind.noneSelected')"
+                    :choose-text="$t('ttsScriptEditor.custom.bind.choose')"
+                    :clear-text="$t('ttsScriptEditor.custom.bind.clear')"
+                    :modal-title="$t('ttsScriptEditor.custom.bind.modalTitle')"
+                    :cancel-text="$t('ttsScriptEditor.common.cancel')"
+                    :info="$t('ttsScriptEditor.custom.bind.infoBound')"
+                    :single-select="true"
+                />
             </template>
 
             <!-- 通用入场标记配置 - 所有卡牌类型都支持 -->
-            <n-form-item :label="$t('ttsScriptEditor.entryTokens.label')">
+            <n-form-item v-if="!isLightScriptOnly" :label="$t('ttsScriptEditor.entryTokens.label')">
                 <n-space vertical size="medium">
                     <!-- 入场标记列表 -->
                     <div v-for="(use, index) in entryTokensConfig" :key="index" class="uses-config-row">
@@ -70,7 +82,7 @@
             </n-form-item>
 
             <!-- 游戏开始位置配置 - 所有卡牌类型都支持 -->
-            <n-form-item :label="$t('ttsScriptEditor.gameStart.label')">
+            <n-form-item v-if="!isLightScriptOnly" :label="$t('ttsScriptEditor.gameStart.label')">
                 <n-space>
                     <n-switch v-model:value="gameStartConfig.startsInPlay" @update:value="onScriptConfigChange">
                         <template #checked>{{ $t('ttsScriptEditor.gameStart.startsInPlay') }}</template>
@@ -369,23 +381,9 @@
     </n-modal>
 
     <!-- 调查员小卡绑定选择器 -->
-    <n-modal v-model:show="showMiniBindSelector" style="width: 80%; max-width: 800px;" preset="card">
-        <template #header>
-            <div class="signature-selector-header">
-                <n-text>选择绑定的调查员卡牌</n-text>
-            </div>
-        </template>
-        <div class="signature-selector-content">
-            <CardFileBrowser :visible="showMiniBindSelector"
-                @update:visible="showMiniBindSelector = $event"
-                @confirm="onMiniBindSelected" />
-        </div>
-        <template #action>
-            <n-space>
-                <n-button @click="showMiniBindSelector = false">{{ $t('ttsScriptEditor.common.cancel') }}</n-button>
-            </n-space>
-        </template>
-    </n-modal>
+    
+
+    
 </template>
 
 <script setup lang="ts">
@@ -404,6 +402,7 @@ import {
 } from '@/config/ttsScriptGenerator';
 import { WorkspaceService, TtsScriptService } from '@/api';
 import CardFileBrowser from './CardFileBrowser.vue';
+import BindCardField from './BindCardField.vue';
 
 // --- 新增: i18n设置 ---
 const { t } = useI18n();
@@ -708,6 +707,9 @@ const supportsSealConfig = computed(() => {
     return !(props.cardType === '调查员' || props.cardType === '定制卡');
 });
 
+// 轻量脚本：调查员小卡/定制卡仅显示 GMNotes 预览
+const isLightScriptOnly = computed(() => props.cardType === '调查员小卡' || props.cardType === '定制卡');
+
 // 判断是否有高级配置（调查员、支援卡、事件卡、地点卡）
 const hasAdvancedConfig = computed(() => {
     const advancedTypes = ['调查员', '支援卡', '事件卡', '地点卡'];
@@ -739,25 +741,21 @@ const generatedLuaScript = computed(() => {
 });
 
 // Mini card binding
-const showMiniBindSelector = ref(false);
+// removed: handled by BindCardField internally
+// const showMiniBindSelector = ref(false);
 const miniBindPath = ref<string>('');
 const isMiniCardBound = computed(() => props.cardType === '调查员小卡' && !!miniBindPath.value);
 
-const onMiniBindSelected = (items: any[]) => {
-    if (Array.isArray(items) && items.length > 0) {
-        const first = items[0];
-        if (first && typeof first.path === 'string') {
-            miniBindPath.value = first.path;
-            showMiniBindSelector.value = false;
-            onScriptConfigChange();
-        }
-    }
-};
+// Custom card binding
+const customBindPath = ref<string>('');
+const isCustomBound = computed(() => props.cardType === '定制卡' && !!customBindPath.value);
+const isScriptIdLocked = computed(() => isMiniCardBound.value || isCustomBound.value);
 
-const clearMiniBind = () => {
-    miniBindPath.value = '';
+// 绑定变化触发预览
+watch([miniBindPath, customBindPath], () => {
+    if (isSyncingFromParent.value) return;
     onScriptConfigChange();
-};
+});
 
 // TTS脚本数据（包含配置）
 // 统一 v2 配置对象（将作为 tts_config 存储与传输）
@@ -768,6 +766,9 @@ const tts_config = computed(() => ({
     phaseButtonConfig: phaseButtonConfig.value,
     mini: {
         bind: { path: miniBindPath.value || '' }
+    },
+    custom: {
+        bind: { path: customBindPath.value || '' }
     },
     investigator: {
         extraToken: investigatorConfig.value.extraToken,
@@ -1333,6 +1334,9 @@ watch(
             // 加载 mini 绑定
             const m = (cfg as any)?.mini?.bind?.path;
             if (typeof m === 'string') miniBindPath.value = m;
+            // 加载 custom 绑定
+            const c = (cfg as any)?.custom?.bind?.path;
+            if (typeof c === 'string') customBindPath.value = c;
             // 避免触发再次 emit 导致循环，仅在首次加载时进行一次预览
             nextTick(async () => {
                 isSyncingFromParent.value = false;

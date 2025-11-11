@@ -33,7 +33,7 @@ class TtsScriptGenerator:
         # extended types
         "技能卡": "Skill",
         "调查员背面": "InvestigatorBack",
-        "定制卡": "Custom",
+        "定制卡": "UpgradeSheet",
         "故事卡": "Story",
         "诡计卡": "Treachery",
         "敌人卡": "Enemy",
@@ -180,9 +180,22 @@ class TtsScriptGenerator:
                 rel_path = bind.get('path')
                 if isinstance(rel_path, str) and rel_path:
                     ref_json = self._read_card_json_by_path(rel_path)
-                    base_sid = self._extract_script_id_from_card_json(ref_json) if ref_json else None
+                    base_sid = self.extract_script_id_from_card_json(ref_json) if ref_json else None
                     if base_sid:
                         return f"{base_sid}-m"
+            except Exception:
+                pass
+        # Custom card (UpgradeSheet): if bound to a card, use its script id with '-c' suffix
+        if card_type == '定制卡':
+            try:
+                custom_cfg = tts_config.get('custom') or {}
+                bind = custom_cfg.get('bind') or {}
+                rel_path = bind.get('path')
+                if isinstance(rel_path, str) and rel_path:
+                    ref_json = self._read_card_json_by_path(rel_path)
+                    base_sid = self.extract_script_id_from_card_json(ref_json) if ref_json else None
+                    if base_sid:
+                        return f"{base_sid}-c"
             except Exception:
                 pass
         # general: use provided script_id when present
@@ -228,7 +241,10 @@ class TtsScriptGenerator:
         except Exception:
             return None
 
-    def _extract_script_id_from_card_json(self, card_json: Dict[str, Any]) -> Optional[str]:
+    def extract_script_id_from_card_json(self, card_json: Dict[str, Any]) -> Optional[str]:
+        """Public helper: extract stable script id from a card json.
+        Priority: v2 tts_config.script_id -> legacy GMNotes.id -> normalized card.id
+        """
         # Prefer v2
         tcfg = card_json.get('tts_config') or {}
         sid = tcfg.get('script_id')
@@ -249,6 +265,10 @@ class TtsScriptGenerator:
         if raw:
             return raw[:8] if len(raw) >= 8 else raw
         return None
+
+    # Backward-compat alias
+    def _extract_script_id_from_card_json(self, card_json: Dict[str, Any]) -> Optional[str]:
+        return self.extract_script_id_from_card_json(card_json)
 
     def _aggregate_signatures_from_paths(self, signatures: List[Dict[str, Any]]) -> List[Dict[str, int]]:
         agg: Dict[str, int] = {}
@@ -604,7 +624,7 @@ class TtsScriptGenerator:
 
         # 封印脚本：除调查员与定制卡外可用
         seal_cfg = tts_config.get('seal') or {}
-        if seal_cfg.get('enabled') and self._map_type(card_type) not in ("Investigator", "Custom"):
+        if seal_cfg.get('enabled') and self._map_type(card_type) not in ("Investigator", "UpgradeSheet"):
             return self._generate_seal_lua(seal_cfg, card.get('language'))
 
         # 其次：调查员阶段按钮脚本

@@ -94,6 +94,30 @@ export default {
     refreshBtn: '🔄 刷新',
   },
 
+  // 定制卡绑定
+  custom: {
+    bind: {
+      label: '🔗 绑定卡牌',
+      choose: '选择',
+      clear: '清除',
+      noneSelected: '未选择',
+      infoBound: '已绑定：脚本ID将自动设为绑定卡牌的脚本ID并加后缀 “-c”。',
+      modalTitle: '选择绑定的卡牌',
+    }
+  },
+
+  // 调查员小卡绑定
+  mini: {
+    bind: {
+      label: '🔗 绑定调查员卡牌',
+      choose: '选择',
+      clear: '清除',
+      noneSelected: '未选择',
+      infoBound: '已绑定：脚本ID将自动设为绑定调查员的脚本ID并加后缀 “-m”。',
+      modalTitle: '选择绑定的调查员卡牌',
+    }
+  },
+
   // 通用按钮
   common: {
     deleteBtn: '🗑️ 删除',

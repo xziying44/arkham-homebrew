@@ -76,7 +76,8 @@ class Card2ArkhamDBConverter:
             pack_code: str,
             workspace_manager,
             encounter_sets: List[Dict[str, Any]] = [],
-            signature_to_investigator: Dict[str, str] = None
+            signature_to_investigator: Dict[str, str] = None,
+            customization_text_map: Dict[str, str] = None
     ) -> None:
         """
         初始化转换器
@@ -98,6 +99,7 @@ class Card2ArkhamDBConverter:
         self.pack_code = pack_code
         self.workspace_manager = workspace_manager
         self.signature_to_investigator = signature_to_investigator or {}
+        self.customization_text_map = customization_text_map or {}
 
     def convert(self) -> List[Dict[str, Any]]:
         """
@@ -397,6 +399,8 @@ class Card2ArkhamDBConverter:
             '🕵️': '[per_investigator]',
             '🔵': '-',
             '<nbsp>': ' ',
+            '<upg>': '☐',
+            '<升级>': '☐',
         }
 
         result = text
@@ -1097,5 +1101,30 @@ class Card2ArkhamDBConverter:
             card_id = self._extract_code_from_gmnotes()
             card_data["deck_limit"] = 1 if flags["exceptional"] else self._get_quantity()
 
+        # 注入 customization_text（若存在绑定的定制卡）
+        try:
+            code = card_data.get('code')
+            if code and code in self.customization_text_map:
+                raw_txt = self.customization_text_map.get(code, '') or ''
+                # 1) 导出 customization_text
+                converted = self._convert_text_format(raw_txt)
+                card_data['customization_text'] = converted
+                # 2) 基于 customization_text 生成 customization_options
+                options = []
+                for raw_line in (converted.splitlines() if converted else []):
+                    line = raw_line.strip()
+                    if not line:
+                        # 忽略空行
+                        continue
+                    # 计算本行的复选框数量：'□' 或 '☐'
+                    count = sum(1 for ch in line if ch in ('□', '☐'))
+                    xp = count if count and count > 0 else 1
+                    options.append({
+                        'xp': xp,
+                        'text_change': 'append'
+                    })
+                card_data['customization_options'] = options
+        except Exception:
+            pass
 
         return card_data
