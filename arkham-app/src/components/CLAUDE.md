@@ -182,6 +182,16 @@ Changelog (2025‑11‑10)
 - TtsScriptEditor.vue: 新增“调查员小卡”绑定调查员卡牌（选择路径）；绑定后脚本ID禁用，后端生成 `<investigator_id>-m`。
 - FileTreePanel.vue: 文件树卡牌类型图标映射增加“调查员小卡”（🧩）。
 
+Changelog (2025‑11‑11)
+- PackageEditor.vue
+  - 添加上传会话隔离：打开上传页面时冻结 `packageData`（深拷贝快照 `uploadConfigSnapshot`），所有上传对话框以快照为 `:config` 来源，避免切包导致上传写入错误包。
+  - 在 `handleUploadConfirm` 中，若存在快照则强制对齐 `updatedPackage.path = snapshot.path`，作为保险丝。
+  - 切换旧式上传模态的 `:config` 同步切换为使用快照。
+- UniversalUploadDialog.vue
+  - 封面文件唯一命名：基于包唯一标识（优先 `meta.code`，否则从 `path`/`name` 派生，最后回退 UUID），生成 `banners/<code>` 与 `banners/<code>_box`，彻底避免跨包 `banner/banner_box` 覆盖。
+  - 上传成功后清空 `updatedPackage.banner_base64`，确保 UI 始终以 URL 显示、避免 base64 回退造成的“错乱”。
+  - 不改变卡牌/遭遇组上传的既有命名策略。
+
 ### FormField.vue
 Signature
 ```ts
