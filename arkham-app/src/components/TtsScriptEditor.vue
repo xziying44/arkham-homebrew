@@ -267,14 +267,61 @@
                     </n-alert>
                 </div>
 
-                <!-- 地点信息显示 -->
-                <n-form-item :label="$t('ttsScriptEditor.location.locationIconLabel')">
-                    <n-input :value="getEditingCardData().location_icon || $t('ttsScriptEditor.location.notSet')" readonly />
+                <!-- 地点图标模式切换：默认模式（自动从卡面）/ 高级模式（可编辑数组） -->
+                <n-form-item :label="t('ttsScriptEditor.location.modeLabel', '图标模式')">
+                    <n-space align="center">
+                        <n-switch v-model:value="locationAdvancedEnabled" @update:value="onLocationModeToggle">
+                            <template #unchecked>{{ t('ttsScriptEditor.location.mode.default', '默认模式') }}</template>
+                            <template #checked>{{ t('ttsScriptEditor.location.mode.advanced', '高级配置') }}</template>
+                        </n-switch>
+                        <n-text depth="3" style="font-size: 12px;">{{ t('ttsScriptEditor.location.modeHelp', '默认模式自动使用卡面上的地点图标；高级模式可自定义并可从卡面同步一次。') }}</n-text>
+                    </n-space>
                 </n-form-item>
 
-                <n-form-item :label="$t('ttsScriptEditor.location.connectionIconLabel')">
-                    <n-input :value="(getEditingCardData().location_link || []).join(', ') || $t('ttsScriptEditor.location.notSet')" readonly />
-                </n-form-item>
+                <!-- 默认模式：只读展示（自动同步卡面） -->
+                <template v-if="!locationAdvancedEnabled">
+                    <n-form-item :label="$t('ttsScriptEditor.location.locationIconLabel')">
+                        <n-input :value="defaultLocationIconDisplay" readonly />
+                    </n-form-item>
+                    <n-form-item :label="$t('ttsScriptEditor.location.connectionIconLabel')">
+                        <n-input :value="defaultLocationConnectionsDisplay" readonly />
+                    </n-form-item>
+                    <n-space v-if="props.isDoubleSided">
+                        <n-button size="small" @click="applyToOtherSide" tertiary>
+                            {{ t('ttsScriptEditor.location.applyToOtherSide', '应用到另一侧') }}
+                        </n-button>
+                    </n-space>
+                </template>
+
+                <!-- 高级模式：可编辑的数组（可添加自定义项） -->
+                <template v-else>
+                    <n-form-item :label="$t('ttsScriptEditor.location.locationIconLabel')">
+                        <n-select
+                            :options="locationIconSelectOptions"
+                            :value="locationIconAdvanced"
+                            filterable
+                            tag
+                            clearable
+                            :placeholder="t('ttsScriptEditor.location.addPlaceholder', '输入或选择图标，例如 arkham_world')"
+                            @update:value="onLocationIconChange"
+                        />
+                    </n-form-item>
+                    <n-form-item :label="$t('ttsScriptEditor.location.connectionIconLabel')">
+                        <n-dynamic-tags
+                            :value="locationConnectionsAdvancedDisplay"
+                            @update:value="onLocationConnectionsChange"
+                            :placeholder="t('ttsScriptEditor.location.addPlaceholder', '输入或选择连接图标')"
+                        />
+                    </n-form-item>
+                    <n-space>
+                        <n-button size="small" type="primary" tertiary @click="syncLocationFromCard">
+                            {{ t('ttsScriptEditor.location.syncFromCardOnce', '从卡面同步一次') }}
+                        </n-button>
+                        <n-button v-if="props.isDoubleSided" size="small" @click="applyToOtherSide" tertiary>
+                            {{ t('ttsScriptEditor.location.applyToOtherSide', '应用到另一侧') }}
+                        </n-button>
+                    </n-space>
+                </template>
 
                 <!-- 线索值配置 - 只有已揭示地点才显示 -->
                 <n-form-item v-if="getEditingCardData().location_type === '已揭示'" :label="$t('ttsScriptEditor.location.clueValueLabel')">
@@ -401,6 +448,7 @@ import {
     type PhaseButton
 } from '@/config/ttsScriptGenerator';
 import { WorkspaceService, TtsScriptService } from '@/api';
+import { cardTypeConfigs } from '@/config/cardTypeConfigsEn';
 import CardFileBrowser from './CardFileBrowser.vue';
 import BindCardField from './BindCardField.vue';
 
@@ -536,6 +584,162 @@ const gameStartConfig = ref<GameStartConfig>({
     startsInPlay: false,
     startsInHand: false
 });
+
+// 地点图标 - 高级模式开关与数据（按正/背面独立配置）
+const sideKey = computed<'front' | 'back'>(() => (props.isDoubleSided && props.currentSide === 'back') ? 'back' : 'front');
+const locationAdvancedEnabledBySide = ref<{ front: boolean; back: boolean }>({ front: false, back: false });
+const locationIconAdvancedBySide = ref<{ front: string; back: string }>({ front: '', back: '' });
+const locationConnectionsAdvancedBySide = ref<{ front: string[]; back: string[] }>({ front: [], back: [] });
+
+const locationAdvancedEnabled = computed<boolean>({
+    get() { return locationAdvancedEnabledBySide.value[sideKey.value]; },
+    set(v: boolean) { locationAdvancedEnabledBySide.value[sideKey.value] = v; }
+});
+const locationIconAdvanced = computed<string>({
+    get() { return locationIconAdvancedBySide.value[sideKey.value]; },
+    set(v: string) { locationIconAdvancedBySide.value[sideKey.value] = v; }
+});
+const locationConnectionsAdvanced = computed<string[]>({
+    get() { return locationConnectionsAdvancedBySide.value[sideKey.value]; },
+    set(v: string[]) { locationConnectionsAdvancedBySide.value[sideKey.value] = v; }
+});
+
+// 从英文配置获取地点图标选项（英文 label + 中文 value），构建映射
+const locationIconOptionList = (() => {
+    const cfg = cardTypeConfigs['地点卡'];
+    const fields = Array.isArray(cfg?.fields) ? cfg.fields : [];
+    const iconField = fields.find(f => f.key === 'location_icon');
+    const linkField = fields.find(f => f.key === 'location_link');
+    const options = Array.isArray(iconField?.options) ? iconField!.options : [];
+    const linkOptions = Array.isArray(linkField?.options) ? linkField!.options : [];
+    // 保持去重（两处来源应一致）
+    const map = new Map<string, string>(); // value(中文) -> label(英文)
+    [...options, ...linkOptions].forEach(opt => {
+        if (opt && typeof opt.value === 'string' && typeof opt.label === 'string') {
+            map.set(opt.value as string, opt.label);
+        }
+    });
+    return map; // 中文 -> 英文
+})();
+
+const englishLabelToChineseValueMap = (() => {
+    const m = new Map<string, string>(); // 规范化英文 -> 中文
+    const normalize = (s: string) => (s || '')
+        // 去掉前缀的非字母字符（如 emoji 与图标）
+        .replace(/^[^A-Za-z]+/, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+    locationIconOptionList.forEach((label, value) => {
+        m.set(normalize(label), value);
+        // 也尝试去掉前缀符号（含 emoji 后已去除），保留纯英文关键词匹配
+    });
+    return { normalize, map: m };
+})();
+
+// 显示用：根据语言选择中文或英文
+const { locale } = useI18n();
+const toDisplayLabel = (value: string): string => {
+    if (!value) return '';
+    const isZh = String(locale.value || '').toLowerCase().startsWith('zh');
+    if (isZh) return value; // 中文环境直接显示中文
+    const label = locationIconOptionList.get(value);
+    return label || value; // 英文环境显示英文，不存在则回退原值
+};
+
+// 默认模式下展示：从卡面读取并本地化
+const defaultLocationIconDisplay = computed<string>(() => {
+    const raw = getEditingCardData().location_icon as string | undefined;
+    if (!raw) return t('ttsScriptEditor.location.notSet');
+    return toDisplayLabel(String(raw));
+});
+const defaultLocationConnectionsDisplay = computed<string>(() => {
+    const arr = Array.isArray(getEditingCardData().location_link) ? getEditingCardData().location_link as any[] : [];
+    if (!arr.length) return t('ttsScriptEditor.location.notSet');
+    return arr.map(x => toDisplayLabel(String(x))).join(', ');
+});
+
+const locationConnectionsAdvancedDisplay = computed<string[]>(() =>
+    (locationConnectionsAdvanced.value || []).map(v => toDisplayLabel(v))
+);
+
+// 规范化输入：英文→中文，保留未知值（自定义）
+const normalizeIconInput = (input: string): string => {
+    if (!input) return input;
+    // 如果恰好等于中文值，直接返回
+    if (locationIconOptionList.has(input)) return input;
+    const key = englishLabelToChineseValueMap.normalize(input);
+    const mapped = englishLabelToChineseValueMap.map.get(key);
+    return mapped || input; // 未知项直接返回作为自定义
+};
+
+const uniqueNormalized = (arr: string[]): string[] => {
+    const result: string[] = [];
+    const seen = new Set<string>();
+    for (const raw of arr) {
+        const norm = normalizeIconInput(String(raw || '').trim());
+        if (!norm) continue;
+        if (!seen.has(norm)) {
+            seen.add(norm);
+            result.push(norm);
+        }
+    }
+    return result;
+};
+
+// 高级模式：事件处理
+const locationIconSelectOptions = computed(() => {
+    const arr: Array<{ label: string; value: string }> = [];
+    locationIconOptionList.forEach((_, value) => {
+        arr.push({ label: toDisplayLabel(value), value });
+    });
+    return arr;
+});
+
+const onLocationIconChange = (val: string | null) => {
+    const normalized = normalizeIconInput(val || '');
+    locationIconAdvanced.value = normalized;
+    onScriptConfigChange();
+};
+const onLocationConnectionsChange = (displayList: string[]) => {
+    locationConnectionsAdvanced.value = uniqueNormalized(displayList);
+    onScriptConfigChange();
+};
+const onLocationModeToggle = (enabled: boolean) => {
+    if (isSyncingFromParent.value) return;
+    if (enabled && !locationIconAdvanced.value && locationConnectionsAdvanced.value.length === 0) {
+        syncLocationFromCard();
+    } else {
+        // 切换任一模式都应刷新预览
+        onScriptConfigChange();
+    }
+};
+const syncLocationFromCard = () => {
+    const side = getEditingCardData();
+    const iconVal = side.location_icon ? String(side.location_icon) : '';
+    const links = Array.isArray(side.location_link) ? side.location_link.map((x: any) => String(x)) : [];
+    locationIconAdvanced.value = normalizeIconInput(iconVal);
+    locationConnectionsAdvanced.value = uniqueNormalized(links);
+    onScriptConfigChange();
+};
+
+// 应用到另一侧：将当前侧的图标配置复制到另一侧（目标侧启用高级模式）
+const applyToOtherSide = () => {
+    const target: 'front' | 'back' = sideKey.value === 'front' ? 'back' : 'front';
+    // 源数据：优先取高级配置，否则取卡面字段
+    const sourceIcon = locationAdvancedEnabled.value
+        ? (locationIconAdvanced.value || '')
+        : (getEditingCardData().location_icon ? String(getEditingCardData().location_icon) : '');
+    const sourceLinks = locationAdvancedEnabled.value
+        ? [...locationConnectionsAdvanced.value]
+        : (Array.isArray(getEditingCardData().location_link) ? (getEditingCardData().location_link as any[]).map(x => String(x)) : []);
+
+    locationAdvancedEnabledBySide.value[target] = true;
+    locationIconAdvancedBySide.value[target] = normalizeIconInput(sourceIcon);
+    locationConnectionsAdvancedBySide.value[target] = uniqueNormalized(sourceLinks);
+    onScriptConfigChange();
+    message.success(t('ttsScriptEditor.messages.applyOtherSideSuccess', '已应用到另一侧'));
+};
 
 // 职阶映射 (通常为内部数据，无需翻译)
 const classMapping: Record<string, string> = {
@@ -789,6 +993,18 @@ const tts_config = computed(() => ({
         tokens: [...sealTokens.value],
         max: sealMax.value ?? null,
     } as SealConfig,
+    ...(locationAdvancedEnabledBySide.value.front && (locationIconAdvancedBySide.value.front || locationConnectionsAdvancedBySide.value.front.length > 0) ? {
+        locationFront: {
+            ...(locationIconAdvancedBySide.value.front ? { icons: locationIconAdvancedBySide.value.front } : {}),
+            ...(locationConnectionsAdvancedBySide.value.front.length > 0 ? { connections: [...locationConnectionsAdvancedBySide.value.front] } : {}),
+        }
+    } : {}),
+    ...(locationAdvancedEnabledBySide.value.back && (locationIconAdvancedBySide.value.back || locationConnectionsAdvancedBySide.value.back.length > 0) ? {
+        locationBack: {
+            ...(locationIconAdvancedBySide.value.back ? { icons: locationIconAdvancedBySide.value.back } : {}),
+            ...(locationConnectionsAdvancedBySide.value.back.length > 0 ? { connections: [...locationConnectionsAdvancedBySide.value.back] } : {}),
+        }
+    } : {}),
 }));
 
 const ttsScriptData = computed((): TtsScriptData => ({
@@ -1210,6 +1426,24 @@ const loadFromTtsConfigV2 = (cfg: any) => {
         sealTokens.value = Array.isArray(s.tokens) ? [...s.tokens] : [];
         sealMax.value = (typeof s.max === 'number' && s.max > 0) ? s.max : null;
     }
+    // 地点（高级模式）
+    // 兼容旧字段（location）：将其视为正面高级配置
+    if (cfg.location && (typeof cfg.location.icons === 'string' || Array.isArray(cfg.location.connections))) {
+        locationAdvancedEnabledBySide.value.front = true;
+        locationIconAdvancedBySide.value.front = normalizeIconInput(typeof cfg.location.icons === 'string' ? cfg.location.icons : '');
+        locationConnectionsAdvancedBySide.value.front = uniqueNormalized(Array.isArray(cfg.location.connections) ? cfg.location.connections : []);
+    }
+    // 新字段：locationFront / locationBack（分别配置）
+    if (cfg.locationFront && (typeof cfg.locationFront.icons === 'string' || Array.isArray(cfg.locationFront.connections))) {
+        locationAdvancedEnabledBySide.value.front = true;
+        locationIconAdvancedBySide.value.front = normalizeIconInput(typeof cfg.locationFront.icons === 'string' ? cfg.locationFront.icons : '');
+        locationConnectionsAdvancedBySide.value.front = uniqueNormalized(Array.isArray(cfg.locationFront.connections) ? cfg.locationFront.connections : []);
+    }
+    if (cfg.locationBack && (typeof cfg.locationBack.icons === 'string' || Array.isArray(cfg.locationBack.connections))) {
+        locationAdvancedEnabledBySide.value.back = true;
+        locationIconAdvancedBySide.value.back = normalizeIconInput(typeof cfg.locationBack.icons === 'string' ? cfg.locationBack.icons : '');
+        locationConnectionsAdvancedBySide.value.back = uniqueNormalized(Array.isArray(cfg.locationBack.connections) ? cfg.locationBack.connections : []);
+    }
 };
 
 // 从旧数据格式兼容加载
@@ -1293,6 +1527,10 @@ watch(
     () => {
         if (shouldShowTtsScript.value) {
             syncAttributesFromCardData();
+            // 默认模式下（未启用高级地点配置），地点图标从卡面自动生效，需触发预览
+            if (!locationAdvancedEnabled.value) {
+                scheduleBackendPreview();
+            }
         }
     },
     { deep: true }

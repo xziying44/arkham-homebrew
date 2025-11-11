@@ -212,5 +212,9 @@ export default {
     },
     helpTitle: 'Usage Tips',
     helpText: 'Body boundary: Positive values expand outward, negative values shrink inward (Range: -50px ~ +50px). Flavor padding: Controls the padding value for flavor text (Range: 0px ~ 100px)'
-  }
+  },
+  locationActions: {
+    applyToOtherSide: 'Apply location icons to the other side',
+    applySuccess: 'Applied to the other side',
+  },
 }

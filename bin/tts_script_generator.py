@@ -388,10 +388,33 @@ class TtsScriptGenerator:
 
         elif mapped_type == "Location":
             # Build location data for front/back
-            def make_location(side: Dict[str, Any]) -> Dict[str, Any]:
+            cfg_location = tts_config.get("location") if isinstance(tts_config.get("location"), dict) else None
+            cfg_location_front = tts_config.get("locationFront") if isinstance(tts_config.get("locationFront"), dict) else None
+            cfg_location_back = tts_config.get("locationBack") if isinstance(tts_config.get("locationBack"), dict) else None
+
+            def _cfg_icons_and_conns(cfg: Optional[Dict[str, Any]]) -> (Optional[str], Optional[str]):
+                icons_str: Optional[str] = None
+                conns_str: Optional[str] = None
+                if cfg:
+                    icons = cfg.get("icons")
+                    if isinstance(icons, list) and icons:
+                        mapped = [self._map_icon(x) or x for x in icons]
+                        icons_str = "|".join([str(x) for x in mapped if x]) if mapped else None
+                    elif isinstance(icons, str) and icons:
+                        mapped1 = self._map_icon(icons) or icons
+                        icons_str = str(mapped1)
+                    conns = cfg.get("connections")
+                    if isinstance(conns, list) and conns:
+                        mappedc = [self._map_icon(x) or x for x in conns]
+                        conns_str = "|".join([str(x) for x in mappedc if x]) if mappedc else None
+                return icons_str, conns_str
+
+            def make_location(side: Dict[str, Any], cfg: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+                cfg_icons, cfg_conns = _cfg_icons_and_conns(cfg)
                 loc: Dict[str, Any] = {
-                    "icons": self._map_icon(side.get("location_icon")) or side.get("location_icon") or "Diamond",
-                    "connections": "|".join([
+                    # 优先使用 tts_config.locationFront/locationBack（高级模式），其次使用 legacy tts_config.location，最后回退卡面字段
+                    "icons": cfg_icons or (_cfg_icons_and_conns(cfg_location)[0]) or (self._map_icon(side.get("location_icon")) or side.get("location_icon") or "Diamond"),
+                    "connections": cfg_conns or (_cfg_icons_and_conns(cfg_location)[1]) or "|".join([
                         self._map_icon(x) or x for x in (side.get("location_link") or [])
                     ]),
                 }
@@ -413,12 +436,12 @@ class TtsScriptGenerator:
                 "traits": self._join_traits(front.get("traits")) or "",
             }
             if front_is_loc:
-                gm["locationFront"] = make_location(front)
+                gm["locationFront"] = make_location(front, cfg_location_front)
             if back_is_loc:
-                gm["locationBack"] = make_location(back)
+                gm["locationBack"] = make_location(back, cfg_location_back)
             if not (front_is_loc or back_is_loc):
-                # single-face location-ish fallback
-                gm = {**base_data, "location": make_location(front)}
+                # single-face location-ish fallback（使用正面配置/legacy配置）
+                gm = {**base_data, "location": make_location(front, cfg_location_front or cfg_location)}
 
         elif mapped_type == "Act":
             # 场景卡：解析线索阈值（front 侧）

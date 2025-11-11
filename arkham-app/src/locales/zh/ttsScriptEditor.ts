@@ -71,6 +71,14 @@ export default {
   location: {
     locationIconLabel: '📍 地点图标',
     connectionIconLabel: '🔗 连接地点图标',
+    modeLabel: '🎛️ 图标模式',
+    mode: {
+      default: '默认模式',
+      advanced: '高级配置',
+    },
+    modeHelp: '默认模式自动使用卡面上的地点图标；高级模式可自定义并可从卡面同步一次。',
+    addPlaceholder: '输入或选择图标，例如 arkham_world',
+    syncFromCardOnce: '从卡面同步一次',
     clueValueLabel: '🔍 线索值',
     originalValueLabel: '原始值:',
     countLabel: '数量',
@@ -92,6 +100,7 @@ export default {
     label: '📋 GMNotes预览',
     copyBtn: '📋 复制',
     refreshBtn: '🔄 刷新',
+    applyToOtherSide: '应用到另一侧',
   },
 
   // 定制卡绑定
@@ -214,5 +223,6 @@ export default {
     copySuccess: 'GMNotes已复制到剪贴板',
     copyError: '复制失败，请手动复制',
     regenerateSuccess: 'GMNotes已重新生成',
+    applyOtherSideSuccess: '已应用到另一侧',
   },
 }
