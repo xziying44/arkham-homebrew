@@ -217,5 +217,9 @@ export default {
     },
     helpTitle: '使用提示',
     helpText: '正文边界：正数向外扩展，负数向内收缩（范围: -50px ~ +50px）。风味内边距：控制风味文本的padding值（范围: 0px ~ 100px）'
-  }
+  },
+  locationActions: {
+    applyToOtherSide: '将地点图标应用到另一侧',
+    applySuccess: '已应用到另一侧',
+  },
 }

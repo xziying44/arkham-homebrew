@@ -2,7 +2,7 @@
   <div class="card-file-browser">
     <div class="browser-header">
       <div class="breadcrumb">
-        <n-button text @click="navigateToParent" v-if="currentPath !== ''" title="返回">
+        <n-button text @click="navigateToParent" v-if="currentPath !== ''" :title="t('fileBrowser.actions.back')">
           <template #icon>
             <n-icon :component="ArrowBackOutline" />
           </template>
@@ -11,10 +11,10 @@
       </div>
       <div class="browser-actions">
         <n-button size="small" @click="clearSelection">
-          清除选择
+          {{ t('fileBrowser.actions.clear') }}
         </n-button>
         <n-button type="primary" size="small" @click="confirmSelection" :disabled="selectedItems.length === 0">
-          确认 ({{ selectedItems.length }})
+          {{ confirmLabel }}
         </n-button>
       </div>
     </div>
@@ -25,16 +25,16 @@
           <n-spin size="large" />
         </div>
         <div v-else-if="currentItems.length === 0" class="empty-container">
-          <n-empty description="当前目录没有卡牌文件">
+          <n-empty :description="t('fileBrowser.empty.description')">
             <template #icon>
               <n-icon :component="FolderOpenOutline" />
             </template>
             <template #extra>
-              <n-text depth="3">当前路径: {{ currentPath }}</n-text>
+              <n-text depth="3">{{ t('fileBrowser.empty.currentPath') }}: {{ currentPath }}</n-text>
               <br>
-              <n-text depth="3">文件夹数量: {{ folders.length }}</n-text>
+              <n-text depth="3">{{ t('fileBrowser.empty.folderCount') }}: {{ folders.length }}</n-text>
               <br>
-              <n-text depth="3">卡牌文件数量: {{ cardFiles.length }}</n-text>
+              <n-text depth="3">{{ t('fileBrowser.empty.fileCount') }}: {{ cardFiles.length }}</n-text>
             </template>
           </n-empty>
         </div>
@@ -44,7 +44,7 @@
             <div class="item-icon">
               <n-icon :component="ArrowUpOutline" size="32" />
             </div>
-            <div class="item-name">返回上一层</div>
+            <div class="item-name">{{ t('fileBrowser.labels.up') }}</div>
           </div>
 
           <!-- 文件夹项目 -->
@@ -117,6 +117,7 @@ interface BrowserItem {
 
 interface Props {
   visible: boolean;
+  singleSelect?: boolean;
 }
 
 interface Emits {
@@ -129,6 +130,7 @@ const emit = defineEmits<Emits>();
 
 const message = useMessage();
 const { t } = useI18n();
+const confirmLabel = computed(() => t('fileBrowser.actions.confirmWithCount', { count: selectedItems.value.length }))
 
 // 状态管理
 const loading = ref(false);
@@ -201,14 +203,14 @@ const loadFileTree = async () => {
     fileTree.value = response.fileTree;
   } catch (error) {
     console.error('加载文件树失败:', error);
-    message.error('加载文件树失败');
+    message.error(t('fileBrowser.messages.loadFailed'));
   } finally {
     loading.value = false;
   }
 };
 
 const getCurrentPathDisplay = () => {
-  return currentPath.value || '工作空间根目录';
+  return currentPath.value || t('fileBrowser.labels.root');
 };
 
 const navigateToParent = () => {
@@ -246,6 +248,15 @@ const isSelected = (item: BrowserItem) => {
 
 const toggleSelection = (item: BrowserItem) => {
   const index = selectedItems.value.findIndex(selected => selected.path === item.path);
+  if (props.singleSelect) {
+    if (index > -1) {
+      // deselect if clicking the same item
+      selectedItems.value = [];
+    } else {
+      selectedItems.value = [item];
+    }
+    return;
+  }
   if (index > -1) {
     selectedItems.value.splice(index, 1);
   } else {
@@ -259,7 +270,7 @@ const clearSelection = () => {
 
 const confirmSelection = () => {
   if (selectedItems.value.length === 0) {
-    message.warning('请至少选择一个文件或文件夹');
+    message.warning(t('fileBrowser.messages.selectAtLeastOne'));
     return;
   }
 

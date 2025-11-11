@@ -71,6 +71,14 @@ export default {
   location: {
     locationIconLabel: '📍 Location Icon',
     connectionIconLabel: '🔗 Connection Icons',
+    modeLabel: '🎛️ Icon Mode',
+    mode: {
+      default: 'Default',
+      advanced: 'Advanced',
+    },
+    modeHelp: 'Default mode uses the icon(s) from the card face automatically. Advanced mode allows customization and one-time sync from card face.',
+    addPlaceholder: 'Enter or choose an icon, e.g. arkham_world',
+    syncFromCardOnce: 'Sync from Card Once',
     clueValueLabel: '🔍 Clue Value',
     originalValueLabel: 'Original Value:',
     countLabel: 'Count',
@@ -92,6 +100,31 @@ export default {
     label: '📋 GMNotes Preview',
     copyBtn: '📋 Copy',
     refreshBtn: '🔄 Refresh',
+    applyToOtherSide: 'Apply to Other Side',
+  },
+
+  // Custom card binding
+  custom: {
+    bind: {
+      label: '🔗 Bind Card',
+      choose: 'Choose',
+      clear: 'Clear',
+      noneSelected: 'None',
+      infoBound: 'Bound: Script ID will be the bound card\'s ID with “-c”.',
+      modalTitle: 'Select Card to Bind',
+    }
+  },
+
+  // Investigator mini binding
+  mini: {
+    bind: {
+      label: '🔗 Bind Investigator Card',
+      choose: 'Choose',
+      clear: 'Clear',
+      noneSelected: 'None',
+      infoBound: 'Bound: Script ID will be the investigator\'s ID with “-m”.',
+      modalTitle: 'Select Investigator Card',
+    }
   },
 
   // Common Buttons
@@ -191,5 +224,6 @@ export default {
     copySuccess: 'GMNotes copied to clipboard',
     copyError: 'Copy failed. Please copy manually.',
     regenerateSuccess: 'GMNotes regenerated successfully',
+    applyOtherSideSuccess: 'Applied to the other side',
   },
 }

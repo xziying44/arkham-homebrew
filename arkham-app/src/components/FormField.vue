@@ -54,7 +54,27 @@
       :placeholder="$t('cardEditor.field.pleaseEnter', { name: getCleanFieldName(field.name) })" />
   </n-form-item>
 
-  <!-- 下拉单选 -->
+  <!-- 地点图标：下拉单选（带SVG图标） -->
+  <n-form-item v-else-if="field.type === 'select' && field.key === 'location_icon'" :path="field.key">
+    <template #label>
+      <div class="field-label">
+        <span>{{ field.name }}</span>
+        <n-button v-if="field.helpText" size="tiny" @click="showHelpModal = true" class="help-button"
+          :title="$t('cardEditor.field.viewFieldDescription')">
+          <template #icon>
+            <n-icon :component="HelpCircleOutline" size="14" />
+          </template>
+          {{ $t('cardEditor.field.help') }}
+        </n-button>
+      </div>
+    </template>
+    <n-select :value="value" @update:value="$emit('update:value', $event)" :options="field.options"
+      :render-label="renderLocationOptionLabel"
+      :consistent-menu-width="false"
+      :placeholder="$t('cardEditor.field.pleaseSelect', { name: getCleanFieldName(field.name) })" />
+  </n-form-item>
+
+  <!-- 其他下拉单选 -->
   <n-form-item v-else-if="field.type === 'select'" :path="field.key">
     <template #label>
       <div class="field-label">
@@ -87,12 +107,19 @@
       </div>
     </template>
     <div class="multi-select-container">
-      <n-select :value="null" :options="field.options" :placeholder="$t('cardEditor.field.add', { name: getCleanFieldName(field.name) })"
+      <n-select :value="null" :options="field.options"
+        :render-label="field.key === 'location_link' ? renderLocationOptionLabel : undefined"
+        :consistent-menu-width="false"
+        :placeholder="$t('cardEditor.field.add', { name: getCleanFieldName(field.name) })"
         @update:value="$emit('add-multi-select-item', $event)" clearable />
       <div v-if="value && value.length > 0" class="selected-items">
         <n-tag v-for="(item, index) in value" :key="index" closable @close="$emit('remove-multi-select-item', index)"
           class="item-tag">
-          {{ getMultiSelectLabel(item, field) }}
+          <span class="loc-tag" v-if="field.key === 'location_link'">
+            <img v-if="getLocationIconUrl(item)" :src="getLocationIconUrl(item) as string" class="loc-icon" />
+            <span>{{ getMultiSelectLabelNoEmoji(item, field) }}</span>
+          </span>
+          <template v-else>{{ getMultiSelectLabel(item, field) }}</template>
         </n-tag>
       </div>
     </div>
@@ -289,13 +316,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, h } from 'vue';
 import type { UploadFileInfo } from 'naive-ui';
 import { TrashOutline, ImageOutline, HelpCircleOutline, CopyOutline, ArrowUpOutline, ArrowDownOutline, CreateOutline, CheckmarkOutline, CloseOutline } from '@vicons/ionicons5';
 import { useMessage } from 'naive-ui';
 import { useI18n } from 'vue-i18n'; // 新增
 import type { FormField } from '@/config/cardTypeConfigs';
 import { ConfigService } from '@/api';
+import { getIconUrlByChinese } from '@/config/locationIcons';
 
 interface Props {
   field: FormField;
@@ -386,6 +414,27 @@ const getMultiSelectLabel = (itemValue: string, field: FormField): string => {
   const option = field.options.find(opt => opt.value === itemValue);
   return option ? option.label : itemValue; // 找到对应选项则返回标签，否则返回原始值
 };
+
+// 去掉emoji用于纯文本展示
+const stripEmoji = (s: string): string => s.replace(/[^\u4e00-\u9fffa-zA-Z0-9\s]/g, '').trim();
+
+const getMultiSelectLabelNoEmoji = (itemValue: string, field: FormField): string => {
+  const label = getMultiSelectLabel(itemValue, field);
+  return stripEmoji(label);
+};
+
+// 选项渲染：地点图标（带SVG）
+const renderLocationOptionLabel = (option: any) => {
+  const src = getIconUrlByChinese(option.value as string);
+  const text = stripEmoji(String(option.label ?? option.value ?? ''));
+  const imgStyle = 'width:14px;height:14px;display:inline-block;vertical-align:middle;object-fit:contain;';
+  return h('div', { class: 'loc-opt', style: 'display:inline-flex;align-items:center;gap:6px;' }, [
+    src ? h('img', { src, class: 'loc-icon', style: imgStyle }) : null,
+    h('span', { style: 'line-height:1;display:inline-block;vertical-align:middle;' }, text)
+  ]);
+};
+
+const getLocationIconUrl = (value: string): string | null => getIconUrlByChinese(value);
 
 // 去掉emoji和空格，获取纯净的字段名
 const getCleanFieldName = (fieldName: string): string => {
@@ -572,6 +621,33 @@ const handleFileChange = async (data: { file: UploadFileInfo; fileList: UploadFi
 
 .help-button:active {
   transform: scale(0.95);
+}
+
+.loc-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.loc-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+:deep(.n-base-select-menu .n-base-select-option) {
+  padding: 4px 8px;
+}
+:deep(.n-base-select-menu .n-base-select-option__content) {
+  display: inline-flex;
+  align-items: center;
+}
+:deep(.loc-opt) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+:deep(.loc-icon) {
+  width: 14px;
+  height: 14px;
 }
 
 /* 帮助文本模态框样式 */

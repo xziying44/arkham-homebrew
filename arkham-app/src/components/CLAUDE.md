@@ -20,7 +20,7 @@ This document provides a complete, multi‑layer reference for the Vue 3 compone
   - `CardSideEditor.vue` → `FormField.vue`, `IllustrationLayoutEditor.vue`, `TextBoundaryEditor.vue`
   - `DeckEditor.vue` → `TTSExportGuide.vue`
   - `PackageEditor.vue` → `UniversalUploadDialog.vue`
-  - `TtsScriptEditor.vue` → `CardFileBrowser.vue`
+- `TtsScriptEditor.vue` → `CardFileBrowser.vue`, `BindCardField.vue`
 - External libraries used across components: Naive UI (`n-*` components), `@vicons/ionicons5`, `vue-i18n`, and project API services under `@/api`.
 
 ## 3) Component Catalog
@@ -60,7 +60,8 @@ This document provides a complete, multi‑layer reference for the Vue 3 compone
 - Dialogs/Inputs
   - `FormField.vue` – Field renderer for many input types; emits rich edit events
   - `UniversalUploadDialog.vue` – Multi‑host image upload (banner/card/encounter) dialog
-  - `CardFileBrowser.vue` – Directory/card picker dialog
+- `CardFileBrowser.vue` – Directory/card picker dialog
+- `BindCardField.vue` – Reusable bind-card field (wraps CardFileBrowser)
   - `LanguageWelcomeModal.vue` – First‑run language selection modal
 
 ## 4) Component APIs (Props, Emits, Signatures)
@@ -181,6 +182,16 @@ Changelog (2025‑11‑10)
 - FormEditPanel.vue: 当正面选择“调查员小卡”时，自动初始化背面为同类型，默认前=normal、后=grayscale 且共享插画。
 - TtsScriptEditor.vue: 新增“调查员小卡”绑定调查员卡牌（选择路径）；绑定后脚本ID禁用，后端生成 `<investigator_id>-m`。
 - FileTreePanel.vue: 文件树卡牌类型图标映射增加“调查员小卡”（🧩）。
+
+Changelog (2025‑11‑11)
+- PackageEditor.vue
+  - 添加上传会话隔离：打开上传页面时冻结 `packageData`（深拷贝快照 `uploadConfigSnapshot`），所有上传对话框以快照为 `:config` 来源，避免切包导致上传写入错误包。
+  - 在 `handleUploadConfirm` 中，若存在快照则强制对齐 `updatedPackage.path = snapshot.path`，作为保险丝。
+  - 切换旧式上传模态的 `:config` 同步切换为使用快照。
+- UniversalUploadDialog.vue
+  - 封面文件唯一命名：基于包唯一标识（优先 `meta.code`，否则从 `path`/`name` 派生，最后回退 UUID），生成 `banners/<code>` 与 `banners/<code>_box`，彻底避免跨包 `banner/banner_box` 覆盖。
+  - 上传成功后清空 `updatedPackage.banner_base64`，确保 UI 始终以 URL 显示、避免 base64 回退造成的“错乱”。
+  - 不改变卡牌/遭遇组上传的既有命名策略。
 
 ### FormField.vue
 Signature
@@ -318,7 +329,8 @@ type TtsScriptData = {
 }
 ```
 Behavior
-- Generates per‑type TTS Lua/GMNotes with optional phase buttons, location/asset/investigator options; integrates `CardFileBrowser`.
+- Generates per‑type TTS Lua/GMNotes with optional phase buttons, location/asset/investigator options; integrates `CardFileBrowser` and `BindCardField`.
+- Light mode (Mini/Custom): show GMNotes preview only; hide entry tokens and game-start configs; script ID locked when bound (`<investigator_id>-m` for mini, `<base_id>-c` for custom).
 
 ### TTSExportGuide.vue
 Signature
@@ -403,7 +415,7 @@ Signature
 type BrowserItem = { name: string; path: string; type: 'directory' | 'card'; fullPath: string };
 
 CardFileBrowser(
-  props: { visible: boolean },
+  props: { visible: boolean; singleSelect?: boolean },
   emits: {
     'update:visible'(value: boolean): void;
     'confirm'(items: BrowserItem[]): void;
@@ -412,6 +424,25 @@ CardFileBrowser(
 ```
 Behavior
 - Directory and card selection tool used by editors to attach files.
+- i18n‑first labels; confirm supports count template `Confirm ({count})`.
+- `singleSelect` enables one‑item selection for binding scenarios.
+
+### BindCardField.vue
+Signature
+```ts
+BindCardField(
+  props: {
+    path: string;                         // v-model:path
+    label: string; noneText: string;
+    chooseText: string; clearText: string;
+    modalTitle: string; cancelText: string;
+    info?: string; singleSelect?: boolean;
+  },
+  emits: { 'update:path'(value: string): void }
+)
+```
+Behavior
+- Wraps CardFileBrowser with i18n‑ready label/buttons; default single‑select.
 
 ## 5) Composition Patterns & Conventions
 - Script setup + TS: All components use `<script setup lang="ts">` with typed `defineProps`/`defineEmits` (and `withDefaults` where appropriate).
@@ -471,3 +502,36 @@ Appendix: File Index
 - Panels: `FileTreePanel.vue`, `ImagePreviewPanel.vue`, `WorkspaceSidebar.vue`, `ResizeSplitter.vue`
 - Dialogs/Inputs: `FormField.vue`, `UniversalUploadDialog.vue`, `CardFileBrowser.vue`, `LanguageWelcomeModal.vue`
 
+ - TtsScriptEditor.vue / BindCardField.vue / CardFileBrowser.vue
+   - Introduced `BindCardField` for unified binding UI; `CardFileBrowser` adds `singleSelect`.
+   - Investigator mini/custom use light-mode TTS (GMNotes-only), hide entry tokens and game-start configs.
+   - Full i18n coverage for file browser and bind fields; confirm label supports count.
+
+## 7) TTS Editor – Location Icons (V2)
+
+Summary
+- Dual mode per side (front/back) for Location cards:
+  - Default mode: read-only, auto-synced from card face fields `location_icon`/`location_link`, preview auto-refresh.
+  - Advanced mode: editable per-side config; writes to `tts_config.locationFront|locationBack` when non-empty.
+- Empty semantics: if `icons` is empty string and `connections` is empty array, omit the side object entirely to fall back to face fields.
+
+UI Details
+- Icon sources: SVG files under `src/assets/location-icons/` (diamond, hourglass, heart, blob, star, equals, T, crescent, plus, square, triangle, wave, 3circles, circle, spades).
+- Rendering:
+  - Card editor FormField: options and selected values render as SVG + text (no emoji). Uses inline styles (14px, vertical-align: middle, inline-flex align-items: center) to ensure consistent alignment in Naive UI teleport menus.
+  - TtsScriptEditor: default-mode readonly chips and advanced-mode selects both render SVG + text; multiple select uses custom tag renderer; custom values render as text only.
+- Apply-to-other-side shortcuts:
+  - In CardSideEditor: button under the `location_link` field copies face fields to the other side (face data).
+  - In TtsScriptEditor: button copies current side config to the other side (advanced config), enabling that side if needed.
+
+Persistence
+- `tts_config` shape (only when advanced enabled and any value present):
+  - `locationFront?: { icons?: string; connections?: string[] }`
+  - `locationBack?: {  icons?: string; connections?: string[] }`
+- Preview pipeline injects `tts_config` into payload; server `/api/tts/generate` returns GMNotes/Lua.
+
+Internationalization
+- English display names for options derive from `src/config/cardTypeConfigsEn.ts` (kept consistent with backend mapping); runtime display localizes text while internal values persist as Chinese keys.
+
+Compatibility
+- Legacy `tts_config.location` is still read (treated as front), and backend falls back to `location_icon/location_link` when per-side config absent.

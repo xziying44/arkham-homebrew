@@ -89,6 +89,31 @@
     • work_directory (str): 工作根路径。
   - Returns: (None)
 
+### TtsScriptGenerator（tts_script_generator.py）
+- 描述：统一从卡文件（含 `tts_config v2`）生成 GMNotes 与 LuaScript 的权威生成器，被 `/api/tts/generate` 路由调用。
+- 版本与兼容：
+  - 当 `tts_config.version != 'v2'`：直接回退并返回卡文件中旧版 `tts_script` 内容（兼容路径）。
+  - 当 `v2`：完全依据 `tts_config` 生成；若未提供特定配置，按旧字段回退。
+- 地点卡（Location）
+  - 支持每面单独配置：`tts_config.locationFront` / `locationBack`，字段：`icons?: string`、`connections?: string[]`。
+  - 若对应面未提供（或字段为空）：回退到该面的卡面字段 `location_icon`（单值）与 `location_link`（数组）。
+  - 映射表（中文 → 英文/代号）已更新：
+    ```py
+    _location_icon_mapping = {
+        '绿菱': 'diamond', '暗红漏斗': 'hourglass', '橙心': 'heart', '浅褐水滴': 'blob',
+        '深紫星': 'star', '深绿斜二': 'equals', '深蓝T': 'T', '紫月': 'crescent',
+        '红十': 'plus', '红方': 'square.svg', '蓝三角': 'triangle', '褐扭': 'wave',
+        '青花': '3circles', '黄圆': 'circle', '粉桃': 'spades',
+    }
+    ```
+  - 线索值：当面为“已揭示”且 `clues` 形如 `1<调查员>` / `4` 时，生成对应 `uses`（每调查员/固定）。
+- 调查员阶段按钮/封印脚本：
+  - `phaseButtonConfig` 与 `enablePhaseButtons` 控制 Lua 阶段按钮；
+  - `seal` 支持全量/白名单、最大封印数量、i18n 菜单文本。
+- 其他：
+  - Mini/custom 绑定：若 `mini.bind.path`/`custom.bind.path` 指向卡，脚本 ID 继承目标并追加 `-m`/`-c`。
+  - 签名卡聚合：v2 接受 `{ path, count }`，解析脚本 ID 后按 ID 聚合计数输出到 GMNotes。
+
   #### `convert_deck_to_tts(deck_config: Dict[str, Any], face_url: str, back_url: str) -> Dict[str, Any]`（tts_card_converter.py:260）
   - Purpose: 生成符合 TTS 的完整对象 JSON（ObjectStates）。
   - Parameters:
@@ -277,9 +302,30 @@
   - 直达菜单：当只配置一种可封印类型时，自动显示“释放 <Token> / 结算 <Token>”。
   - 地点/场景/密谋等 GMNotes：保持原有解析（线索/毁灭阈值、参考卡 token 修饰解析）。
 - 行为（非 V2）：回退读取 `card_data.tts_script` 并兼容地点卡旧数据结构。
+  - 绑定与脚本 ID：
+    - 调查员小卡：若 `tts_config.mini.bind.path` 存在，脚本 ID = `<investigator_id>-m`。
+    - 定制卡：若 `tts_config.custom.bind.path` 存在，脚本 ID = `<base_id>-c`。
+  - 公共方法：
+    - `extract_script_id_from_card_json(card_json)`：公开稳定脚本 ID 提取（优先 v2 的 `tts_config.script_id`，回退 GMNotes.id，再回退 `card.id` 规范化）。
+    - 兼容别名 `_extract_script_id_from_card_json` 保留给旧代码。
+### ContentPackageManager（content_package_manager.py）
+- ArkhamDB 导出：
+  - 第一步：扫描调查员以建立签名卡映射。
+  - 第二步：扫描“定制卡”，通过 `tts_config.custom.bind.path` 解析绑定卡脚本 ID，构造 `customization_text_map = { base_id -> customization_text }`；若同一 base 存在多个定制卡，仅保留首个并输出警告日志。
+  - 第三步：传入 `customization_text_map` 给 `Card2ArkhamDBConverter`，在转换时注入到对应的基卡对象。
+### Card2ArkhamDBConverter（card2arkhamdb.py）
+- customization 注入规则：
+  - 若当前卡 `code` 命中 `customization_text_map`：
+    - 写入 `customization_text`（先通过 `_convert_text_format` 清洗 emoji/标记）。
+    - 生成 `customization_options`：按行切割 `customization_text`，忽略空行；每行统计“□/☐”数量作为 `xp`（最少为 1），输出 `{ xp, text_change: 'append' }`，顺序保持。
 ## Changelog (2025‑11‑10)
 - workspace_manager.py：新增“调查员小卡”纯图片分支：取消页脚绘制；背面共享正面插画与布局在 WorkspaceManager/ExportHelper 两处路径补齐。
 - pnp_exporter.py：打印纸模式对卡面按实际尺寸（含出血）白底居中绘制，切线基于实际出血线，保持正反面对准。
 - content_package_manager.py：为“调查员小卡”选择 `templates/InvestigatorMini.json` TTS 模板。
 - tts_script_generator.py：映射“调查员小卡 → Minicard”；若绑定调查员卡，脚本 ID 采用 `<investigator_id>-m`。
 - tts_card_converter.py：补充“调查员小卡”标签归类（PlayerCard）。
+
+## Changelog (2025‑11‑11)
+- tts_script_generator.py：公开 `extract_script_id_from_card_json`；新增定制卡绑定逻辑（`<base_id>-c`）。
+- content_package_manager.py：ArkhamDB 导出新增第二遍扫描定制卡，构建 `customization_text_map` 并在冲突时输出警告。
+- card2arkhamdb.py：命中 `customization_text_map` 时注入 `customization_text` 与 `customization_options`；空行忽略，`xp` 取每行“□/☐”数量，最少 1。

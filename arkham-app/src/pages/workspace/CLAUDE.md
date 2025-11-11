@@ -122,3 +122,9 @@ workspace/
 - Security: Never log or persist GitHub token beyond auth flow; avoid console logging secrets.
 - Limitations: Settings only enumerates PNG images from root dir; package/deck schemas must be valid JSON.
 
+## Changelog (2025‑11‑11)
+- TTSItems.vue
+  - 为 `<PackageEditor>` 增加 `:key="selectedPackage.path"`，切换内容包时强制重建组件，防止内部临时状态被复用导致封面错位/闪现。
+- 关联组件（详见 components/CLAUDE.md）
+  - PackageEditor.vue：上传会话隔离（冻结 `packageData` 快照并传入 `UniversalUploadDialog`）。
+  - UniversalUploadDialog.vue：封面 public_id 唯一命名（`banners/<code>` 与 `banners/<code>_box`），上传成功后清空 `banner_base64`。

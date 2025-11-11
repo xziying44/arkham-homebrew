@@ -33,7 +33,7 @@ class TtsScriptGenerator:
         # extended types
         "技能卡": "Skill",
         "调查员背面": "InvestigatorBack",
-        "定制卡": "Custom",
+        "定制卡": "UpgradeSheet",
         "故事卡": "Story",
         "诡计卡": "Treachery",
         "敌人卡": "Enemy",
@@ -48,20 +48,21 @@ class TtsScriptGenerator:
     }
 
     _location_icon_mapping = {
-        "绿菱": "GreenDiamond",
-        "暗红漏斗": "DarkRedCrescent",
-        "橙心": "OrangeHeart",
-        "浅褐水滴": "LightBrownDroplet",
-        "深紫星": "DeepPurpleStar",
-        "深绿斜二": "DeepGreenSquare",
-        "深蓝T": "DeepBlueHourglass",
-        "紫月": "PurpleMoon",
-        "红十": "RedCross",
-        "红方": "RedSquare",
-        "蓝三角": "BlueTriangle",
-        "褐扭": "BrownSpiral",
-        "青花": "BlueFlower",
-        "黄圆": "YellowCircle",
+        "绿菱": "diamond",
+        "暗红漏斗": "hourglass",
+        "橙心": "heart",
+        "浅褐水滴": "blob",
+        "深紫星": "star",
+        "深绿斜二": "equals",
+        "深蓝T": "T",
+        "紫月": "crescent",
+        "红十": "plus",
+        "红方": "square.svg",
+        "蓝三角": "triangle",
+        "褐扭": "wave",
+        "青花": "3circles",
+        "黄圆": "circle",
+        "粉桃": "spades",
     }
 
     def __init__(self, workspace_manager=None):
@@ -180,9 +181,22 @@ class TtsScriptGenerator:
                 rel_path = bind.get('path')
                 if isinstance(rel_path, str) and rel_path:
                     ref_json = self._read_card_json_by_path(rel_path)
-                    base_sid = self._extract_script_id_from_card_json(ref_json) if ref_json else None
+                    base_sid = self.extract_script_id_from_card_json(ref_json) if ref_json else None
                     if base_sid:
                         return f"{base_sid}-m"
+            except Exception:
+                pass
+        # Custom card (UpgradeSheet): if bound to a card, use its script id with '-c' suffix
+        if card_type == '定制卡':
+            try:
+                custom_cfg = tts_config.get('custom') or {}
+                bind = custom_cfg.get('bind') or {}
+                rel_path = bind.get('path')
+                if isinstance(rel_path, str) and rel_path:
+                    ref_json = self._read_card_json_by_path(rel_path)
+                    base_sid = self.extract_script_id_from_card_json(ref_json) if ref_json else None
+                    if base_sid:
+                        return f"{base_sid}-c"
             except Exception:
                 pass
         # general: use provided script_id when present
@@ -228,7 +242,10 @@ class TtsScriptGenerator:
         except Exception:
             return None
 
-    def _extract_script_id_from_card_json(self, card_json: Dict[str, Any]) -> Optional[str]:
+    def extract_script_id_from_card_json(self, card_json: Dict[str, Any]) -> Optional[str]:
+        """Public helper: extract stable script id from a card json.
+        Priority: v2 tts_config.script_id -> legacy GMNotes.id -> normalized card.id
+        """
         # Prefer v2
         tcfg = card_json.get('tts_config') or {}
         sid = tcfg.get('script_id')
@@ -249,6 +266,10 @@ class TtsScriptGenerator:
         if raw:
             return raw[:8] if len(raw) >= 8 else raw
         return None
+
+    # Backward-compat alias
+    def _extract_script_id_from_card_json(self, card_json: Dict[str, Any]) -> Optional[str]:
+        return self.extract_script_id_from_card_json(card_json)
 
     def _aggregate_signatures_from_paths(self, signatures: List[Dict[str, Any]]) -> List[Dict[str, int]]:
         agg: Dict[str, int] = {}
@@ -368,10 +389,33 @@ class TtsScriptGenerator:
 
         elif mapped_type == "Location":
             # Build location data for front/back
-            def make_location(side: Dict[str, Any]) -> Dict[str, Any]:
+            cfg_location = tts_config.get("location") if isinstance(tts_config.get("location"), dict) else None
+            cfg_location_front = tts_config.get("locationFront") if isinstance(tts_config.get("locationFront"), dict) else None
+            cfg_location_back = tts_config.get("locationBack") if isinstance(tts_config.get("locationBack"), dict) else None
+
+            def _cfg_icons_and_conns(cfg: Optional[Dict[str, Any]]) -> (Optional[str], Optional[str]):
+                icons_str: Optional[str] = None
+                conns_str: Optional[str] = None
+                if cfg:
+                    icons = cfg.get("icons")
+                    if isinstance(icons, list) and icons:
+                        mapped = [self._map_icon(x) or x for x in icons]
+                        icons_str = "|".join([str(x) for x in mapped if x]) if mapped else None
+                    elif isinstance(icons, str) and icons:
+                        mapped1 = self._map_icon(icons) or icons
+                        icons_str = str(mapped1)
+                    conns = cfg.get("connections")
+                    if isinstance(conns, list) and conns:
+                        mappedc = [self._map_icon(x) or x for x in conns]
+                        conns_str = "|".join([str(x) for x in mappedc if x]) if mappedc else None
+                return icons_str, conns_str
+
+            def make_location(side: Dict[str, Any], cfg: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+                cfg_icons, cfg_conns = _cfg_icons_and_conns(cfg)
                 loc: Dict[str, Any] = {
-                    "icons": self._map_icon(side.get("location_icon")) or side.get("location_icon") or "Diamond",
-                    "connections": "|".join([
+                    # 优先使用 tts_config.locationFront/locationBack（高级模式），其次使用 legacy tts_config.location，最后回退卡面字段
+                    "icons": cfg_icons or (_cfg_icons_and_conns(cfg_location)[0]) or (self._map_icon(side.get("location_icon")) or side.get("location_icon") or "Diamond"),
+                    "connections": cfg_conns or (_cfg_icons_and_conns(cfg_location)[1]) or "|".join([
                         self._map_icon(x) or x for x in (side.get("location_link") or [])
                     ]),
                 }
@@ -393,12 +437,12 @@ class TtsScriptGenerator:
                 "traits": self._join_traits(front.get("traits")) or "",
             }
             if front_is_loc:
-                gm["locationFront"] = make_location(front)
+                gm["locationFront"] = make_location(front, cfg_location_front)
             if back_is_loc:
-                gm["locationBack"] = make_location(back)
+                gm["locationBack"] = make_location(back, cfg_location_back)
             if not (front_is_loc or back_is_loc):
-                # single-face location-ish fallback
-                gm = {**base_data, "location": make_location(front)}
+                # single-face location-ish fallback（使用正面配置/legacy配置）
+                gm = {**base_data, "location": make_location(front, cfg_location_front or cfg_location)}
 
         elif mapped_type == "Act":
             # 场景卡：解析线索阈值（front 侧）
@@ -604,7 +648,7 @@ class TtsScriptGenerator:
 
         # 封印脚本：除调查员与定制卡外可用
         seal_cfg = tts_config.get('seal') or {}
-        if seal_cfg.get('enabled') and self._map_type(card_type) not in ("Investigator", "Custom"):
+        if seal_cfg.get('enabled') and self._map_type(card_type) not in ("Investigator", "UpgradeSheet"):
             return self._generate_seal_lua(seal_cfg, card.get('language'))
 
         # 其次：调查员阶段按钮脚本

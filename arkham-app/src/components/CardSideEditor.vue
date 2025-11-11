@@ -41,6 +41,13 @@
                             @move-string-array-item-down="moveStringArrayItemDown(field, $event)"
                             @edit-string-array-item="(index, newValue) => editStringArrayItem(field, index, newValue)"
                             @remove-image="removeImage(field)" />
+
+                        <!-- 地点卡快捷操作按钮放在“连接地点图标”字段下方 -->
+                        <div v-if="isLocationType && field.key === 'location_link'" style="margin-top: 6px; display: flex; justify-content: flex-end;">
+                            <n-button tertiary size="small" @click="applyLocationToOtherSide">
+                                {{ $t('cardEditor.locationActions.applyToOtherSide') }}
+                            </n-button>
+                        </div>
                     </div>
                 </div>
             </n-form>
@@ -191,6 +198,7 @@
 
 <script setup lang="ts">
 import { ref, computed, reactive, watch, nextTick } from 'vue';
+import { useMessage } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import type { FormField, CardTypeConfig, ShowCondition } from '@/config/cardTypeConfigs';
 import FormFieldComponent from './FormField.vue';
@@ -214,6 +222,7 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+const message = useMessage();
 
 // 当前面的数据（使用响应式引用确保数据独立）
 const sideCardData = reactive({ ...props.cardData });
@@ -251,6 +260,7 @@ const quantity = computed({
 
 // 当前面的类型 - 必须在watch之前声明
 const currentSideType = ref(sideCardData.type || '');
+const isLocationType = computed(() => currentSideType.value === '地点卡');
 
 // 监听props变化，更新本地数据
 watch(() => props.cardData, (newData) => {
@@ -598,6 +608,18 @@ const updateSideData = (fieldKey: string, value: any) => {
 // 删除图片
 const removeImage = (field: FormField) => {
     setFieldValue(field, '');
+};
+
+// 快捷操作：将当前侧的地点图标配置应用到另一侧（卡面字段）
+const applyLocationToOtherSide = () => {
+    if (!isLocationType.value) return;
+    const target = props.side === 'front' ? 'back' : 'front';
+    const icon = sideCardData.location_icon ? String(sideCardData.location_icon) : '';
+    const links = Array.isArray(sideCardData.location_link) ? sideCardData.location_link as any[] : [];
+    if (icon) emit('update-card-data', target, 'location_icon', icon);
+    if (Array.isArray(links)) emit('update-card-data', target, 'location_link', [...links]);
+    emit('trigger-preview');
+    message.success(t('cardEditor.locationActions.applySuccess'));
 };
 
 // Section refs (用于父组件导航定位)

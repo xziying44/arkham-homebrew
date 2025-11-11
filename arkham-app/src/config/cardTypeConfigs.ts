@@ -1256,6 +1256,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
           { label: '🌀 褐扭', value: '褐扭' },
           { label: '🌸 青花', value: '青花' },
           { label: '🟡 黄圆', value: '黄圆' },
+          { label: '♠ 粉桃', value: '粉桃' },
         ]
       },
       {
@@ -1278,6 +1279,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
           { label: '🌀 褐扭', value: '褐扭' },
           { label: '🌸 青花', value: '青花' },
           { label: '🟡 黄圆', value: '黄圆' },
+          { label: '♠ 粉桃', value: '粉桃' },
         ]
       },
       {

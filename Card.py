@@ -648,7 +648,7 @@ class Card:
             for render_item in self.last_render_list:
                 obj = render_item.obj
                 x, y = render_item.x, render_item.y
-                if isinstance(obj, TextObject) and obj.text == '□':
+                if isinstance(obj, TextObject) and obj.text in ['□', '☐']:
                     box_position.append([x + 10, y + 8])
         return box_position
 

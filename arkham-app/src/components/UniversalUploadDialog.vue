@@ -535,9 +535,28 @@ const uploadBanner = async () => {
     uploadProgress.value = 60;
     uploadStatus.value = '准备上传到云端...';
 
-    // 上传图片
-    const imageUrl = await uploadSingleImage(savedFiles.saved_files.front_url, 'banner');
-    const imageBoxUrl = await uploadSingleImage(savedFiles.saved_files.back_url, 'banner_box');
+    // 依据包唯一标识生成唯一的线上文件名，避免跨包覆盖
+    const pkgMeta = (props.config && props.config.meta) ? props.config.meta : {};
+    // 优先使用 meta.code；若无则从 path/name 派生一个安全标识，最后回退 UUID
+    const deriveSafeId = (v: any): string => {
+      try {
+        const s = String(v || '').trim();
+        if (!s) return '';
+        const cleaned = s.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64);
+        return cleaned;
+      } catch {
+        return '';
+      }
+    };
+    let code = deriveSafeId(pkgMeta.code);
+    if (!code) {
+      code = deriveSafeId(props.config?.path) || deriveSafeId(pkgMeta.name) || uuidv4();
+    }
+    const basePublicId = `banners/${code}`;
+
+    // 上传图片（正面作为 banner，背面作为 banner_box）
+    const imageUrl = await uploadSingleImage(savedFiles.saved_files.front_url, basePublicId);
+    const imageBoxUrl = await uploadSingleImage(savedFiles.saved_files.back_url, `${basePublicId}_box`);
     let footerIconUrl = null;
 
     // 上传遭遇组图标
@@ -552,7 +571,7 @@ const uploadBanner = async () => {
     uploadProgress.value = 80;
     uploadStatus.value = '更新内容包数据...';
 
-    // 更新内容包的banner_url
+    // 更新内容包的banner_url，并清理本地base64以防回退干扰
     const updatedPackage = {
       ...props.config,
       meta: {
@@ -560,7 +579,8 @@ const uploadBanner = async () => {
         banner_url: imageUrl,
         banner_box_url: imageBoxUrl,
         icon_url: footerIconUrl
-      }
+      },
+      banner_base64: ''
     };
 
     emit('confirm', updatedPackage);
