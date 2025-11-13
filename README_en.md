@@ -3,9 +3,7 @@
 ---
 
 <p align="center">
-  <a href="https://github.com/xziying44/arkham-homebrew/releases">
-    <img src="https://img.shields.io/github/v/release/xziying44/arkham-homebrew?include_prereleases&label=release" alt="release" />
-  </a>
+  <img src="https://img.shields.io/badge/release-v3.2-orange" alt="release v3.2" />
   <a href="https://github.com/xziying44/arkham-homebrew/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-green" alt="license: MIT" />
   </a>
