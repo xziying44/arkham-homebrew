@@ -36,6 +36,16 @@
 - ExportHelper.py：固定“调查员小卡”出血导出为 41×63mm（不受用户规格影响，按出血 mm 叠加），并在双面导出路径补齐背面共享正面插画与布局逻辑；
 - create_card.py：新增“调查员小卡”纯图片生成（484×744），支持 normal/grayscale 滤镜（保 Alpha，无 Alpha 时填充 255）。
 
+## Changelog (2025‑11‑13)
+- CI/CD：新增 GitHub Actions 工作流支持桌面端构建与发布：
+  - macOS：`build-macos` job 使用 PyInstaller + create-dmg 在 `macos-latest`（arm64）与 `macos-13`（x86_64）上构建 DMG，并上传为 artifacts；
+  - Windows：`build-windows` job 使用 `app.spec` 在 `windows-latest` 上构建 PyInstaller 发行版，并打包为 `Arkham-Card-Maker-win.zip`（根目录为 `Arkham Card Maker/`）；
+  - Release：`release` job 仅在推送 tag 时执行，使用 `github.ref_name` 作为版本号，将三种产物重命名为：
+    - `Arkham-Card-Maker-<version>-macos-arm64.dmg`
+    - `Arkham-Card-Maker-<version>-macos-x86_64.dmg`
+    - `Arkham-Card-Maker-<version>-win.zip`
+    并自动上传至对应 tag 的 GitHub Release。
+
 ## Key Components
 
 ### server.py（Flask 服务）
