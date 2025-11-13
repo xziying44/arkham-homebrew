@@ -110,11 +110,6 @@ const navItems = computed(() => [
     icon: '🏠'
   },
   {
-    key: 'deck-builder',
-    label: t('workspace.sidebar.navItems.deckBuilder'),
-    icon: '🃏'
-  },
-  {
     key: 'content-package',
     label: t('workspace.sidebar.navItems.contentPackage'),
     icon: '📦'
