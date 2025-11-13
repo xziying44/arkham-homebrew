@@ -56,7 +56,7 @@ if __name__ == '__main__':
         import webview
 
         window = webview.create_window(
-            "阿卡姆印牌姬-V3.2",
+            "阿卡姆印牌姬-V3.2.1",
             app,
             width=1500,
             height=800,
