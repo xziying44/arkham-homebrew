@@ -7,7 +7,7 @@
     <img src="https://img.shields.io/github/v/release/xziying44/arkham-homebrew?include_prereleases&label=release" alt="release" />
   </a>
   <a href="https://github.com/xziying44/arkham-homebrew/blob/main/LICENSE">
-    <img src="https://img.shields.io/github/license/xziying44/arkham-homebrew?label=license" alt="license: MIT" />
+    <img src="https://img.shields.io/badge/license-MIT-green" alt="license: MIT" />
   </a>
   <img src="https://img.shields.io/badge/python-3.11%2B-blue?logo=python" alt="python 3.11+" />
   <img src="https://img.shields.io/badge/vue-3.x-42b883?logo=vue.js" alt="vue 3" />
@@ -22,9 +22,6 @@
 **Custom Card Creation Tool for Arkham Horror LCG**
 
 A visual card creation tool designed specifically for *Arkham Horror: The Card Game*. Easily create, edit, and export custom cards to craft your own terrifying adventure stories.
-
-![Main Interface Preview](docs/screenshots/main-interface-preview.png)
-*Main Interface Preview*
 
 ---
 
@@ -62,9 +59,6 @@ A visual card creation tool designed specifically for *Arkham Horror: The Card G
 - **Deck Builder**: Supports complex DeckOption systems for constructing optional decks
 - **Upgrade Card System**: Investigator upgrade cards with Power Word script support
 
-![Card Editor Interface](docs/screenshots/card-editor-interface.png)
-*Card Editor Interface*
-
 ---
 
 ## 📥 Installation and Launch
@@ -95,9 +89,6 @@ Arkham Card Maker/
 └── logs/                   # Runtime logs
 ```
 
-![Installation Directory Structure](docs/screenshots/installation-directory.png)
-*Installation Directory Structure Example*
-
 ### macOS
 
 1. **Download the Application**
@@ -114,9 +105,6 @@ Arkham Card Maker/
    - Right-click and select "Open" (first launch requires authorization to run unsigned application)
    - Click "Open" in the security prompt that appears
 
-![First Launch Screen](docs/screenshots/first-launch-screen.png)
-*First Launch Screen*
-
 ---
 
 ## 🚀 Quick Start
@@ -128,9 +116,6 @@ After the first launch, you need to select or create a workspace directory to st
 1. Click the **"Select Workspace Directory"** button
 2. Choose an empty directory or create a new folder (recommended to create separate directories for each project)
 3. The application will automatically load the workspace file tree
-
-![Select Workspace](docs/screenshots/select-workspace.png)
-*Select Workspace Directory*
 
 ### Step 2: Create Your First Card
 
@@ -149,9 +134,6 @@ After the first launch, you need to select or create a workspace directory to st
 
 4. **Real-time Preview**
    The right preview panel displays card effects in real-time. Click **"Save"** when satisfied with your adjustments
-
-![Quick Card Creation Flow](docs/screenshots/quick-card-creation-flow.png)
-*Quick Card Creation Flow*
 
 ### Step 3: Advanced Editing (Optional)
 
@@ -173,9 +155,6 @@ After completing editing, you can export to multiple formats:
    - Switch to the **"TTS Export"** page
    - Select content package or encounter group
    - Click **"Export TTS"** or **"Export PNP PDF"** to batch generate all cards
-
-![Export Options Panel](docs/screenshots/export-options-panel.png)
-*Export Options Panel*
 
 ---
 

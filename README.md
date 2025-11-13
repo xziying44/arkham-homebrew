@@ -7,7 +7,7 @@
     <img src="https://img.shields.io/github/v/release/xziying44/arkham-homebrew?include_prereleases&label=release" alt="release" />
   </a>
   <a href="https://github.com/xziying44/arkham-homebrew/blob/main/LICENSE">
-    <img src="https://img.shields.io/github/license/xziying44/arkham-homebrew?label=license" alt="license: MIT" />
+    <img src="https://img.shields.io/badge/license-MIT-green" alt="license: MIT" />
   </a>
   <img src="https://img.shields.io/badge/python-3.11%2B-blue?logo=python" alt="python 3.11+" />
   <img src="https://img.shields.io/badge/vue-3.x-42b883?logo=vue.js" alt="vue 3" />
@@ -22,9 +22,6 @@
 **阿卡姆恐怖 LCG 自定义制卡工具**
 
 一款专为《阿卡姆恐怖：卡牌版》设计的可视化制卡工具，让您轻松创建、编辑和导出自定义卡牌，打造属于自己的恐怖冒险故事。
-
-![主界面预览](docs/screenshots/main-interface-preview.png)
-*图：主界面预览*
 
 ---
 
@@ -62,9 +59,6 @@
 - **牌组构建器**：支持复杂的 DeckOption 系统，构建可选牌组
 - **升级卡系统**：调查员升级卡与 Power Word 脚本支持
 
-![卡牌编辑界面](docs/screenshots/card-editor-interface.png)
-*图：卡牌编辑界面*
-
 ---
 
 ## 📥 安装与启动
@@ -95,9 +89,6 @@ Arkham Card Maker/
 └── recent_directories.json # 最近使用的工作区记录
 ```
 
-![安装目录结构](docs/screenshots/installation-directory.png)
-*图：安装目录结构示例*
-
 ### macOS 系统
 
 1. **下载应用**
@@ -114,9 +105,6 @@ Arkham Card Maker/
    - 右键点击，选择 "打开"（首次需要授权运行未签名应用）
    - 在弹出的安全提示中点击 "打开"
 
-![首次启动界面](docs/screenshots/first-launch-screen.png)
-*图：首次启动界面*
-
 ---
 
 ## 🚀 快速入门
@@ -128,9 +116,6 @@ Arkham Card Maker/
 1. 点击 **"选择工作目录"** 按钮
 2. 选择一个空目录或新建文件夹（建议为每个项目创建独立目录）
 3. 应用会自动加载工作区文件树
-
-![选择工作区](docs/screenshots/select-workspace.png)
-*图：选择工作区目录*
 
 ### 第二步：创建第一张卡牌
 
@@ -149,9 +134,6 @@ Arkham Card Maker/
 
 4. **实时预览**
    右侧预览面板会实时显示卡牌效果，调整满意后点击 **"保存"**
-
-![快速创建卡牌流程](docs/screenshots/quick-card-creation-flow.png)
-*图：快速创建卡牌流程*
 
 ### 第三步：高级编辑（可选）
 
@@ -173,9 +155,6 @@ Arkham Card Maker/
    - 切换到 **"TTS 导出"** 页面
    - 选择内容包或遭遇组
    - 点击 **"导出 TTS"** 或 **"导出 PNP PDF"**，批量生成所有卡牌
-
-![导出选项界面](docs/screenshots/export-options-panel.png)
-*图：导出选项界面*
 
 ---
 
