@@ -259,6 +259,38 @@ export interface SaveCardEnhancedRequest {
   rotate_landscape?: boolean; // 是否旋转横向图片（宽大于高），默认false
 }
 
+// 语言配置相关类型
+export interface LanguageFontConfig {
+  name: string;
+  size_percent: number;
+  vertical_offset: number;
+}
+
+export interface LanguageFontsConfig {
+  title: LanguageFontConfig;
+  subtitle: LanguageFontConfig;
+  card_type: LanguageFontConfig;
+  trait: LanguageFontConfig;
+  bold: LanguageFontConfig;
+  body: LanguageFontConfig;
+  flavor: LanguageFontConfig;
+  collection_info: LanguageFontConfig;
+}
+
+export interface LanguageConfigItem {
+  name: string;
+  code: string;
+  fonts: LanguageFontsConfig;
+  texts?: Record<string, string>;
+}
+
+export interface LanguageConfigData {
+  config: LanguageConfigItem[];
+  fonts: string[];
+  fontsDir: string;
+  fontsDirIsWorkspace: boolean;
+}
+
 // 保存卡图响应数据类型
 export interface SaveCardData {
   saved_files: string[]; // 保存成功的文件路径列表（相对路径）

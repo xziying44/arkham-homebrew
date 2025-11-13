@@ -5,6 +5,7 @@ export default {
       workspace: '工作区',
       deckBuilder: '牌库制作',
       contentPackage: '内容包管理',
+      languageConfig: '多语言卡牌支持',
       settings: '设置',
       about: '关于'
     },

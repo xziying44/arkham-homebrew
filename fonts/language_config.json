@@ -178,7 +178,7 @@
       },
       "body": {
         "name": "ArnoPro-Regular",
-        "size_percent": 1.0,
+        "size_percent": 1.15,
         "vertical_offset": 0
       },
       "flavor": {
@@ -252,7 +252,7 @@
       },
       "body": {
         "name": "ArnoPro-Regular",
-        "size_percent": 1.0,
+        "size_percent": 1.15,
         "vertical_offset": 0
       },
       "flavor": {

@@ -20,6 +20,7 @@ from bin.logger import logger_manager
 from bin.workspace_manager import WorkspaceManager, ScanProgressTracker
 from bin.tts_script_generator import TtsScriptGenerator
 from bin.image_uploader import create_uploader
+from ResourceManager import get_resource_path, load_filename_mapping
 
 mimetypes.init()
 mimetypes.add_type('application/javascript', '.js')
@@ -1115,6 +1116,120 @@ def save_config():
         return jsonify(create_response(
             code=6003,
             msg="保存配置失败"
+        )), 500
+
+
+@app.route('/api/language-config', methods=['GET'])
+@handle_api_error
+def get_language_config():
+    """获取多语言字体与文本配置"""
+
+    # 用户配置与默认模板路径
+    user_config_path = config_dir_manager.get_language_config_file_path()
+    default_config_path = get_resource_path('fonts/language_config.json')
+
+    config_data = []
+
+    # 优先读取用户配置，其次读取默认模板
+    try:
+        if os.path.exists(user_config_path):
+            with open(user_config_path, 'r', encoding='utf-8') as f:
+                config_data = json.load(f)
+        elif os.path.exists(default_config_path):
+            with open(default_config_path, 'r', encoding='utf-8') as f:
+                config_data = json.load(f)
+        else:
+            logger_manager.info("[LanguageConfig] 未找到任何语言配置文件，返回空配置")
+    except Exception as e:
+        logger_manager.error(f"[LanguageConfig] 加载语言配置失败: {e}", exc_info=True)
+
+    # 字体列表：优先通过当前工作区的 FontManager 获取已加载字体
+    default_fonts_dir = get_resource_path('fonts')
+    fonts_dir_is_workspace = False
+    workspace_fonts_dir = None
+
+    if current_workspace is not None:
+        workspace_fonts_dir = os.path.join(current_workspace.workspace_path, 'fonts')
+        if os.path.exists(workspace_fonts_dir) and os.path.isdir(workspace_fonts_dir):
+            fonts_dir_is_workspace = True
+
+    fonts = []
+    try:
+        if current_workspace is not None and getattr(current_workspace, 'font_manager', None) is not None:
+            fm = current_workspace.font_manager
+            try:
+                fm._load_fonts()
+            except Exception as e:
+                logger_manager.error(f"[LanguageConfig] 刷新字体列表失败: {e}", exc_info=True)
+
+            try:
+                fonts = fm.get_available_font_display_names()
+            except Exception as e:
+                logger_manager.error(f"[LanguageConfig] 获取 FontManager 字体名称失败: {e}", exc_info=True)
+
+        # 如果 FontManager 不可用或获取失败，退回到空列表（前端仍可正常工作）
+    except Exception as e:
+        logger_manager.error(f"[LanguageConfig] 处理字体列表时异常: {e}", exc_info=True)
+
+    return jsonify(create_response(
+        msg="获取语言配置成功",
+        data={
+            "config": config_data,
+            "fonts": fonts,
+            "fontsDir": workspace_fonts_dir or default_fonts_dir,
+            "fontsDirIsWorkspace": fonts_dir_is_workspace
+        }
+    ))
+
+
+@app.route('/api/language-config', methods=['PUT'])
+@handle_api_error
+def save_language_config():
+    """保存多语言字体与文本配置"""
+    data = request.get_json()
+    if not data or 'config' not in data:
+        return jsonify(create_response(
+            code=6002,
+            msg="请提供语言配置数据"
+        )), 400
+
+    config_data = data['config']
+    user_config_path = config_dir_manager.get_language_config_file_path()
+
+    try:
+        os.makedirs(os.path.dirname(user_config_path), exist_ok=True)
+        with open(user_config_path, 'w', encoding='utf-8') as f:
+            json.dump(config_data, f, ensure_ascii=False, indent=2)
+        logger_manager.info(f"[LanguageConfig] 语言配置保存成功: {user_config_path}")
+
+        # 保存后尝试刷新当前工作区的字体与语言配置
+        try:
+            from ResourceManager import FontManager  # 仅用于类型提示，避免循环导入
+
+            if current_workspace is not None and getattr(current_workspace, 'font_manager', None) is not None:
+                fm = current_workspace.font_manager
+
+                # 若工作区存在 fonts 目录，则作为额外字体目录附加
+                workspace_fonts_dir = os.path.join(current_workspace.workspace_path, 'fonts')
+                if os.path.exists(workspace_fonts_dir) and os.path.isdir(workspace_fonts_dir):
+                    try:
+                        fm.add_font_folder(workspace_fonts_dir)
+                    except Exception as e:
+                        logger_manager.error(f"[LanguageConfig] 附加工作区字体目录失败: {e}", exc_info=True)
+
+                # 重新加载字体与语言配置
+                fm._load_fonts()
+                fm._load_language_configs()
+                logger_manager.info("[LanguageConfig] 已刷新 FontManager 字体与语言配置")
+        except Exception as e:
+            logger_manager.error(f"[LanguageConfig] 刷新 FontManager 配置失败: {e}", exc_info=True)
+
+        return jsonify(create_response(msg="保存语言配置成功"))
+    except Exception as e:
+        logger_manager.error(f"[LanguageConfig] 保存语言配置失败: {e}", exc_info=True)
+        return jsonify(create_response(
+            code=6003,
+            msg="保存语言配置失败"
         )), 500
 
 

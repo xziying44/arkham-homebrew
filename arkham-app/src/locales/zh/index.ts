@@ -12,6 +12,7 @@ import cardEditor from './cardEditor'
 import ttsScriptEditor from './ttsScriptEditor' // 确保路径正确
 import deckOptionEditor from './deckOptionEditor'
 import languageWelcome from './languageWelcome'
+import languageConfig from './languageConfig'
 import arkhamdbImport from './arkhamdbImport'
 import fileBrowser from './fileBrowser'
 
@@ -30,6 +31,7 @@ export default {
   ttsScriptEditor,
   deckOptionEditor,
   languageWelcome,
-  arkhamdbImport
-  ,fileBrowser
+  arkhamdbImport,
+  fileBrowser,
+  languageConfig,
 }

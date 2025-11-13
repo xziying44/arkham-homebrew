@@ -142,6 +142,17 @@ export const API_ENDPOINTS = {
     method: HttpMethod.GET,
     timeout: 10000
   } as ApiConfig,
+  // 多语言字体与文本配置
+  GET_LANGUAGE_CONFIG: {
+    url: '/api/language-config',
+    method: HttpMethod.GET,
+    timeout: 10000
+  } as ApiConfig,
+  SAVE_LANGUAGE_CONFIG: {
+    url: '/api/language-config',
+    method: HttpMethod.PUT,
+    timeout: 15000
+  } as ApiConfig,
   // TTS导出相关接口
   OPEN_DIRECTORY: {
     url: '/api/open-directory',

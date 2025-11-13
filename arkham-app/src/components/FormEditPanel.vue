@@ -317,7 +317,7 @@ import CardSideEditor from './CardSideEditor.vue';
 import { cardTypeConfigs as cardTypeConfigsZh, cardTypeOptions as cardTypeOptionsZh, cardBackConfigs as cardBackConfigsZh, type CardTypeConfig, getDefaultBackType as getDefaultBackTypeZh } from '@/config/cardTypeConfigs';
 import { cardTypeConfigs as cardTypeConfigsEn, cardTypeOptions as cardTypeOptionsEn, cardBackConfigs as cardBackConfigsEn, getDefaultBackType as getDefaultBackTypeEn } from '@/config/cardTypeConfigsEn';
 
-import { WorkspaceService, CardService, ConfigService } from '@/api';
+import { WorkspaceService, CardService, ConfigService, LanguageConfigService } from '@/api';
 import type { CardData } from '@/api/types';
 import TtsScriptEditor from './TtsScriptEditor.vue';
 import { generateUpgradePowerWordScript } from '@/config/upgrade-script-generator';
@@ -477,24 +477,12 @@ const currentSideType = computed({
 });
 
 
-// 新增：语言选项
-const languageOptions = computed(() => [
-    {
-        label: "简体中文",
-        value: 'zh'
-    },
-    {
-        label: "繁體中文",
-        value: 'zh-CHT'
-    },
-    {
-        label: "English",
-        value: 'en'
-    },
-    {
-        label: "Polski",
-        value: 'pl'
-    }
+// 新增：语言选项（默认值为当前内置四种语言，实际加载时会被语言配置覆盖）
+const languageOptions = ref<Array<{ label: string; value: string }>>([
+    { label: '简体中文', value: 'zh' },
+    { label: '繁體中文', value: 'zh-CHT' },
+    { label: 'English', value: 'en' },
+    { label: 'Polski', value: 'pl' },
 ]);
 
 // 获取当前语言对应的默认背面配置函数
@@ -523,6 +511,21 @@ const converting = ref(false);
 
 // 新增：图片预览加载状态
 const imagePreviewLoading = ref(false);
+
+// 从后端语言配置中加载支持的语言列表
+const loadLanguageOptions = async () => {
+    try {
+        const data = await LanguageConfigService.getLanguageConfig();
+        if (Array.isArray(data.config) && data.config.length > 0) {
+            languageOptions.value = data.config.map((item) => ({
+                label: item.name || item.code,
+                value: item.code,
+            }));
+        }
+    } catch (error) {
+        console.warn('加载语言配置失败，使用默认语言列表', error);
+    }
+};
 
 // 快速导航相关
 const cardTypeSection = ref<HTMLElement | null>(null);
@@ -934,6 +937,8 @@ const clearDebounceTimer = () => {
 
 // 初始化配置
 onMounted(async () => {
+    // 加载可用语言配置（失败时回退到内置默认列表）
+    await loadLanguageOptions();
     // AI功能已移除
 });
 

@@ -29,6 +29,7 @@ import DeckBuilder from './workspace/DeckBuilder.vue';
 import ContentPackageManager from './workspace/TTSItems.vue'; // 文件名暂时保持不变，内容已改为内容包管理
 import Settings from './workspace/Settings.vue';
 import About from './workspace/About.vue';
+import LanguageConfig from './workspace/LanguageConfig.vue';
 
 // 国际化
 const { t } = useI18n();
@@ -53,6 +54,7 @@ const componentMap = {
   'workspace': markRaw(WorkspaceMain),
   'deck-builder': markRaw(DeckBuilder),
   'content-package': markRaw(ContentPackageManager),
+  'language-config': markRaw(LanguageConfig),
   'settings': markRaw(Settings),
   'about': markRaw(About)
 };

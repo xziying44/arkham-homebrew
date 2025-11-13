@@ -1,12 +1,14 @@
 import json
 import os
 import sys
+import shutil
 from dataclasses import dataclass
 from typing import Optional, Dict
 
 from PIL import Image, ImageFont
 
 from bin.logger import logger_manager
+from bin.config_directory_manager import config_dir_manager
 
 
 # ============================================
@@ -381,9 +383,11 @@ class FontManager:
         self.font_map = {}  # 英文键 -> 字体文件路径
         self.name_mapping = {}  # 中文键 -> 英文文件名
         self.font_folder = get_resource_path(font_folder)
+        self.additional_font_folders = []  # 额外字体目录列表
         self.language_configs = {}
         self.lang = None
         self.silence = False  # 静默模式
+
         logger_manager.info(f"[FontManager] 初始化，字体目录: {self.font_folder}")
 
         # 加载文件名映射
@@ -397,37 +401,62 @@ class FontManager:
         # 设置默认语言
         self.set_lang(lang)
 
+    def add_font_folder(self, folder: str):
+        """添加额外的字体目录，并重新加载字体"""
+        try:
+            # 允许传入绝对路径或相对路径
+            if not os.path.isabs(folder):
+                folder_path = os.path.abspath(folder)
+            else:
+                folder_path = folder
+
+            if folder_path not in self.additional_font_folders:
+                self.additional_font_folders.append(folder_path)
+                logger_manager.info(f"[FontManager] 附加字体目录: {folder_path}")
+
+            # 重新加载字体（合并所有目录）
+            self._load_fonts()
+        except Exception as e:
+            logger_manager.info(f"[FontManager] 附加字体目录失败: {folder}: {str(e)}")
+
     def _load_fonts(self):
-        """加载字体目录下所有支持的字体文件"""
+        """加载所有支持的字体文件（主目录 + 额外目录）"""
         supported_ext = ['.ttf', '.otf', '.ttc']
 
-        if not os.path.exists(self.font_folder):
-            logger_manager.info(f"[FontManager] 错误：字体目录不存在 - {self.font_folder}")
-            return
+        # 重新构建字体映射
+        self.font_map = {}
+
+        # 主目录 + 额外目录列表
+        font_dirs = [self.font_folder] + self.additional_font_folders
 
         try:
-            # 直接列出目录（文件名已经是英文）
-            files = os.listdir(self.font_folder)
-            logger_manager.info(f"[FontManager] 目录中的文件数: {len(files)}")
-
             loaded_count = 0
-            for filename in files:
-                name, ext = os.path.splitext(filename)
-
-                if ext.lower() not in supported_ext:
+            for folder in font_dirs:
+                if not os.path.exists(folder) or not os.path.isdir(folder):
+                    logger_manager.info(f"[FontManager] 字体目录不存在或不可用: {folder}")
                     continue
 
-                font_path = os.path.join(self.font_folder, filename)
+                files = os.listdir(folder)
+                logger_manager.info(f"[FontManager] 扫描字体目录: {folder}, 文件数: {len(files)}")
 
-                if not os.path.exists(font_path):
-                    continue
+                for filename in files:
+                    name, ext = os.path.splitext(filename)
 
-                # 使用小写的英文文件名（无扩展名）作为键
-                key = name.lower()
-                self.font_map[key] = font_path
-                loaded_count += 1
+                    if ext.lower() not in supported_ext:
+                        continue
 
-                logger_manager.info(f"[FontManager] #{loaded_count}: {filename} (key: {key})")
+                    font_path = os.path.join(folder, filename)
+
+                    if not os.path.exists(font_path):
+                        continue
+
+                    # 使用小写的英文文件名（无扩展名）作为键
+                    key = name.lower()
+                    # 后扫描的目录可以覆盖之前的同名键
+                    self.font_map[key] = font_path
+                    loaded_count += 1
+
+                    logger_manager.info(f"[FontManager] #{loaded_count}: {filename} (key: {key}) 来自 {folder}")
 
             logger_manager.info(f"[FontManager] 成功加载 {loaded_count} 个字体")
             if self.font_map:
@@ -438,21 +467,84 @@ class FontManager:
             import traceback
             traceback.print_exc()
 
+    def get_available_font_display_names(self):
+        """获取当前已加载字体的显示名称列表
+
+        优先使用文件名映射中的中文逻辑名；对未映射或用户自定义字体，
+        使用实际文件名（不含扩展名）。
+        """
+
+        try:
+            filename_mapping = load_filename_mapping()
+            font_mapping = filename_mapping.get('fonts', {})
+
+            english_to_display = {}
+            for cn_filename, en_filename in font_mapping.items():
+                cn_base = os.path.splitext(cn_filename)[0]
+                en_base = os.path.splitext(en_filename)[0]
+                english_to_display[en_base.lower()] = cn_base
+
+            display_names = set()
+
+            for font_path in self.font_map.values():
+                base_name = os.path.splitext(os.path.basename(font_path))[0]
+                key = base_name.lower()
+                display_name = english_to_display.get(key, base_name)
+                display_names.add(display_name)
+
+            return sorted(display_names)
+        except Exception as e:
+            logger_manager.info(f"[FontManager] 获取可用字体显示名失败: {e}")
+            fallback = set()
+            for font_path in self.font_map.values():
+                base_name = os.path.splitext(os.path.basename(font_path))[0]
+                fallback.add(base_name)
+            return sorted(fallback)
+
     def _load_language_configs(self, lang_config=None):
-        """加载多语言配置"""
+        """加载多语言配置
+
+        优先使用用户配置目录下的 language_config.json，当不存在或不可用时
+        回退到内置的 fonts/language_config.json，确保渲染始终有可用配置。
+        """
+        # 先清空现有配置，避免重复加载产生脏数据
+        self.language_configs = {}
+
+        # 默认与用户配置路径
+        default_config_path = get_resource_path('fonts/language_config.json')
+        user_config_path = config_dir_manager.get_language_config_file_path()
+
+        # 未显式指定时，按“用户优先”的策略选择配置文件
         if lang_config is None:
-            # 尝试加载默认配置文件
-            default_config_path = get_resource_path('fonts/language_config.json')
-            if os.path.exists(default_config_path):
-                lang_config = default_config_path
+            candidate_path = None
+
+            # 1. 用户配置已存在，直接使用
+            if os.path.exists(user_config_path):
+                candidate_path = user_config_path
+            # 2. 用户配置不存在但有默认模板，复制一份作为用户配置
+            elif os.path.exists(default_config_path):
+                try:
+                    os.makedirs(os.path.dirname(user_config_path), exist_ok=True)
+                    shutil.copy2(default_config_path, user_config_path)
+                    logger_manager.info(
+                        f"[FontManager] 已从默认模板创建用户语言配置: {user_config_path}")
+                    candidate_path = user_config_path
+                except Exception as e:
+                    logger_manager.info(
+                        f"[FontManager] 创建用户语言配置失败，将直接使用默认配置: {e}")
+                    candidate_path = default_config_path
+            # 3. 两者都不存在，只能使用空配置
             else:
-                logger_manager.info("警告：未找到语言配置文件，将使用空配置")
+                logger_manager.info("警告：未找到任何语言配置文件，将使用空配置")
                 return
 
+            lang_config = candidate_path
+
+        # 根据类型加载配置
         if isinstance(lang_config, str):
-            # 从JSON文件加载
+            # 从 JSON 文件加载
             try:
-                with open(get_resource_path(lang_config), 'r', encoding='utf-8') as f:
+                with open(lang_config, 'r', encoding='utf-8') as f:
                     config_data = json.load(f)
                     self._parse_config_data(config_data)
             except Exception as e:
@@ -460,6 +552,16 @@ class FontManager:
         elif isinstance(lang_config, list):
             # 从列表加载
             self._parse_config_data(lang_config)
+
+        # 若当前配置为空，尝试回退到默认配置，确保渲染可用
+        if not self.language_configs and os.path.exists(default_config_path):
+            try:
+                with open(default_config_path, 'r', encoding='utf-8') as f:
+                    config_data = json.load(f)
+                    self._parse_config_data(config_data)
+                    logger_manager.info("[FontManager] 用户语言配置不可用，已回退到默认配置")
+            except Exception as e:
+                logger_manager.info(f"加载默认语言配置文件失败: {str(e)}")
 
     def _parse_config_data(self, config_data):
         """解析配置数据"""

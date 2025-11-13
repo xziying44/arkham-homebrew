@@ -82,9 +82,17 @@ class ConfigDirectoryManager:
         """获取日志目录"""
         return os.path.join(self._get_user_data_dir(), 'logs')
 
+    def get_user_font_dir(self) -> str:
+        """获取日志目录"""
+        return os.path.join(self._get_user_data_dir(), 'fonts')
+
     def get_recent_directories_file_path(self) -> str:
         """获取最近目录记录文件路径"""
         return os.path.join(self.get_global_config_dir(), 'recent_directories.json')
+
+    def get_language_config_file_path(self) -> str:
+        """获取全局语言配置文件路径"""
+        return os.path.join(self.get_global_config_dir(), 'language_config.json')
 
     def get_tts_save_directory(self) -> Optional[str]:
         """获取TTS保存目录，不存在则创建"""

@@ -671,19 +671,15 @@ class WorkspaceManager:
         # 初始化卡牌生成相关管理器
         if CARD_GENERATION_AVAILABLE:
             try:
-                fonts_path = os.path.join(self.workspace_path, 'fonts')
-                images_path = os.path.join(self.workspace_path, 'images')
-
-                # 如果fonts和images目录不存在，尝试查找或使用默认路径
-                if not os.path.exists(fonts_path):
-                    fonts_path = 'fonts'  # 使用相对路径
-                if not os.path.exists(images_path):
-                    images_path = 'images'  # 使用相对路径
-
                 app_mode = os.environ.get('APP_MODE', 'normal')
 
-                self.font_manager = FontManager(fonts_path)
-                self.image_manager = ImageManager(images_path)
+                self.font_manager = FontManager()
+                self.image_manager = ImageManager()
+                self.font_manager.add_font_folder(config_dir_manager.get_user_font_dir())
+
+                workspace_fonts_dir = os.path.join(self.workspace_path, 'fonts')
+                if os.path.exists(workspace_fonts_dir) and os.path.isdir(workspace_fonts_dir):
+                    self.font_manager.add_font_folder(workspace_fonts_dir)
                 # 设置图片工作目录
                 self.image_manager.set_working_directory(workspace_path)
                 self.creator = CardCreator(

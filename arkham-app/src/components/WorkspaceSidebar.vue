@@ -54,6 +54,14 @@
     </button>
     <button
       class="mobile-nav-btn"
+      :class="{ 'active': activeItem === 'language-config' }"
+      @click="selectItem('language-config')"
+    >
+      <div class="mobile-nav-icon">🌐</div>
+      <span class="mobile-nav-label">{{ t('workspace.sidebar.navItems.languageConfig') }}</span>
+    </button>
+    <button
+      class="mobile-nav-btn"
       :class="{ 'active': activeItem === 'about' }"
       @click="selectItem('about')"
     >
@@ -110,6 +118,11 @@ const navItems = computed(() => [
     key: 'content-package',
     label: t('workspace.sidebar.navItems.contentPackage'),
     icon: '📦'
+  },
+  {
+    key: 'language-config',
+    label: t('workspace.sidebar.navItems.languageConfig'),
+    icon: '🌐'
   },
   {
     key: 'settings',

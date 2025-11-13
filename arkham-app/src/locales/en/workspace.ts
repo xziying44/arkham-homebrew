@@ -5,6 +5,7 @@ export default {
       workspace: 'Workspace',
       deckBuilder: 'Deck Builder',
       contentPackage: 'Content Package',
+      languageConfig: 'Card Languages',
       settings: 'Settings',
       about: 'About'
     },
