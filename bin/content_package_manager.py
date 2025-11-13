@@ -30,12 +30,14 @@ class ContentPackageManager:
         # 卡牌类型标签映射
         self.card_type_tags = {
             "调查员": ["Investigator", "PlayerCard"],
+            "调查员小卡": ["PlayerCard"],
             "调查员背面": ["Investigator", "PlayerCard"],
             "定制卡": ["PlayerCard"],
             "技能卡": ["PlayerCard"],
             "事件卡": ["PlayerCard"],
             "支援卡": ["Asset", "PlayerCard"],
             "敌人卡": ["ScenarioCard"],
+            "诡计卡": ["ScenarioCard"],
             "地点卡": ["Location", "ScenarioCard"],
             "密谋卡": ["ScenarioCard"],
             "密谋卡-大画": ["ScenarioCard"],
@@ -94,8 +96,10 @@ class ContentPackageManager:
             self._add_log(f"读取卡牌JSON失败 {card_filename}: {e}")
             return None
 
-    def _get_card_tags(self, card_type: str) -> List[str]:
+    def _get_card_tags(self, card_type: str, card_class: str) -> List[str]:
         """根据卡牌类型获取标签"""
+        if card_class == '弱点':
+            return ["PlayerCard"]
         return self.card_type_tags.get(card_type, ["PlayerCard"])
 
     # ==================== TTS导出功能 ====================
@@ -191,6 +195,10 @@ class ContentPackageManager:
                 "error": str(e)
             }
 
+    def _clean_name(self, name: str) -> str:
+        """清理卡牌名称，移除特殊标记"""
+        return name.replace("🏅", "").replace("<独特>", "").strip()
+
     def _create_card_object(self, card_data: Dict[str, Any], front_url: str, back_url: str,
                             card_index: int) -> Optional[Dict[str, Any]]:
         """
@@ -206,6 +214,7 @@ class ContentPackageManager:
         try:
             # 判断卡牌类型
             card_type = card_data.get("type", "")
+            card_class = card_data.get("class", "")
             is_investigator = card_type == "调查员"
 
             # 定义需要使用act.json模板的卡牌类型
@@ -233,7 +242,7 @@ class ContentPackageManager:
             card_id = int(f"{custom_deck_id}00")  # CardID设置为CustomDeck+00
 
             # 设置卡牌信息
-            card_name = card_data.get("name", "未知卡牌")
+            card_name = self._clean_name(card_data.get("name", ""))
             card_subtitle = card_data.get("subtitle", "")
 
             template["GUID"] = guid
@@ -242,7 +251,7 @@ class ContentPackageManager:
             template["CardID"] = card_id
 
             # 设置标签
-            tags = self._get_card_tags(card_type)
+            tags = self._get_card_tags(card_type, card_class)
             template["Tags"] = tags
 
             # 设置图片URL - 先移除默认的CustomDeck条目，然后添加新的
@@ -289,7 +298,7 @@ class ContentPackageManager:
             pack_code = self._get_pack_code()
             self._add_log(f"包代码: {pack_code}")
             signature_to_investigator = {}  # 签名卡ID -> 调查员ID的映射
-            customization_text_map = {}     # 绑定卡脚本ID -> 定制卡正文
+            customization_text_map = {}  # 绑定卡脚本ID -> 定制卡正文
 
             cards = self.content_package.get("cards", [])
             self._add_log(f"第一遍扫描：查找调查员的签名卡...")
@@ -353,7 +362,7 @@ class ContentPackageManager:
                         continue
                     body = (card_data or {}).get('body', '') or ''
                     customization_text_map[base_id] = body
-                    self._add_log(f"  映射 customization_text：{base_id} ← 定制卡 [{card_data.get('name','')}]")
+                    self._add_log(f"  映射 customization_text：{base_id} ← 定制卡 [{card_data.get('name', '')}]")
                 except Exception as e:
                     self._add_log(f"  处理定制卡绑定失败：{e}")
 
@@ -879,7 +888,8 @@ class ContentPackageManager:
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
             # 创建PNP导出器，传递日志回调
-            pnp_exporter = PNPExporter(export_params, self.workspace_manager, task_id=task_id, log_callback=log_callback)
+            pnp_exporter = PNPExporter(export_params, self.workspace_manager, task_id=task_id,
+                                       log_callback=log_callback)
 
             # 执行导出
             result = pnp_exporter.export_pnp(

@@ -23,6 +23,7 @@ class TTSCardConverter:
             "事件卡": ["PlayerCard"],
             "支援卡": ["Asset", "PlayerCard"],
             "敌人卡": ["ScenarioCard"],
+            "诡计卡": ["ScenarioCard"],
             "地点卡": ["Location", "ScenarioCard"],
             "密谋卡": ["ScenarioCard"],
             "密谋卡-大画": ["ScenarioCard"],
@@ -58,8 +59,10 @@ class TTSCardConverter:
 
         raise FileNotFoundError(f"Card file not found: {card_path}")
 
-    def get_card_tags(self, card_type: str) -> List[str]:
+    def get_card_tags(self, card_type: str, card_class: str) -> List[str]:
         """根据卡牌类型获取标签"""
+        if card_class == '弱点':
+            return ["PlayerCard"]
         return self.card_type_tags.get(card_type, ["PlayerCard"])
 
     def create_custom_deck_entry(self, face_url: str, back_url: str,
@@ -94,32 +97,32 @@ class TTSCardConverter:
             front_gm_data = {}
             if gm_notes:
                 front_gm_data = json.loads(gm_notes)
-            
+
             # 处理正面为地点卡的情况
             if front_card_type == "地点卡" and front_gm_data.get("type") == "Location":
                 if "location" in front_gm_data:
                     front_gm_data["locationFront"] = front_gm_data.pop("location")
                     print(f"正面地点卡：将location字段改为locationFront")
-            
+
             # 处理背面为地点卡的情况
             if back_card:
                 back_card_type = back_card.get("type", "")
                 back_tts_script = back_card.get("tts_script", {})
                 back_gm_notes = back_tts_script.get("GMNotes", "")
-                
+
                 if back_gm_notes:
                     back_gm_data = json.loads(back_gm_notes)
-                    
+
                     # 如果背面是地点卡
                     if back_card_type == "地点卡" and back_gm_data.get("type") == "Location":
                         if "location" in back_gm_data:
                             # 将背面的location改为locationBack并合并到正面
                             front_gm_data["locationBack"] = back_gm_data["location"]
                             print(f"背面地点卡：将location字段改为locationBack并合并到正面")
-            
+
             # 返回处理后的JSON字符串
             return json.dumps(front_gm_data, ensure_ascii=False) if front_gm_data else ""
-            
+
         except json.JSONDecodeError as e:
             print(f"解析GMNotes JSON时出错: {e}")
             return gm_notes
@@ -136,7 +139,8 @@ class TTSCardConverter:
 
         # 确定卡牌类型和标签
         card_type = card_data.get("type", "")
-        tags = self.get_card_tags(card_type)
+        card_class = card_data.get("class", "")
+        tags = self.get_card_tags(card_type, card_class)
 
         # 生成/获取脚本信息（v2 优先）
         gm_notes = ""

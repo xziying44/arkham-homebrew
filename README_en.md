@@ -1,109 +1,207 @@
-[简体中文](./README.md) | **English**
-# Arkham Homebrew Card Maker
+# 🎴 Arkham Card Maker
 
-A Flask-based tool for automatically generating custom cards for games like Arkham Horror. It leverages OpenAI to create card data from prompts and renders it into high-quality, beautifully designed card images.
+---
 
-## Features
+<p align="center">
+  <a href="https://github.com/xziying44/arkham-homebrew/releases">
+    <img src="https://img.shields.io/github/v/release/xziying44/arkham-homebrew?include_prereleases&label=release" alt="release" />
+  </a>
+  <a href="https://github.com/xziying44/arkham-homebrew/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/xziying44/arkham-homebrew?label=license" alt="license: MIT" />
+  </a>
+  <img src="https://img.shields.io/badge/python-3.11%2B-blue?logo=python" alt="python 3.11+" />
+  <img src="https://img.shields.io/badge/vue-3.x-42b883?logo=vue.js" alt="vue 3" />
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS-informational" alt="Platform: Windows | macOS" />
+</p>
 
-- 🖼️ **Visual Card Design UI**: An intuitive web interface for designing and generating cards.
-- 🤖 **AI-Powered Content**: Integrates with OpenAI to intelligently generate card names, text, and attributes.
-- 🎨 **Highly Customizable**: Supports custom fonts, image assets, and style templates to match your vision.
-- 📦 **Multiple Card Types**: Built-in support for various card templates, including:
-    - Investigator Cards
-    - Skill Cards
-    - Asset Cards
-    - Event Cards
-    - Weakness Cards
-    - Upgraded Cards
-- 🌐 **Cross-Platform Desktop App**: Packaged as a simple web-based desktop application using Pywebview.
+<p align="center">
+  <a href="./README.md">简体中文</a> |
+  <strong>English</strong>
+</p>
 
-## Quick Start
+**Custom Card Creation Tool for Arkham Horror LCG**
 
-### Standalone Executable (Windows)
+A visual card creation tool designed specifically for *Arkham Horror: The Card Game*. Easily create, edit, and export custom cards to craft your own terrifying adventure stories.
 
-The easiest way to get started without any installation.
+![Main Interface Preview](docs/screenshots/main-interface-preview.png)
+*Main Interface Preview*
 
-1.  Go to the [Releases Page](https://github.com/xziying44/arkham-homebrew/releases).
-2.  Download the latest version of `arkham-homebrew-windows-x64.zip`.
-3.  Unzip the file to any directory.
-4.  Double-click `Arkham Card Maker.exe` to run the application.
+---
 
-#### Directory Structure
+## ✨ Core Features
 
-After unzipping, your directory should look like this. Please ensure all required directories are present.
+### 📝 Visual Card Editor
+- **20+ Card Types Supported**: Investigator, Skill, Asset, Event, Weakness, Location, Agenda, Act, Enemy, and more
+- **What-You-See-Is-What-You-Get**: Real-time preview of card effects with intuitive design adjustments
+- **Smart Form System**: Automatically displays relevant fields based on card type, streamlining the editing workflow
 
+### 🌐 Bilingual Support
+- **Interface Languages**: Seamlessly switch between Chinese and English interfaces
+- **Font System**: Automatically adapts Chinese and English fonts with mixed-script support
+- **Rich Text Rendering**: Supports HTML-style tags (bold, italic, icons, line breaks, etc.)
+
+### 🎨 Advanced Layout Controls
+- **Illustration Transform Editor**: Precisely adjust image scale, crop, rotation, offset, and flip
+- **Text Boundary Editor**: Customize text area position and size for complex layouts
+- **Template System**: 305+ exquisite card templates covering all card types in the series
+
+### 📦 Content Package Management
+- **Project Organization**: Workspace-based file management supporting large-scale projects
+- **Encounter Group System**: Easily manage card deck structures for scenarios and campaigns
+- **Batch Operations**: Support for content package-level batch export and numbering
+
+### 🎲 Multi-Format Export
+- **Image Export**: PNG/JPG formats with customizable DPI and bleed settings
+- **PDF Export**: Print-ready impositioned PDFs supporting A4, Letter, and other specifications
+- **TTS Export**: One-click generation of Tabletop Simulator scripts and objects
+- **ArkhamDB Export**: Export to ArkhamDB format for easy sharing
+
+### 🚀 Professional Features
+- **AI Bleed Processing**: Automatically generate bleed areas using LaMa or mirror algorithms
+- **GitHub Image Hosting**: Integrated image hosting for quick card image sharing
+- **Deck Builder**: Supports complex DeckOption systems for constructing optional decks
+- **Upgrade Card System**: Investigator upgrade cards with Power Word script support
+
+![Card Editor Interface](docs/screenshots/card-editor-interface.png)
+*Card Editor Interface*
+
+---
+
+## 📥 Installation and Launch
+
+### Windows
+
+1. **Download the Application**
+   Visit the [GitHub Releases](https://github.com/xziying44/arkham-homebrew/releases) page and download the latest version of `arkham-homebrew-windows-x64.zip`
+
+2. **Extract the Files**
+   Extract the ZIP file to any directory (recommended to avoid paths with non-ASCII characters)
+
+3. **Run the Program**
+   Double-click `Arkham Card Maker.exe` to launch the application
+
+**Example directory layout (Windows release)**:
+
+```text
+Arkham Card Maker/
+├── Arkham Card Maker.exe   # Main executable (double-click to run)
+├── _internal/              # Runtime dependencies and resources
+│   ├── fonts/              # Font resources
+│   ├── images/             # Templates and artwork
+│   ├── templates/          # TTS scripts and other templates
+│   └── ...                 # Other internal dependencies
+├── global_config.json      # Global configuration
+├── recent_directories.json # Recent workspace history
+└── logs/                   # Runtime logs
 ```
-.
-├── Arkham Card Maker.exe    # Main application
-├── _internal/               # Runtime dependencies (Do not modify)
-├── fonts/                   # Required font assets
-├── images/                  # Required card templates and assets
-├── prompt/                  # Required prompt templates for AI
-└── config.json              # Configuration file (auto-generated on first run)
-```
 
-## Running from Source
+![Installation Directory Structure](docs/screenshots/installation-directory.png)
+*Installation Directory Structure Example*
 
-If you prefer to run the application from the source code.
+### macOS
 
-### Prerequisites
+1. **Download the Application**
+   Visit the [GitHub Releases](https://github.com/xziying44/arkham-homebrew/releases) page and download based on your Mac chip type:
+   - **Apple Silicon (M1/M2/M3)**: Download `Arkham-Card-Maker-macOS-arm64.dmg`
+   - **Intel Chip**: Download `Arkham-Card-Maker-macOS-x86_64.dmg`
 
--   Python 3.9+
--   [Required font files](fonts/)
--   [Required image assets](images/)
+2. **Install the Application**
+   - Double-click the `.dmg` file to open the installer
+   - Drag "Arkham Card Maker" into the "Applications" folder
 
-### Installation
+3. **First Launch**
+   - Open the "Applications" folder and find "Arkham Card Maker"
+   - Right-click and select "Open" (first launch requires authorization to run unsigned application)
+   - Click "Open" in the security prompt that appears
 
-```bash
-# Clone the repository
-git clone https://github.com/xziying44/arkham-homebrew.git
-cd arkham-homebrew
+![First Launch Screen](docs/screenshots/first-launch-screen.png)
+*First Launch Screen*
 
-# Install the dependencies
-pip install -r requirements.txt
-```
+---
 
-### Running the Application
+## 🚀 Quick Start
 
-```bash
-python app.py
-```
+### Step 1: Select Workspace
 
-## Project Structure
+After the first launch, you need to select or create a workspace directory to store card files:
 
-```
-.
-├── app.py                 # Main application entry point
-├── Card.py                # Core card rendering logic
-├── create_card.py         # Card generation handler
-├── requirements.txt       # Python dependencies
-├── config.json            # Configuration file
-├── fonts/                 # Font assets
-├── images/                # Card templates and image assets
-├── static/                # Static web assets (CSS, JS)
-└── templates/             # HTML templates
-```
+1. Click the **"Select Workspace Directory"** button
+2. Choose an empty directory or create a new folder (recommended to create separate directories for each project)
+3. The application will automatically load the workspace file tree
 
-## Development Guide
+![Select Workspace](docs/screenshots/select-workspace.png)
+*Select Workspace Directory*
 
-### Extending with New Card Types
+### Step 2: Create Your First Card
 
-1.  Add a new handler function for your card type in `create_card.py`.
-2.  Extend the `Card` class in `Card.py` with a new rendering method for the new type.
-3.  Add the corresponding image templates and assets to the `images/` directory.
+1. **Create a Card File**
+   Right-click a directory in the left file tree, select **"New File"**, and enter a filename (e.g., `my-card.card`)
 
-## Contributing
+2. **Choose Card Type**
+   In the editing panel, select a type from the **"Card Type"** dropdown menu (e.g., "Skill", "Asset", etc.)
 
-Contributions are welcome via Issues and Pull Requests!
+3. **Fill in Card Information**
+   Complete the card fields according to the form prompts:
+   - **Basic Information**: Card name, subtitle, traits, etc.
+   - **Numerical Attributes**: Cost, skill icons, health/sanity, etc.
+   - **Text Content**: Card description, rules text, flavor text, etc.
+   - **Illustration Settings**: Upload or select illustration images
 
-1.  Fork this repository.
-2.  Create your feature branch (`git checkout -b feature/your-feature`).
-3.  Commit your changes (`git commit -m 'Add some feature'`).
-4.  Push to the branch (`git push origin feature/your-feature`).
-5.  Open a Pull Request.
+4. **Real-time Preview**
+   The right preview panel displays card effects in real-time. Click **"Save"** when satisfied with your adjustments
 
-## License
+![Quick Card Creation Flow](docs/screenshots/quick-card-creation-flow.png)
+*Quick Card Creation Flow*
 
-This project is licensed under the MIT License.
+### Step 3: Advanced Editing (Optional)
 
-MIT: [https://rem.mit-license.org](https://rem.mit-license.org/)
+For more precise layout control:
+
+- **Illustration Layout Editor**: Click the **"Illustration Layout"** tab to adjust image scale, crop, rotation, and other parameters
+- **Text Boundary Editor**: Click the **"Text Boundaries"** tab to customize text area position and size
+
+### Step 4: Export Cards
+
+After completing editing, you can export to multiple formats:
+
+1. **Single Card Export**
+   - Click the **"Export"** button in the top right corner of the card editor
+   - Select format (PNG/JPG), size (Standard/Poker/Tarot, etc.), and bleed options
+   - Click confirm, and the image will be saved to the corresponding directory in the workspace
+
+2. **Batch Export**
+   - Switch to the **"TTS Export"** page
+   - Select content package or encounter group
+   - Click **"Export TTS"** or **"Export PNP PDF"** to batch generate all cards
+
+![Export Options Panel](docs/screenshots/export-options-panel.png)
+*Export Options Panel*
+
+---
+
+## 📖 More Resources
+
+- **User Guide**: [Complete User Manual](docs/user-guide-en.md) (detailed feature descriptions and advanced usage)
+- **GitHub Repository**: [https://github.com/xziying44/arkham-homebrew](https://github.com/xziying44/arkham-homebrew)
+- **Issue Tracker**: [Submit an Issue](https://github.com/xziying44/arkham-homebrew/issues)
+- **Changelog**: [View Releases](https://github.com/xziying44/arkham-homebrew/releases)
+
+---
+
+## 🤝 Contributing and Feedback
+
+If you encounter issues or have suggestions for improvements, please participate through:
+
+- Submit an [Issue](https://github.com/xziying44/arkham-homebrew/issues) on GitHub
+- Email the project maintainers
+- Join discussions and feature suggestions
+
+---
+
+## 📄 License
+
+This project is open source under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+---
+
+**Thank you for using Arkham Card Maker! Enjoy your creative journey!** 🎉

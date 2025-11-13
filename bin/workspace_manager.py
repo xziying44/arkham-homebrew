@@ -535,18 +535,6 @@ class WorkspaceScanner:
     def _extract_card_type_with_error(self, file_path: str) -> Dict:
         """容错的card_type提取,返回结果或错误信息"""
         try:
-            # 文件大小检查
-            file_size = os.path.getsize(file_path)
-            if file_size > self.MAX_JSON_SIZE:
-                logger_manager.warning(f"跳过超大文件: {file_path} ({file_size} bytes)")
-                return {
-                    'card_type': None,
-                    'error': {
-                        'code': ScanProgressTracker.ERROR_FILE_TOO_LARGE,
-                        'message': f'文件超过限制 ({file_size} bytes)'
-                    }
-                }
-
             # 读取card_type(重试3次)
             for attempt in range(3):
                 try:

@@ -293,7 +293,10 @@ class ExportHelper:
                 img = self.workspace_manager.image_manager.get_image(f'投入-{card_class}-{icon}')
                 # 将img裁剪为15*80
                 img = img.crop((0, 0, 15, img.size[1]))
-                card_map.paste(img, (0, 167 + submit_index * 80 + 19), img)
+                offset = 19
+                if card_json.get('type') == '事件卡':
+                    offset = 20
+                card_map.paste(img, (0, 167 + submit_index * 80 + offset), img)
                 submit_index += 1
         return card_map
 
@@ -635,11 +638,11 @@ if __name__ == "__main__":
 
     export_helper = ExportHelper(
         system_defaults,
-        WorkspaceManager(r'C:\Users\xziyi\Desktop\arkham-homebrew-projects\EdgeOfTheEarth')
+        WorkspaceManager(r'C:\Users\xziyi\Desktop\arkham-homebrew-projects\EdgeOfTheEarthInv')
     )
 
     # 自动判断卡牌类型并导出
-    result = export_helper.export_card_auto(r'Terror of the Stars.card')
+    result = export_helper.export_card_auto(r'Dodge.card')
 
     if isinstance(result, dict):
         # 双面卡牌
