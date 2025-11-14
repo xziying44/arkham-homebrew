@@ -30,20 +30,18 @@ This guide only covers running on Windows and macOS. Source builds and Android a
 
 ### 1.2 First Run and Workspace Selection
 
-On launch you will see the **Home** page with:
+On launch you will see the **Arkham Card Maker** home screen with:
 
-- **Recent Workspaces** – up to 20 recent workspace directories (maintained by the backend QuickStart service).
-- **Select Directory** – open or create a workspace directory.
-- **Language Switch** – switch between Chinese and English UI.
-- **Service Status** – Flask backend status and version.
+- **Recent Projects** – up to 20 recent project folders (maintained by the backend service).
+- **Open Project Folder** – select a folder containing card files, or an empty folder to start a new project.
 
 ![Screenshot: Home Page](screenshots/home-page.png)
 
 To open a workspace:
 
-1. Click `Select Directory`.
-2. Choose or create an empty directory.
-3. Confirm to enter the workspace main view.
+1. Click `Open Project Folder`.
+2. Choose or create an empty folder.
+3. Confirm to enter the **Workspace** view.
 
 ![Screenshot: Select Workspace](screenshots/select-workspace.png)
 
@@ -64,14 +62,14 @@ Large workspace scanning behavior:
 
 ## 2. UI Overview
 
-### 2.1 Home Page
+### 2.1 Home Screen
 
-- Quick actions: select workspace, switch language.
-- Recent workspaces: click to open; right-click to remove from the list.
+- Quick actions: open a project folder, resume a recent project.
+- Recent projects: click to open; right-click to remove from the list.
 
 ### 2.2 Workspace Layout (Three-Column View)
 
-- Left: **File Tree** panel
+- Left: **File Explorer** panel
   - Quick actions: create / rename / delete / refresh.
   - Search box: filter by name or card type.
   - Virtual scrolling: smooth navigation even for very large projects.
@@ -136,7 +134,7 @@ Purpose: precisely control image scaling, cropping, rotation and offset.
 Usage:
 
 1. In the card editor, locate the `Illustration` field.
-2. Click the `Advanced Layout` button.
+2. Click the `Advanced Layout Editor` button.
 3. In the popup editor adjust:
    - **Scale**: 0.5–2.0 (1.0 = original size).
    - **Crop**: top / bottom / left / right margins as percentages (0–100%).
@@ -162,7 +160,7 @@ Purpose: define the shape and position of the text region (supports polygonal re
 Usage:
 
 1. In the card editor, locate the `Card Text` field.
-2. Click the `Edit Text Boundary` button.
+2. Click the `Text Boundary Editor` button.
 3. In the popup editor:
    - Visual editing: drag control points to adjust the polygon.
    - Numeric input: enter coordinates precisely (pixels).
@@ -180,9 +178,9 @@ Typical use cases:
 
 ### 3.5 Single-Card Export (PNG/JPG/PDF)
 
-Quick export: click `Quick Export` in the bottom area of the editor.
+Quick export: in the file tree, right-click a card and choose `Quick Export`.
 
-Advanced export: right-click a card object and choose `Advanced Export`.
+Advanced export: in the file tree, right-click a card and choose `Advanced Export`.
 
 Options:
 
@@ -198,16 +196,16 @@ Multi-select cards in the file tree (`Ctrl` / `Cmd`), then right-click and choos
 
 ### 3.7 Encounter Icons and Expansion Icons
 
-- **Encounter set icons**: create a directory in your workspace to store encounter set icons. Put your transparent PNGs there (ideally named after the encounter set). Then choose that directory in `Encounter Icon Directory` in settings to use them in the editor.
-- **Expansion icons**: these icons appear at the bottom right of the card. Place a transparent square image (1:1 ratio) in the workspace, then select it in `Expansion Icon` in settings to apply globally.
-- **Global copyright**: at the bottom of the form, fill in a short copyright text, e.g. `© 2025 DIY`.
+- **Encounter group icons**: in `Settings` → `Workspace Configuration`, set the `Encounter Groups Icon Directory`. Point it to a folder in your workspace that contains transparent PNGs (ideally named after the encounter groups). These icons are used in the editor.
+- **Footer icon**: in the same settings section, choose a `Footer Icon` image (PNG from the workspace root) to appear on exported cards.
+- **Footer copyright**: configure a short footer copyright text (for example, `© 2025 DIY`).
 
 ![Screenshot: Encounter Icon Configuration](screenshots/encounter-set-config.png)
 
-### 3.8 Favorites and Temporary Workspace
+### 3.8 Bookmarks and Temporary Workspace
 
-- **Favorites**: right-click a card in the file tree → `Add to Favorites` to pin frequently used or in-progress cards.
-- **Temporary workspace**: drag the cards you are actively editing into the temporary workspace area at the bottom to jump between them across folders.
+- **Bookmarks**: right-click a card in the file tree → `Add Bookmark` to pin frequently used or in-progress cards. You can later toggle `Show bookmarks only`.
+- **Temporary Workspace**: drag the cards you are actively editing into the **Temporary Workspace** area at the bottom to jump between them across folders.
 
 ![Screenshot: Favorites and Temporary Workspace](screenshots/favorite-cards.png)
 
@@ -250,27 +248,29 @@ Content Packages are an efficient way to manage scenario or campaign cards in bu
 
 #### Method 1: From the Workspace
 
-1. In the top navigation, click `Content Packages`.
+1. In the left sidebar, click `Content Package` to open **Content Package Management**.
 2. Click `New Package`.
-3. Fill in package info:
+3. In **Basic Info**, fill in package metadata:
    - **Name**: for example, "Midnight Masks Campaign".
    - **Author**: your name.
-   - **Version**: for example, `1.0`.
-   - **Description**: a short description.
-4. Select cards to include (drag from the file tree or multi-select).
-5. Save as a `.pack` file.
+   - **Language**: choose `Chinese` or `English`.
+   - **Package Types**: select one or more types such as `Investigators`, `Player Cards`, `Campaign`.
+   - **Status**: choose `Draft`, `Alpha`, `Beta`, `Complete` or `Final`.
+   - (Optional) **External Link**: external reference URL.
+4. Use the `Card Management` tab to select cards to include (drag from the file tree or multi-select in the picker).
+5. Save to create or update the content package.
 
 ![Screenshot: Create Content Package](screenshots/create-content-package.png)
 
 ### 4.2 Adding and Managing Cards
 
-When you open an existing Content Package, you can add or adjust cards in the **Card Management** view.
+When you open an existing Content Package, you can add or adjust cards in the **Card Management** tab.
 
-1. **Open the package**: in `Content Packages`, load the package you want to edit.
+1. **Open the package**: in **Content Package Management**, select a package from **My Packages**.
 2. **Switch to card management**: go to the `Card Management` tab to see all cards currently included.
-3. **Add cards**: click `Add Cards` to open the file picker.
+3. **Add cards**: click `Add Card` to open the file picker.
    - You can multi-select files or select a whole folder; all cards inside will be added.
-4. **Save changes**: after adjusting cards, remember to save the package.
+4. **Save**: after adjusting cards, click `Save` in the toolbar to persist changes.
 
 ![Screenshot: Add Cards to Content Package](screenshots/add-card-content-package.png)
 
@@ -282,7 +282,7 @@ For TTS, each card image needs a public HTTPS URL. The app can help you upload i
 
 1. Sign up for a free Cloudinary account (the free tier is usually enough).
    - Register at: https://cloudinary.com/users/register/free
-2. In Arkham Card Maker, go to `Settings` → `Image Host`.
+2. In Arkham Card Maker, go to `Settings` → `Workspace Configuration` → `GitHub Image Hosting` or other image host configuration as needed.
 3. Fill in Cloudinary settings:
    - **Cloud Name**: shown on the Cloudinary dashboard home.
    - **API Key** and **API Secret**: found under `Settings` → `API Keys`.
@@ -295,8 +295,8 @@ For TTS, each card image needs a public HTTPS URL. The app can help you upload i
 
 #### Uploading Images
 
-1. Open your Content Package in the `Content Packages` page.
-2. Click `Upload to Image Host`.
+1. Open your Content Package in **Content Package Management**.
+2. Click `Upload to Cloud`.
 3. Choose which cards to upload (all are selected by default).
 4. Click `Start Upload`.
 5. After upload, each card will receive a public image URL.
@@ -316,12 +316,13 @@ Auto Numbering helps you assign card numbers for scenarios and campaigns.
 #### Numbering Rules
 
 1. Open the Content Package.
-2. Click `Generate Numbering Scheme`.
+2. Switch to the `Auto Numbering` tab.
 3. Configure numbering:
-   - **Start number**: for example, `1` or `100`.
-   - **Grouping**: by encounter set or by card type.
-4. Click `Generate` to preview the result.
-5. If it looks good, click `Apply Numbering`.
+   - **Start Number**: for example, `1` or `100`.
+   - **No Encounter Group Position**: choose whether cards without encounter groups appear before or after encounter groups.
+   - (Optional) **Footer Copyright** and **Footer Icon**.
+4. Click `Generate Plan` to preview the result.
+5. If it looks good, click `Apply Plan`.
 
 ![Screenshot: Auto Numbering](screenshots/auto-numbering.png)
 
@@ -338,7 +339,7 @@ TTS Export generates a `.json` file that Tabletop Simulator can load as a saved 
 #### Export Steps
 
 1. Make sure every card has an image URL (either uploaded or manually provided).
-2. In the Content Package page, click `Export TTS`.
+2. In the Content Package page, click `Export TTS Items`.
 3. Configure TTS options:
    - **Box name**: the container name shown in TTS.
    - **Auto group**: automatically split into multiple decks by card type.
@@ -368,7 +369,7 @@ arkham.build is an online deck builder. After exporting, you can share your home
 #### Export Steps
 
 1. Open the Content Package.
-2. Click `Export to arkham.build`.
+2. Click `Export ArkhamDB Format`.
 3. Configure options:
    - **Include image URLs**: if enabled, Cloudinary URLs are included.
    - **Compatibility mode**: keep the data format compatible with official Arkham cards.
@@ -389,13 +390,14 @@ PNP (Print and Play) export generates PDFs optimized for printing, with multiple
 #### Export Steps
 
 1. Open the Content Package.
-2. Click `Export PNP`.
+2. Click `PNP Export`.
 3. Configure print options:
-   - **Paper size**: A4 / Letter / A3.
-   - **Cards per page**: 9 cards (3×3) or 8 cards (2×4).
-   - **Bleed marks**: show cut lines.
+   - **Export Mode**: `Single Card Mode` or `Print Sheet Mode`.
+   - **Paper Size**: A4 / Letter / A3.
+   - **Cards per page**: controlled by export mode (for example, 9 cards (3×3) or 8 cards (2×4) in Print Sheet mode).
+   - **Bleed Size / Bleed Mode**: configure bleed and crop/stretch behavior.
    - **Back side handling**: automatically generate matching back pages.
-4. Click `Export` to generate the PDF.
+4. Click `Start Export PNP PDF` to generate the PDF.
 
 #### Printing Tips
 
