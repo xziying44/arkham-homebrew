@@ -1752,6 +1752,33 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       ...externalImageFields
     ]
   },
+  '规则小卡': {
+    field_type_display: '📘 规则小卡',
+    card_category: 'encounter',
+    fields: [
+      {
+        key: 'name',
+        name: '📝 标题',
+        type: 'text',
+        layout: 'half',
+        helpText: nameTip
+      },
+      {
+        key: 'body',
+        name: '📄 正文内容',
+        type: 'textarea',
+        layout: 'full',
+        helpText: bodyTip
+      },
+      {
+        key: 'page_number',
+        name: '🔢 页码 (1-999)',
+        type: 'number',
+        layout: 'half',
+        helpText: '仅显示 1-999，其余值自动忽略'
+      }
+    ]
+  },
 };
 
 // 系统预设卡背类型配置

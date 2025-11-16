@@ -46,6 +46,10 @@
     - `Arkham-Card-Maker-<version>-win.zip`
     并自动上传至对应 tag 的 GitHub Release。
 
+## Changelog (2025‑11‑22)
+- create_card.py：新增“规则小卡”类型，复用冒险参考卡文本模式，并引入 `规则小卡/规则小卡-页码` 模板与动态页码字号（1~3 位）；
+- arkham-app/src/config：在中英文卡牌配置中注册“规则小卡”字段（标题/正文/页码），以驱动表单输入。
+
 ## Key Components
 
 ### server.py（Flask 服务）

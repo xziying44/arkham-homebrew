@@ -1729,13 +1729,90 @@ class CardCreator:
             if 'subtitle' in data and data['subtitle'] != '':
                 card.draw_centered_text((369, 265), data['subtitle'], "副标题字体",
                                         26 if self.font_manager.lang in ['zh', 'zh-CHT'] else 30
-                                        , (0, 0, 0), max_length=600, debug_line=False) 
+                                        , (0, 0, 0), max_length=600, debug_line=False)
 
             # 画正文
             scenario_card = data.get('scenario_card', {})
             card.draw_scenario_card(scenario_card, resource_name=scenario_card.get('resource_name', ''))
 
         return card
+
+    def create_rule_mini_card(self, card_json: dict) -> Card:
+        """生成规则小卡"""
+        data = card_json
+        if 'msg' in data and data['msg'] != '':
+            raise ValueError(data['msg'])
+        if 'type' not in data or data['type'] != '规则小卡':
+            raise ValueError('卡牌类型错误')
+
+        card = Card(739, 1049, self.font_manager, self.image_manager, data['type'], is_back=True)
+
+        # 贴底图
+        base_image = self.image_manager.get_image('规则小卡')
+        if base_image:
+            card.paste_image(base_image, (0, 0, 739, 1049), 'contain')
+        # 贴页码
+        max_height = 950
+        if data.get('page_number'):
+            page_frame = self.image_manager.get_image('规则小卡-页码')
+            card.paste_image(page_frame, (0, 0, 739, 1049), 'contain')
+            max_height = 970
+            self._draw_rule_card_page_number(card, data.get('page_number'))
+
+        # 标题 & 正文区域
+        title = data.get('name', '').strip()
+        text_vertices = [(76, 90), (665, 90), (665, max_height), (76, max_height)]
+        if title:
+            card.draw_centered_text((369, 100), title, "标题字体", 48, (0, 0, 0),
+                                     max_length=600, debug_line=False)
+            text_vertices = [(76, 140), (665, 140), (665, max_height), (76, max_height)]
+
+        body = self._tidy_body_flavor(
+            data.get('body', ''),
+            '',
+            flavor_padding=self._get_flavor_padding(data)
+        )
+        card.draw_text(
+            body,
+            vertices=text_vertices,
+            default_font_name='正文字体',
+            default_size=32,
+            padding=15,
+            draw_virtual_box=False,
+            boundary_offset=self._get_text_boundary_offset(data, 'body')
+        )
+
+        return card
+
+    def _draw_rule_card_page_number(self, card: Card, page_number: Union[str, int, None]):
+        """根据位数绘制规则小卡的页码"""
+        if page_number is None:
+            return
+
+        page_text = str(page_number).strip()
+        if page_text == '':
+            return
+        try:
+            page_value = int(page_text)
+        except ValueError:
+            return
+
+        if page_value <= 0 or page_value > 999:
+            return
+
+        digits = len(str(page_value))
+        font_size_map = {1: 56, 2: 56, 3: 42}
+        font_size = font_size_map.get(digits, 48)
+
+        card.draw_centered_text(
+            (371, 986),
+            str(page_value),
+            "Arkhamic",
+            font_size,
+            (0, 0, 0),
+            max_length=None,
+            debug_line=False
+        )
 
     def create_card_bottom_map(self, card_json: dict, picture_path: Union[str, Image.Image, None] = None) -> Card:
         """制作底图"""
@@ -1937,6 +2014,8 @@ class CardCreator:
                 return self.create_action_card(card_json, picture_path)
             elif card_type == '冒险参考卡':
                 return self.create_scenario_card(card_json, picture_path)
+            elif card_type == '规则小卡':
+                return self.create_rule_mini_card(card_json)
             elif card_type == '敌人卡':
                 return self.create_enemy_card(card_json, picture_path)
             elif card_type == '诡计卡':
@@ -1973,45 +2052,16 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "诡计卡",
-        "name": "🏅The Elder Sign The Elder The Elder The Elder",
-        "id": "",
-        "created_at": "",
-        "version": "2.0",
-        "language": "en",
-        "subtitle": "Sigil of Kish",
-        "class": "弱点",
-        "subclass":[
-            "守护者",
-            "生存者",
-            "探求者"
-        ],
-        "level": 0,
-        "cost": -1,
-        "submit_icon": [],
-        "traits": [
-            "Contract",
-            "Contract",
-            "Contract",
-        ],
-        "health": -1,
-        "horror": -1,
-        "body": "Permanent. Limit 1 per deck. Purchase only at deck creation. Uses (3 signs).\n⚡ If you are playing true solo, exhaust The Elder Sign and spend 1 sign. Choose one:\n<bul> Move to a connecting location.\n<bul> You get +2 skill value for your next skill test this round.\n<bul> Gain 1 additional action this turn, which may only be used to activate an ➡️ ability on a scenario card in play.\n⚡ Draw the top card of the encounter deck: Replenish 2 uses on The Elder Sign. ",
-        "flavor": "",
-        "illustrator": "",
-        "card_number": "117",
-        "encounter_group_number": "",
-        "image_mode": 1,
-        "back": {
-            "type": "玩家卡背",
-            "name": "The Elder Sign (背面)",
-            "image_mode": 0,
-            "language": "en",
-            "version": "2.0"
-        },
-        "position": 117,
-        "code": "97e40858-5059-4efc-8d36-bd06da6598a1",
-        "deck_options": []
+      "type": "规则小卡",
+      "name": "",
+      "id": "",
+      "created_at": "",
+      "version": "2.0",
+      "language": "zh",
+      "deck_options": [],
+      "back": {},
+      "body": "测试测试",
+      "page_number": 999
     }
 
     # 创建字体和图片管理器
@@ -2033,7 +2083,7 @@ if __name__ == '__main__':
     profiler = cProfile.Profile()
     profiler.enable()
 
-    fm.set_lang('en')
+    fm.set_lang('zh')
     card = creator.create_card(json_data, picture_path=json_data.get('picture_path', None))
 
     profiler.disable()

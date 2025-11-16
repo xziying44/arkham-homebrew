@@ -515,11 +515,11 @@ def main():
     # ===========================================
 
     # 1. 输入目录（包含要处理的图片文件）
-    INPUT_DIRECTORY = r"D:\诡镇奇谈\图片加工厂\9循环出血\铁杉谷盛宴 战役"  # 修改为您的图片目录路径
+    INPUT_DIRECTORY = r"C:\Users\xziyi\Desktop\出血牌框\工作区"  # 修改为您的图片目录路径
 
     # 2. 目标尺寸配置
-    TARGET_WIDTH = 750  # 目标宽度
-    TARGET_HEIGHT = 1050  # 目标高度
+    TARGET_WIDTH = 768  # 目标宽度
+    TARGET_HEIGHT = 1087  # 目标高度
 
     # 3. lama-cleaner服务地址
     LAMA_CLEANER_URL = "http://localhost:8080"

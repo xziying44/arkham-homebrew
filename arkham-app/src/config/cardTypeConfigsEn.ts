@@ -1767,6 +1767,34 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       ...externalImageFields
     ]
   },
+  '规则小卡': {
+    field_type_en: 'Rules Mini Card',
+    field_type_display: '📘 Rules Mini Card',
+    card_category: 'encounter',
+    fields: [
+      {
+        key: 'name',
+        name: '📝 Title',
+        type: 'text',
+        layout: 'half',
+        helpText: nameTip
+      },
+      {
+        key: 'body',
+        name: '📄 Body Text',
+        type: 'textarea',
+        layout: 'full',
+        helpText: bodyTip
+      },
+      {
+        key: 'page_number',
+        name: '🔢 Page Number (1-999)',
+        type: 'number',
+        layout: 'half',
+        helpText: 'Display numbers 1-999 only'
+      }
+    ]
+  },
 };
 
 // System preset card back type configurations

@@ -452,6 +452,15 @@ const currentLanguage = computed({
             currentCardData.back.language = value;
         } else {
             currentCardData.language = value;
+            if (isDoubleSided.value) {
+                if (!currentCardData.back) {
+                    currentCardData.back = {};
+                }
+                const backLang = currentCardData.back.language;
+                if (!backLang || backLang.trim() === '') {
+                    currentCardData.back.language = value;
+                }
+            }
         }
     }
 });
@@ -489,6 +498,14 @@ const languageOptions = ref<Array<{ label: string; value: string }>>([
 const getDefaultBackType = (frontType: string): { type: string; is_back?: boolean } | null => {
     const getDefaultBackTypeFunc = locale.value === 'en' ? getDefaultBackTypeEn : getDefaultBackTypeZh;
     return getDefaultBackTypeFunc(frontType);
+};
+
+const ensureRuleMiniBack = () => {
+    if (!currentCardData.back) {
+        currentCardData.back = {};
+    }
+    currentCardData.back.type = '规则小卡';
+    currentCardData.back.is_back = true;
 };
 
 // 原始数据状态 - 用于检测修改
@@ -753,6 +770,15 @@ const updateCardSideData = (side: string, fieldKey: string, value: any) => {
             currentCardData.back[fieldKey] = value;
         } else {
             currentCardData[fieldKey] = value;
+            if (fieldKey === 'language' && isDoubleSided.value) {
+                if (!currentCardData.back) {
+                    currentCardData.back = {};
+                }
+                const backLang = currentCardData.back.language;
+                if (!backLang || backLang.trim() === '') {
+                    currentCardData.back.language = value;
+                }
+            }
         }
     }
     // 触发防抖预览更新
@@ -812,6 +838,8 @@ const updateCardSideType = (side: string, newType: string) => {
                 if (!currentCardData.back.image_filter) {
                     currentCardData.back.image_filter = 'grayscale';
                 }
+            } else if (newType === '规则小卡') {
+                ensureRuleMiniBack();
             }
         }
     }

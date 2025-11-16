@@ -671,7 +671,8 @@ const CARD_TYPE_ICON_MAP = markRaw({
   '密谋卡-大画': { component: DocumentOutline, emoji: '🌕' },
   '场景卡': { component: DocumentOutline, emoji: '🎬' },
   '场景卡-大画': { component: DocumentOutline, emoji: '🎞️' },
-  '冒险参考卡': { component: DocumentOutline, emoji: '📋' }
+  '冒险参考卡': { component: DocumentOutline, emoji: '📋' },
+  '规则小卡': { component: DocumentOutline, emoji: '📘' }
 } as const);
 
 // 获取CPU核心数

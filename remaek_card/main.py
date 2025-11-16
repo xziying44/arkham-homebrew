@@ -882,8 +882,8 @@ if __name__ == "__main__":
 
             # 如果需要处理剧本卡，取消下面的注释并注释上面的代码
             scanner = CardMetadataScanner(
-                work_directory=r"D:\诡镇奇谈\重置剧本卡\07_印斯茅斯的阴谋",  # 替换为实际的工作目录路径
-                code="07"  # 使用code前缀，匹配前2位
+                work_directory=r"D:\诡镇奇谈\重置剧本卡\09_绯红密钥",  # 替换为实际的工作目录路径
+                code="09"  # 使用code前缀，匹配前2位
             )
 
             # 执行扫描并保存元数据
