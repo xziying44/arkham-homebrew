@@ -114,7 +114,22 @@ jobs:
         run: |
           DMG_NAME="Arkham-Card-Maker-${{ matrix.arch }}.dmg"
           echo "📀 Creating DMG: $DMG_NAME"
-          
+
+          # 清理可能存在的旧文件和挂载
+          if [ -f "$DMG_NAME" ]; then
+            echo "Removing existing DMG file..."
+            rm -f "$DMG_NAME"
+          fi
+
+          # 卸载可能已挂载的同名卷
+          if hdiutil info | grep -q "Arkham Card Maker"; then
+            echo "Unmounting existing volume..."
+            hdiutil detach "/Volumes/Arkham Card Maker" -force 2>/dev/null || true
+          fi
+
+          # 等待文件系统稳定
+          sleep 2
+
           create-dmg \
             --volname "Arkham Card Maker" \
             --volicon "favicon.icns" \
@@ -127,7 +142,7 @@ jobs:
             --no-internet-enable \
             "$DMG_NAME" \
             "dist/Arkham Card Maker.app"
-          
+
           echo "✅ DMG created successfully"
 
       - name: Verify DMG
@@ -233,6 +248,11 @@ jobs:
             pkg_manager: dnf
             dependencies: "gtk3, webkit2gtk4.1"
             install_cmd: |
+              # 设置 UTF-8 locale 以支持中文字符
+              dnf install -y glibc-langpack-en
+              export LANG=en_US.UTF-8
+              export LC_ALL=en_US.UTF-8
+
               dnf install -y \
                 python3 python3-pip python3-devel \
                 gtk3 webkit2gtk4.1 \
@@ -370,6 +390,13 @@ jobs:
 
           echo "Creating ${{ matrix.pkg_format }} package version $VERSION..."
 
+          # 为 Fedora container 设置 UTF-8 环境变量（解决中文编码问题）
+          if [ "${{ matrix.distro }}" = "fedora" ]; then
+            export LANG=en_US.UTF-8
+            export LC_ALL=en_US.UTF-8
+            echo "Set UTF-8 locale for RPM package creation"
+          fi
+
           # 将逗号分隔的依赖转换为 fpm 的 --depends 参数
           DEPS="${{ matrix.dependencies }}"
           DEPS_ARGS=""
@@ -384,7 +411,7 @@ jobs:
             -v "$VERSION" \
             --vendor "Arkham Card Maker Team" \
             --maintainer "Arkham Card Maker <support@arkham-card-maker.com>" \
-            --description "Create custom cards for Arkham Horror LCG / 诡镇奇谈LCG DIY工具" \
+            --description "Create custom cards for Arkham Horror LCG" \
             --url "https://github.com/xziying44/arkham-homebrew" \
             --license "MIT" \
             --architecture x86_64 \
