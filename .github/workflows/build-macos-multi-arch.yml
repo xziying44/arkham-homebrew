@@ -203,52 +203,427 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
+  build-linux:
+    strategy:
+      matrix:
+        include:
+          # Debian 系列 - 生成 .deb 包（适用于 Ubuntu、Mint、Debian 及其衍生版）
+          - distro: debian
+            runner: ubuntu-latest
+            distro_name: "Debian/Ubuntu/Mint"
+            distro_version: "Debian 11+, Ubuntu 20.04+, Mint 21+"
+            pkg_format: deb
+            pkg_manager: apt
+            dependencies: "libgtk-3-0, libwebkit2gtk-4.0-37, libayatana-appindicator3-1"
+            install_cmd: |
+              apt-get update
+              apt-get install -y \
+                python3 python3-pip python3-dev \
+                libgtk-3-0 libwebkit2gtk-4.0-37 \
+                libayatana-appindicator3-1 gir1.2-ayatanaappindicator3-0.1 \
+                binutils patchelf ruby ruby-dev build-essential
+              gem install --no-document fpm
+
+          # Fedora 系列 - 生成 .rpm 包（适用于 Fedora、RHEL、CentOS）
+          - distro: fedora
+            runner: ubuntu-latest
+            distro_name: "Fedora/RHEL/CentOS"
+            distro_version: "Fedora 38+, RHEL 9+, CentOS Stream 9+"
+            pkg_format: rpm
+            pkg_manager: dnf
+            dependencies: "gtk3, webkit2gtk4.1"
+            install_cmd: |
+              dnf install -y \
+                python3 python3-pip python3-devel \
+                gtk3 webkit2gtk4.1 \
+                binutils patchelf \
+                gcc gcc-c++ make \
+                ruby ruby-devel rubygems rpm-build
+              gem install --no-document fpm
+
+          # 通用 Linux - 生成 tar.gz（适用于所有其他发行版）
+          - distro: generic
+            runner: ubuntu-latest
+            distro_name: "Generic Linux"
+            distro_version: "All distributions (Arch, openSUSE, Gentoo, etc.)"
+            pkg_format: tar.gz
+            pkg_manager: manual
+            dependencies: ""
+            install_cmd: |
+              apt-get update
+              apt-get install -y \
+                python3 python3-pip python3-dev \
+                libgtk-3-0 libwebkit2gtk-4.0-37 \
+                libayatana-appindicator3-1 gir1.2-ayatanaappindicator3-0.1 \
+                binutils patchelf
+
+    runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.distro == 'fedora' && 'fedora:latest' || null }}
+
+    name: Build for ${{ matrix.distro_name }} (${{ matrix.distro_version }})
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Display build info
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🔨 Build Information"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Distribution: ${{ matrix.distro_name }}"
+          echo "Version: ${{ matrix.distro_version }}"
+          echo "Package Format: ${{ matrix.pkg_format }}"
+          echo "Package Manager: ${{ matrix.pkg_manager }}"
+          echo "Runner: ${{ matrix.runner }}"
+          echo "System Architecture: $(uname -m)"
+          echo "Kernel Version: $(uname -r)"
+          if command -v lsb_release &> /dev/null; then
+            echo "OS Info: $(lsb_release -d | cut -f2-)"
+          elif [ -f /etc/os-release ]; then
+            echo "OS Info: $(grep PRETTY_NAME /etc/os-release | cut -d'"' -f2)"
+          fi
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+      - name: Install system dependencies
+        run: |
+          echo "Installing dependencies for ${{ matrix.distro_name }}..."
+          ${{ matrix.install_cmd }}
+
+      - name: Set up Python (non-container)
+        if: matrix.distro != 'fedora'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip packages
+        if: matrix.distro != 'fedora'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-${{ matrix.distro }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.distro }}-pip-
+
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip3 install pyinstaller
+          pip3 install -r requirements.txt
+
+      - name: Build with PyInstaller
+        run: |
+          echo "🔨 Starting build for ${{ matrix.distro_name }}..."
+          pyinstaller app-linux.spec --clean --noconfirm
+
+      - name: Verify build
+        run: |
+          if [ -d "dist/Arkham Card Maker" ]; then
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "✅ Build Successful"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Distribution: ${{ matrix.distro_name }}"
+            echo "App Size: $(du -sh 'dist/Arkham Card Maker' | cut -f1)"
+            echo "Architecture: x86_64"
+            echo ""
+            echo "Binary Information:"
+            file "dist/Arkham Card Maker/Arkham Card Maker"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          else
+            echo "❌ Build failed"
+            exit 1
+          fi
+
+      # 原生包构建（.deb 或 .rpm）
+      - name: Prepare package structure (native packages)
+        if: matrix.pkg_format != 'tar.gz'
+        run: |
+          mkdir -p package/opt/arkham-card-maker
+          mkdir -p package/usr/share/applications
+          mkdir -p package/usr/share/pixmaps
+
+          # 复制应用文件
+          cp -r "dist/Arkham Card Maker"/* package/opt/arkham-card-maker/
+
+          # 复制图标
+          cp favicon.png package/usr/share/pixmaps/arkham-card-maker.png
+          cp favicon.png package/opt/arkham-card-maker/favicon.png
+
+          # 复制 .desktop 文件
+          cp arkham-card-maker.desktop package/usr/share/applications/
+
+          echo "✅ Package structure prepared"
+
+      - name: Create native package (${{ matrix.pkg_format }})
+        if: matrix.pkg_format != 'tar.gz'
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          if [ -z "$VERSION" ] || [ "$VERSION" = "$GITHUB_REF_NAME" ]; then
+            VERSION="1.0.0"
+          fi
+
+          echo "Creating ${{ matrix.pkg_format }} package version $VERSION..."
+
+          # 将逗号分隔的依赖转换为 fpm 的 --depends 参数
+          DEPS="${{ matrix.dependencies }}"
+          DEPS_ARGS=""
+          IFS=',' read -ra DEP_ARRAY <<< "$DEPS"
+          for dep in "${DEP_ARRAY[@]}"; do
+            dep=$(echo "$dep" | xargs)  # 去除空格
+            DEPS_ARGS="$DEPS_ARGS --depends $dep"
+          done
+
+          fpm -s dir -t ${{ matrix.pkg_format }} \
+            -n arkham-card-maker \
+            -v "$VERSION" \
+            --vendor "Arkham Card Maker Team" \
+            --maintainer "Arkham Card Maker <support@arkham-card-maker.com>" \
+            --description "Create custom cards for Arkham Horror LCG / 诡镇奇谈LCG DIY工具" \
+            --url "https://github.com/your-repo/arkham-json-diy" \
+            --license "MIT" \
+            --architecture x86_64 \
+            $DEPS_ARGS \
+            --after-install /dev/null \
+            --after-remove /dev/null \
+            -C package \
+            opt usr
+
+          echo "✅ ${{ matrix.pkg_format }} package created successfully"
+
+      - name: Verify native package
+        if: matrix.pkg_format != 'tar.gz'
+        run: |
+          PACKAGE_FILE=$(ls arkham-card-maker*.${{ matrix.pkg_format }})
+          if [ -f "$PACKAGE_FILE" ]; then
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "📦 ${{ matrix.distro_name }} Package Information"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "File: $PACKAGE_FILE"
+            echo "Size: $(du -sh '$PACKAGE_FILE' | cut -f1)"
+            echo "Format: ${{ matrix.pkg_format }}"
+            echo "Distribution: ${{ matrix.distro_name }}"
+            echo "Architecture: x86_64"
+            echo ""
+            echo "Package Contents:"
+            if [ "${{ matrix.pkg_format }}" = "deb" ]; then
+              dpkg -c "$PACKAGE_FILE" | head -20
+            else
+              rpm -qlp "$PACKAGE_FILE" | head -20
+            fi
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          else
+            echo "❌ Package not found!"
+            exit 1
+          fi
+
+      - name: Rename native package
+        if: matrix.pkg_format != 'tar.gz'
+        run: |
+          PACKAGE_FILE=$(ls arkham-card-maker*.${{ matrix.pkg_format }})
+          VERSION="${GITHUB_REF_NAME#v}"
+          if [ -z "$VERSION" ] || [ "$VERSION" = "$GITHUB_REF_NAME" ]; then
+            VERSION="1.0.0"
+          fi
+          NEW_NAME="arkham-card-maker_${VERSION}_${{ matrix.distro }}.${{ matrix.pkg_format }}"
+          mv "$PACKAGE_FILE" "$NEW_NAME"
+          echo "✅ Renamed to: $NEW_NAME"
+
+      # 通用 tar.gz 构建
+      - name: Create generic tar.gz package
+        if: matrix.pkg_format == 'tar.gz'
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          if [ -z "$VERSION" ] || [ "$VERSION" = "$GITHUB_REF_NAME" ]; then
+            VERSION="1.0.0"
+          fi
+
+          cd dist
+          tar -czf "../arkham-card-maker_${VERSION}_linux.tar.gz" "Arkham Card Maker"
+          cd ..
+          echo "✅ Generic tar.gz created successfully"
+
+      - name: Verify tar.gz package
+        if: matrix.pkg_format == 'tar.gz'
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          if [ -z "$VERSION" ] || [ "$VERSION" = "$GITHUB_REF_NAME" ]; then
+            VERSION="1.0.0"
+          fi
+          PACKAGE_FILE="arkham-card-maker_${VERSION}_linux.tar.gz"
+          if [ -f "$PACKAGE_FILE" ]; then
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "📦 Generic Linux Package Information"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "File: $PACKAGE_FILE"
+            echo "Size: $(du -sh '$PACKAGE_FILE' | cut -f1)"
+            echo "Format: tar.gz"
+            echo "Compatible: All Linux distributions"
+            echo "Architecture: x86_64"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          else
+            echo "❌ tar.gz not found!"
+            exit 1
+          fi
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: arkham-card-maker-${{ matrix.distro }}
+          path: |
+            arkham-card-maker_*_${{ matrix.distro }}.${{ matrix.pkg_format }}
+            arkham-card-maker_*_linux.tar.gz
+          retention-days: 30
+          if-no-files-found: error
+
   # 创建构建摘要
   build-summary:
-    needs: build-macos
+    needs:
+      - build-macos
+      - build-linux
     runs-on: ubuntu-latest
 
     steps:
       - name: Create Build Summary
         run: |
           cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-          # 🎉 macOS 构建完成
-          
+          # 🎉 构建完成
+
           ## 📥 下载安装包
-          
-          两个版本已成功构建，请根据你的 Mac 芯片类型选择对应的 DMG 文件：
-          
-          ### 🍎 Apple Silicon (ARM64)
+
+          所有版本已成功构建，请根据你的操作系统选择对应的安装包：
+
+          ### 🍎 macOS - Apple Silicon (ARM64)
           **适用于：** M1、M2、M3 芯片的 Mac（2020 年底及以后）
-          
-          **下载：** `Arkham-Card-Maker-arm64`
-          
+
+          **下载：** `Arkham-Card-Maker-arm64.dmg`
+
           ---
-          
-          ### 💻 Intel (x86_64)
+
+          ### 💻 macOS - Intel (x86_64)
           **适用于：** Intel 处理器的 Mac（2020 年及之前）
-          
-          **下载：** `Arkham-Card-Maker-x86_64`
-          
+
+          **下载：** `Arkham-Card-Maker-x86_64.dmg`
+
           ---
-          
+
+          ### 🪟 Windows (x86_64)
+          **适用于：** Windows 10/11（64位）
+
+          **下载：** `Arkham-Card-Maker-win.zip`
+
+          ---
+
+          ### 🐧 Linux - Debian/Ubuntu/Mint (推荐)
+          **适用于：** Debian 11+, Ubuntu 20.04+, Linux Mint 21+ 及所有 Debian 系衍生版
+
+          **下载：** `arkham-card-maker_xxx_debian.deb` (原生包，自动安装依赖)
+
+          **安装方法：**
+          ```bash
+          # 方法1：图形界面 - 双击 .deb 文件，按提示安装
+
+          # 方法2：命令行
+          sudo dpkg -i arkham-card-maker_*_debian.deb
+          sudo apt-get install -f  # 自动安装依赖（如有需要）
+          ```
+
+          **卸载：**
+          ```bash
+          sudo apt-get remove arkham-card-maker
+          ```
+
+          ---
+
+          ### 🎩 Linux - Fedora/RHEL/CentOS (推荐)
+          **适用于：** Fedora 38+, RHEL 9+, CentOS Stream 9+ 及 Red Hat 系衍生版
+
+          **下载：** `arkham-card-maker_xxx_fedora.rpm` (原生包，自动安装依赖)
+
+          **安装方法：**
+          ```bash
+          # 方法1：图形界面 - 双击 .rpm 文件，按提示安装
+
+          # 方法2：命令行
+          sudo dnf install arkham-card-maker_*_fedora.rpm
+          ```
+
+          **卸载：**
+          ```bash
+          sudo dnf remove arkham-card-maker
+          ```
+
+          ---
+
+          ### 🔧 Linux - 通用版本 (所有发行版)
+          **适用于：** Arch、openSUSE、Gentoo、Slackware 等其他 Linux 发行版
+
+          **下载：** `arkham-card-maker_xxx_linux.tar.gz` (手动安装)
+
+          **安装方法：**
+          ```bash
+          # 1. 解压
+          tar -xzf arkham-card-maker_*_linux.tar.gz
+
+          # 2. 进入目录
+          cd "Arkham Card Maker"
+
+          # 3. 安装依赖（根据你的发行版选择命令）
+          # Arch Linux:
+          sudo pacman -S gtk3 webkit2gtk
+
+          # openSUSE:
+          sudo zypper install gtk3 webkit2gtk3
+
+          # 4. 运行
+          ./Arkham\ Card\ Maker
+          ```
+
+          ---
+
           ## ❓ 如何确定我的 Mac 芯片类型？
-          
+
           1. 点击左上角  **Apple 菜单**
           2. 选择 **关于本机**
           3. 查看 **芯片** 或 **处理器** 一栏：
              - 显示 "Apple M1/M2/M3" → 下载 **ARM64** 版本
              - 显示 "Intel Core" → 下载 **x86_64** 版本
-          
-          ## 📦 安装方法
-          
+
+          ## 📦 安装说明
+
+          ### macOS
           1. 下载对应架构的 DMG 文件
           2. 双击打开 DMG
           3. 将 **Arkham Card Maker.app** 拖拽到 **Applications** 文件夹
           4. 首次运行时，右键点击应用 → 选择 **打开**（绕过未签名警告）
-          
+
+          ### Windows
+          1. 下载 ZIP 文件
+          2. 解压到任意目录
+          3. 运行 `Arkham Card Maker.exe`
+          4. 如遇到 SmartScreen 警告，点击"更多信息" → "仍要运行"
+
+          ### Linux（原生包 - 强烈推荐）
+
+          **优势：**
+          - ✅ 自动安装所需依赖库
+          - ✅ 自动添加到系统应用菜单
+          - ✅ 可通过系统包管理器卸载和更新
+
+          **使用方法：**
+          1. **Debian 系用户**（Ubuntu/Mint）：下载 `.deb` 包
+          2. **Red Hat 系用户**（Fedora/RHEL）：下载 `.rpm` 包
+          3. 双击安装包，按系统提示安装
+          4. 安装完成后，在应用菜单中搜索 "Arkham Card Maker" 即可运行
+          5. 或在终端运行：`arkham-card-maker`
+
+          **通用版本（tar.gz）适用场景：**
+          - 使用其他发行版（Arch、openSUSE 等）
+          - 不想使用系统包管理器
+          - 需要便携式安装
+          - 需要多版本共存
+
           ---
-          
+
           *构建时间: $(date -u '+%Y-%m-%d %H:%M:%S UTC')*
           EOF
 
@@ -256,6 +631,7 @@ jobs:
     needs:
       - build-macos
       - build-windows
+      - build-linux
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
 
@@ -268,17 +644,39 @@ jobs:
         with:
           path: artifacts
 
+      - name: List artifacts structure
+        run: |
+          echo "Downloaded artifacts:"
+          ls -R artifacts
+
       - name: Prepare release assets
         run: |
-          ls -R artifacts
           mkdir -p release
 
+          # macOS
           mv "artifacts/Arkham-Card-Maker-arm64/Arkham-Card-Maker-arm64.dmg" \
              "release/Arkham-Card-Maker-${VERSION}-macos-arm64.dmg"
           mv "artifacts/Arkham-Card-Maker-x86_64/Arkham-Card-Maker-x86_64.dmg" \
              "release/Arkham-Card-Maker-${VERSION}-macos-x86_64.dmg"
+
+          # Windows
           mv "artifacts/Arkham-Card-Maker-win/Arkham-Card-Maker-win.zip" \
              "release/Arkham-Card-Maker-${VERSION}-win.zip"
+
+          # Linux - Debian (.deb)
+          DEBIAN_DEB=$(find artifacts/arkham-card-maker-debian -name "*.deb")
+          cp "$DEBIAN_DEB" "release/arkham-card-maker-${VERSION}-debian.deb"
+
+          # Linux - Fedora (.rpm)
+          FEDORA_RPM=$(find artifacts/arkham-card-maker-fedora -name "*.rpm")
+          cp "$FEDORA_RPM" "release/arkham-card-maker-${VERSION}-fedora.rpm"
+
+          # Linux - Generic (tar.gz)
+          GENERIC_TAR=$(find artifacts/arkham-card-maker-generic -name "*_linux.tar.gz")
+          cp "$GENERIC_TAR" "release/arkham-card-maker-${VERSION}-linux.tar.gz"
+
+          echo "Release assets prepared:"
+          ls -lh release/
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
@@ -288,5 +686,70 @@ jobs:
             release/Arkham-Card-Maker-${{ env.VERSION }}-macos-arm64.dmg
             release/Arkham-Card-Maker-${{ env.VERSION }}-macos-x86_64.dmg
             release/Arkham-Card-Maker-${{ env.VERSION }}-win.zip
+            release/arkham-card-maker-${{ env.VERSION }}-debian.deb
+            release/arkham-card-maker-${{ env.VERSION }}-fedora.rpm
+            release/arkham-card-maker-${{ env.VERSION }}-linux.tar.gz
+          body: |
+            ## 🎉 Arkham Card Maker ${{ env.VERSION }}
+
+            ### 📦 安装包下载
+
+            #### macOS
+            - **Apple Silicon (M1/M2/M3)**: `Arkham-Card-Maker-${{ env.VERSION }}-macos-arm64.dmg`
+            - **Intel**: `Arkham-Card-Maker-${{ env.VERSION }}-macos-x86_64.dmg`
+
+            #### Windows
+            - **Windows 10/11 (64位)**: `Arkham-Card-Maker-${{ env.VERSION }}-win.zip`
+
+            #### Linux
+
+            **原生包（推荐）：**
+            - **Debian/Ubuntu/Mint**: `arkham-card-maker-${{ env.VERSION }}-debian.deb`
+            - **Fedora/RHEL/CentOS**: `arkham-card-maker-${{ env.VERSION }}-fedora.rpm`
+
+            **通用版本：**
+            - **所有 Linux 发行版**: `arkham-card-maker-${{ env.VERSION }}-linux.tar.gz`
+
+            ---
+
+            ### 📖 安装说明
+
+            #### Linux 用户
+
+            **Debian/Ubuntu/Mint (推荐原生包)**:
+            ```bash
+            sudo dpkg -i arkham-card-maker-${{ env.VERSION }}-debian.deb
+            sudo apt-get install -f  # 自动安装依赖
+            ```
+
+            **Fedora/RHEL/CentOS (推荐原生包)**:
+            ```bash
+            sudo dnf install arkham-card-maker-${{ env.VERSION }}-fedora.rpm
+            ```
+
+            **其他发行版（通用 tar.gz）**:
+            ```bash
+            tar -xzf arkham-card-maker-${{ env.VERSION }}-linux.tar.gz
+            cd "Arkham Card Maker"
+
+            # 安装依赖（根据你的发行版）
+            # Arch: sudo pacman -S gtk3 webkit2gtk
+            # openSUSE: sudo zypper install gtk3 webkit2gtk3
+
+            ./Arkham\ Card\ Maker
+            ```
+
+            安装后在应用菜单搜索 "Arkham Card Maker" 即可运行。
+
+            ---
+
+            ### ✨ 新特性
+            - Linux 原生包支持（.deb 和 .rpm）
+            - 覆盖更多 Linux 发行版
+            - 自动依赖安装
+            - 系统菜单集成
+
+            ---
+            *完整安装文档请查看项目 README*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

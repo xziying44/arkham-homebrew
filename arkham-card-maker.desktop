@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Arkham Card Maker
+GenericName=Card Creator
+Comment=Create custom cards for Arkham Horror LCG
+Comment[zh_CN]=诡镇奇谈LCG DIY工具
+Exec=/opt/arkham-card-maker/Arkham Card Maker
+Icon=/opt/arkham-card-maker/favicon.png
+Terminal=false
+Categories=Graphics;Publishing;Utility;
+Keywords=arkham;cards;tcg;lcg;
+StartupWMClass=Arkham Card Maker
