@@ -209,24 +209,24 @@ jobs:
         include:
           # Debian 系列 - 生成 .deb 包（适用于 Ubuntu、Mint、Debian 及其衍生版）
           - distro: debian
-            runner: ubuntu-latest
+            runner: ubuntu-20.04
             distro_name: "Debian/Ubuntu/Mint"
             distro_version: "Debian 11+, Ubuntu 20.04+, Mint 21+"
             pkg_format: deb
             pkg_manager: apt
-            dependencies: "libgtk-3-0, libwebkit2gtk-4.1-0, libayatana-appindicator3-1"
+            dependencies: "libgtk-3-0, libwebkit2gtk-4.0-37, libayatana-appindicator3-1"
             install_cmd: |
               sudo apt-get update
               sudo apt-get install -y \
                 python3 python3-pip python3-dev \
-                libgtk-3-0 libwebkit2gtk-4.1-0 \
+                libgtk-3-0 libwebkit2gtk-4.0-37 \
                 libayatana-appindicator3-1 gir1.2-ayatanaappindicator3-0.1 \
                 binutils patchelf ruby ruby-dev build-essential
               sudo gem install --no-document fpm
 
           # Fedora 系列 - 生成 .rpm 包（适用于 Fedora、RHEL、CentOS）
           - distro: fedora
-            runner: ubuntu-latest
+            runner: ubuntu-20.04
             distro_name: "Fedora/RHEL/CentOS"
             distro_version: "Fedora 38+, RHEL 9+, CentOS Stream 9+"
             pkg_format: rpm
@@ -243,7 +243,7 @@ jobs:
 
           # 通用 Linux - 生成 tar.gz（适用于所有其他发行版）
           - distro: generic
-            runner: ubuntu-latest
+            runner: ubuntu-20.04
             distro_name: "Generic Linux"
             distro_version: "All distributions (Arch, openSUSE, Gentoo, etc.)"
             pkg_format: tar.gz
@@ -253,7 +253,7 @@ jobs:
               sudo apt-get update
               sudo apt-get install -y \
                 python3 python3-pip python3-dev \
-                libgtk-3-0 libwebkit2gtk-4.1-0 \
+                libgtk-3-0 libwebkit2gtk-4.0-37 \
                 libayatana-appindicator3-1 gir1.2-ayatanaappindicator3-0.1 \
                 binutils patchelf
 
@@ -349,8 +349,14 @@ jobs:
           cp favicon.png package/usr/share/pixmaps/arkham-card-maker.png
           cp favicon.png package/opt/arkham-card-maker/favicon.png
 
-          # 复制 .desktop 文件
+          # 复制 .desktop 文件并设置权限
           cp arkham-card-maker.desktop package/usr/share/applications/
+          chmod 644 package/usr/share/applications/arkham-card-maker.desktop
+
+          # 准备 post-install 脚本
+          mkdir -p scripts
+          cp .github/scripts/postinstall.sh scripts/
+          chmod 755 scripts/postinstall.sh
 
           echo "✅ Package structure prepared"
 
@@ -379,11 +385,11 @@ jobs:
             --vendor "Arkham Card Maker Team" \
             --maintainer "Arkham Card Maker <support@arkham-card-maker.com>" \
             --description "Create custom cards for Arkham Horror LCG / 诡镇奇谈LCG DIY工具" \
-            --url "https://github.com/your-repo/arkham-json-diy" \
+            --url "https://github.com/xziying44/arkham-homebrew" \
             --license "MIT" \
             --architecture x86_64 \
             $DEPS_ARGS \
-            --after-install /dev/null \
+            --after-install scripts/postinstall.sh \
             --after-remove /dev/null \
             -C package \
             opt usr
