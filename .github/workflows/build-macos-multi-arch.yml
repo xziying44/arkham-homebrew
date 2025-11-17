@@ -209,9 +209,9 @@ jobs:
         include:
           # Debian 系列 - 生成 .deb 包（适用于 Ubuntu、Mint、Debian 及其衍生版）
           - distro: debian
-            runner: ubuntu-20.04
+            runner: ubuntu-22.04
             distro_name: "Debian/Ubuntu/Mint"
-            distro_version: "Debian 11+, Ubuntu 20.04+, Mint 21+"
+            distro_version: "Debian 11+, Ubuntu 22.04+, Mint 21+"
             pkg_format: deb
             pkg_manager: apt
             dependencies: "libgtk-3-0, libwebkit2gtk-4.0-37, libayatana-appindicator3-1"
@@ -226,7 +226,7 @@ jobs:
 
           # Fedora 系列 - 生成 .rpm 包（适用于 Fedora、RHEL、CentOS）
           - distro: fedora
-            runner: ubuntu-20.04
+            runner: ubuntu-22.04
             distro_name: "Fedora/RHEL/CentOS"
             distro_version: "Fedora 38+, RHEL 9+, CentOS Stream 9+"
             pkg_format: rpm
@@ -243,7 +243,7 @@ jobs:
 
           # 通用 Linux - 生成 tar.gz（适用于所有其他发行版）
           - distro: generic
-            runner: ubuntu-20.04
+            runner: ubuntu-22.04
             distro_name: "Generic Linux"
             distro_version: "All distributions (Arch, openSUSE, Gentoo, etc.)"
             pkg_format: tar.gz
@@ -520,7 +520,7 @@ jobs:
           ---
 
           ### 🐧 Linux - Debian/Ubuntu/Mint (推荐)
-          **适用于：** Debian 11+, Ubuntu 20.04+, Linux Mint 21+ 及所有 Debian 系衍生版
+          **适用于：** Debian 11+, Ubuntu 22.04+, Linux Mint 21+ 及所有 Debian 系衍生版
 
           **下载：** `arkham-card-maker_xxx_debian.deb` (原生包，自动安装依赖)
 
@@ -535,10 +535,7 @@ jobs:
 
           **手动安装依赖（如需要）：**
           ```bash
-          # Ubuntu 24.04+ / Debian 12+
-          sudo apt-get install libgtk-3-0 libwebkit2gtk-4.1-0 libayatana-appindicator3-1
-
-          # Ubuntu 20.04-23.10 / Debian 11
+          # Ubuntu 22.04+ / Debian 11+
           sudo apt-get install libgtk-3-0 libwebkit2gtk-4.0-37 libayatana-appindicator3-1
           ```
 
@@ -763,6 +760,11 @@ jobs:
             - 覆盖更多 Linux 发行版
             - 自动依赖安装
             - 系统菜单集成
+
+            ### 📋 系统要求
+            - **Ubuntu/Debian**: Ubuntu 22.04+, Debian 11+
+            - **Fedora/RHEL**: Fedora 38+, RHEL 9+
+            - **其他**: 任何现代 Linux 发行版（使用通用 tar.gz）
 
             ---
             *完整安装文档请查看项目 README*
