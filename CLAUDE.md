@@ -185,6 +185,7 @@
     - `calculate_pixel_dimensions(dpi: int=300, bleed: ExportBleed=ExportBleed.TWO_MM, size: ExportSize=ExportSize.SIZE_61_88) -> tuple[int,int]`
     - `get_export_settings() -> dict`
     - `__str__() -> str` — 人类可读配置摘要
+    - `_draw_text_layer(card_map: Image, text_layer: list[dict]) -> Image`：基于 `EnhancedDraw` 绘制导出文字层，支持 `text_info.opacity` 与 `text_info.effects`（`stroke/shadow/glow`）统一输出。
 
 ### Card.py（单卡绘制）
 - 描述：基于 Pillow 的版式排版与贴图/文字渲染封装，供 `WorkspaceManager` 调用。
@@ -196,6 +197,7 @@
       - Parameters: `scale:number`, `crop:{top,right,bottom,left}`, `rotation:number`, `flip_horizontal?:bool`, `flip_vertical?:bool`, `offset:{x,y}`
     - `draw_centered_text(position: tuple[int,int], text:str, font_name:str, font_size:int, font_color:tuple, has_border:bool=False, border_width:int=1, border_color:tuple=(0,0,0), underline:bool=False, vertical:bool=False, max_length?:int=None, debug_line:bool=False) -> None`
     - `draw_left_text(position: tuple[int,int], text:str, font_name:str, font_size:int, font_color:tuple, has_border:bool=False, border_width:int=1, border_color:tuple=(0,0,0), max_length?:int=None, debug_line:bool=False) -> None`
+      - `draw_*` 家族统一透传 `opacity`（0-100）与 `effects`（特效配置列表）到 `RichTextRenderer`，可与 `enhanced_draw.py` 的 `stroke/shadow/glow` 叠加。
     - 其他：`copy_circle_to_image(...)` 等内部工具；`last_render_list: list` 暴露最近一次渲染项用于前端交互。
 
 ## Dependencies

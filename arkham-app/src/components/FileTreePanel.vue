@@ -657,8 +657,11 @@ const BASE_ICON_MAP = markRaw({
 } as const);
 const CARD_TYPE_ICON_MAP = markRaw({
   '支援卡': { component: DocumentOutline, emoji: '📦' },
+  '大画-支援卡': { component: DocumentOutline, emoji: '📦' },
   '事件卡': { component: DocumentOutline, emoji: '⚡' },
+  '大画-事件卡': { component: DocumentOutline, emoji: '⚡' },
   '技能卡': { component: DocumentOutline, emoji: '🎯' },
+  '大画-技能卡': { component: DocumentOutline, emoji: '🎯' },
   '调查员': { component: DocumentOutline, emoji: '👤' },
   '调查员背面': { component: DocumentOutline, emoji: '🔄' },
   '调查员小卡': { component: DocumentOutline, emoji: '🧩' },

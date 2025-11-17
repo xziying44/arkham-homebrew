@@ -20,6 +20,8 @@ class TextObject:
     border_color: Union[str, Tuple[int, int, int], Tuple[int, int, int, int]] = "#000000"
     offset_x: int = 0
     offset_y: int = 0
+    opacity: int = 100
+    effects: Optional[list[dict]] = None
 
     def __post_init__(self):
         self.color = self._convert_color(self.color)

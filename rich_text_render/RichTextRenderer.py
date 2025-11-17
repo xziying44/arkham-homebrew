@@ -6,9 +6,10 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import List, Optional, TYPE_CHECKING
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageColor
 
 from ResourceManager import FontManager, ImageManager
+from enhanced_draw import EnhancedDraw
 
 if TYPE_CHECKING:
     from rich_text_render import ParsedItem
@@ -186,6 +187,8 @@ class DrawOptions:
     border_color: str = "#000000"
     border_width: int = 1
     has_underline: bool = False
+    opacity: int = 100
+    effects: Optional[list[dict]] = None
 
 
 class ImageTag:
@@ -474,6 +477,88 @@ class RichTextRenderer:
             current_text = merge_flavors(current_text)
 
         return current_text
+
+    @staticmethod
+    def _sanitize_opacity(opacity_value) -> int:
+        """规范化透明度，限定在0-100之间"""
+        try:
+            value = int(opacity_value)
+        except (TypeError, ValueError):
+            return 100
+        return max(0, min(100, value))
+
+    @staticmethod
+    def _prepare_effects(effects_config) -> list[dict]:
+        """确保特效配置为拷贝列表，避免共享引用"""
+        if not isinstance(effects_config, list):
+            return []
+        prepared = []
+        for effect in effects_config:
+            if isinstance(effect, dict):
+                prepared.append(effect.copy())
+        return prepared
+
+    @staticmethod
+    def _normalize_color(color_value) -> tuple[int, int, int]:
+        """将颜色转换为RGB元组"""
+        if color_value is None:
+            return 0, 0, 0
+        if isinstance(color_value, (list, tuple)):
+            if len(color_value) >= 3:
+                return tuple(int(color_value[i]) for i in range(3))
+        if isinstance(color_value, int):
+            hex_color = f"#{color_value:06x}"
+            try:
+                return ImageColor.getrgb(hex_color)
+            except ValueError:
+                return 0, 0, 0
+        if isinstance(color_value, str):
+            try:
+                return ImageColor.getrgb(color_value)
+            except ValueError:
+                return 0, 0, 0
+        return 0, 0, 0
+
+    def _compose_effects(self, base_effects: list[dict], border_width: int = 0, border_color=None) -> list[dict]:
+        """组合基础特效与描边配置"""
+        effects = []
+        for effect in base_effects:
+            cfg = effect.copy()
+            if 'color' in cfg:
+                cfg['color'] = self._normalize_color(cfg['color'])
+            effects.append(cfg)
+        if border_width and border_width > 0:
+            effects.insert(0, {
+                "type": "stroke",
+                "size": max(1, int(border_width)),
+                "opacity": 100,
+                "color": self._normalize_color(border_color or "#000000")
+            })
+        return effects
+
+    @staticmethod
+    def _use_enhanced_draw(options: DrawOptions) -> bool:
+        """仅在存在透明度/特效需求时启用 EnhancedDraw"""
+        has_effects = bool(options.effects) if options.effects is not None else False
+        return has_effects or options.opacity != 100
+
+    def _draw_border_text(self, position: Tuple[int, int], text: str,
+                          font: ImageFont.FreeTypeFont, border_color, border_width: int) -> None:
+        """在启用旧式描边时使用单独偏移绘制"""
+        if not border_width or border_width <= 0 or not border_color:
+            return
+        normalized_color = self._normalize_color(border_color)
+        offsets = [-border_width, 0, border_width]
+        for dx in offsets:
+            for dy in offsets:
+                if dx == 0 and dy == 0:
+                    continue
+                self.draw.text(
+                    (position[0] + dx, position[1] + dy),
+                    text,
+                    font=font,
+                    fill=normalized_color
+                )
 
     def _get_text_box(self, text: str, font: ImageFont.FreeTypeFont) -> Tuple[int, int]:
         bbox = font.getbbox(text)
@@ -776,6 +861,11 @@ class RichTextRenderer:
         # 从布局好的VirtualTextBox中获取渲染列表
         render_list = final_vbox.get_render_list()
 
+        for item in render_list:
+            if isinstance(item.obj, TextObject):
+                item.obj.opacity = options.opacity
+                item.obj.effects = options.effects
+
         # 首先获取所有辅助线线段的坐标
         guide_line_segments = final_vbox.get_guide_line_segments()
         # 遍历并绘制每一条线段
@@ -792,23 +882,63 @@ class RichTextRenderer:
             self.draw.line(line_segment, fill=options.font_color, width=2)
         # ==================== 新增代码结束 ====================
 
+        use_enhanced = (not self.font_manager.silence or ignore_silence) and self._use_enhanced_draw(options)
+
         # 遍历渲染列表并绘制到图片上
         if not self.font_manager.silence or ignore_silence:
+            text_opacity = self._sanitize_opacity(options.opacity)
+            base_effects = self._prepare_effects(options.effects) if use_enhanced else []
+            composed_effects = self._compose_effects(
+                base_effects,
+                border_width=options.border_width if options.has_border else 0,
+                border_color=options.border_color
+            ) if use_enhanced else []
+            drawer = EnhancedDraw(self.image) if use_enhanced else None
+            pending_text = False
+
+            def flush_drawer():
+                nonlocal drawer, pending_text
+                if use_enhanced and pending_text:
+                    result = drawer.get_image()
+                    self.image.paste(result, (0, 0))
+                    self.draw = ImageDraw.Draw(self.image)
+                    drawer = EnhancedDraw(self.image)
+                    pending_text = False
+
             for render_item in render_list:
                 obj = render_item.obj
-                offset_x = obj.offset_x
-                offset_y = obj.offset_y
+                offset_x = getattr(obj, 'offset_x', 0)
+                offset_y = getattr(obj, 'offset_y', 0)
                 x, y = render_item.x + offset_x, render_item.y + offset_y
 
                 if isinstance(obj, TextObject):
-                    self.draw.text((x, y), obj.text, font=obj.font, fill=options.font_color)
+                    fill_color = self._normalize_color(getattr(obj, 'color', options.font_color))
+                    if use_enhanced:
+                        drawer.text(
+                            (x, y),
+                            obj.text,
+                            font=obj.font,
+                            fill=fill_color,
+                            opacity=text_opacity,
+                            effects=composed_effects
+                        )
+                        pending_text = True
+                    else:
+                        if options.has_border:
+                            self._draw_border_text((x, y), obj.text, obj.font,
+                                                   options.border_color, options.border_width)
+                        self.draw.text((x, y), obj.text, font=obj.font, fill=fill_color)
                 elif isinstance(obj, ImageObject):
+                    flush_drawer()
                     if obj.image.mode == 'RGBA':
                         self.image.paste(obj.image, (x, y), obj.image)
                     else:
                         self.image.paste(obj.image, (x, y))
                     if draw_debug_frame:
                         self.draw.rectangle([(x, y), (x + obj.width, y + obj.height)], outline="green", width=1)
+
+            flush_drawer()
+
         return render_list
 
     def draw_line(self, text: str, position: Tuple[int, int],
@@ -967,6 +1097,8 @@ class RichTextRenderer:
             border_color=options.border_color,
             border_width=options.border_width,
             has_underline=options.has_underline,
+            opacity=options.opacity,
+            effects=options.effects
         )
 
         # 根据对齐方式和垂直/水平模式计算起始位置
@@ -1046,75 +1178,79 @@ class RichTextRenderer:
         current_x = start_x
         current_y = start_y
         render_items = []  # 用于存储RenderItem对象
-        border_width = 0
-        border_color = None
-        if options.has_border:
-            border_width = options.border_width
-            border_color = options.border_color
+        border_width = options.border_width if options.has_border else 0
+        border_color = options.border_color if options.has_border else None
+        use_enhanced = (not self.font_manager.silence) and self._use_enhanced_draw(options)
+        text_opacity = self._sanitize_opacity(options.opacity)
+        base_effects = self._prepare_effects(options.effects) if use_enhanced else []
+        composed_effects = self._compose_effects(base_effects, border_width, border_color) if use_enhanced else []
 
-        for segment in render_segments:
-            # 创建TextObject
-            text_obj = TextObject(
-                text=segment['text'],
-                font=segment['font'],
-                font_name=segment['font_name'],
-                font_size=segment['font'].size,
-                height=segment['height'],  # 使用原始高度
-                width=segment['width'],
-                color=segment['color'],
-                border_width=border_width,
-                border_color=border_color
-            )
-            if not self.font_manager.silence:
+        if not self.font_manager.silence:
+            drawer = EnhancedDraw(self.image) if use_enhanced else None
+            pending_text = False
+
+            def flush_drawer():
+                nonlocal drawer, pending_text
+                if use_enhanced and pending_text:
+                    result = drawer.get_image()
+                    self.image.paste(result, (0, 0))
+                    self.draw = ImageDraw.Draw(self.image)
+                    drawer = EnhancedDraw(self.image)
+                    pending_text = False
+
+            for segment in render_segments:
+                text_obj = TextObject(
+                    text=segment['text'],
+                    font=segment['font'],
+                    font_name=segment['font_name'],
+                    font_size=segment['font'].size,
+                    height=segment['height'],  # 使用原始高度
+                    width=segment['width'],
+                    color=segment['color'],
+                    border_width=border_width,
+                    border_color=border_color,
+                    opacity=options.opacity,
+                    effects=options.effects
+                )
+
                 if vertical:
-                    # 垂直模式：每个字符居中对齐在列中
                     char_x = start_x + (max_width - segment['width']) // 2
                     char_y = current_y
 
-                    # 创建RenderItem并添加到列表
-                    render_item = RenderItem(
-                        obj=text_obj,
-                        x=char_x,
-                        y=char_y
-                    )
+                    render_item = RenderItem(obj=text_obj, x=char_x, y=char_y)
                     render_items.append(render_item)
 
-                    # 绘制文本
-                    self.draw.text(
-                        (char_x, char_y),
-                        segment['text'],
-                        font=segment['font'],
-                        fill=segment['color']
-                    )
-
-                    # 如果有边框效果
-                    if options.has_border:
-                        # 绘制边框效果（描边）
-                        for dx in [-options.border_width, 0, options.border_width]:
-                            for dy in [-options.border_width, 0, options.border_width]:
-                                if dx != 0 or dy != 0:  # 不重复绘制中心点
-                                    self.draw.text(
-                                        (char_x + dx, char_y + dy),
-                                        segment['text'],
-                                        font=segment['font'],
-                                        fill=options.border_color
-                                    )
-                        # 重新绘制主文本（覆盖边框）
+                    if use_enhanced:
+                        drawer.text(
+                            (char_x, char_y),
+                            segment['text'],
+                            font=segment['font'],
+                            fill=self._normalize_color(segment['color']),
+                            opacity=text_opacity,
+                            effects=composed_effects
+                        )
+                        pending_text = True
+                    else:
+                        if border_width:
+                            self._draw_border_text(
+                                (char_x, char_y),
+                                segment['text'],
+                                segment['font'],
+                                border_color,
+                                border_width
+                            )
                         self.draw.text(
                             (char_x, char_y),
                             segment['text'],
                             font=segment['font'],
                             fill=segment['color']
                         )
-
-                    # 更新y坐标（垂直移动），使用带间距的高度
                     current_y += segment['spaced_height']
                 else:
-                    # 水平模式（原有逻辑）
-                    # 创建RenderItem并添加到列表
                     offset_y = 0
                     if text_obj.font_name == 'SourceHanSansSC-Regular':
                         offset_y = -(text_obj.font_size * 0.4)
+
                     render_item = RenderItem(
                         obj=text_obj,
                         x=current_x,
@@ -1122,36 +1258,34 @@ class RichTextRenderer:
                     )
                     render_items.append(render_item)
 
-                    # 绘制文本
-                    self.draw.text(
-                        (current_x, start_y + offset_y),
-                        segment['text'],
-                        font=segment['font'],
-                        fill=segment['color']
-                    )
-
-                    # 如果有边框效果
-                    if options.has_border:
-                        # 绘制边框效果（描边）
-                        for dx in [-options.border_width, 0, options.border_width]:
-                            for dy in [-options.border_width, 0, options.border_width]:
-                                if dx != 0 or dy != 0:  # 不重复绘制中心点
-                                    self.draw.text(
-                                        (current_x + dx, start_y + offset_y + dy),
-                                        segment['text'],
-                                        font=segment['font'],
-                                        fill=options.border_color
-                                    )
-                        # 重新绘制主文本（覆盖边框）
+                    if use_enhanced:
+                        drawer.text(
+                            (current_x, start_y + offset_y),
+                            segment['text'],
+                            font=segment['font'],
+                            fill=self._normalize_color(segment['color']),
+                            opacity=text_opacity,
+                            effects=composed_effects
+                        )
+                        pending_text = True
+                    else:
+                        if border_width:
+                            self._draw_border_text(
+                                (current_x, start_y + offset_y),
+                                segment['text'],
+                                segment['font'],
+                                border_color,
+                                border_width
+                            )
                         self.draw.text(
                             (current_x, start_y + offset_y),
                             segment['text'],
                             font=segment['font'],
                             fill=segment['color']
                         )
-
-                    # 更新x坐标
                     current_x += segment['width']
+
+            flush_drawer()
 
         # 如果有下划线效果，在所有文本绘制完成后绘制整条下划线
         if options.has_underline:

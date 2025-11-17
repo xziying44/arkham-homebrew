@@ -1797,6 +1797,30 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   },
 };
 
+// Unofficial template mappings
+const unofficialTemplates: Record<string, { source: string; displayName: string; englishName: string }> = {
+  '大画-支援卡': {
+    source: '支援卡',
+    displayName: '📦 Large Art - Asset',
+    englishName: 'Large Art Asset Card'
+  },
+  '大画-事件卡': {
+    source: '事件卡',
+    displayName: '⚡ Large Art - Event',
+    englishName: 'Large Art Event Card'
+  },
+  '大画-技能卡': {
+    source: '技能卡',
+    displayName: '🎯 Large Art - Skill',
+    englishName: 'Large Art Skill Card'
+  }
+};
+// Generate unofficial template configs (deep clone)
+Object.entries(unofficialTemplates).forEach(([key, { source, displayName }]) => {
+  cardTypeConfigs[key] = JSON.parse(JSON.stringify(cardTypeConfigs[source]));
+  cardTypeConfigs[key].field_type_display = displayName;
+});
+
 // System preset card back type configurations
 export const cardBackConfigs: Record<string, CardTypeConfig> = {
   '玩家卡背': {
@@ -1829,7 +1853,11 @@ export const cardTypeOptions = [
   { label: '--- Player Cards ---', value: '__divider_player__', disabled: true },
   // Player card types
   ...Object.keys(cardTypeConfigs)
-    .filter(key => cardTypeConfigs[key].card_category === 'player')
+    .filter(key => {
+      const isPlayerCard = cardTypeConfigs[key].card_category === 'player';
+      const isUnofficial = key in unofficialTemplates;
+      return isPlayerCard && !isUnofficial;
+    })
     .map(key => ({
       label: cardTypeConfigs[key].field_type_display || cardTypeConfigs[key].field_type_en || key,
       value: key
@@ -1842,6 +1870,11 @@ export const cardTypeOptions = [
       label: cardTypeConfigs[key].field_type_display || cardTypeConfigs[key].field_type_en || key,
       value: key
     })),
+  { label: '--- Unofficial Templates ---', value: '__divider_unofficial__', disabled: true },
+  ...Object.keys(unofficialTemplates).map(key => ({
+    label: cardTypeConfigs[key].field_type_display || key,
+    value: key
+  })),
   // System preset card back options
   { label: '--- System Presets ---', value: '__divider__', disabled: true },
   { label: cardBackConfigs['玩家卡背'].field_type_display, value: '玩家卡背' },

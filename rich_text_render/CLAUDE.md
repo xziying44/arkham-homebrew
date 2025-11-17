@@ -30,12 +30,13 @@ Provides rich text rendering for Arkham Horror DIY cards, turning HTML‑like an
 
 - Rendering (`RichTextRenderer.py`)
   - Config: `DefaultFonts`, `TextAlignment`, `DrawOptions`.
+    - `DrawOptions` 新增 `opacity` (0~100) 与 `effects: list[dict]`，例如 `{"type":"shadow","size":8,"spread":20,"opacity":60,"color":(0,0,0)}`。
   - Helpers: `FontStack`, `HtmlTagStack`, `FontCache`, `ImageTag` (inline image sizing by width/height or by current font size).
   - Preprocessing: merges adjacent `<flavor ...>` blocks; maps emojis/aliases (e.g., factions, stats, chaos tokens) → `<font name="arkham-icons">{char}</font>`.
   - Public API:
     - `find_best_fit_font_size(text, polygon_vertices, padding, options)` → `VirtualTextBox` sized via binary search.
     - `draw_complex_text(text, polygon_vertices, padding, options[, draw_debug_frame])` → draws layout, guide lines, `<hr>` lines, and returns `RenderItem[]`.
-    - `draw_line(text, position, alignment, options[, vertical])` → single‑line horizontal/vertical typesetting, with optional underline/border effect.
+    - `draw_line(text, position, alignment, options[, vertical])` → single-line horizontal/vertical typesetting, with optional underline/border effect.
 
 ## Dependencies
 
@@ -74,7 +75,8 @@ Provides rich text rendering for Arkham Horror DIY cards, turning HTML‑like an
 - Fonts: default families are resolved by `FontManager.get_lang_font` labels; ensure your font registry provides names for regular/bold/italic/trait and `arkham-icons`.
 - Images: `<img>` scales by explicit `width`/`height` or current font size if omitted; supports `offset` for vertical alignment.
 - Layout: polygon sampling picks conservative line bounds; `line_padding` can narrow per‑flavor lines; punctuation wrap rules avoid orphans.
-- Rendering: `DrawOptions` supports border (stroke) and underline; vertical single‑line mode is available in `draw_line`.
+- Rendering: `DrawOptions` supports border (stroke) and underline; vertical single-line mode is available in `draw_line`.
+- 文本落笔通过 `enhanced_draw.EnhancedDraw` 统一完成，若 `options.effects` 或 `options.has_border` 设置了描边/阴影/发光，会按队列叠加；`options.opacity` 允许单行/块文字调节透明度。
 - External modules: `ResourceManager` is assumed to be available on `PYTHONPATH`; this package does not ship it.
 - No child `CLAUDE.md` files were detected; this document reflects the current code’s behavior and exported interfaces.
 

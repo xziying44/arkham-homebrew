@@ -342,6 +342,8 @@ class Card:
             vertical=False,
             max_length: int | None = None,
             debug_line: bool = False,
+            opacity: int = 100,
+            effects: list[dict] | None = None,
     ):
         """
         在指定位置居中绘制文字，可选外边框
@@ -356,6 +358,8 @@ class Card:
         :param border_color: 边框颜色
         :param underline: 是否添加下划线
         :param vertical:垂直文本
+        :param opacity: 文字透明度（0-100）
+        :param effects: EnhancedDraw 特效配置列表
         """
         if self.font_manager.silence and not underline:
             return
@@ -376,7 +380,9 @@ class Card:
                 has_border=has_border,
                 border_color=border_color,
                 border_width=border_width,
-                has_underline=underline
+                has_underline=underline,
+                opacity=opacity,
+                effects=effects
             ),
             vertical=vertical,
             max_length=(max_length if max_length is not None else self.width),
@@ -386,7 +392,8 @@ class Card:
 
     def draw_left_text(self, position, text, font_name, font_size, font_color,
                        has_border=False, border_width=1, border_color=(0, 0, 0),
-                       max_length: int | None = None, debug_line: bool = False):
+                       max_length: int | None = None, debug_line: bool = False,
+                       opacity: int = 100, effects: list[dict] | None = None):
         """
         在指定位置左对齐绘制文字，可选外边框
         :param position: 左上角坐标 (x, y)
@@ -397,6 +404,8 @@ class Card:
         :param has_border: 是否添加外边框
         :param border_width: 边框粗细
         :param border_color: 边框颜色
+        :param opacity: 文字透明度（0-100）
+        :param effects: EnhancedDraw 特效配置列表
         """
         if self.font_manager.silence:
             return
@@ -414,6 +423,8 @@ class Card:
                 has_border=has_border,
                 border_color=border_color,
                 border_width=border_width,
+                opacity=opacity,
+                effects=effects
             ),
             max_length=(max_length if max_length is not None else self.width),
             debug_draw_range=debug_line
@@ -599,7 +610,9 @@ class Card:
         return adjusted_vertices
 
     def draw_text(self, text, vertices, default_font_name='simfang',
-                  default_size=12, color=(0, 0, 0), padding=10, draw_virtual_box=False, boundary_offset=None):
+                  default_size=12, color=(0, 0, 0), padding=10,
+                  draw_virtual_box=False, boundary_offset=None,
+                  opacity: int = 100, effects: list[dict] | None = None):
         """
         在多边形区域内绘制格式化文本
 
@@ -613,6 +626,8 @@ class Card:
         :param boundary_offset: 可选的边界偏移配置,格式: {'top': int, 'bottom': int, 'left': int, 'right': int}
                                正数表示向外扩展边界,负数表示向内收缩边界,单位为像素
                                不传或传None时保持原vertices不变,完全向后兼容
+        :param opacity: 文字透明度（0-100）
+        :param effects: EnhancedDraw 特效配置列表
         """
         # 应用边界偏移(如果提供)
         if boundary_offset:
@@ -637,7 +652,9 @@ class Card:
             options=DrawOptions(
                 font_name=lang_font.name,
                 font_size=int(default_size * lang_font.size_percent),
-                font_color=color
+                font_color=color,
+                opacity=opacity,
+                effects=effects
             ),
             draw_debug_frame=draw_virtual_box
         ))
@@ -660,7 +677,10 @@ class Card:
         """
         if name not in ['意志', '战力', '敏捷', '智力', '狂野']:
             return
-        img = self.image_manager.get_image(f'投入-{self.card_class}-{name}')
+        ui_name = f'投入-{self.card_class}-{name}'
+        if self.card_type in ['大画-事件卡', '大画-支援卡', '大画-技能卡']:
+            ui_name = f'投入-大画卡-{self.card_class}-{name}'
+        img = self.image_manager.get_image(ui_name)
         self.paste_image(img, (0, 167 + self.submit_index * 80), 'contain')
         self.submit_index += 1
 
@@ -670,6 +690,27 @@ class Card:
 
         :param level: 等级
         """
+        if self.card_type in ['大画-技能卡']:
+            ui_name = f'大画-等级框-{self.card_class}'
+            if self.card_class == '弱点':
+                ui_name += '-无等级'
+            else:
+                if level is not None and 0 < level < 6:
+                    ui_name += f'-等级{level}'
+                else:
+                    ui_name += '-无等级'
+            self.paste_image(self.image_manager.get_image(ui_name), (-4, 12), 'contain')
+        if self.card_type in ['大画-事件卡', '大画-支援卡']:
+            ui_name = f'大画-费用框-{self.card_class}'
+            if self.card_class == '弱点':
+                ui_name += '-无等级'
+            else:
+                if level is not None and 0 < level < 6:
+                    ui_name += f'-等级{level}'
+                else:
+                    ui_name += '-无等级'
+            self.paste_image(self.image_manager.get_image(ui_name), (0, 0), 'contain')
+            return
         if level == -2 and self.card_type in ['事件卡', '支援卡', '技能卡']:
             # 定制标
             position_none = (15, 55)
@@ -714,6 +755,48 @@ class Card:
 
         :param cost: 费用
         """
+        if self.card_type in ['大画-事件卡', '大画-支援卡']:
+            default_position = [(75, 53), (75, 55)]
+            if 0 <= cost < 100:
+                self.draw_centered_text(
+                    position=default_position[0],
+                    text=str(cost),
+                    font_name='Arkhamic',
+                    font_size=62,
+                    font_color=(3, 0, 0),
+                    effects=[
+                        {"type": "glow", "size": 18, "spread": 22, "opacity": 100, "color": (3, 0, 0)},
+                        {"type": "stroke", "size": 3, "opacity": 100, "color": (165, 157, 153)}
+                    ]
+                )
+            elif cost == -2:
+                """X费用"""
+                self.draw_centered_text(
+                    position=default_position[0],
+                    text='X',
+                    font_name='Arkhamic',
+                    font_size=62,
+                    font_color=(3, 0, 0),
+                    effects=[
+                        {"type": "glow", "size": 18, "spread": 22, "opacity": 100, "color": (3, 0, 0)},
+                        {"type": "stroke", "size": 3, "opacity": 100, "color": (165, 157, 153)}
+                    ]
+                )
+            else:
+                # 无费用
+                self.draw_centered_text(
+                    position=default_position[1],
+                    text='—',
+                    font_name='Arkhamic',
+                    font_size=68,
+                    font_color=(3, 0, 0),
+                    effects=[
+                        {"type": "glow", "size": 18, "spread": 22, "opacity": 100, "color": (3, 0, 0)},
+                        {"type": "stroke", "size": 3, "opacity": 100, "color": (165, 157, 153)}
+                    ]
+                )
+            pass
+            return
         default_position = [(71, 53), (71, 55)]
         if 0 <= cost < 100:
             self.draw_centered_text(
@@ -760,6 +843,11 @@ class Card:
         """
         if slots not in ['双手', '双法术', '塔罗', '手部', '法术', '盟友', '身体', '饰品']:
             return
+        if self.card_type == '大画-支援卡':
+            img = self.image_manager.get_image(f'大画-槽位-{slots}')
+            self.paste_image(img, (646 - self.slots_index * 50, 42), 'contain')
+            self.slots_index += 1
+            return
         img = self.image_manager.get_image(f'槽位-{slots}')
         self.paste_image(img, (603 - self.slots_index * 105, 900), 'contain')
         self.slots_index += 1
@@ -771,6 +859,44 @@ class Card:
         :param horror:  恐怖值
         :return:
         """
+        if self.card_type == '大画-支援卡':
+            # 画生命值
+            if 0 < health < 100:
+                position, text, font_name, font_size = (605, 615), str(health), 'Arkhamic', 60
+            elif health == -2:
+                position, text, font_name, font_size = (605, 615 +7), '*', 'star', 58
+            else:
+                position, text, font_name, font_size = (605, 615), 'x', 'arkham-icons', 58
+            self.draw_centered_text(
+                position=position,
+                text=text,
+                font_name=font_name,
+                font_size=font_size,
+                font_color=(79, 13, 17),
+                effects=[
+                    {"type": "glow", "size": 8, "spread": 22, "opacity": 100, "color": (3, 0, 0)},
+                    {"type": "stroke", "size": 3, "opacity": 100, "color": (165, 157, 153)}
+                ]
+            )
+            # 画恐惧值
+            if 0 < horror < 100:
+                position, text, font_name, font_size = (688, 647), str(horror), 'Arkhamic', 60
+            elif horror == -2:
+                position, text, font_name, font_size = (688, 647 + 7), '*', 'star', 58
+            else:
+                position, text, font_name, font_size = (688, 647), 'x', 'arkham-icons', 58
+            self.draw_centered_text(
+                position=position,
+                text=text,
+                font_name=font_name,
+                font_size=font_size,
+                font_color=(25, 38, 79),
+                effects=[
+                    {"type": "glow", "size": 8, "spread": 22, "opacity": 100, "color": (3, 0, 0)},
+                    {"type": "stroke", "size": 3, "opacity": 100, "color": (165, 157, 153)}
+                ]
+            )
+            return
         if health == -999 and horror == -999:
             if self.card_type == '支援卡':
                 # 画底图
@@ -1231,6 +1357,16 @@ class Card:
         :param footer_icon_font:
         :return:
         """
+        effects = None
+        opacity = 100
+        font_color = (255, 255, 255)
+        if self.card_type in ['大画-事件卡', '大画-支援卡', '大画-技能卡']:
+            effects = [
+                {"type": "glow", "size": 18, "spread": 22, "opacity": 36, "color": (3, 0, 0)},
+                {"type": "stroke", "size": 2, "opacity": 63, "color": (165, 157, 153)}
+            ]
+            opacity = 75
+            font_color = (3, 0, 0)
         if self.card_type == "纯图片":
             return
         if self.card_type in ['密谋卡', '场景卡', '调查员卡'] and self.is_back:
@@ -1272,7 +1408,6 @@ class Card:
         pos_icon = (card_width - 110, card_height - 34)
         pos_right = (card_width - 80, card_height - 28)
         pos_right_encounter_group_number = (card_width - 180, card_height - 28)
-        font_color = (255, 255, 255)
         # 特殊卡牌位置点
         if self.card_type in ['密谋卡', '场景卡']:
             card_width = 1049 - 400
@@ -1319,7 +1454,9 @@ class Card:
                 text=left_text,
                 font_name='收藏信息字体',
                 font_size=20,
-                font_color=font_color
+                font_color=font_color,
+                opacity=opacity,
+                effects=effects
             )
         if center_text:
             if self.font_manager.lang in ['zh', 'zh-CHT']:
@@ -1331,7 +1468,9 @@ class Card:
                 text=center_text,
                 font_name='收藏信息字体',
                 font_size=20,
-                font_color=font_color
+                font_color=font_color,
+                opacity=opacity,
+                effects=effects
             )
         if encounter_text:
             self.draw_centered_text(
@@ -1339,7 +1478,9 @@ class Card:
                 text=encounter_text,
                 font_name='收藏信息字体',
                 font_size=20,
-                font_color=font_color
+                font_color=font_color,
+                opacity=opacity,
+                effects=effects
             )
         if footer_icon_copy:
             self.paste_image(
@@ -1353,7 +1494,9 @@ class Card:
                 text=footer_icon_font,
                 font_name='收藏信息字体',
                 font_size=30,
-                font_color=font_color
+                font_color=font_color,
+                opacity=opacity,
+                effects=effects
             )
         if right_text:
             self.draw_left_text(
@@ -1361,7 +1504,9 @@ class Card:
                 text=right_text,
                 font_name='收藏信息字体',
                 font_size=20,
-                font_color=font_color
+                font_color=font_color,
+                opacity=opacity,
+                effects=effects
             )
 
     def draw_victory_points(self, position, victory_value, font_name="加粗字体", font_size=28, font_color=(0, 0, 0)):
@@ -1375,6 +1520,13 @@ class Card:
             font_size: 字体大小，默认28
             font_color: 字体颜色，默认黑色
         """
+        effects=None
+        if self.card_type in ['大画-事件卡', '大画-支援卡', '大画-技能卡']:
+            font_color = (255, 255, 255)
+            effects = [
+                {"type": "shadow", "size": 8, "spread": 20, "opacity": 100, "color": (3, 0, 0)},
+                {"type": "stroke", "size": 2, "opacity": 100, "color": (3, 0, 0)}
+            ]
         if victory_value is None:
             return
         if self.font_manager.lang not in ['zh', 'zh-CHT']:
@@ -1407,7 +1559,8 @@ class Card:
                     text=line,
                     font_name=font_name,
                     font_size=font_size,
-                    font_color=font_color
+                    font_color=font_color,
+                    effects=effects
                 )
                 y -= font_size
 
@@ -1417,7 +1570,8 @@ class Card:
                 text=text,
                 font_name=font_name,
                 font_size=font_size,
-                font_color=font_color
+                font_color=font_color,
+                effects=effects
             )
 
     def get_text_layer_metadata(self):
@@ -1440,5 +1594,7 @@ class Card:
                     "color": item.obj.color,
                     "border_width": item.obj.border_width,
                     "border_color": item.obj.border_color,
+                    "opacity": item.obj.opacity,
+                    "effects": item.obj.effects,
                 })
         return text_layer_metadata

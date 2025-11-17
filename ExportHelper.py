@@ -5,9 +5,10 @@ import time
 from typing import Dict, Any, Tuple, TypeVar, Type, Union, TYPE_CHECKING
 
 import numpy as np
-from PIL import Image, ImageFont, ImageDraw, ImageEnhance
+from PIL import Image, ImageFont, ImageDraw, ImageEnhance, ImageColor
 
 from export_helper.LamaCleaner import LamaCleaner
+from enhanced_draw import EnhancedDraw
 
 if TYPE_CHECKING:
     from bin.workspace_manager import WorkspaceManager
@@ -288,6 +289,8 @@ class ExportHelper:
         """出血投入图标"""
         submit_index = 0
         card_class = card_json.get('class', '')
+        if '大画' in card_json.get('type', ''):
+            return card_map
         if 'submit_icon' in card_json and isinstance(card_json['submit_icon'], list):
             for icon in card_json['submit_icon']:
                 img = self.workspace_manager.image_manager.get_image(f'投入-{card_class}-{icon}')
@@ -366,6 +369,41 @@ class ExportHelper:
             self._font_cache[cache_key] = default_font
             return default_font
 
+    @staticmethod
+    def _normalize_color(color_value) -> Tuple[int, int, int]:
+        """将颜色值转换为RGB三元组"""
+        if color_value is None:
+            return 0, 0, 0
+        if isinstance(color_value, (tuple, list)):
+            if len(color_value) >= 3:
+                return tuple(int(color_value[i]) for i in range(3))
+        if isinstance(color_value, int):
+            hex_color = f"#{color_value:06x}"
+            try:
+                return ImageColor.getrgb(hex_color)
+            except ValueError:
+                return 0, 0, 0
+        if isinstance(color_value, str):
+            try:
+                return ImageColor.getrgb(color_value)
+            except ValueError:
+                return 0, 0, 0
+        return 0, 0, 0
+
+    @staticmethod
+    def _prepare_effects(effects_config) -> list[dict]:
+        """规范化特效配置"""
+        if not isinstance(effects_config, list):
+            return []
+        sanitized = []
+        for effect in effects_config:
+            if isinstance(effect, dict):
+                cfg = effect.copy()
+                if 'color' in cfg:
+                    cfg['color'] = ExportHelper._normalize_color(cfg['color'])
+                sanitized.append(cfg)
+        return sanitized
+
     def _draw_text_layer(self, card_map: Image.Image, text_layer: list[dict[str, any]]) -> Image.Image:
         """
         绘制文字层
@@ -391,6 +429,8 @@ class ExportHelper:
             card_map = card_map.resize((target_width, target_height), Image.Resampling.LANCZOS)
         # 创建绘图对象
         draw = ImageDraw.Draw(card_map)
+        drawer = None
+        drawer_used = False
 
         if self._is_horizontal(card_map):
             bleed_offset_x = bleed_offset[1]
@@ -408,32 +448,61 @@ class ExportHelper:
                 font_name = text_info.get('font', 'default')
                 font_size = int(text_info.get('font_size', 12) * dpi_scale_factor)
                 color = text_info.get('color', '#000000')
+                opacity_value = text_info.get('opacity', 100)
+                try:
+                    opacity = max(0, min(100, int(opacity_value)))
+                except (ValueError, TypeError):
+                    opacity = 100
+                effects = self._prepare_effects(text_info.get('effects'))
                 border_width = int(text_info.get('border_width', 0) * dpi_scale_factor)
                 border_color = text_info.get('border_color', '#FFFFFF')
                 # 加载字体（使用缓存）
                 font = self._load_font(font_name, font_size)
-                # 绘制文字边框（如果有）
-                if border_width > 0:
-                    # 绘制边框：在主文字周围绘制多次偏移的文字
-                    for dx in range(-border_width, border_width + 1):
-                        for dy in range(-border_width, border_width + 1):
-                            if dx != 0 or dy != 0:  # 不绘制中心位置
-                                draw.text(
-                                    (x + dx, y + dy),
-                                    text,
-                                    font=font,
-                                    fill=border_color
-                                )
-                # 绘制主文字
-                draw.text(
-                    (x, y),
-                    text,
-                    font=font,
-                    fill=color
-                )
+                normalized_color = self._normalize_color(color)
+                normalized_border_color = self._normalize_color(border_color)
+                use_enhanced = (opacity != 100) or bool(effects)
+                if use_enhanced and border_width > 0:
+                    effects = [{
+                        "type": "stroke",
+                        "size": max(1, border_width),
+                        "opacity": 100,
+                        "color": normalized_border_color
+                    }] + effects
+
+                if use_enhanced:
+                    if drawer is None:
+                        drawer = EnhancedDraw(card_map)
+                    drawer.text(
+                        (x, y),
+                        text,
+                        font=font,
+                        fill=normalized_color,
+                        opacity=opacity,
+                        effects=effects
+                    )
+                    drawer_used = True
+                else:
+                    if border_width > 0:
+                        for dx in range(-border_width, border_width + 1):
+                            for dy in range(-border_width, border_width + 1):
+                                if dx != 0 or dy != 0:
+                                    draw.text(
+                                        (x + dx, y + dy),
+                                        text,
+                                        font=font,
+                                        fill=normalized_border_color
+                                    )
+                    draw.text(
+                        (x, y),
+                        text,
+                        font=font,
+                        fill=normalized_color
+                    )
             except Exception as e:
                 print(f"警告：绘制文字时发生错误 - 文字: '{text_info.get('text', 'N/A')}', 错误: {e}")
                 continue
+        if drawer_used:
+            card_map = drawer.get_image()
         if self.bleed_mode == BleedMode.STRETCH:
             if self._is_horizontal(card_map):
                 card_map = card_map.resize((self.pixel_height, self.pixel_width), Image.Resampling.LANCZOS)
@@ -638,11 +707,11 @@ if __name__ == "__main__":
 
     export_helper = ExportHelper(
         system_defaults,
-        WorkspaceManager(r'C:\Users\xziyi\Desktop\arkham-homebrew-projects\EdgeOfTheEarthInv')
+        WorkspaceManager(r'C:\Users\xziyi\Desktop\饥荒玩家卡')
     )
 
     # 自动判断卡牌类型并导出
-    result = export_helper.export_card_auto(r'Dodge.card')
+    result = export_helper.export_card_auto(r'修女打老鼠.card')
 
     if isinstance(result, dict):
         # 双面卡牌

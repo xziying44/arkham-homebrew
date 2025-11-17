@@ -1781,6 +1781,28 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
   },
 };
 
+// 定义非官方模版的映射关系
+const unofficialTemplates: Record<string, { source: string; displayName: string }> = {
+  '大画-支援卡': {
+    source: '支援卡',
+    displayName: '📦 大画-支援卡'
+  },
+  '大画-事件卡': {
+    source: '事件卡',
+    displayName: '⚡ 大画-事件卡'
+  },
+  '大画-技能卡': {
+    source: '技能卡',
+    displayName: '🎯 大画-技能卡'
+  }
+};
+// 添加非官方模版到配置中（深克隆）
+Object.entries(unofficialTemplates).forEach(([key, { source, displayName }]) => {
+  cardTypeConfigs[key] = JSON.parse(JSON.stringify(cardTypeConfigs[source]));
+  cardTypeConfigs[key].field_type_display = displayName;
+});
+
+
 // 系统预设卡背类型配置
 export const cardBackConfigs: Record<string, CardTypeConfig> = {
   '玩家卡背': {
@@ -1809,7 +1831,11 @@ export const cardTypeOptions = [
   { label: '--- 玩家卡 ---', value: '__divider_player__', disabled: true },
   // 玩家卡类型
   ...Object.keys(cardTypeConfigs)
-    .filter(key => cardTypeConfigs[key].card_category === 'player')
+    .filter(key => {
+      const isPlayerCard = cardTypeConfigs[key].card_category === 'player';
+      const isUnofficial = key in unofficialTemplates;
+      return isPlayerCard && !isUnofficial;
+    })
     .map(key => ({
       label: cardTypeConfigs[key].field_type_display || key,
       value: key
@@ -1822,6 +1848,12 @@ export const cardTypeOptions = [
       label: cardTypeConfigs[key].field_type_display || key,
       value: key
     })),
+  // 非官方模版
+  { label: '--- 非官方模版 ---', value: '__divider_unofficial__', disabled: true },
+  ...Object.keys(unofficialTemplates).map(key => ({
+    label: cardTypeConfigs[key].field_type_display || key,
+    value: key
+  })),
   // 系统预设卡背选项
   { label: '--- 系统预设 ---', value: '__divider__', disabled: true },
   { label: cardBackConfigs['玩家卡背'].field_type_display, value: '玩家卡背' },

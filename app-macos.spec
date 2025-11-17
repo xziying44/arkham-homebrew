@@ -9,6 +9,7 @@ flask_submodules = collect_submodules('flask')
 jinja2_submodules = collect_submodules('jinja2')
 werkzeug_submodules = collect_submodules('werkzeug')
 webview_submodules = collect_submodules('webview')
+cv2_submodules = collect_submodules('cv2')
 
 # 收集隐藏导入
 hidden_imports = [
@@ -52,7 +53,7 @@ hidden_imports = [
     'cloudinary',
     'pydantic',
     'pydantic_core',
-] + flask_submodules + jinja2_submodules + werkzeug_submodules + webview_submodules
+] + flask_submodules + jinja2_submodules + werkzeug_submodules + webview_submodules + cv2_submodules
 
 # 数据文件
 datas = [
@@ -68,6 +69,7 @@ datas = [
 datas += collect_data_files('webview')
 datas += collect_data_files('certifi')
 datas += collect_data_files('cloudinary')
+datas += collect_data_files('cv2')
 
 a = Analysis(
     ['app.py'],
