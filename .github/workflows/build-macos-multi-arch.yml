@@ -214,12 +214,12 @@ jobs:
             distro_version: "Debian 11+, Ubuntu 20.04+, Mint 21+"
             pkg_format: deb
             pkg_manager: apt
-            dependencies: "libgtk-3-0, libwebkit2gtk-4.0-37, libayatana-appindicator3-1"
+            dependencies: "libgtk-3-0, libwebkit2gtk-4.1-0, libayatana-appindicator3-1"
             install_cmd: |
               sudo apt-get update
               sudo apt-get install -y \
                 python3 python3-pip python3-dev \
-                libgtk-3-0 libwebkit2gtk-4.0-37 \
+                libgtk-3-0 libwebkit2gtk-4.1-0 \
                 libayatana-appindicator3-1 gir1.2-ayatanaappindicator3-0.1 \
                 binutils patchelf ruby ruby-dev build-essential
               sudo gem install --no-document fpm
@@ -253,7 +253,7 @@ jobs:
               sudo apt-get update
               sudo apt-get install -y \
                 python3 python3-pip python3-dev \
-                libgtk-3-0 libwebkit2gtk-4.0-37 \
+                libgtk-3-0 libwebkit2gtk-4.1-0 \
                 libayatana-appindicator3-1 gir1.2-ayatanaappindicator3-0.1 \
                 binutils patchelf
 
@@ -525,6 +525,15 @@ jobs:
           # 方法2：命令行
           sudo dpkg -i arkham-card-maker_*_debian.deb
           sudo apt-get install -f  # 自动安装依赖（如有需要）
+          ```
+
+          **手动安装依赖（如需要）：**
+          ```bash
+          # Ubuntu 24.04+ / Debian 12+
+          sudo apt-get install libgtk-3-0 libwebkit2gtk-4.1-0 libayatana-appindicator3-1
+
+          # Ubuntu 20.04-23.10 / Debian 11
+          sudo apt-get install libgtk-3-0 libwebkit2gtk-4.0-37 libayatana-appindicator3-1
           ```
 
           **卸载：**
