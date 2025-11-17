@@ -216,13 +216,13 @@ jobs:
             pkg_manager: apt
             dependencies: "libgtk-3-0, libwebkit2gtk-4.0-37, libayatana-appindicator3-1"
             install_cmd: |
-              apt-get update
-              apt-get install -y \
+              sudo apt-get update
+              sudo apt-get install -y \
                 python3 python3-pip python3-dev \
                 libgtk-3-0 libwebkit2gtk-4.0-37 \
                 libayatana-appindicator3-1 gir1.2-ayatanaappindicator3-0.1 \
                 binutils patchelf ruby ruby-dev build-essential
-              gem install --no-document fpm
+              sudo gem install --no-document fpm
 
           # Fedora 系列 - 生成 .rpm 包（适用于 Fedora、RHEL、CentOS）
           - distro: fedora
@@ -250,8 +250,8 @@ jobs:
             pkg_manager: manual
             dependencies: ""
             install_cmd: |
-              apt-get update
-              apt-get install -y \
+              sudo apt-get update
+              sudo apt-get install -y \
                 python3 python3-pip python3-dev \
                 libgtk-3-0 libwebkit2gtk-4.0-37 \
                 libayatana-appindicator3-1 gir1.2-ayatanaappindicator3-0.1 \
