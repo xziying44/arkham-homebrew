@@ -427,10 +427,6 @@ class ExportHelper:
             card_map = card_map.resize((target_height, target_width), Image.Resampling.LANCZOS)
         else:
             card_map = card_map.resize((target_width, target_height), Image.Resampling.LANCZOS)
-        # 创建绘图对象
-        draw = ImageDraw.Draw(card_map)
-        drawer = None
-        drawer_used = False
 
         if self._is_horizontal(card_map):
             bleed_offset_x = bleed_offset[1]
@@ -438,7 +434,11 @@ class ExportHelper:
         else:
             bleed_offset_x = bleed_offset[0]
             bleed_offset_y = bleed_offset[1]
-        # print(f"出血偏移量: ({bleed_offset_x}, {bleed_offset_y}), DPI缩放因子: {dpi_scale_factor}")
+
+        # 性能优化：收集所有文本项后批量渲染
+        enhanced_text_items = []  # [(position, text, font, fill, opacity, effects), ...]
+        fast_text_items = []  # 无特效的快速路径 [(x, y, text, font, fill, border_width, border_color), ...]
+
         for text_info in text_layer:
             try:
                 # 提取文字信息并应用DPI缩放
@@ -456,11 +456,13 @@ class ExportHelper:
                 effects = self._prepare_effects(text_info.get('effects'))
                 border_width = int(text_info.get('border_width', 0) * dpi_scale_factor)
                 border_color = text_info.get('border_color', '#FFFFFF')
+
                 # 加载字体（使用缓存）
                 font = self._load_font(font_name, font_size)
                 normalized_color = self._normalize_color(color)
                 normalized_border_color = self._normalize_color(border_color)
                 use_enhanced = (opacity != 100) or bool(effects)
+
                 if use_enhanced and border_width > 0:
                     effects = [{
                         "type": "stroke",
@@ -470,39 +472,51 @@ class ExportHelper:
                     }] + effects
 
                 if use_enhanced:
-                    if drawer is None:
-                        drawer = EnhancedDraw(card_map)
-                    drawer.text(
+                    enhanced_text_items.append((
                         (x, y),
                         text,
-                        font=font,
-                        fill=normalized_color,
-                        opacity=opacity,
-                        effects=effects
-                    )
-                    drawer_used = True
+                        font,
+                        normalized_color,
+                        opacity,
+                        effects
+                    ))
                 else:
-                    if border_width > 0:
-                        for dx in range(-border_width, border_width + 1):
-                            for dy in range(-border_width, border_width + 1):
-                                if dx != 0 or dy != 0:
-                                    draw.text(
-                                        (x + dx, y + dy),
-                                        text,
-                                        font=font,
-                                        fill=normalized_border_color
-                                    )
-                    draw.text(
-                        (x, y),
-                        text,
-                        font=font,
-                        fill=normalized_color
-                    )
+                    fast_text_items.append((
+                        x, y, text, font,
+                        normalized_color,
+                        border_width,
+                        normalized_border_color
+                    ))
             except Exception as e:
                 print(f"警告：绘制文字时发生错误 - 文字: '{text_info.get('text', 'N/A')}', 错误: {e}")
                 continue
-        if drawer_used:
+
+        # 批量渲染
+        if enhanced_text_items:
+            drawer = EnhancedDraw(card_map)
+            drawer.text_batch(enhanced_text_items)
             card_map = drawer.get_image()
+
+        if fast_text_items:
+            draw = ImageDraw.Draw(card_map)
+            for x, y, text, font, fill, border_width, border_color in fast_text_items:
+                if border_width > 0:
+                    for dx in range(-border_width, border_width + 1):
+                        for dy in range(-border_width, border_width + 1):
+                            if dx != 0 or dy != 0:
+                                draw.text(
+                                    (x + dx, y + dy),
+                                    text,
+                                    font=font,
+                                    fill=border_color
+                                )
+                draw.text(
+                    (x, y),
+                    text,
+                    font=font,
+                    fill=fill
+                )
+
         if self.bleed_mode == BleedMode.STRETCH:
             if self._is_horizontal(card_map):
                 card_map = card_map.resize((self.pixel_height, self.pixel_width), Image.Resampling.LANCZOS)

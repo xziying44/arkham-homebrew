@@ -2326,7 +2326,7 @@ if __name__ == '__main__':
                 "【显现】 – 从对应职阶图层中选择一项：\n"
                 "<点>守卫者。              <点>探求者。\n"
                 "<点>流浪者。             <点>潜修者。",
-        "picture_path": r"C:\Users\xziyi\Desktop\卡图.png"
+        "picture_path": r"C:\Users\xziyi\Desktop\BG.png"
     }
 
     # 创建字体和图片管理器

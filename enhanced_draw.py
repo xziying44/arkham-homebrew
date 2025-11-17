@@ -453,6 +453,85 @@ class EnhancedDraw:
 
         # 性能优化：不在这里合成到主图像，等待get_image()时再合成
 
+    def text_batch(
+            self,
+            items: List[Tuple[Tuple[int, int], str, ImageFont.FreeTypeFont,
+                            Tuple[int, int, int], int, Optional[List[dict]]]]
+    ) -> None:
+        """批量绘制文字（性能优化版）
+
+        将具有相同 opacity 和 effects 的文本分组，合并蒙版后只做一次特效计算。
+        相比逐个调用 text()，可大幅减少特效计算次数。
+
+        Args:
+            items: 列表，每项为 (position, text, font, fill, opacity, effects) 元组
+                  - position: (x, y) 坐标
+                  - text: 文字内容
+                  - font: 字体对象
+                  - fill: RGB 颜色元组
+                  - opacity: 透明度 0-100
+                  - effects: 特效配置列表或 None
+
+        性能提升：
+        - 相同特效的N个文本：从N次特效计算降为1次
+        - 100%不透明+无特效：跳过EnhancedDraw开销
+        """
+        if not items:
+            return
+
+        # 按 (opacity, effects) 分组
+        # key: (opacity, effects_tuple), value: [(pos, text, font, fill), ...]
+        groups = {}
+        for position, text, font, fill, opacity, effects in items:
+            # 将 effects 转为可哈希的 tuple（用于分组）
+            if effects is None:
+                effects_key = None
+            else:
+                # 转为 tuple of tuples，保证可哈希且顺序一致
+                effects_key = tuple(
+                    tuple(sorted(effect.items())) for effect in effects
+                )
+
+            group_key = (opacity, effects_key)
+            if group_key not in groups:
+                groups[group_key] = []
+            groups[group_key].append((position, text, font, fill))
+
+        # 对每组批量处理
+        for (opacity, effects_tuple), group_items in groups.items():
+            # 恢复 effects 列表
+            if effects_tuple is None:
+                effects_list = []
+            else:
+                effects_list = [dict(effect) for effect in effects_tuple]
+
+            # 创建合并蒙版（一次性包含该组所有文本）
+            merged_mask = Image.new('L', self.image.size, 0)
+            mask_draw = ImageDraw.Draw(merged_mask)
+
+            for pos, text, font, fill in group_items:
+                mask_draw.text(pos, text, font=font, fill=255)
+
+            # 应用特效到合并蒙版（只计算一次）
+            for effect_config in effects_list:
+                effect_instance = self._create_effect(effect_config, self.use_opencv)
+                # 为每个特效创建独立图层
+                temp_effect_layer = Image.new('RGBA', self.image.size, (0, 0, 0, 0))
+                temp_effect_layer = effect_instance.apply(temp_effect_layer, merged_mask)
+                # 合并到特效缓存层
+                self._effect_layer = ImageChops.lighter(self._effect_layer, temp_effect_layer)
+
+            # 绘制文字到文字缓存层
+            text_opacity = int(opacity * 255 / 100)
+            text_draw = ImageDraw.Draw(self._text_layer)
+
+            for pos, text, font, fill in group_items:
+                if len(fill) == 3:
+                    text_color = (*fill, text_opacity)
+                else:
+                    text_color = (*fill[:3], int(fill[3] * opacity / 100))
+                text_draw.text(pos, text, font=font, fill=text_color)
+
     def get_image(self) -> Image.Image:
         """获取绘制结果（合成所有图层）
 

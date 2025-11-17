@@ -893,19 +893,13 @@ class RichTextRenderer:
                 border_width=options.border_width if options.has_border else 0,
                 border_color=options.border_color
             ) if use_enhanced else []
-            drawer = EnhancedDraw(self.image) if use_enhanced else None
-            pending_text = False
 
-            def flush_drawer():
-                nonlocal drawer, pending_text
-                if use_enhanced and pending_text:
-                    result = drawer.get_image()
-                    self.image.paste(result, (0, 0))
-                    self.draw = ImageDraw.Draw(self.image)
-                    drawer = EnhancedDraw(self.image)
-                    pending_text = False
+            # 性能优化：分离文本和图片项，文本批量渲染
+            text_items = []  # [(position, text, font, fill, opacity, effects), ...]
+            image_items = []  # [(index, render_item), ...]
+            fast_text_items = []  # 100%不透明+无特效的快速路径文本
 
-            for render_item in render_list:
+            for idx, render_item in enumerate(render_list):
                 obj = render_item.obj
                 offset_x = getattr(obj, 'offset_x', 0)
                 offset_y = getattr(obj, 'offset_y', 0)
@@ -914,30 +908,48 @@ class RichTextRenderer:
                 if isinstance(obj, TextObject):
                     fill_color = self._normalize_color(getattr(obj, 'color', options.font_color))
                     if use_enhanced:
-                        drawer.text(
+                        text_items.append((
                             (x, y),
                             obj.text,
-                            font=obj.font,
-                            fill=fill_color,
-                            opacity=text_opacity,
-                            effects=composed_effects
-                        )
-                        pending_text = True
+                            obj.font,
+                            fill_color,
+                            text_opacity,
+                            composed_effects
+                        ))
                     else:
-                        if options.has_border:
-                            self._draw_border_text((x, y), obj.text, obj.font,
-                                                   options.border_color, options.border_width)
-                        self.draw.text((x, y), obj.text, font=obj.font, fill=fill_color)
+                        # 快速路径：无特效直接用 PIL
+                        fast_text_items.append((x, y, obj.text, obj.font, fill_color))
                 elif isinstance(obj, ImageObject):
-                    flush_drawer()
-                    if obj.image.mode == 'RGBA':
-                        self.image.paste(obj.image, (x, y), obj.image)
-                    else:
-                        self.image.paste(obj.image, (x, y))
-                    if draw_debug_frame:
-                        self.draw.rectangle([(x, y), (x + obj.width, y + obj.height)], outline="green", width=1)
+                    image_items.append((idx, render_item))
 
-            flush_drawer()
+            # 批量渲染文本
+            if use_enhanced and text_items:
+                drawer = EnhancedDraw(self.image)
+                drawer.text_batch(text_items)
+                result = drawer.get_image()
+                self.image.paste(result, (0, 0))
+                self.draw = ImageDraw.Draw(self.image)
+            elif fast_text_items:
+                # 快速路径：直接绘制
+                for x, y, text, font, fill in fast_text_items:
+                    if options.has_border:
+                        self._draw_border_text((x, y), text, font,
+                                               options.border_color, options.border_width)
+                    self.draw.text((x, y), text, font=font, fill=fill)
+
+            # 绘制图片
+            for idx, render_item in image_items:
+                obj = render_item.obj
+                offset_x = getattr(obj, 'offset_x', 0)
+                offset_y = getattr(obj, 'offset_y', 0)
+                x, y = render_item.x + offset_x, render_item.y + offset_y
+
+                if obj.image.mode == 'RGBA':
+                    self.image.paste(obj.image, (x, y), obj.image)
+                else:
+                    self.image.paste(obj.image, (x, y))
+                if draw_debug_frame:
+                    self.draw.rectangle([(x, y), (x + obj.width, y + obj.height)], outline="green", width=1)
 
         return render_list
 
@@ -1185,19 +1197,11 @@ class RichTextRenderer:
         base_effects = self._prepare_effects(options.effects) if use_enhanced else []
         composed_effects = self._compose_effects(base_effects, border_width, border_color) if use_enhanced else []
 
+        # 性能优化：收集所有文本项后批量渲染
+        text_items = []  # [(position, text, font, fill, opacity, effects), ...]
+        fast_text_items = []  # 无特效的快速路径
+
         if not self.font_manager.silence:
-            drawer = EnhancedDraw(self.image) if use_enhanced else None
-            pending_text = False
-
-            def flush_drawer():
-                nonlocal drawer, pending_text
-                if use_enhanced and pending_text:
-                    result = drawer.get_image()
-                    self.image.paste(result, (0, 0))
-                    self.draw = ImageDraw.Draw(self.image)
-                    drawer = EnhancedDraw(self.image)
-                    pending_text = False
-
             for segment in render_segments:
                 text_obj = TextObject(
                     text=segment['text'],
@@ -1221,30 +1225,21 @@ class RichTextRenderer:
                     render_items.append(render_item)
 
                     if use_enhanced:
-                        drawer.text(
+                        text_items.append((
                             (char_x, char_y),
                             segment['text'],
-                            font=segment['font'],
-                            fill=self._normalize_color(segment['color']),
-                            opacity=text_opacity,
-                            effects=composed_effects
-                        )
-                        pending_text = True
+                            segment['font'],
+                            self._normalize_color(segment['color']),
+                            text_opacity,
+                            composed_effects
+                        ))
                     else:
-                        if border_width:
-                            self._draw_border_text(
-                                (char_x, char_y),
-                                segment['text'],
-                                segment['font'],
-                                border_color,
-                                border_width
-                            )
-                        self.draw.text(
-                            (char_x, char_y),
+                        fast_text_items.append((
+                            char_x, char_y,
                             segment['text'],
-                            font=segment['font'],
-                            fill=segment['color']
-                        )
+                            segment['font'],
+                            segment['color']
+                        ))
                     current_y += segment['spaced_height']
                 else:
                     offset_y = 0
@@ -1259,33 +1254,46 @@ class RichTextRenderer:
                     render_items.append(render_item)
 
                     if use_enhanced:
-                        drawer.text(
+                        text_items.append((
                             (current_x, start_y + offset_y),
                             segment['text'],
-                            font=segment['font'],
-                            fill=self._normalize_color(segment['color']),
-                            opacity=text_opacity,
-                            effects=composed_effects
-                        )
-                        pending_text = True
+                            segment['font'],
+                            self._normalize_color(segment['color']),
+                            text_opacity,
+                            composed_effects
+                        ))
                     else:
-                        if border_width:
-                            self._draw_border_text(
-                                (current_x, start_y + offset_y),
-                                segment['text'],
-                                segment['font'],
-                                border_color,
-                                border_width
-                            )
-                        self.draw.text(
-                            (current_x, start_y + offset_y),
+                        fast_text_items.append((
+                            current_x, start_y + offset_y,
                             segment['text'],
-                            font=segment['font'],
-                            fill=segment['color']
-                        )
+                            segment['font'],
+                            segment['color']
+                        ))
                     current_x += segment['width']
 
-            flush_drawer()
+            # 批量渲染
+            if use_enhanced and text_items:
+                drawer = EnhancedDraw(self.image)
+                drawer.text_batch(text_items)
+                result = drawer.get_image()
+                self.image.paste(result, (0, 0))
+                self.draw = ImageDraw.Draw(self.image)
+            elif fast_text_items:
+                for x, y, text, font, color in fast_text_items:
+                    if border_width:
+                        self._draw_border_text(
+                            (x, y),
+                            text,
+                            font,
+                            border_color,
+                            border_width
+                        )
+                    self.draw.text(
+                        (x, y),
+                        text,
+                        font=font,
+                        fill=color
+                    )
 
         # 如果有下划线效果，在所有文本绘制完成后绘制整条下划线
         if options.has_underline:

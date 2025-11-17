@@ -700,6 +700,7 @@ class Card:
                 else:
                     ui_name += '-无等级'
             self.paste_image(self.image_manager.get_image(ui_name), (-4, 12), 'contain')
+            return
         if self.card_type in ['大画-事件卡', '大画-支援卡']:
             ui_name = f'大画-费用框-{self.card_class}'
             if self.card_class == '弱点':
