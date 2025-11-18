@@ -315,23 +315,57 @@ jobs:
           echo "Installing dependencies for ${{ matrix.distro_name }}..."
           ${{ matrix.install_cmd }}
 
-      # 不使用 actions/setup-python - 直接使用系统 Python 以访问系统安装的 gi 模块
+      - name: Set up Python (non-container)
+        if: matrix.distro != 'fedora'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Configure Python to access system gi modules
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🔧 Configuring Python environment"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+          # 根据发行版确定系统 site-packages 路径
+          if [ "${{ matrix.distro }}" = "fedora" ]; then
+            # Fedora 使用系统 Python，查找 site-packages
+            SYSTEM_SITE_PACKAGES=$(python3 -c "import sys; import os; paths = [p for p in sys.path if 'site-packages' in p and os.path.exists(p)]; print(paths[0] if paths else '/usr/lib64/python3.11/site-packages')")
+          else
+            # Debian/Ubuntu 查找 dist-packages（系统包位置）
+            SYSTEM_SITE_PACKAGES=$(/usr/bin/python3 -c "import sys; print([p for p in sys.path if 'dist-packages' in p][0])" 2>/dev/null || echo "/usr/lib/python3/dist-packages")
+          fi
+
+          echo "System site-packages: $SYSTEM_SITE_PACKAGES"
+
+          # 将系统 site-packages 添加到 PYTHONPATH（对后续所有步骤生效）
+          echo "PYTHONPATH=$SYSTEM_SITE_PACKAGES:$PYTHONPATH" >> $GITHUB_ENV
+
+          # 验证路径存在
+          if [ -d "$SYSTEM_SITE_PACKAGES/gi" ]; then
+            echo "✅ Found gi module at: $SYSTEM_SITE_PACKAGES/gi"
+          else
+            echo "⚠️  Warning: gi module not found at expected location"
+            echo "   Searching for gi module..."
+            find /usr/lib* -name "gi" -type d 2>/dev/null | head -5 || true
+          fi
+
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
       - name: Cache pip packages
         if: matrix.distro != 'fedora'
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-${{ matrix.distro }}-system-python-pip-${{ hashFiles('requirements-linux.txt') }}
+          key: ${{ runner.os }}-${{ matrix.distro }}-py311-pip-${{ hashFiles('requirements-linux.txt') }}
           restore-keys: |
-            ${{ runner.os }}-${{ matrix.distro }}-system-python-pip-
+            ${{ runner.os }}-${{ matrix.distro }}-py311-pip-
 
       - name: Install Python dependencies
         run: |
-          # 使用系统 Python，需要 --break-system-packages 标志（PEP 668）
-          python3 -m pip install --upgrade pip --break-system-packages
-          pip3 install pyinstaller --break-system-packages
-          pip3 install -r requirements-linux.txt --break-system-packages
+          python3 -m pip install --upgrade pip
+          pip3 install pyinstaller
+          pip3 install -r requirements-linux.txt
 
       - name: Verify GTK and GI installation
         run: |
@@ -346,8 +380,11 @@ jobs:
           echo "Python executable:"
           which python3
           echo ""
-          echo "Python site-packages:"
-          python3 -c "import site; print('\n'.join(site.getsitepackages()))"
+          echo "PYTHONPATH:"
+          echo "$PYTHONPATH"
+          echo ""
+          echo "Python sys.path:"
+          python3 -c "import sys; print('\n'.join(sys.path))"
           echo ""
 
           # 验证 gi 模块可导入
