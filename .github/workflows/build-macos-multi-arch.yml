@@ -229,7 +229,7 @@ jobs:
             distro_version: "Debian 11+, Ubuntu 22.04+, Mint 21+"
             pkg_format: deb
             pkg_manager: apt
-            dependencies: "libgtk-3-0, libwebkit2gtk-4.0-37, libayatana-appindicator3-1, gir1.2-gtk-3.0, gir1.2-webkit2-4.0"
+            dependencies: "libgtk-3-0, libwebkit2gtk-4.0-37, libayatana-appindicator3-1, gir1.2-gtk-3.0, gir1.2-webkit2-4.0, python3-gi, python3-gi-cairo"
             install_cmd: |
               sudo apt-get update
               sudo apt-get install -y \
@@ -248,7 +248,7 @@ jobs:
             distro_version: "Fedora 38+, RHEL 9+, CentOS Stream 9+"
             pkg_format: rpm
             pkg_manager: dnf
-            dependencies: "gtk3, webkit2gtk4.1, gobject-introspection"
+            dependencies: "gtk3, webkit2gtk4.1, gobject-introspection, python3-gobject, python3-cairo"
             install_cmd: |
               # 设置 UTF-8 locale 以支持中文字符
               dnf install -y glibc-langpack-en
@@ -335,6 +335,26 @@ jobs:
           python3 -m pip install --upgrade pip
           pip3 install pyinstaller
           pip3 install -r requirements-linux.txt
+
+      - name: Verify GTK and GI installation
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📦 Verifying GTK and PyGObject installation"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+          # 验证 gi 模块可导入
+          python3 -c "import gi; print('✅ gi module imported successfully')"
+
+          # 验证 GTK 3.0 可用
+          python3 -c "import gi; gi.require_version('Gtk', '3.0'); from gi.repository import Gtk; print('✅ GTK 3.0 available')"
+
+          # 验证 WebKit2 4.0 可用
+          python3 -c "import gi; gi.require_version('WebKit2', '4.0'); from gi.repository import WebKit2; print('✅ WebKit2 4.0 available')"
+
+          # 验证 cairo 可用
+          python3 -c "import cairo; print('✅ cairo module available')"
+
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
       - name: Build with PyInstaller
         run: |
@@ -568,7 +588,8 @@ jobs:
           **手动安装依赖（如需要）：**
           ```bash
           # Ubuntu 22.04+ / Debian 11+
-          sudo apt-get install libgtk-3-0 libwebkit2gtk-4.0-37 libayatana-appindicator3-1
+          sudo apt-get install libgtk-3-0 libwebkit2gtk-4.0-37 libayatana-appindicator3-1 \
+            gir1.2-gtk-3.0 gir1.2-webkit2-4.0 python3-gi python3-gi-cairo
           ```
 
           **卸载：**
@@ -613,10 +634,13 @@ jobs:
 
           # 3. 安装依赖（根据你的发行版选择命令）
           # Arch Linux:
-          sudo pacman -S gtk3 webkit2gtk
+          sudo pacman -S gtk3 webkit2gtk python-gobject python-cairo
 
           # openSUSE:
-          sudo zypper install gtk3 webkit2gtk3
+          sudo zypper install gtk3 webkit2gtk3 python3-gobject python3-cairo
+
+          # Gentoo:
+          sudo emerge --ask dev-python/pygobject dev-python/pycairo x11-libs/gtk+ net-libs/webkit-gtk
 
           # 4. 运行
           ./Arkham\ Card\ Maker
@@ -777,8 +801,8 @@ jobs:
             cd "Arkham Card Maker"
 
             # 安装依赖（根据你的发行版）
-            # Arch: sudo pacman -S gtk3 webkit2gtk
-            # openSUSE: sudo zypper install gtk3 webkit2gtk3
+            # Arch: sudo pacman -S gtk3 webkit2gtk python-gobject python-cairo
+            # openSUSE: sudo zypper install gtk3 webkit2gtk3 python3-gobject python3-cairo
 
             ./Arkham\ Card\ Maker
             ```

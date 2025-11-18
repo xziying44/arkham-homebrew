@@ -20,6 +20,5 @@ opencv-python-headless==4.12.0.88
 psutil==6.1.1
 cloudinary==1.44.1
 reportlab==4.4.3
-# Linux 专用依赖 - pywebview 需要 GTK Python 绑定
-PyGObject>=3.42.0
-pycairo>=1.20.0
+# Linux 专用依赖 - PyGObject 和 pycairo 通过系统包安装 (python3-gi, python3-cairo)
+# 不在此处列出，因为 pip 版本需要编译且可能与系统库版本不兼容
