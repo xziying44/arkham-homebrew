@@ -139,11 +139,24 @@ jobs:
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
           # ============================================
-          # 四层防御清理机制 (指数退避重试)
+          # 五层防御清理机制 (指数退避重试)
           # ============================================
-          echo "🧹 Phase 1: Enhanced Volume Cleanup (Exponential Backoff)"
+          echo "🧹 Phase 1: Disk Device Cleanup (Critical Fix for Resource Busy)"
+          # 检测并 detach 所有 Arkham 相关的磁盘设备 (包括未挂载到 /Volumes 的)
           for i in {1..5}; do
-            # A. 卷级强制卸载
+            # A. 从 hdiutil info 获取所有 Arkham 相关的镜像路径
+            ARKHAM_IMAGES=$(hdiutil info | grep -i "arkham" | grep "image-path" | awk '{print $3}')
+
+            if [ -n "$ARKHAM_IMAGES" ]; then
+              echo "  🔍 Found Arkham disk images:"
+              echo "$ARKHAM_IMAGES" | while read -r img; do
+                echo "    - $img"
+                # 尝试 detach 镜像路径
+                hdiutil detach "$img" -force 2>/dev/null || true
+              done
+            fi
+
+            # B. Detach 所有 Arkham 相关的挂载点
             for vol in /Volumes/Arkham\ Card\ Maker*; do
               [ -d "$vol" ] && {
                 echo "  Detaching volume: $vol"
@@ -151,15 +164,15 @@ jobs:
               }
             done
 
-            # B. 检查是否还有残留挂载
+            # C. 检查是否还有残留
             if ! hdiutil info | grep -iq "arkham"; then
-              echo "  ✅ All Arkham volumes detached"
+              echo "  ✅ All Arkham disk images/volumes detached"
               break
             fi
 
-            # C. 指数退避等待
+            # D. 指数退避等待
             WAIT_TIME=$((i * 2))
-            echo "  ⏳ Retry $i: Waiting ${WAIT_TIME}s for system stabilization..."
+            echo "  ⏳ Retry $i: Waiting ${WAIT_TIME}s for device release..."
             sleep $WAIT_TIME
           done
 
@@ -174,9 +187,18 @@ jobs:
           done
 
           echo ""
-          echo "🧼 Phase 3: File Cleanup"
-          # 删除旧 DMG 文件
+          echo "🧼 Phase 3: Temporary DMG File Cleanup"
+          # 删除 create-dmg 的临时 rw.*.dmg 文件
+          echo "  Searching for temporary rw.*.dmg files..."
+          find . -maxdepth 1 -name "rw.*.dmg" -type f 2>/dev/null | while read -r tmpfile; do
+            echo "  Removing temporary file: $tmpfile"
+            rm -f "$tmpfile" 2>/dev/null || true
+          done
+
+          # 删除旧的最终 DMG 文件
           rm -f "$DMG_NAME" 2>/dev/null || true
+
+          echo "  ✅ File cleanup completed"
 
           echo ""
           echo "📊 Phase 4: Pre-Creation Diagnostics"
@@ -245,19 +267,33 @@ jobs:
                 echo "🔄 Deep cleanup before retry..."
                 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-                # 深度清理 (复用四层防御逻辑)
+                # 深度清理 (复用五层防御逻辑)
+                # 1. Disk Device Cleanup
                 for i in {1..3}; do
+                  ARKHAM_IMAGES=$(hdiutil info | grep -i "arkham" | grep "image-path" | awk '{print $3}')
+                  if [ -n "$ARKHAM_IMAGES" ]; then
+                    echo "$ARKHAM_IMAGES" | while read -r img; do
+                      hdiutil detach "$img" -force 2>/dev/null || true
+                    done
+                  fi
+
                   for vol in /Volumes/Arkham\ Card\ Maker*; do
                     [ -d "$vol" ] && hdiutil detach "$vol" -force 2>/dev/null || true
                   done
+
                   hdiutil info | grep -iq "arkham" || break
                   sleep $((i * 3))
                 done
 
+                # 2. Ghost Mount Point Cleanup
                 for vol in /Volumes/Arkham\ Card\ Maker*; do
                   [ -d "$vol" ] && rmdir "$vol" 2>/dev/null || true
                 done
 
+                # 3. Temporary DMG File Cleanup
+                find . -maxdepth 1 -name "rw.*.dmg" -type f 2>/dev/null | while read -r tmpfile; do
+                  rm -f "$tmpfile" 2>/dev/null || true
+                done
                 rm -f "$DMG_NAME" 2>/dev/null || true
 
                 echo "⏳ Waiting 10s before retry..."
