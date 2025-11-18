@@ -12,7 +12,19 @@ a = Analysis(
         ('cardback', 'cardback'),
         ('templates', 'templates'),
     ],
-    hiddenimports=[],
+    hiddenimports=[
+        # pywebview GTK 依赖
+        'gi',
+        'gi.repository',
+        'gi.repository.Gtk',
+        'gi.repository.GLib',
+        'gi.repository.Gio',
+        'gi.repository.GObject',
+        'gi.repository.WebKit2',
+        'cairo',
+        # pywebview 平台模块
+        'webview.platforms.gtk',
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

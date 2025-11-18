@@ -229,13 +229,15 @@ jobs:
             distro_version: "Debian 11+, Ubuntu 22.04+, Mint 21+"
             pkg_format: deb
             pkg_manager: apt
-            dependencies: "libgtk-3-0, libwebkit2gtk-4.0-37, libayatana-appindicator3-1"
+            dependencies: "libgtk-3-0, libwebkit2gtk-4.0-37, libayatana-appindicator3-1, gir1.2-gtk-3.0, gir1.2-webkit2-4.0"
             install_cmd: |
               sudo apt-get update
               sudo apt-get install -y \
                 python3 python3-pip python3-dev \
                 libgtk-3-0 libwebkit2gtk-4.0-37 \
                 libayatana-appindicator3-1 gir1.2-ayatanaappindicator3-0.1 \
+                python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-webkit2-4.0 \
+                libgirepository1.0-dev libcairo2-dev pkg-config \
                 binutils patchelf ruby ruby-dev build-essential
               sudo gem install --no-document fpm
 
@@ -246,7 +248,7 @@ jobs:
             distro_version: "Fedora 38+, RHEL 9+, CentOS Stream 9+"
             pkg_format: rpm
             pkg_manager: dnf
-            dependencies: "gtk3, webkit2gtk4.1"
+            dependencies: "gtk3, webkit2gtk4.1, gobject-introspection"
             install_cmd: |
               # 设置 UTF-8 locale 以支持中文字符
               dnf install -y glibc-langpack-en
@@ -256,6 +258,7 @@ jobs:
               dnf install -y \
                 python3 python3-pip python3-devel \
                 gtk3 webkit2gtk4.1 \
+                python3-gobject python3-cairo gobject-introspection-devel cairo-devel \
                 binutils patchelf \
                 gcc gcc-c++ make \
                 ruby ruby-devel rubygems rpm-build
@@ -275,6 +278,8 @@ jobs:
                 python3 python3-pip python3-dev \
                 libgtk-3-0 libwebkit2gtk-4.0-37 \
                 libayatana-appindicator3-1 gir1.2-ayatanaappindicator3-0.1 \
+                python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-webkit2-4.0 \
+                libgirepository1.0-dev libcairo2-dev pkg-config \
                 binutils patchelf
 
     runs-on: ${{ matrix.runner }}
@@ -321,7 +326,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-${{ matrix.distro }}-pip-${{ hashFiles('requirements.txt') }}
+          key: ${{ runner.os }}-${{ matrix.distro }}-pip-${{ hashFiles('requirements-linux.txt') }}
           restore-keys: |
             ${{ runner.os }}-${{ matrix.distro }}-pip-
 
@@ -329,7 +334,7 @@ jobs:
         run: |
           python3 -m pip install --upgrade pip
           pip3 install pyinstaller
-          pip3 install -r requirements.txt
+          pip3 install -r requirements-linux.txt
 
       - name: Build with PyInstaller
         run: |
