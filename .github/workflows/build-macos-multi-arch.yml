@@ -315,39 +315,32 @@ jobs:
           echo "Installing dependencies for ${{ matrix.distro_name }}..."
           ${{ matrix.install_cmd }}
 
-      - name: Set up Python (non-container)
-        if: matrix.distro != 'fedora'
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Configure Python to access system gi modules
+      # 方案1：使用系统 Python 3.10（不使用 actions/setup-python）
+      - name: Configure Python environment
         run: |
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "🔧 Configuring Python environment"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-          # 根据发行版确定系统 site-packages 路径
-          if [ "${{ matrix.distro }}" = "fedora" ]; then
-            # Fedora 使用系统 Python，查找 site-packages
-            SYSTEM_SITE_PACKAGES=$(python3 -c "import sys; import os; paths = [p for p in sys.path if 'site-packages' in p and os.path.exists(p)]; print(paths[0] if paths else '/usr/lib64/python3.11/site-packages')")
+          # 清除预设的 PYTHONPATH 避免版本冲突
+          echo "PYTHONPATH=" >> $GITHUB_ENV
+          echo "PYTHONNOUSERSITE=1" >> $GITHUB_ENV
+
+          # 验证系统 Python 版本和 gi 模块
+          echo "Python version:"
+          python3 --version
+          echo ""
+          echo "Python executable:"
+          command -v python3
+          echo ""
+
+          # 检查 gi 模块是否可用
+          if python3 -c "import gi" 2>/dev/null; then
+            echo "✅ gi module available in system Python"
+            python3 -c "import gi; print('   gi module path:', gi.__file__)"
           else
-            # Debian/Ubuntu 查找 dist-packages（系统包位置）
-            SYSTEM_SITE_PACKAGES=$(/usr/bin/python3 -c "import sys; print([p for p in sys.path if 'dist-packages' in p][0])" 2>/dev/null || echo "/usr/lib/python3/dist-packages")
-          fi
-
-          echo "System site-packages: $SYSTEM_SITE_PACKAGES"
-
-          # 将系统 site-packages 添加到 PYTHONPATH（对后续所有步骤生效）
-          echo "PYTHONPATH=$SYSTEM_SITE_PACKAGES:$PYTHONPATH" >> $GITHUB_ENV
-
-          # 验证路径存在
-          if [ -d "$SYSTEM_SITE_PACKAGES/gi" ]; then
-            echo "✅ Found gi module at: $SYSTEM_SITE_PACKAGES/gi"
-          else
-            echo "⚠️  Warning: gi module not found at expected location"
-            echo "   Searching for gi module..."
-            find /usr/lib* -name "gi" -type d 2>/dev/null | head -5 || true
+            echo "⚠️  Warning: gi module not found in system Python"
+            echo "   This may cause build failures"
           fi
 
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -357,9 +350,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-${{ matrix.distro }}-py311-pip-${{ hashFiles('requirements-linux.txt') }}
+          key: ${{ runner.os }}-${{ matrix.distro }}-system-python-pip-${{ hashFiles('requirements-linux.txt') }}
           restore-keys: |
-            ${{ runner.os }}-${{ matrix.distro }}-py311-pip-
+            ${{ runner.os }}-${{ matrix.distro }}-system-python-pip-
 
       - name: Install Python dependencies
         run: |
@@ -367,38 +360,32 @@ jobs:
           pip3 install pyinstaller
           pip3 install -r requirements-linux.txt
 
-      - name: Verify GTK and GI installation
+      - name: Verify GTK and PyGObject installation
         run: |
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "📦 Verifying GTK and PyGObject installation"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-          # 显示 Python 环境信息
-          echo "Python version:"
-          python3 --version
-          echo ""
-          echo "Python executable:"
-          command -v python3
-          echo ""
-          echo "PYTHONPATH:"
-          echo "$PYTHONPATH"
-          echo ""
-          echo "Python sys.path:"
-          python3 -c "import sys; print('\n'.join(sys.path))"
-          echo ""
+          python3 - << 'PY'
+          import sys
+          import gi
 
-          # 验证 gi 模块可导入
-          python3 -c "import gi; print('✅ gi module imported successfully')"
-          python3 -c "import gi; print('   gi module path:', gi.__file__)"
+          print("✓ Python:", sys.version)
+          print("✓ Python executable:", sys.executable)
+          print("✓ gi module path:", gi.__file__)
+          print()
 
-          # 验证 GTK 3.0 可用
-          python3 -c "import gi; gi.require_version('Gtk', '3.0'); from gi.repository import Gtk; print('✅ GTK 3.0 available')"
+          # 验证 GTK/WebKit2/Cairo
+          gi.require_version("Gtk", "3.0")
+          from gi.repository import Gtk, WebKit2, GLib, GObject
+          import cairo
 
-          # 验证 WebKit2 4.0 可用
-          python3 -c "import gi; gi.require_version('WebKit2', '4.0'); from gi.repository import WebKit2; print('✅ WebKit2 4.0 available')"
-
-          # 验证 cairo 可用
-          python3 -c "import cairo; print('✅ cairo module available')"
+          print("✓ GTK 3.0: OK")
+          print("✓ WebKit2: OK")
+          print("✓ cairo: OK")
+          print()
+          print("✅ All modules verified successfully")
+          PY
 
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
