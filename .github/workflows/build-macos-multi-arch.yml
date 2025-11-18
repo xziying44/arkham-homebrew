@@ -381,6 +381,9 @@ jobs:
 
       - name: Verify GTK and PyGObject installation
         run: |
+          # 激活虚拟环境
+          source venv/bin/activate
+
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "📦 Verifying GTK and PyGObject installation"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -411,6 +414,10 @@ jobs:
       - name: Build with PyInstaller
         run: |
           echo "🔨 Starting build for ${{ matrix.distro_name }}..."
+
+          # 激活虚拟环境（确保所有发行版都能找到 pyinstaller）
+          source venv/bin/activate
+
           pyinstaller app-linux.spec --clean --noconfirm
 
       - name: Verify build
