@@ -830,6 +830,9 @@ jobs:
       VERSION: ${{ github.ref_name }}
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -869,6 +872,44 @@ jobs:
           echo "Release assets prepared:"
           ls -lh release/
 
+      - name: Extract changelog for current version
+        id: changelog
+        run: |
+          VERSION="${{ github.ref_name }}"
+          echo "Extracting changelog for version: $VERSION"
+
+          # 提取当前版本的更新日志（从 ## [vX.X.X] 或 ## [X.X.X] 到下一个 ## 之间的内容）
+          # 支持带 v 前缀和不带 v 前缀的版本号
+          VERSION_NO_V="${VERSION#v}"
+
+          # 提取中文更新日志
+          CHANGELOG_ZH=$(awk "/## \[v?${VERSION_NO_V}\]/,/^## \[/" CHANGELOG.md | sed '1d;$d' | sed '/^$/d')
+          if [ -z "$CHANGELOG_ZH" ]; then
+            echo "⚠️  No Chinese changelog found for version $VERSION, using default message"
+            CHANGELOG_ZH="请查看完整更新日志：[CHANGELOG.md](https://github.com/xziying44/arkham-homebrew/blob/main/CHANGELOG.md)"
+          else
+            echo "✅ Chinese changelog extracted successfully"
+          fi
+
+          # 提取英文更新日志
+          CHANGELOG_EN=$(awk "/## \[v?${VERSION_NO_V}\]/,/^## \[/" CHANGELOG_EN.md | sed '1d;$d' | sed '/^$/d')
+          if [ -z "$CHANGELOG_EN" ]; then
+            echo "⚠️  No English changelog found for version $VERSION, using default message"
+            CHANGELOG_EN="See full changelog: [CHANGELOG_EN.md](https://github.com/xziying44/arkham-homebrew/blob/main/CHANGELOG_EN.md)"
+          else
+            echo "✅ English changelog extracted successfully"
+          fi
+
+          # 输出到 GitHub Actions 环境变量（处理多行）
+          {
+            echo "CHANGELOG_ZH<<EOF"
+            echo "$CHANGELOG_ZH"
+            echo "EOF"
+            echo "CHANGELOG_EN<<EOF"
+            echo "$CHANGELOG_EN"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -882,6 +923,16 @@ jobs:
             release/arkham-card-maker-${{ env.VERSION }}-linux.tar.gz
           body: |
             ## 🎉 Arkham Card Maker ${{ env.VERSION }}
+
+            ### ✨ 更新日志 / What's New
+
+            #### 中文 / Chinese
+            ${{ steps.changelog.outputs.CHANGELOG_ZH }}
+
+            #### English
+            ${{ steps.changelog.outputs.CHANGELOG_EN }}
+
+            ---
 
             ### 📦 下载安装包
 
@@ -923,11 +974,6 @@ jobs:
             tar -xzf arkham-card-maker-${{ env.VERSION }}-linux.tar.gz
             cd "Arkham Card Maker" && ./Arkham\ Card\ Maker
             ```
-
-            ---
-
-            ### ✨ 更新日志
-            <!-- 在此处添加版本更新内容 -->
 
             ---
 
