@@ -110,49 +110,167 @@ jobs:
         run: |
           brew install create-dmg
 
+      - name: Filesystem Sync Before DMG
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🔄 Syncing filesystem..."
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+          # 多次 sync 确保 I/O 稳定
+          sync && sleep 1 && sync
+
+          # 健康检查: 抽样读取 .app 资源确保文件完整可用
+          echo "Verifying .app integrity..."
+          find "dist/Arkham Card Maker.app/Contents" -type f | head -10 | xargs -I {} cat {} > /dev/null
+
+          # Intel runner 专属额外等待 (x86_64 架构的 I/O 缓存窗口更长)
+          if [ "${{ matrix.arch }}" = "x86_64" ]; then
+            echo "Intel runner detected - adding extra stabilization time..."
+            sleep 3
+          fi
+
+          echo "✅ Filesystem sync completed"
+
       - name: Create DMG
         run: |
           DMG_NAME="Arkham-Card-Maker-${{ matrix.arch }}.dmg"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "📀 Creating DMG: $DMG_NAME"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-          # 彻底清理挂载点和临时文件
-          echo "Cleaning up existing mounts and files..."
+          # ============================================
+          # 四层防御清理机制 (指数退避重试)
+          # ============================================
+          echo "🧹 Phase 1: Enhanced Volume Cleanup (Exponential Backoff)"
+          for i in {1..5}; do
+            # A. 卷级强制卸载
+            for vol in /Volumes/Arkham\ Card\ Maker*; do
+              [ -d "$vol" ] && {
+                echo "  Detaching volume: $vol"
+                hdiutil detach "$vol" -force 2>/dev/null || true
+              }
+            done
 
-          # 1. 卸载所有可能的 "Arkham Card Maker" 卷
-          for vol in /Volumes/Arkham\ Card\ Maker*; do
-            if [ -d "$vol" ]; then
-              echo "Unmounting $vol"
-              hdiutil detach "$vol" -force 2>/dev/null || true
+            # B. 检查是否还有残留挂载
+            if ! hdiutil info | grep -iq "arkham"; then
+              echo "  ✅ All Arkham volumes detached"
+              break
             fi
+
+            # C. 指数退避等待
+            WAIT_TIME=$((i * 2))
+            echo "  ⏳ Retry $i: Waiting ${WAIT_TIME}s for system stabilization..."
+            sleep $WAIT_TIME
           done
 
-          # 2. 删除可能存在的旧 DMG 文件
+          echo ""
+          echo "🗑️  Phase 2: Ghost Mount Point Cleanup"
+          # 清理幽灵挂载点 (已卸载但目录残留)
+          for vol in /Volumes/Arkham\ Card\ Maker*; do
+            [ -d "$vol" ] && {
+              echo "  Removing ghost mount point: $vol"
+              rmdir "$vol" 2>/dev/null || true
+            }
+          done
+
+          echo ""
+          echo "🧼 Phase 3: File Cleanup"
+          # 删除旧 DMG 文件
           rm -f "$DMG_NAME" 2>/dev/null || true
 
-          # 3. 等待文件系统稳定（增加等待时间）
-          echo "Waiting for filesystem to stabilize..."
-          sleep 5
+          echo ""
+          echo "📊 Phase 4: Pre-Creation Diagnostics"
+          echo "  Verifying cleanup status..."
+          hdiutil info | grep -i "arkham" || echo "  ✅ No Arkham volumes in hdiutil info"
+          lsof +D /Volumes 2>/dev/null | grep -i "arkham" || echo "  ✅ No Arkham processes holding /Volumes"
+          echo ""
 
-          # 4. 验证清理状态
-          echo "Current mounts:"
-          hdiutil info | grep -i "arkham" || echo "No Arkham volumes mounted"
+          # ============================================
+          # DMG 创建 (带重试与隔离机制)
+          # ============================================
+          MAX_RETRIES=2
+          UNIQUE_VOLNAME="Arkham Card Maker (${{ matrix.arch }}-$(date +%s))"
 
-          # 5. 创建 DMG
-          echo "Starting DMG creation..."
-          create-dmg \
-            --volname "Arkham Card Maker" \
-            --volicon "favicon.icns" \
-            --window-pos 200 120 \
-            --window-size 800 400 \
-            --icon-size 100 \
-            --icon "Arkham Card Maker.app" 200 190 \
-            --hide-extension "Arkham Card Maker.app" \
-            --app-drop-link 600 185 \
-            --no-internet-enable \
-            "$DMG_NAME" \
-            "dist/Arkham Card Maker.app"
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "🚀 Attempt $attempt/$MAX_RETRIES: Starting DMG creation..."
+            echo "   Volume Name: $UNIQUE_VOLNAME"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-          echo "✅ DMG created successfully"
+            if create-dmg \
+              --volname "$UNIQUE_VOLNAME" \
+              --volicon "favicon.icns" \
+              --window-pos 200 120 \
+              --window-size 800 400 \
+              --icon-size 100 \
+              --icon "Arkham Card Maker.app" 200 190 \
+              --hide-extension "Arkham Card Maker.app" \
+              --app-drop-link 600 185 \
+              --no-internet-enable \
+              "$DMG_NAME" \
+              "dist/Arkham Card Maker.app"; then
+
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              echo "✅ DMG creation succeeded on attempt $attempt"
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              break
+            else
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              echo "❌ Attempt $attempt failed"
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+              if [ $attempt -lt $MAX_RETRIES ]; then
+                echo ""
+                echo "🔍 Deep Diagnostics (Failed Attempt $attempt)"
+                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+                # 导出详细诊断信息
+                echo "📋 hdiutil info (verbose):"
+                hdiutil info -verbose | grep -A 10 -i "arkham" || echo "  (No Arkham volumes)"
+                echo ""
+
+                echo "💾 diskutil list:"
+                diskutil list | grep -A 5 -i "arkham" || echo "  (No Arkham disks)"
+                echo ""
+
+                echo "📂 Current mounts:"
+                mount | grep -i "arkham" || echo "  (No Arkham mounts)"
+                echo ""
+
+                echo "🔒 Processes holding /Volumes:"
+                lsof +D /Volumes 2>/dev/null | grep -i "arkham" || echo "  (No Arkham processes)"
+                echo ""
+
+                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                echo "🔄 Deep cleanup before retry..."
+                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+                # 深度清理 (复用四层防御逻辑)
+                for i in {1..3}; do
+                  for vol in /Volumes/Arkham\ Card\ Maker*; do
+                    [ -d "$vol" ] && hdiutil detach "$vol" -force 2>/dev/null || true
+                  done
+                  hdiutil info | grep -iq "arkham" || break
+                  sleep $((i * 3))
+                done
+
+                for vol in /Volumes/Arkham\ Card\ Maker*; do
+                  [ -d "$vol" ] && rmdir "$vol" 2>/dev/null || true
+                done
+
+                rm -f "$DMG_NAME" 2>/dev/null || true
+
+                echo "⏳ Waiting 10s before retry..."
+                sleep 10
+              else
+                echo ""
+                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                echo "💥 All retry attempts exhausted"
+                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                exit 1
+              fi
+            fi
+          done
 
       - name: Verify DMG
         run: |
