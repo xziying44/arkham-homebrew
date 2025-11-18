@@ -153,9 +153,6 @@ const confirmLanguage = async () => {
     // 显示成功提示
     message.success(t('languageWelcome.success'));
 
-    // 标记首次访问已完成
-    localStorage.setItem('language-welcome-completed', 'true');
-
   } catch (error) {
     console.error('语言切换失败:', error);
     message.error(t('languageWelcome.error'));

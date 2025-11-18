@@ -1159,12 +1159,6 @@ const loadCardData = async () => {
 
         // 尝试从暂存获取数据
         const filePath = props.selectedFile.path;
-        // 通过emit触发父组件的loadFromCache方法
-        // 由于我们需要同步获取数据，这里需要特殊处理
-        // 实际上，我们需要父组件将loadFromCache作为prop传下来
-
-        // 临时方案：直接从localStorage或通过事件获取
-        // 更好的方案：将loadFromCache作为prop传递
 
         // 先尝试正常加载文件内容
         const content = await WorkspaceService.getFileContent(filePath);

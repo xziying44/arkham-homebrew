@@ -517,16 +517,8 @@ const checkFirstVisit = async () => {
       showLanguageWelcome.value = true;
     }
   } catch (error) {
-    console.warn('🔍 [首次访问检测] 检查配置失败，回退到localStorage:', error);
-
-    // 回退到localStorage检测（保持向后兼容）
-    const hasCompletedWelcome = localStorage.getItem('language-welcome-completed');
-    const hasLanguageSetting = localStorage.getItem('language');
-
-    if (!hasCompletedWelcome && !hasLanguageSetting) {
-      console.log('🎉 [首次访问] localStorage检测到首次访问，将显示语言选择弹窗');
-      showLanguageWelcome.value = true;
-    }
+    console.error('🔍 [首次访问检测] 检查配置失败:', error);
+    // 配置检查失败时，不显示欢迎弹窗
   }
 };
 
@@ -553,13 +545,7 @@ const handleLanguageSelected = async (selectedLanguage: string) => {
 
   } catch (error) {
     console.error('❌ [语言选择] 保存配置失败:', error);
-
-    // 回退到localStorage保存（保持向后兼容）
-    localStorage.setItem('language', selectedLanguage);
-    localStorage.setItem('language-welcome-completed', 'true');
-
-    console.log('⚠️ [语言选择] 已回退保存到localStorage');
-    message.warning(t('languageWelcome.error'));
+    message.error(t('languageWelcome.error'));
   }
 };
 

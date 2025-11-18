@@ -7,12 +7,10 @@ const messages = {
   en
 }
 
-// 从localStorage获取语言设置，默认中文
-const savedLanguage = localStorage.getItem('language') || 'zh'
-
+// 默认使用中文，语言设置由后端配置管理
 const i18n = createI18n({
   legacy: false, // 使用 Composition API 模式
-  locale: savedLanguage,
+  locale: 'zh',
   fallbackLocale: 'zh',
   messages,
   globalInjection: true // 全局注入$t
@@ -21,9 +19,9 @@ const i18n = createI18n({
 export default i18n
 
 // 导出切换语言函数
+// 注意：语言设置应通过后端配置保存，此函数仅更新运行时语言
 export const setLanguage = (locale: string) => {
   i18n.global.locale.value = locale
-  localStorage.setItem('language', locale)
 }
 
 // 导出当前语言
