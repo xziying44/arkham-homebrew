@@ -378,7 +378,7 @@ jobs:
           python3 --version
           echo ""
           echo "Python executable:"
-          which python3
+          command -v python3
           echo ""
           echo "PYTHONPATH:"
           echo "$PYTHONPATH"
