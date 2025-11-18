@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main
+      - master
       - develop
     tags:
       - "*"
   pull_request:
     branches:
-      - main
+      - master
 
 jobs:
   build-macos:
@@ -878,26 +878,46 @@ jobs:
           VERSION="${{ github.ref_name }}"
           echo "Extracting changelog for version: $VERSION"
 
-          # 提取当前版本的更新日志（从 ## [vX.X.X] 或 ## [X.X.X] 到下一个 ## 之间的内容）
-          # 支持带 v 前缀和不带 v 前缀的版本号
+          # 移除 v 前缀（如果有）
           VERSION_NO_V="${VERSION#v}"
 
+          echo "Looking for version: ${VERSION_NO_V}"
+          echo "Checking if CHANGELOG files exist..."
+          ls -la CHANGELOG*.md || true
+
           # 提取中文更新日志
-          CHANGELOG_ZH=$(awk "/## \[v?${VERSION_NO_V}\]/,/^## \[/" CHANGELOG.md | sed '1d;$d' | sed '/^$/d')
+          # 使用 sed 从 ## [版本号] 开始提取到下一个 ## [ 或 --- 分隔符
+          echo "Extracting Chinese changelog..."
+          CHANGELOG_ZH=$(sed -n "/^## \[${VERSION_NO_V}\]/,/^## \[/p" CHANGELOG.md | sed '1d;$d')
+
+          # 如果为空，可能是最后一个版本，尝试提取到 --- 分隔符
           if [ -z "$CHANGELOG_ZH" ]; then
-            echo "⚠️  No Chinese changelog found for version $VERSION, using default message"
-            CHANGELOG_ZH="请查看完整更新日志：[CHANGELOG.md](https://github.com/xziying44/arkham-homebrew/blob/main/CHANGELOG.md)"
+            CHANGELOG_ZH=$(sed -n "/^## \[${VERSION_NO_V}\]/,/^---/p" CHANGELOG.md | sed '1d;$d')
+          fi
+
+          if [ -z "$CHANGELOG_ZH" ]; then
+            echo "⚠️  No Chinese changelog found for version $VERSION"
+            CHANGELOG_ZH="请查看完整更新日志：[CHANGELOG.md](https://github.com/xziying44/arkham-homebrew/blob/master/CHANGELOG.md)"
           else
             echo "✅ Chinese changelog extracted successfully"
+            echo "Preview: ${CHANGELOG_ZH:0:100}..."
           fi
 
           # 提取英文更新日志
-          CHANGELOG_EN=$(awk "/## \[v?${VERSION_NO_V}\]/,/^## \[/" CHANGELOG_EN.md | sed '1d;$d' | sed '/^$/d')
+          echo "Extracting English changelog..."
+          CHANGELOG_EN=$(sed -n "/^## \[${VERSION_NO_V}\]/,/^## \[/p" CHANGELOG_EN.md | sed '1d;$d')
+
+          # 如果为空，可能是最后一个版本，尝试提取到 --- 分隔符
           if [ -z "$CHANGELOG_EN" ]; then
-            echo "⚠️  No English changelog found for version $VERSION, using default message"
-            CHANGELOG_EN="See full changelog: [CHANGELOG_EN.md](https://github.com/xziying44/arkham-homebrew/blob/main/CHANGELOG_EN.md)"
+            CHANGELOG_EN=$(sed -n "/^## \[${VERSION_NO_V}\]/,/^---/p" CHANGELOG_EN.md | sed '1d;$d')
+          fi
+
+          if [ -z "$CHANGELOG_EN" ]; then
+            echo "⚠️  No English changelog found for version $VERSION"
+            CHANGELOG_EN="See full changelog: [CHANGELOG_EN.md](https://github.com/xziying44/arkham-homebrew/blob/master/CHANGELOG_EN.md)"
           else
             echo "✅ English changelog extracted successfully"
+            echo "Preview: ${CHANGELOG_EN:0:100}..."
           fi
 
           # 输出到 GitHub Actions 环境变量（处理多行）
