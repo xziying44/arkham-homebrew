@@ -345,21 +345,39 @@ jobs:
 
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-      - name: Cache pip packages
+      - name: Cache pip packages and venv
         if: matrix.distro != 'fedora'
         uses: actions/cache@v4
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-${{ matrix.distro }}-system-python-pip-${{ hashFiles('requirements-linux.txt') }}
+          path: |
+            ~/.cache/pip
+            venv
+          key: ${{ runner.os }}-${{ matrix.distro }}-venv-${{ hashFiles('requirements-linux.txt') }}
           restore-keys: |
-            ${{ runner.os }}-${{ matrix.distro }}-system-python-pip-
+            ${{ runner.os }}-${{ matrix.distro }}-venv-
 
       - name: Install Python dependencies
         run: |
-          # CI 环境使用 sudo 直接安装到系统目录（避免 --user 路径问题）
-          sudo python3 -m pip install --upgrade pip setuptools wheel
-          sudo python3 -m pip install pyinstaller
-          sudo python3 -m pip install -r requirements-linux.txt
+          # 创建虚拟环境（如果不存在，--system-site-packages 允许访问系统 gi 模块）
+          if [ ! -d "venv" ]; then
+            echo "Creating new virtual environment..."
+            python3 -m venv --system-site-packages venv
+          else
+            echo "Virtual environment restored from cache"
+          fi
+
+          source venv/bin/activate
+
+          # 在虚拟环境中安装依赖
+          pip install --upgrade pip setuptools wheel
+          pip install pyinstaller
+          pip install -r requirements-linux.txt
+
+          # 将虚拟环境的 bin 目录添加到 PATH（后续步骤生效）
+          echo "${{ github.workspace }}/venv/bin" >> $GITHUB_PATH
+
+          # 保存虚拟环境激活状态（通过环境变量）
+          echo "VIRTUAL_ENV=${{ github.workspace }}/venv" >> $GITHUB_ENV
 
       - name: Verify GTK and PyGObject installation
         run: |
