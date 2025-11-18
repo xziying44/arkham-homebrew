@@ -115,21 +115,30 @@ jobs:
           DMG_NAME="Arkham-Card-Maker-${{ matrix.arch }}.dmg"
           echo "📀 Creating DMG: $DMG_NAME"
 
-          # 清理可能存在的旧文件和挂载
-          if [ -f "$DMG_NAME" ]; then
-            echo "Removing existing DMG file..."
-            rm -f "$DMG_NAME"
-          fi
+          # 彻底清理挂载点和临时文件
+          echo "Cleaning up existing mounts and files..."
 
-          # 卸载可能已挂载的同名卷
-          if hdiutil info | grep -q "Arkham Card Maker"; then
-            echo "Unmounting existing volume..."
-            hdiutil detach "/Volumes/Arkham Card Maker" -force 2>/dev/null || true
-          fi
+          # 1. 卸载所有可能的 "Arkham Card Maker" 卷
+          for vol in /Volumes/Arkham\ Card\ Maker*; do
+            if [ -d "$vol" ]; then
+              echo "Unmounting $vol"
+              hdiutil detach "$vol" -force 2>/dev/null || true
+            fi
+          done
 
-          # 等待文件系统稳定
-          sleep 2
+          # 2. 删除可能存在的旧 DMG 文件
+          rm -f "$DMG_NAME" 2>/dev/null || true
 
+          # 3. 等待文件系统稳定（增加等待时间）
+          echo "Waiting for filesystem to stabilize..."
+          sleep 5
+
+          # 4. 验证清理状态
+          echo "Current mounts:"
+          hdiutil info | grep -i "arkham" || echo "No Arkham volumes mounted"
+
+          # 5. 创建 DMG
+          echo "Starting DMG creation..."
           create-dmg \
             --volname "Arkham Card Maker" \
             --volicon "favicon.icns" \
@@ -607,149 +616,50 @@ jobs:
 
           ## 📥 下载安装包
 
-          所有版本已成功构建，请根据你的操作系统选择对应的安装包：
+          ### 🍎 macOS
+          - **Apple Silicon (M1/M2/M3)**: `Arkham-Card-Maker-arm64.dmg`
+          - **Intel**: `Arkham-Card-Maker-x86_64.dmg`
 
-          ### 🍎 macOS - Apple Silicon (ARM64)
-          **适用于：** M1、M2、M3 芯片的 Mac（2020 年底及以后）
-
-          **下载：** `Arkham-Card-Maker-arm64.dmg`
-
-          ---
-
-          ### 💻 macOS - Intel (x86_64)
-          **适用于：** Intel 处理器的 Mac（2020 年及之前）
-
-          **下载：** `Arkham-Card-Maker-x86_64.dmg`
+          **安装：** 双击 DMG → 拖拽到 Applications → 右键打开（绕过签名警告）
 
           ---
 
-          ### 🪟 Windows (x86_64)
-          **适用于：** Windows 10/11（64位）
+          ### 🪟 Windows (64位)
+          - **下载：** `Arkham-Card-Maker-win.zip`
 
-          **下载：** `Arkham-Card-Maker-win.zip`
+          **安装：** 使用 **7-Zip/Bandizip/WinRAR** 解压 → 运行 `Arkham Card Maker.exe`
 
-          ---
+          #### ⚠️ 特别提醒
+          **不推荐使用 Windows 自带 ZIP 解压**，可能导致 DLL 文件被锁定而无法运行。请使用第三方解压软件。
 
-          ### 🐧 Linux - Debian/Ubuntu/Mint (推荐)
-          **适用于：** Debian 11+, Ubuntu 22.04+, Linux Mint 21+ 及所有 Debian 系衍生版
-
-          **下载：** `arkham-card-maker_xxx_debian.deb` (原生包，自动安装依赖)
-
-          **安装方法：**
-          ```bash
-          # 方法1：图形界面 - 双击 .deb 文件，按提示安装
-
-          # 方法2：命令行
-          sudo dpkg -i arkham-card-maker_*_debian.deb
-          sudo apt-get install -f  # 自动安装依赖（如有需要）
-          ```
-
-          **手动安装依赖（如需要）：**
-          ```bash
-          # Ubuntu 22.04+ / Debian 11+
-          sudo apt-get install libgtk-3-0 libwebkit2gtk-4.0-37 libayatana-appindicator3-1 \
-            gir1.2-gtk-3.0 gir1.2-webkit2-4.0 python3-gi python3-gi-cairo
-          ```
-
-          **卸载：**
-          ```bash
-          sudo apt-get remove arkham-card-maker
-          ```
+          #### **Important Note for Windows Users**
+          **Do NOT use the default Windows ZIP extractor**. It may lock DLL files, preventing the app from running. Use 7-Zip, Bandizip, or WinRAR instead.
 
           ---
 
-          ### 🎩 Linux - Fedora/RHEL/CentOS (推荐)
-          **适用于：** Fedora 38+, RHEL 9+, CentOS Stream 9+ 及 Red Hat 系衍生版
+          ### 🐧 Linux
+          - **Debian/Ubuntu/Mint**: `arkham-card-maker_xxx_debian.deb`
+          - **Fedora/RHEL/CentOS**: `arkham-card-maker_xxx_fedora.rpm`
+          - **其他发行版**: `arkham-card-maker_xxx_linux.tar.gz`
 
-          **下载：** `arkham-card-maker_xxx_fedora.rpm` (原生包，自动安装依赖)
-
-          **安装方法：**
+          **安装（原生包）：**
           ```bash
-          # 方法1：图形界面 - 双击 .rpm 文件，按提示安装
+          # Debian/Ubuntu
+          sudo dpkg -i arkham-card-maker_*_debian.deb && sudo apt-get install -f
 
-          # 方法2：命令行
+          # Fedora/RHEL
           sudo dnf install arkham-card-maker_*_fedora.rpm
           ```
 
-          **卸载：**
+          **通用版本：**
           ```bash
-          sudo dnf remove arkham-card-maker
-          ```
-
-          ---
-
-          ### 🔧 Linux - 通用版本 (所有发行版)
-          **适用于：** Arch、openSUSE、Gentoo、Slackware 等其他 Linux 发行版
-
-          **下载：** `arkham-card-maker_xxx_linux.tar.gz` (手动安装)
-
-          **安装方法：**
-          ```bash
-          # 1. 解压
           tar -xzf arkham-card-maker_*_linux.tar.gz
-
-          # 2. 进入目录
-          cd "Arkham Card Maker"
-
-          # 3. 安装依赖（根据你的发行版选择命令）
-          # Arch Linux:
-          sudo pacman -S gtk3 webkit2gtk python-gobject python-cairo
-
-          # openSUSE:
-          sudo zypper install gtk3 webkit2gtk3 python3-gobject python3-cairo
-
-          # Gentoo:
-          sudo emerge --ask dev-python/pygobject dev-python/pycairo x11-libs/gtk+ net-libs/webkit-gtk
-
-          # 4. 运行
-          ./Arkham\ Card\ Maker
+          cd "Arkham Card Maker" && ./Arkham\ Card\ Maker
           ```
 
           ---
 
-          ## ❓ 如何确定我的 Mac 芯片类型？
-
-          1. 点击左上角  **Apple 菜单**
-          2. 选择 **关于本机**
-          3. 查看 **芯片** 或 **处理器** 一栏：
-             - 显示 "Apple M1/M2/M3" → 下载 **ARM64** 版本
-             - 显示 "Intel Core" → 下载 **x86_64** 版本
-
-          ## 📦 安装说明
-
-          ### macOS
-          1. 下载对应架构的 DMG 文件
-          2. 双击打开 DMG
-          3. 将 **Arkham Card Maker.app** 拖拽到 **Applications** 文件夹
-          4. 首次运行时，右键点击应用 → 选择 **打开**（绕过未签名警告）
-
-          ### Windows
-          1. 下载 ZIP 文件
-          2. 解压到任意目录
-          3. 运行 `Arkham Card Maker.exe`
-          4. 如遇到 SmartScreen 警告，点击"更多信息" → "仍要运行"
-
-          ### Linux（原生包 - 强烈推荐）
-
-          **优势：**
-          - ✅ 自动安装所需依赖库
-          - ✅ 自动添加到系统应用菜单
-          - ✅ 可通过系统包管理器卸载和更新
-
-          **使用方法：**
-          1. **Debian 系用户**（Ubuntu/Mint）：下载 `.deb` 包
-          2. **Red Hat 系用户**（Fedora/RHEL）：下载 `.rpm` 包
-          3. 双击安装包，按系统提示安装
-          4. 安装完成后，在应用菜单中搜索 "Arkham Card Maker" 即可运行
-          5. 或在终端运行：`arkham-card-maker`
-
-          **通用版本（tar.gz）适用场景：**
-          - 使用其他发行版（Arch、openSUSE 等）
-          - 不想使用系统包管理器
-          - 需要便携式安装
-          - 需要多版本共存
-
-          ---
+          **❓ 如何确定 Mac 芯片？** 左上角  → 关于本机 → 查看"芯片"（M1/M2/M3 = ARM64，Intel = x86_64）
 
           *构建时间: $(date -u '+%Y-%m-%d %H:%M:%S UTC')*
           EOF
@@ -819,69 +729,54 @@ jobs:
           body: |
             ## 🎉 Arkham Card Maker ${{ env.VERSION }}
 
-            ### 📦 安装包下载
+            ### 📦 下载安装包
 
-            #### macOS
+            #### 🍎 macOS
             - **Apple Silicon (M1/M2/M3)**: `Arkham-Card-Maker-${{ env.VERSION }}-macos-arm64.dmg`
             - **Intel**: `Arkham-Card-Maker-${{ env.VERSION }}-macos-x86_64.dmg`
 
-            #### Windows
-            - **Windows 10/11 (64位)**: `Arkham-Card-Maker-${{ env.VERSION }}-win.zip`
+            **安装：** 双击 DMG → 拖拽到 Applications → 右键打开
 
-            #### Linux
+            ---
 
-            **原生包（推荐）：**
+            #### 🪟 Windows (64位)
+            - **下载：** `Arkham-Card-Maker-${{ env.VERSION }}-win.zip`
+
+            **安装：** 使用 **7-Zip/Bandizip/WinRAR** 解压 → 运行 exe
+
+            #### ⚠️ 特别提醒
+            **不推荐使用 Windows 自带 ZIP 解压**，可能导致 DLL 文件被锁定。请使用第三方解压软件。
+
+            #### **Important Note for Windows Users**
+            **Do NOT use the default Windows ZIP extractor**. It may lock DLL files. Use 7-Zip, Bandizip, or WinRAR instead.
+
+            ---
+
+            #### 🐧 Linux
             - **Debian/Ubuntu/Mint**: `arkham-card-maker-${{ env.VERSION }}-debian.deb`
             - **Fedora/RHEL/CentOS**: `arkham-card-maker-${{ env.VERSION }}-fedora.rpm`
+            - **其他发行版**: `arkham-card-maker-${{ env.VERSION }}-linux.tar.gz`
 
-            **通用版本：**
-            - **所有 Linux 发行版**: `arkham-card-maker-${{ env.VERSION }}-linux.tar.gz`
-
-            ---
-
-            ### 📖 安装说明
-
-            #### Linux 用户
-
-            **Debian/Ubuntu/Mint (推荐原生包)**:
+            **安装：**
             ```bash
-            sudo dpkg -i arkham-card-maker-${{ env.VERSION }}-debian.deb
-            sudo apt-get install -f  # 自动安装依赖
-            ```
+            # Debian/Ubuntu
+            sudo dpkg -i arkham-card-maker-${{ env.VERSION }}-debian.deb && sudo apt-get install -f
 
-            **Fedora/RHEL/CentOS (推荐原生包)**:
-            ```bash
+            # Fedora/RHEL
             sudo dnf install arkham-card-maker-${{ env.VERSION }}-fedora.rpm
-            ```
 
-            **其他发行版（通用 tar.gz）**:
-            ```bash
+            # 通用版本
             tar -xzf arkham-card-maker-${{ env.VERSION }}-linux.tar.gz
-            cd "Arkham Card Maker"
-
-            # 安装依赖（根据你的发行版）
-            # Arch: sudo pacman -S gtk3 webkit2gtk python-gobject python-cairo
-            # openSUSE: sudo zypper install gtk3 webkit2gtk3 python3-gobject python3-cairo
-
-            ./Arkham\ Card\ Maker
+            cd "Arkham Card Maker" && ./Arkham\ Card\ Maker
             ```
 
-            安装后在应用菜单搜索 "Arkham Card Maker" 即可运行。
+            ---
+
+            ### ✨ 更新日志
+            <!-- 在此处添加版本更新内容 -->
 
             ---
 
-            ### ✨ 新特性
-            - Linux 原生包支持（.deb 和 .rpm）
-            - 覆盖更多 Linux 发行版
-            - 自动依赖安装
-            - 系统菜单集成
-
-            ### 📋 系统要求
-            - **Ubuntu/Debian**: Ubuntu 22.04+, Debian 11+
-            - **Fedora/RHEL**: Fedora 38+, RHEL 9+
-            - **其他**: 任何现代 Linux 发行版（使用通用 tar.gz）
-
-            ---
-            *完整安装文档请查看项目 README*
+            *完整文档请查看 [README](https://github.com/xziying44/arkham-homebrew)*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
