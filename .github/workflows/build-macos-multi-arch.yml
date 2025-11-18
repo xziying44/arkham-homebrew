@@ -349,16 +349,22 @@ jobs:
         if: matrix.distro != 'fedora'
         uses: actions/cache@v4
         with:
-          path: ~/.cache/pip
+          path: |
+            ~/.cache/pip
+            ~/.local/lib/python3.10/site-packages
           key: ${{ runner.os }}-${{ matrix.distro }}-system-python-pip-${{ hashFiles('requirements-linux.txt') }}
           restore-keys: |
             ${{ runner.os }}-${{ matrix.distro }}-system-python-pip-
 
       - name: Install Python dependencies
         run: |
-          python3 -m pip install --upgrade pip
-          pip3 install pyinstaller
-          pip3 install -r requirements-linux.txt
+          # 使用 --user 安装到用户目录，避免权限问题
+          python3 -m pip install --user --upgrade pip setuptools wheel
+          python3 -m pip install --user pyinstaller
+          python3 -m pip install --user -r requirements-linux.txt
+
+          # 确保 ~/.local/bin 在 PATH 中（pyinstaller 安装位置）
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Verify GTK and PyGObject installation
         run: |
