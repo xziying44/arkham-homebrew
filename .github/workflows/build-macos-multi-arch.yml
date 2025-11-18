@@ -315,26 +315,23 @@ jobs:
           echo "Installing dependencies for ${{ matrix.distro_name }}..."
           ${{ matrix.install_cmd }}
 
-      - name: Set up Python (non-container)
-        if: matrix.distro != 'fedora'
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+      # 不使用 actions/setup-python - 直接使用系统 Python 以访问系统安装的 gi 模块
 
       - name: Cache pip packages
         if: matrix.distro != 'fedora'
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-${{ matrix.distro }}-pip-${{ hashFiles('requirements-linux.txt') }}
+          key: ${{ runner.os }}-${{ matrix.distro }}-system-python-pip-${{ hashFiles('requirements-linux.txt') }}
           restore-keys: |
-            ${{ runner.os }}-${{ matrix.distro }}-pip-
+            ${{ runner.os }}-${{ matrix.distro }}-system-python-pip-
 
       - name: Install Python dependencies
         run: |
-          python3 -m pip install --upgrade pip
-          pip3 install pyinstaller
-          pip3 install -r requirements-linux.txt
+          # 使用系统 Python，需要 --break-system-packages 标志（PEP 668）
+          python3 -m pip install --upgrade pip --break-system-packages
+          pip3 install pyinstaller --break-system-packages
+          pip3 install -r requirements-linux.txt --break-system-packages
 
       - name: Verify GTK and GI installation
         run: |
@@ -342,8 +339,20 @@ jobs:
           echo "📦 Verifying GTK and PyGObject installation"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
+          # 显示 Python 环境信息
+          echo "Python version:"
+          python3 --version
+          echo ""
+          echo "Python executable:"
+          which python3
+          echo ""
+          echo "Python site-packages:"
+          python3 -c "import site; print('\n'.join(site.getsitepackages()))"
+          echo ""
+
           # 验证 gi 模块可导入
           python3 -c "import gi; print('✅ gi module imported successfully')"
+          python3 -c "import gi; print('   gi module path:', gi.__file__)"
 
           # 验证 GTK 3.0 可用
           python3 -c "import gi; gi.require_version('Gtk', '3.0'); from gi.repository import Gtk; print('✅ GTK 3.0 available')"
