@@ -4,6 +4,8 @@ export default {
     clear: '清除选择',
     confirm: '确认',
     confirmWithCount: '确认 ({count})',
+    selectAll: '全选',
+    deselectAll: '取消全选',
   },
   empty: {
     description: '当前目录没有卡牌文件',

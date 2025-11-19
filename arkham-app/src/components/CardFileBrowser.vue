@@ -10,9 +10,15 @@
         <span class="path-text">{{ getCurrentPathDisplay() }}</span>
       </div>
       <div class="browser-actions">
-        <n-button size="small" @click="clearSelection">
-          {{ t('fileBrowser.actions.clear') }}
-        </n-button>
+        <!-- 全选/取消全选按钮（非单选模式下显示） -->
+        <template v-if="!singleSelect">
+          <n-button size="small" @click="selectAllCards" :disabled="allCardsSelected">
+            {{ t('fileBrowser.actions.selectAll') }}
+          </n-button>
+          <n-button size="small" @click="deselectAllCards" :disabled="selectedItems.length === 0">
+            {{ t('fileBrowser.actions.deselectAll') }}
+          </n-button>
+        </template>
         <n-button type="primary" size="small" @click="confirmSelection" :disabled="selectedItems.length === 0">
           {{ confirmLabel }}
         </n-button>
@@ -195,6 +201,17 @@ const cardFiles = computed(() => {
     }));
 });
 
+// 当前目录所有可选项（文件夹和卡牌文件）
+const allCardFiles = computed(() => {
+  return [...folders.value, ...cardFiles.value];
+});
+
+// 是否已全选当前目录所有项
+const allCardsSelected = computed(() => {
+  return allCardFiles.value.length > 0 &&
+         allCardFiles.value.every(item => selectedItems.value.some(selected => selected.path === item.path));
+});
+
 // 方法
 const loadFileTree = async () => {
   loading.value = true;
@@ -265,6 +282,15 @@ const toggleSelection = (item: BrowserItem) => {
 };
 
 const clearSelection = () => {
+  selectedItems.value = [];
+};
+
+const selectAllCards = () => {
+  // 全选当前目录的所有文件夹和卡牌文件
+  selectedItems.value = [...allCardFiles.value];
+};
+
+const deselectAllCards = () => {
   selectedItems.value = [];
 };
 

@@ -33,10 +33,28 @@
               {{ $t('workspaceMain.fileTree.bookmarks.onlyLabel') }}
             </n-checkbox>
           </n-space>
-          <n-text depth="3" v-if="showOnlyBookmarks && !hasBookmarkedCards">
-            {{ $t('workspaceMain.fileTree.bookmarks.emptyHint') }}
-          </n-text>
+          <n-space align="center" size="small">
+            <!-- 多选模式切换 -->
+            <n-checkbox size="small" v-model:checked="multiSelectMode" @update:checked="handleMultiSelectModeChange">
+              {{ $t('workspaceMain.fileTree.multiSelect.modeLabel') }}
+            </n-checkbox>
+            <!-- 全选/取消全选按钮（多选模式下显示） -->
+            <template v-if="multiSelectMode">
+              <n-button size="tiny" @click="selectAllCards" :disabled="allCardsSelected">
+                {{ $t('workspaceMain.fileTree.multiSelect.selectAll') }}
+              </n-button>
+              <n-button size="tiny" @click="deselectAllCards" :disabled="selectedKeys.length === 0">
+                {{ $t('workspaceMain.fileTree.multiSelect.deselectAll') }}
+              </n-button>
+              <n-text depth="3" style="font-size: 12px;">
+                {{ $t('workspaceMain.fileTree.multiSelect.selectedCount', { count: selectedKeys.length }) }}
+              </n-text>
+            </template>
+          </n-space>
         </n-space>
+        <n-text depth="3" v-if="showOnlyBookmarks && !hasBookmarkedCards">
+          {{ $t('workspaceMain.fileTree.bookmarks.emptyHint') }}
+        </n-text>
       </div>
       <n-spin :show="loading">
         <VirtualFileTree
@@ -801,6 +819,31 @@ const temporaryWorkspaceItems = ref<Array<{ path: string; label: string; key: st
 const isTempWorkspaceDragOver = ref(false);
 
 const hasBookmarkedCards = computed(() => bookmarkedPaths.value.length > 0);
+
+// 多选模式相关计算属性
+const allCardFiles = computed(() => {
+  const allFiles: Array<string | number> = [];
+  const collectCardFiles = (nodes: TreeOption[]) => {
+    nodes.forEach(node => {
+      if (node.type === 'card') {
+        allFiles.push(node.key);
+      }
+      if (node.children && node.children.length > 0) {
+        collectCardFiles(node.children);
+      }
+    });
+  };
+  if (displayedTreeData.value) {
+    collectCardFiles(displayedTreeData.value);
+  }
+  return allFiles;
+});
+
+const allCardsSelected = computed(() => {
+  return allCardFiles.value.length > 0 &&
+         allCardFiles.value.every(key => selectedKeys.value.includes(key));
+});
+
 const bookmarkSyncReady = ref(false);
 let lastPersistedBookmarksSnapshot = JSON.stringify([]);
 let bookmarkSyncRequestId = 0;
@@ -848,6 +891,9 @@ const syncBookmarksToConfig = async (paths: string[]) => {
 // 文件树展开和选中状态
 const expandedKeys = ref<Array<string | number>>([]);
 const selectedKeys = ref<Array<string | number>>([]);
+
+// 多选模式相关状态
+const multiSelectMode = ref(false);
 
 // 右键菜单
 const showContextMenu = ref(false);
@@ -2033,9 +2079,45 @@ const handleFileSelect = (keys: Array<string | number>, options: TreeOption[]) =
     return;
   }
 
-  // 如果点击的是文件，触发文件切换事件
+  // 多选模式处理
+  if (multiSelectMode.value) {
+    // 只处理卡牌文件的多选
+    if (selectedOption.type === 'card') {
+      const key = selectedOption.key;
+      const index = selectedKeys.value.indexOf(key);
+
+      if (index > -1) {
+        // 如果已选中，则取消选中
+        selectedKeys.value = selectedKeys.value.filter(k => k !== key);
+      } else {
+        // 如果未选中，则添加到选中列表
+        selectedKeys.value = [...selectedKeys.value, key];
+      }
+    }
+    return;
+  }
+
+  // 单选模式：如果点击的是文件，触发文件切换事件
   // 注意：不在这里更新 selectedKeys，而是等待父组件确认切换后，通过 watch 自动同步
   emit('file-select', keys, selectedOption);
+};
+
+// 多选模式切换处理
+const handleMultiSelectModeChange = (enabled: boolean) => {
+  if (!enabled) {
+    // 退出多选模式时，清空所有选中项
+    selectedKeys.value = [];
+  }
+};
+
+// 全选所有卡牌
+const selectAllCards = () => {
+  selectedKeys.value = [...allCardFiles.value];
+};
+
+// 取消选择所有卡牌
+const deselectAllCards = () => {
+  selectedKeys.value = [];
 };
 
 // 处理展开状态变化

@@ -281,6 +281,12 @@ export default {
       onlyLabel: '仅显示书签卡牌',
       emptyHint: '暂无书签卡牌'
     },
+    multiSelect: {
+      modeLabel: '多选模式',
+      selectAll: '全选',
+      deselectAll: '取消全选',
+      selectedCount: '已选择 {count} 张卡牌'
+    },
     tempWorkspace: {
       title: '临时工作区',
       clear: '清空',

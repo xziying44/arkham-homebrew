@@ -336,13 +336,17 @@ class Card2ArkhamDBConverter:
         return "🏅" in name or "<独特>" in name or self.card_meta.get("unique", False)
 
     def _get_special_flags(self) -> Dict[str, bool]:
-        """获取特殊标记"""
+        """
+        获取特殊标记
+        优先从卡牌文件（card_data）读取，回退到内容包元数据（card_meta）以保持向后兼容
+        """
         return {
             "is_unique": self._check_is_unique(),
-            "permanent": self.card_meta.get("permanent", False),
-            "exceptional": self.card_meta.get("exceptional", False),
-            "myriad": self.card_meta.get("myriad", False),
-            "exile": self.card_meta.get("exile", False)
+            # 优先从卡牌文件读取标签，不存在时回退到内容包meta
+            "permanent": self.card_data.get("permanent", self.card_meta.get("permanent", False)),
+            "exceptional": self.card_data.get("exceptional", self.card_meta.get("exceptional", False)),
+            "myriad": self.card_data.get("myriad", self.card_meta.get("myriad", False)),
+            "exile": self.card_data.get("exile", self.card_meta.get("exile", False))
         }
 
     def _convert_faction_codes(self) -> List[str]:

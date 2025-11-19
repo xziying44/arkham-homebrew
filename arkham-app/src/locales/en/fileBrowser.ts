@@ -4,6 +4,8 @@ export default {
     clear: 'Clear Selection',
     confirm: 'Confirm',
     confirmWithCount: 'Confirm ({count})',
+    selectAll: 'Select All',
+    deselectAll: 'Deselect All',
   },
   empty: {
     description: 'No card files in this directory',

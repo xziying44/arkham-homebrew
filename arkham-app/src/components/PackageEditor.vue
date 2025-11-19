@@ -242,21 +242,8 @@
                         <n-tag v-else type="success" size="tiny">
                           v{{ getCardStatus(card.filename).version }}
                         </n-tag>
-                        <!-- 卡牌标签显示 -->
-                        <n-tag v-if="card.permanent" type="info" size="tiny">
-                          {{ t('contentPackage.common.permanent') }}
-                        </n-tag>
-                        <n-tag v-if="card.exceptional" type="warning" size="tiny">
-                          {{ t('contentPackage.common.exceptional') }}
-                        </n-tag>
                         <n-tag v-if="getCardStatus(card.filename).modified" type="warning" size="tiny">
                           {{ t('contentPackage.cards.modifiedTag') }}
-                        </n-tag>
-                        <n-tag v-if="card.myriad" type="success" size="tiny">
-                          {{ t('contentPackage.common.myriad') }}
-                        </n-tag>
-                        <n-tag v-if="card.exile" type="error" size="tiny">
-                          {{ t('contentPackage.common.exile') }}
                         </n-tag>
                       </n-space>
                     </div>
@@ -271,14 +258,6 @@
                   <!-- 卡牌操作按钮区域 - 移到底部 -->
                   <div class="card-bottom-actions">
                     <n-space vertical style="width: 100%;">
-                      <!-- 标签编辑按钮 -->
-                      <n-button type="info" size="small" @click="openEditTagsDialog(card)">
-                        <template #icon>
-                          <n-icon :component="CreateOutline" />
-                        </template>
-                        {{ t('contentPackage.common.editTags') }}
-                      </n-button>
-
                       <!-- 上传按钮 -->
                       <n-button v-if="getCardStatus(card.filename).version === '2.0'" type="primary" size="small"
                         @click="openCardUploadPage(card)"
@@ -1015,85 +994,6 @@
       </template>
     </n-modal>
 
-    <!-- 编辑标签对话框 -->
-    <n-modal v-model:show="showEditTagsDialog" preset="dialog" :title="t('contentPackage.tags.edit.title', { filename: editingCard?.filename || '' })"
-      style="width: 500px;">
-      <div class="edit-tags-container">
-        <div class="tags-info">
-          <n-alert type="info" style="margin-bottom: 1rem;">
-            <template #icon>
-              <n-icon :component="InformationCircleOutline" />
-            </template>
-            {{ t('contentPackage.tags.edit.description') }}
-          </n-alert>
-        </div>
-
-        <n-form ref="editTagsFormRef" :model="editTagsForm" label-placement="left" label-width="100px">
-          <n-form-item :label="t('contentPackage.tags.edit.permanent.label')">
-            <n-switch v-model:value="editTagsForm.permanent" />
-            <template #feedback>
-              <n-text depth="3" style="font-size: 0.875rem;">
-                {{ t('contentPackage.tags.edit.permanent.description') }}
-              </n-text>
-            </template>
-          </n-form-item>
-
-          <n-form-item :label="t('contentPackage.tags.edit.exceptional.label')">
-            <n-switch v-model:value="editTagsForm.exceptional" />
-            <template #feedback>
-              <n-text depth="3" style="font-size: 0.875rem;">
-                {{ t('contentPackage.tags.edit.exceptional.description') }}
-              </n-text>
-            </template>
-          </n-form-item>
-
-          <n-form-item :label="t('contentPackage.tags.edit.myriad.label')">
-            <n-switch v-model:value="editTagsForm.myriad" />
-            <template #feedback>
-              <n-text depth="3" style="font-size: 0.875rem;">
-                {{ t('contentPackage.tags.edit.myriad.description') }}
-              </n-text>
-            </template>
-          </n-form-item>
-
-          <n-form-item :label="t('contentPackage.tags.edit.exile.label')">
-            <n-switch v-model:value="editTagsForm.exile" />
-            <template #feedback>
-              <n-text depth="3" style="font-size: 0.875rem;">
-                {{ t('contentPackage.tags.edit.exile.description') }}
-              </n-text>
-            </template>
-          </n-form-item>
-        </n-form>
-
-        <!-- 当前标签预览 -->
-        <div class="current-tags-preview" v-if="hasAnyFormTags()">
-          <h5>{{ t('contentPackage.tags.edit.preview') }}</h5>
-          <n-space size="small">
-            <n-tag v-if="editTagsForm.permanent" type="info" size="small">
-              {{ t('contentPackage.common.permanent') }}
-            </n-tag>
-            <n-tag v-if="editTagsForm.exceptional" type="warning" size="small">
-              {{ t('contentPackage.common.exceptional') }}
-            </n-tag>
-            <n-tag v-if="editTagsForm.myriad" type="success" size="small">
-              {{ t('contentPackage.common.myriad') }}
-            </n-tag>
-            <n-tag v-if="editTagsForm.exile" type="error" size="small">
-              {{ t('contentPackage.common.exile') }}
-            </n-tag>
-          </n-space>
-        </div>
-      </div>
-      <template #action>
-        <n-space>
-          <n-button @click="closeEditTagsDialog">{{ t('contentPackage.tags.edit.cancel') }}</n-button>
-          <n-button type="primary" @click="saveTagsChanges">{{ t('contentPackage.tags.edit.save') }}</n-button>
-        </n-space>
-      </template>
-    </n-modal>
-
-
     <!-- 遭遇组上传对话框 -->
     <n-modal v-model:show="showUploadEncounterDialog" preset="dialog"
       :title="t('contentPackage.upload.title.uploadEncounterToCloud')" style="width: 600px;">
@@ -1257,17 +1157,6 @@ const dragOverEncounter = ref<EncounterSet | null>(null);
 const batchEncounterUploading = ref(false);
 const batchEncounterUploadProgress = ref(0);
 const batchEncounterUploadStatus = ref('');
-
-// 标签编辑对话框状态
-const showEditTagsDialog = ref(false);
-const editingCard = ref<ContentPackageCard | null>(null);
-const editTagsFormRef = ref<any>(null);
-const editTagsForm = ref({
-  permanent: false,
-  exceptional: false,
-  myriad: false,
-  exile: false
-});
 
 // 自动编号相关状态
 const numberingStartNumber = ref(1);
@@ -1692,14 +1581,47 @@ const handleAddCards = async (items: any[]) => {
       }
     }
 
-    // 合并到现有卡牌列表（去重）
+    // 合并到现有卡牌列表（增强去重）
     const existingCards = packageData.value?.cards || [];
     const allCards = [...existingCards];
+    const duplicateCards: string[] = [];
+    const addedCards: string[] = [];
 
     for (const newCard of newCards) {
-      if (!allCards.some(card => card.filename === newCard.filename)) {
-        allCards.push(newCard);
+      // 检查是否已存在相同文件名的卡牌
+      const existingCard = allCards.find(card => card.filename === newCard.filename);
+      if (existingCard) {
+        duplicateCards.push(newCard.filename);
+        continue; // 跳过重复卡牌
       }
+
+      // 添加新卡牌
+      allCards.push(newCard);
+      addedCards.push(newCard.filename);
+
+      // 确保新添加的卡牌标记为已修改
+      cardStatusMap.value.set(newCard.filename, {
+        version: newCard.version,
+        isGenerating: false,
+        generationError: undefined,
+        previewImage: undefined,
+        contentHash: undefined, // 新卡牌没有内容哈希，会被识别为已修改
+        modified: true, // 新添加的卡牌自动标记为已修改
+        cardNumber: undefined,
+        name: undefined
+      });
+    }
+
+    // 显示添加结果提示
+    if (addedCards.length > 0) {
+      let messageText = t('contentPackage.messages.addCardSuccess', { count: addedCards.length });
+      if (duplicateCards.length > 0) {
+        messageText += ` (${duplicateCards.length} 张重复卡牌已跳过)`;
+      }
+      message.success(messageText);
+    } else if (duplicateCards.length > 0) {
+      message.warning(`所有选择的卡牌都已存在，未添加任何卡牌`);
+      return; // 如果没有添加任何卡牌，直接返回
     }
 
     // 更新包数据
@@ -1710,20 +1632,27 @@ const handleAddCards = async (items: any[]) => {
 
     emit('update:package', updatedPackage);
 
-    // 立即更新 cardStatusMap 以确保UI显示正确的版本信息
+    // 更新现有卡牌的状态信息（对于重复的卡牌也要确保状态正确）
     newCards.forEach(card => {
-      cardStatusMap.value.set(card.filename, {
-        version: card.version,
-        isGenerating: false,
-        generationError: undefined,
-        previewImage: undefined
-      });
+      if (!cardStatusMap.value.has(card.filename)) {
+        cardStatusMap.value.set(card.filename, {
+          version: card.version,
+          isGenerating: false,
+          generationError: undefined,
+          previewImage: undefined,
+          contentHash: undefined,
+          modified: false, // 已存在的卡牌默认为未修改
+          cardNumber: undefined,
+          name: undefined
+        });
+      }
     });
 
-    // 开始生成预览图（仅对version 2.0的卡牌）
-    startPreviewGeneration(newCards.filter(card => card.version === '2.0'));
-
-    message.success(t('contentPackage.messages.addCardSuccess', { count: newCards.length }));
+    // 开始生成预览图（仅对version 2.0的卡牌，只生成新添加的）
+    const newlyAddedCards = newCards.filter(card =>
+      card.version === '2.0' && addedCards.includes(card.filename)
+    );
+    startPreviewGeneration(newlyAddedCards);
   } catch (error) {
     console.error('添加卡牌失败:', error);
     message.error(t('contentPackage.messages.addCardFailed'));
@@ -1821,17 +1750,6 @@ const hasCloudUrls = (card: ContentPackageCard): boolean => {
 // 检查卡牌是否有本地URL
 const hasLocalUrls = (card: ContentPackageCard): boolean => {
   return !!(card.front_url?.startsWith('file:///') || card.back_url?.startsWith('file:///'));
-};
-
-// 检查卡牌是否有任何标签
-const hasAnyTags = (card: ContentPackageCard): boolean => {
-  return !!(card.permanent || card.exceptional || card.myriad || card.exile);
-};
-
-// 检查表单是否有任何标签
-const hasAnyFormTags = (): boolean => {
-  return !!(editTagsForm.value.permanent || editTagsForm.value.exceptional ||
-           editTagsForm.value.myriad || editTagsForm.value.exile);
 };
 
 // 遭遇组相关方法
@@ -2340,53 +2258,6 @@ const handleBatchUpload = (updatedPackage: any) => {
   // 直接触发保存到文件
   emit('save', true);
 
-};
-
-// 打开标签编辑对话框
-const openEditTagsDialog = (card: ContentPackageCard) => {
-  editingCard.value = card;
-  editTagsForm.value = {
-    permanent: card.permanent || false,
-    exceptional: card.exceptional || false,
-    myriad: card.myriad || false,
-    exile: card.exile || false
-  };
-  showEditTagsDialog.value = true;
-};
-
-// 关闭标签编辑对话框
-const closeEditTagsDialog = () => {
-  showEditTagsDialog.value = false;
-  editingCard.value = null;
-  editTagsFormRef.value?.restoreValidation();
-};
-
-// 保存标签更改
-const saveTagsChanges = () => {
-  if (!editingCard.value) return;
-
-  // 更新包数据中的卡牌标签
-  const updatedPackage = { ...packageData.value };
-  const cardIndex = updatedPackage.cards?.findIndex(c => c.filename === editingCard.value!.filename);
-
-  if (cardIndex !== undefined && cardIndex >= 0) {
-    updatedPackage.cards![cardIndex] = {
-      ...updatedPackage.cards![cardIndex],
-      permanent: editTagsForm.value.permanent,
-      exceptional: editTagsForm.value.exceptional,
-      myriad: editTagsForm.value.myriad,
-      exile: editTagsForm.value.exile
-    };
-
-    // 更新包数据
-    emit('update:package', updatedPackage);
-
-    // 直接触发保存到文件
-    emit('save', true);
-
-    closeEditTagsDialog();
-    message.success(t('contentPackage.common.cardTagsSaved'));
-  }
 };
 
 // 开始批量上传
@@ -3872,6 +3743,8 @@ watch(() => packageData.value, async (newPackage, oldPackage) => {
   padding: 1rem;
   transition: all 0.2s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
 }
 
 /* 状态图标样式 - 重新设计 */
@@ -3988,6 +3861,8 @@ watch(() => packageData.value, async (newPackage, oldPackage) => {
 
 .card-info {
   margin-bottom: 0.5rem;
+  flex: 1;
+  min-height: 0;
 }
 
 .card-name {
@@ -3996,7 +3871,16 @@ watch(() => packageData.value, async (newPackage, oldPackage) => {
   font-size: 0.9rem;
   margin-bottom: 0.25rem;
   word-break: break-word;
-  line-height: 1.2;
+  line-height: 1.3;
+  /* 限制最多显示2行，超出显示省略号 */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* 固定2行高度 */
+  min-height: calc(1.3em * 2);
+  max-height: calc(1.3em * 2);
 }
 
 .card-meta {
@@ -4018,7 +3902,8 @@ watch(() => packageData.value, async (newPackage, oldPackage) => {
 }
 
 .card-bottom-actions {
-  margin-top: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.5rem;
   display: flex;
   justify-content: center;
 }

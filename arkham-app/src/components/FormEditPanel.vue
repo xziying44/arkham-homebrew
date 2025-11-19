@@ -163,6 +163,12 @@
                                 @update-tts-script="updateTtsScript" />
                         </div>
 
+                        <!-- 卡牌标签编辑器 -->
+                        <div ref="tagsSection">
+                            <CardTagsEditor :card-data="currentCardData" :side="currentSide"
+                                @update-tags="updateCardTags" />
+                        </div>
+
                         <!-- 牌库选项编辑器 -->
                         <div ref="deckOptionsSection">
                             <DeckOptionEditor :card-data="currentCardData" :card-type="currentSideType"
@@ -303,6 +309,7 @@ import {
     TextOutline,
     InformationCircleOutline,
     CodeSlashOutline,
+    PricetagOutline,
     OptionsOutline
 } from '@vicons/ionicons5';
 import { useMessage } from 'naive-ui';
@@ -320,6 +327,7 @@ import { cardTypeConfigs as cardTypeConfigsEn, cardTypeOptions as cardTypeOption
 import { WorkspaceService, CardService, ConfigService, LanguageConfigService } from '@/api';
 import type { CardData } from '@/api/types';
 import TtsScriptEditor from './TtsScriptEditor.vue';
+import CardTagsEditor from './CardTagsEditor.vue';
 import { generateUpgradePowerWordScript } from '@/config/upgrade-script-generator';
 
 interface Props {
@@ -551,6 +559,7 @@ const illustrationSection = ref<HTMLElement | null>(null);
 const textLayoutSection = ref<HTMLElement | null>(null);
 const cardInfoSection = ref<HTMLElement | null>(null);
 const ttsScriptSection = ref<HTMLElement | null>(null);
+const tagsSection = ref<HTMLElement | null>(null);
 const deckOptionsSection = ref<HTMLElement | null>(null);
 const activeSection = ref<string>('cardType');
 const isNavCollapsed = ref<boolean>(true); // 导航条收起状态（默认收起）
@@ -602,6 +611,11 @@ const navigationItems = computed(() => {
             icon: CodeSlashOutline
         },
         {
+            id: 'tags',
+            label: t('cardEditor.nav.tags'),
+            icon: PricetagOutline
+        },
+        {
             id: 'deckOptions',
             label: t('cardEditor.nav.deckOptions'),
             icon: OptionsOutline
@@ -651,6 +665,7 @@ const scrollToSection = async (sectionId: string) => {
         textLayout: getElementFromRef(activeCardSideEditor?.textLayoutSection) || getElementFromRef(textLayoutSection.value),
         cardInfo: getElementFromRef(activeCardSideEditor?.cardInfoSection) || getElementFromRef(cardInfoSection.value),
         ttsScript: getElementFromRef(ttsScriptSection.value),
+        tags: getElementFromRef(tagsSection.value),
         deckOptions: getElementFromRef(deckOptionsSection.value)
     };
 
@@ -684,6 +699,7 @@ const handleScroll = () => {
         { id: 'textLayout', ref: getElementFromRef(activeCardSideEditor?.textLayoutSection) || getElementFromRef(textLayoutSection.value) },
         { id: 'cardInfo', ref: getElementFromRef(activeCardSideEditor?.cardInfoSection) || getElementFromRef(cardInfoSection.value) },
         { id: 'ttsScript', ref: getElementFromRef(ttsScriptSection.value) },
+        { id: 'tags', ref: getElementFromRef(tagsSection.value) },
         { id: 'deckOptions', ref: getElementFromRef(deckOptionsSection.value) }
     ];
 
@@ -873,6 +889,44 @@ const updateDeckOptions = (options) => {
 
     // 保存到根级deck_options字段，无论单面还是双面卡牌
     currentCardData.deck_options = options;
+    // 触发防抖预览更新
+    triggerDebouncedPreviewUpdate();
+};
+
+// 处理卡牌标签更新的函数
+const updateCardTags = (tags: { permanent: boolean; exceptional: boolean; myriad: boolean; exile: boolean }) => {
+    // 避免重复更新相同数据
+    const currentSideData = currentSide.value === 'back' ? (currentCardData.back || {}) : currentCardData;
+    const currentTags = {
+        permanent: currentSideData.permanent || false,
+        exceptional: currentSideData.exceptional || false,
+        myriad: currentSideData.myriad || false,
+        exile: currentSideData.exile || false
+    };
+
+    const newTagsString = JSON.stringify(tags);
+    const currentTagsString = JSON.stringify(currentTags);
+
+    if (newTagsString === currentTagsString) {
+        return;
+    }
+
+    // 更新对应面的标签数据
+    if (currentSide.value === 'back') {
+        if (!currentCardData.back) {
+            currentCardData.back = {};
+        }
+        currentCardData.back.permanent = tags.permanent;
+        currentCardData.back.exceptional = tags.exceptional;
+        currentCardData.back.myriad = tags.myriad;
+        currentCardData.back.exile = tags.exile;
+    } else {
+        currentCardData.permanent = tags.permanent;
+        currentCardData.exceptional = tags.exceptional;
+        currentCardData.myriad = tags.myriad;
+        currentCardData.exile = tags.exile;
+    }
+
     // 触发防抖预览更新
     triggerDebouncedPreviewUpdate();
 };

@@ -167,6 +167,7 @@ export default {
     textLayout: 'Text Layout',
     cardInfo: 'Card Info',
     ttsScript: 'TTS Script',
+    tags: 'Tags',
     deckOptions: 'Deck Options'
   },
 
@@ -216,5 +217,32 @@ export default {
   locationActions: {
     applyToOtherSide: 'Apply location icons to the other side',
     applySuccess: 'Applied to the other side',
+  },
+
+  // Tags Editor
+  tags: {
+    title: 'Card Tags',
+    description: 'Set special attribute tags for cards, these tags will be retained during export',
+    permanent: {
+      label: 'Permanent Card',
+      name: 'Permanent',
+      description: 'Permanent cards do not count towards deck size, are not removed from the game, and are set up on the field at the start of the game'
+    },
+    exceptional: {
+      label: 'Exceptional Card',
+      name: 'Exceptional',
+      description: 'Exceptional cards cost double the experience points, and only one copy can be purchased'
+    },
+    myriad: {
+      label: 'Myriad Card',
+      name: 'Myriad',
+      description: 'Myriad cards can have 3 copies in a deck, and purchasing multiple copies only costs experience once'
+    },
+    exile: {
+      label: 'Exile',
+      name: 'Exile',
+      description: 'Exile cards can be removed from the game under specific conditions'
+    },
+    preview: 'Tags Preview'
   },
 }

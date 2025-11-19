@@ -11,6 +11,7 @@ declare module 'vue' {
     BindCardField: typeof import('./src/components/BindCardField.vue')['default']
     CardFileBrowser: typeof import('./src/components/CardFileBrowser.vue')['default']
     CardSideEditor: typeof import('./src/components/CardSideEditor.vue')['default']
+    CardTagsEditor: typeof import('./src/components/CardTagsEditor.vue')['default']
     DeckEditor: typeof import('./src/components/DeckEditor.vue')['default']
     DeckOptionEditor: typeof import('./src/components/DeckOptionEditor.vue')['default']
     FileTreePanel: typeof import('./src/components/FileTreePanel.vue')['default']

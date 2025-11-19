@@ -283,6 +283,12 @@ export default {
       onlyLabel: 'Show bookmarks only',
       emptyHint: 'No bookmarked cards yet'
     },
+    multiSelect: {
+      modeLabel: 'Multi-select',
+      selectAll: 'Select All',
+      deselectAll: 'Deselect All',
+      selectedCount: '{count} cards selected'
+    },
     tempWorkspace: {
       title: 'Temporary Workspace',
       clear: 'Clear',

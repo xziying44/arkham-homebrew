@@ -172,6 +172,7 @@ export default {
     textLayout: '文本布局',
     cardInfo: '卡牌信息',
     ttsScript: 'TTS脚本',
+    tags: '标签编辑',
     deckOptions: '牌库选项'
   },
 
@@ -221,5 +222,32 @@ export default {
   locationActions: {
     applyToOtherSide: '将地点图标应用到另一侧',
     applySuccess: '已应用到另一侧',
+  },
+
+  // 标签编辑
+  tags: {
+    title: '卡牌标签',
+    description: '为卡牌设置特殊属性标签，这些标签将在导出时保留',
+    permanent: {
+      label: '永久卡牌',
+      name: '永久',
+      description: '永久卡牌不占用卡组张数，不会从游戏中移除，且开场设置于场上'
+    },
+    exceptional: {
+      label: '卓越卡牌',
+      name: '卓越',
+      description: '卓越卡牌花费两倍经验值，且只能购买一份'
+    },
+    myriad: {
+      label: '无数卡牌',
+      name: '无数',
+      description: '无数卡牌可以在卡组中放入3张，且购买多张时只需花费一份经验'
+    },
+    exile: {
+      label: '可放逐',
+      name: '可放逐',
+      description: '可放逐卡牌可以在特定条件下从游戏中移除'
+    },
+    preview: '标签预览'
   },
 }
