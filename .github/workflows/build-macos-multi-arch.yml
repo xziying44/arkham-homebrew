@@ -107,45 +107,22 @@ jobs:
       - name: Create DMG
         run: |
           DMG_NAME="Arkham-Card-Maker-${{ matrix.arch }}.dmg"
+          VOLUME_NAME="Arkham Card Maker (${{ matrix.arch_name }})"
+
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "📀 Creating DMG: $DMG_NAME"
           echo "   Architecture: ${{ matrix.arch }}"
+          echo "   Volume Name: $VOLUME_NAME"
           echo "   Method: dmgbuild (Python)"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
           # 删除旧的 DMG 文件（如果存在）
           rm -f "$DMG_NAME" 2>/dev/null || true
 
-          # 使用 dmgbuild 创建 DMG
-          python3 - <<'EOF'
-import sys
-import os
-
-# 设置工作目录（确保路径正确）
-os.chdir(os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else '.')
-
-try:
-    import dmgbuild
-    import dmg_settings
-
-    # 设置卷标名称（包含架构标识）
-    volume_name = "Arkham Card Maker (${{ matrix.arch_name }})"
-
-    # 构建 DMG
-    print(f"Building DMG with volume name: {volume_name}")
-    dmgbuild.build_dmg(
-        filename="$DMG_NAME",
-        volume_name=volume_name,
-        settings=dmg_settings
-    )
-    print(f"✅ DMG created successfully: $DMG_NAME")
-
-except Exception as e:
-    print(f"❌ DMG creation failed: {e}", file=sys.stderr)
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
-EOF
+          # 使用外部 Python 脚本创建 DMG
+          python3 .github/scripts/create_dmg.py \
+            --output "$DMG_NAME" \
+            --volume-name "$VOLUME_NAME"
 
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "✅ DMG creation completed"
