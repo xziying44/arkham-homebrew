@@ -18,15 +18,19 @@ def create_dmg(dmg_filename: str, volume_name: str):
     """
     try:
         import dmgbuild
-        import dmg_settings
+
+        # 获取 dmg_settings.py 的绝对路径（与此脚本在同一目录）
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        settings_file = os.path.join(script_dir, 'dmg_settings.py')
 
         print(f"Building DMG with volume name: {volume_name}")
         print(f"Output file: {dmg_filename}")
+        print(f"Settings file: {settings_file}")
 
         dmgbuild.build_dmg(
             filename=dmg_filename,
             volume_name=volume_name,
-            settings=dmg_settings
+            settings_file=settings_file
         )
 
         print(f"✅ DMG created successfully: {dmg_filename}")
