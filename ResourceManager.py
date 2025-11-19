@@ -324,16 +324,37 @@ class ImageManager:
         if src_path.startswith('@'):
             # 相对路径：去掉 @ 符号，拼接工作目录
             relative_path = src_path[1:]  # 去掉开头的 @
-            # 处理路径分隔符（支持 / 和 \）
-            if relative_path.startswith('\\') or relative_path.startswith('/'):
-                relative_path = relative_path[1:]  # 去掉开头的分隔符
 
-            actual_path = os.path.join(self.working_directory, relative_path)
+            # 按分隔符分割路径（兼容 Windows 的 \ 和 Unix 的 /）
+            path_parts = relative_path.replace('\\', '/').split('/')
+            # 过滤掉空字符串（如开头的分隔符会产生空字符串）
+            path_parts = [part for part in path_parts if part]
+
+            # 使用 os.path.join 确保使用正确的系统分隔符
+            if path_parts:
+                actual_path = os.path.join(self.working_directory, *path_parts)
+            else:
+                # 如果路径部分为空，直接使用工作目录（通常是无效路径）
+                actual_path = self.working_directory
         else:
-            # 绝对路径
-            actual_path = src_path
+            # 绝对路径：同样按分隔符分割并重新组合
+            path_parts = src_path.replace('\\', '/').split('/')
+            path_parts = [part for part in path_parts if part]
 
-        # 规范化路径
+            # 如果路径部分为空，使用原始路径（让后续逻辑处理）
+            if not path_parts:
+                actual_path = src_path
+            # 对于绝对路径，需要保留根路径
+            elif src_path.startswith('/'):
+                # Unix 绝对路径
+                actual_path = os.path.join('/', *path_parts)
+            elif ':' in path_parts[0]:
+                # Windows 绝对路径（如 C:\path）
+                actual_path = os.path.join(*path_parts)
+            else:
+                actual_path = os.path.join(*path_parts)
+
+        # 规范化路径（处理 .. 和 . 等）
         actual_path = os.path.normpath(actual_path)
 
         logger_manager.info(f"[ImageManager] 尝试加载图片: {actual_path}")
