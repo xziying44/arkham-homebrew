@@ -20,5 +20,8 @@ opencv-python-headless==4.12.0.88
 psutil==6.1.1
 cloudinary==1.44.1
 reportlab==4.4.3
-# Linux 专用依赖 - PyGObject 和 pycairo 通过系统包安装 (python3-gi, python3-cairo)
-# 不在此处列出，因为 pip 版本需要编译且可能与系统库版本不兼容
+# Linux 专用依赖 - PyQt5/PyQt6 通过系统包安装
+# Ubuntu 22.04 LTS: 使用 python3-pyqt5 和 python3-pyqt5.qtwebengine
+# Ubuntu 24.04+ / Debian 12+: 使用 python3-pyqt6 和 python3-pyqt6.qtwebengine
+# Fedora 38+: 使用 python3-qt6 和 python3-qt6-webengine
+# 不在此处列出原因：系统包版本兼容性更好，避免编译依赖

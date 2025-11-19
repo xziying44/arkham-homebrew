@@ -236,15 +236,14 @@ EOF
             distro_version: "Debian 12+, Ubuntu 24.04+, Mint 22+"
             pkg_format: deb
             pkg_manager: apt
-            dependencies: "libgtk-3-0, libwebkit2gtk-4.1-0, libayatana-appindicator3-1, gir1.2-gtk-3.0, gir1.2-webkit2-4.1, python3-gi, python3-gi-cairo"
+            dependencies: "python3-pyqt6, python3-pyqt6.qtwebengine, python3-pyqt6.qtwebenginecore, libayatana-appindicator3-1"
             install_cmd: |
               sudo apt-get update
               sudo apt-get install -y \
                 python3 python3-pip python3-dev \
-                libgtk-3-0 libwebkit2gtk-4.1-0 \
+                python3-pyqt6 python3-pyqt6.qtwebengine python3-pyqt6.qtwebenginecore \
                 libayatana-appindicator3-1 gir1.2-ayatanaappindicator3-0.1 \
-                python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-webkit2-4.1 \
-                libgirepository1.0-dev libcairo2-dev pkg-config \
+                pkg-config \
                 binutils patchelf ruby ruby-dev build-essential
               sudo gem install --no-document fpm
 
@@ -255,7 +254,7 @@ EOF
             distro_version: "Fedora 38+, RHEL 9+, CentOS Stream 9+"
             pkg_format: rpm
             pkg_manager: dnf
-            dependencies: "gtk3, webkit2gtk4.1, gobject-introspection, python3-gobject, python3-cairo"
+            dependencies: "python3-qt6, python3-qt6-webengine"
             install_cmd: |
               # 设置 UTF-8 locale 以支持中文字符
               dnf install -y glibc-langpack-en
@@ -264,14 +263,13 @@ EOF
 
               dnf install -y \
                 python3 python3-pip python3-devel \
-                gtk3 webkit2gtk4.1 \
-                python3-gobject python3-cairo gobject-introspection-devel cairo-devel \
+                python3-qt6 python3-qt6-webengine \
                 binutils patchelf \
                 gcc gcc-c++ make \
                 ruby ruby-devel rubygems rpm-build
               gem install --no-document fpm
 
-          # 通用 Linux - Ubuntu 22.04 基础（适用于旧版发行版）
+          # 通用 Linux - Ubuntu 22.04 基础（适用于旧版发行版）- 使用 PyQt5
           - distro: generic-ubuntu22
             runner: ubuntu-22.04
             distro_name: "Generic Linux (Ubuntu 22.04 base)"
@@ -284,13 +282,12 @@ EOF
               sudo apt-get update
               sudo apt-get install -y \
                 python3 python3-pip python3-dev \
-                libgtk-3-0 libwebkit2gtk-4.0-37 \
+                python3-pyqt5 python3-pyqt5.qtwebengine \
                 libayatana-appindicator3-1 gir1.2-ayatanaappindicator3-0.1 \
-                python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-webkit2-4.0 \
-                libgirepository1.0-dev libcairo2-dev pkg-config \
+                pkg-config \
                 binutils patchelf
 
-          # 通用 Linux - Ubuntu 24.04 基础（适用于新版发行版）
+          # 通用 Linux - Ubuntu 24.04 基础（适用于新版发行版）- 使用 PyQt6
           - distro: generic-ubuntu24
             runner: ubuntu-24.04
             distro_name: "Generic Linux (Ubuntu 24.04 base)"
@@ -303,10 +300,9 @@ EOF
               sudo apt-get update
               sudo apt-get install -y \
                 python3 python3-pip python3-dev \
-                libgtk-3-0 libwebkit2gtk-4.1-0 \
+                python3-pyqt6 python3-pyqt6.qtwebengine python3-pyqt6.qtwebenginecore \
                 libayatana-appindicator3-1 gir1.2-ayatanaappindicator3-0.1 \
-                python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-webkit2-4.1 \
-                libgirepository1.0-dev libcairo2-dev pkg-config \
+                pkg-config \
                 binutils patchelf
 
     runs-on: ${{ matrix.runner }}
@@ -406,37 +402,56 @@ EOF
           # 保存虚拟环境激活状态（通过环境变量）
           echo "VIRTUAL_ENV=${{ github.workspace }}/venv" >> $GITHUB_ENV
 
-      - name: Verify GTK and PyGObject installation
+      - name: Verify Qt and PyQt installation
         run: |
           # 激活虚拟环境
           source venv/bin/activate
 
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "📦 Verifying GTK and PyGObject installation"
+          echo "📦 Verifying Qt and PyQt installation"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
           python3 - << 'PY'
           import sys
-          import gi
+          import os
 
           print("✓ Python:", sys.version)
           print("✓ Python executable:", sys.executable)
-          print("✓ gi module path:", gi.__file__)
           print()
 
-          # 验证 GTK/WebKit2/Cairo
-          gi.require_version("Gtk", "3.0")
-          from gi.repository import Gtk, WebKit2, GLib, GObject
-          import cairo
+          # 根据 Ubuntu 版本验证对应的 PyQt 版本
+          ubuntu_version = os.environ.get('MATRIX_UBUNTU_VERSION', '24.04')
 
-          print("✓ GTK 3.0: OK")
-          print("✓ WebKit2: OK")
-          print("✓ cairo: OK")
+          if ubuntu_version == '22.04':
+              # Ubuntu 22.04 使用 PyQt5
+              try:
+                  from PyQt5 import QtCore, QtWidgets, QtWebEngineWidgets
+                  print("✓ PyQt5: OK")
+                  print("  QtCore version:", QtCore.PYQT_VERSION_STR)
+                  print("  Qt version:", QtCore.QT_VERSION_STR)
+                  print("✓ QtWebEngineWidgets: OK")
+              except ImportError as e:
+                  print("✗ PyQt5 import failed:", e)
+                  sys.exit(1)
+          else:
+              # Ubuntu 24.04+ 和其他发行版使用 PyQt6
+              try:
+                  from PyQt6 import QtCore, QtWidgets, QtWebEngineWidgets
+                  print("✓ PyQt6: OK")
+                  print("  QtCore version:", QtCore.PYQT_VERSION_STR)
+                  print("  Qt version:", QtCore.QT_VERSION_STR)
+                  print("✓ QtWebEngineWidgets: OK")
+              except ImportError as e:
+                  print("✗ PyQt6 import failed:", e)
+                  sys.exit(1)
+
           print()
           print("✅ All modules verified successfully")
           PY
 
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        env:
+          MATRIX_UBUNTU_VERSION: ${{ matrix.ubuntu_version }}
 
       - name: Build with PyInstaller
         run: |

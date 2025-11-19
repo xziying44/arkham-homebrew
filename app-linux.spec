@@ -13,17 +13,21 @@ a = Analysis(
         ('templates', 'templates'),
     ],
     hiddenimports=[
-        # pywebview GTK 依赖
-        'gi',
-        'gi.repository',
-        'gi.repository.Gtk',
-        'gi.repository.GLib',
-        'gi.repository.Gio',
-        'gi.repository.GObject',
-        'gi.repository.WebKit2',
-        'cairo',
+        # pywebview Qt 依赖 (Ubuntu 22.04 使用 PyQt5，Ubuntu 24.04+ 使用 PyQt6)
+        # PyQt5 模块 (Ubuntu 22.04)
+        'PyQt5',
+        'PyQt5.QtCore',
+        'PyQt5.QtGui',
+        'PyQt5.QtWidgets',
+        'PyQt5.QtWebEngineWidgets',
+        # PyQt6 模块 (Ubuntu 24.04+)
+        'PyQt6',
+        'PyQt6.QtCore',
+        'PyQt6.QtGui',
+        'PyQt6.QtWidgets',
+        'PyQt6.QtWebEngineWidgets',
         # pywebview 平台模块
-        'webview.platforms.gtk',
+        'webview.platforms.qt',
     ],
     hookspath=[],
     hooksconfig={},
