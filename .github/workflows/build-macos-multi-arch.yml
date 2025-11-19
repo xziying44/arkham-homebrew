@@ -231,7 +231,7 @@ jobs:
             distro_version: "Fedora 38+, RHEL 9+, CentOS Stream 9+"
             pkg_format: rpm
             pkg_manager: dnf
-            dependencies: "python3-qt6, python3-qt6-webengine"
+            dependencies: "python3-pyqt6, python3-pyqt6-webengine"
             install_cmd: |
               # 设置 UTF-8 locale 以支持中文字符
               dnf install -y glibc-langpack-en
@@ -240,7 +240,7 @@ jobs:
 
               dnf install -y \
                 python3 python3-pip python3-devel \
-                python3-qt6 python3-qt6-webengine \
+                python3-pyqt6 python3-pyqt6-webengine \
                 binutils patchelf \
                 gcc gcc-c++ make \
                 ruby ruby-devel rubygems rpm-build
