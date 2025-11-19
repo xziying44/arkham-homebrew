@@ -1300,14 +1300,6 @@ const loadCardData = async () => {
             // 【关键】加载完成后自动生成预览，并结束加载动画
             autoGeneratePreview(true);
         }, 100);
-
-        // 双面卡牌额外处理：确保图片预览立即更新
-        if (cardData.version === '2.0') {
-            console.log('🔄 检测到双面卡牌，立即触发预览更新');
-            setTimeout(() => {
-                autoGeneratePreview(true);
-            }, 200);
-        }
     } catch (error) {
         loadError = error; // 赋值给外部变量
         console.error('加载卡牌数据失败:', loadError);
