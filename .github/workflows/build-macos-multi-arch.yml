@@ -100,207 +100,56 @@ jobs:
             exit 1
           fi
 
-      - name: Install create-dmg
+      - name: Install dmgbuild
         run: |
-          brew install create-dmg
-
-      - name: Filesystem Sync Before DMG
-        run: |
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "🔄 Syncing filesystem..."
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-          # 多次 sync 确保 I/O 稳定
-          sync && sleep 1 && sync
-
-          # 健康检查: 抽样读取 .app 资源确保文件完整可用
-          echo "Verifying .app integrity..."
-          find "dist/Arkham Card Maker.app/Contents" -type f | head -10 | xargs -I {} cat {} > /dev/null
-
-          # Intel runner 专属额外等待 (x86_64 架构的 I/O 缓存窗口更长)
-          if [ "${{ matrix.arch }}" = "x86_64" ]; then
-            echo "Intel runner detected - adding extra stabilization time..."
-            sleep 3
-          fi
-
-          echo "✅ Filesystem sync completed"
+          pip install dmgbuild
 
       - name: Create DMG
         run: |
           DMG_NAME="Arkham-Card-Maker-${{ matrix.arch }}.dmg"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "📀 Creating DMG: $DMG_NAME"
+          echo "   Architecture: ${{ matrix.arch }}"
+          echo "   Method: dmgbuild (Python)"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-          # ============================================
-          # 五层防御清理机制 (指数退避重试)
-          # ============================================
-          echo "🧹 Phase 1: Disk Device Cleanup (Critical Fix for Resource Busy)"
-          # 检测并 detach 所有 Arkham 相关的磁盘设备 (包括未挂载到 /Volumes 的)
-          for i in {1..5}; do
-            # A. 从 hdiutil info 获取所有 Arkham 相关的镜像路径
-            ARKHAM_IMAGES=$(hdiutil info | grep -i "arkham" | grep "image-path" | awk '{print $3}')
-
-            if [ -n "$ARKHAM_IMAGES" ]; then
-              echo "  🔍 Found Arkham disk images:"
-              echo "$ARKHAM_IMAGES" | while read -r img; do
-                echo "    - $img"
-                # 尝试 detach 镜像路径
-                hdiutil detach "$img" -force 2>/dev/null || true
-              done
-            fi
-
-            # B. Detach 所有 Arkham 相关的挂载点
-            for vol in /Volumes/Arkham\ Card\ Maker*; do
-              [ -d "$vol" ] && {
-                echo "  Detaching volume: $vol"
-                hdiutil detach "$vol" -force 2>/dev/null || true
-              }
-            done
-
-            # C. 检查是否还有残留
-            if ! hdiutil info | grep -iq "arkham"; then
-              echo "  ✅ All Arkham disk images/volumes detached"
-              break
-            fi
-
-            # D. 指数退避等待
-            WAIT_TIME=$((i * 2))
-            echo "  ⏳ Retry $i: Waiting ${WAIT_TIME}s for device release..."
-            sleep $WAIT_TIME
-          done
-
-          echo ""
-          echo "🗑️  Phase 2: Ghost Mount Point Cleanup"
-          # 清理幽灵挂载点 (已卸载但目录残留)
-          for vol in /Volumes/Arkham\ Card\ Maker*; do
-            [ -d "$vol" ] && {
-              echo "  Removing ghost mount point: $vol"
-              rmdir "$vol" 2>/dev/null || true
-            }
-          done
-
-          echo ""
-          echo "🧼 Phase 3: Temporary DMG File Cleanup"
-          # 删除 create-dmg 的临时 rw.*.dmg 文件
-          echo "  Searching for temporary rw.*.dmg files..."
-          find . -maxdepth 1 -name "rw.*.dmg" -type f 2>/dev/null | while read -r tmpfile; do
-            echo "  Removing temporary file: $tmpfile"
-            rm -f "$tmpfile" 2>/dev/null || true
-          done
-
-          # 删除旧的最终 DMG 文件
+          # 删除旧的 DMG 文件（如果存在）
           rm -f "$DMG_NAME" 2>/dev/null || true
 
-          echo "  ✅ File cleanup completed"
+          # 使用 dmgbuild 创建 DMG
+          python3 - <<'EOF'
+import sys
+import os
 
-          echo ""
-          echo "📊 Phase 4: Pre-Creation Diagnostics"
-          echo "  Verifying cleanup status..."
-          hdiutil info | grep -i "arkham" || echo "  ✅ No Arkham volumes in hdiutil info"
-          lsof +D /Volumes 2>/dev/null | grep -i "arkham" || echo "  ✅ No Arkham processes holding /Volumes"
-          echo ""
+# 设置工作目录（确保路径正确）
+os.chdir(os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else '.')
 
-          # ============================================
-          # DMG 创建 (带重试与隔离机制)
-          # ============================================
-          MAX_RETRIES=2
-          UNIQUE_VOLNAME="Arkham Card Maker (${{ matrix.arch }}-$(date +%s))"
+try:
+    import dmgbuild
+    import dmg_settings
 
-          for attempt in $(seq 1 $MAX_RETRIES); do
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo "🚀 Attempt $attempt/$MAX_RETRIES: Starting DMG creation..."
-            echo "   Volume Name: $UNIQUE_VOLNAME"
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    # 设置卷标名称（包含架构标识）
+    volume_name = "Arkham Card Maker (${{ matrix.arch_name }})"
 
-            if create-dmg \
-              --volname "$UNIQUE_VOLNAME" \
-              --volicon "favicon.icns" \
-              --window-pos 200 120 \
-              --window-size 800 400 \
-              --icon-size 100 \
-              --icon "Arkham Card Maker.app" 200 190 \
-              --hide-extension "Arkham Card Maker.app" \
-              --app-drop-link 600 185 \
-              --no-internet-enable \
-              "$DMG_NAME" \
-              "dist/Arkham Card Maker.app"; then
+    # 构建 DMG
+    print(f"Building DMG with volume name: {volume_name}")
+    dmgbuild.build_dmg(
+        filename="$DMG_NAME",
+        volume_name=volume_name,
+        settings=dmg_settings
+    )
+    print(f"✅ DMG created successfully: $DMG_NAME")
 
-              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-              echo "✅ DMG creation succeeded on attempt $attempt"
-              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-              break
-            else
-              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-              echo "❌ Attempt $attempt failed"
-              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+except Exception as e:
+    print(f"❌ DMG creation failed: {e}", file=sys.stderr)
+    import traceback
+    traceback.print_exc()
+    sys.exit(1)
+EOF
 
-              if [ $attempt -lt $MAX_RETRIES ]; then
-                echo ""
-                echo "🔍 Deep Diagnostics (Failed Attempt $attempt)"
-                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-                # 导出详细诊断信息
-                echo "📋 hdiutil info (verbose):"
-                hdiutil info -verbose | grep -A 10 -i "arkham" || echo "  (No Arkham volumes)"
-                echo ""
-
-                echo "💾 diskutil list:"
-                diskutil list | grep -A 5 -i "arkham" || echo "  (No Arkham disks)"
-                echo ""
-
-                echo "📂 Current mounts:"
-                mount | grep -i "arkham" || echo "  (No Arkham mounts)"
-                echo ""
-
-                echo "🔒 Processes holding /Volumes:"
-                lsof +D /Volumes 2>/dev/null | grep -i "arkham" || echo "  (No Arkham processes)"
-                echo ""
-
-                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                echo "🔄 Deep cleanup before retry..."
-                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-                # 深度清理 (复用五层防御逻辑)
-                # 1. Disk Device Cleanup
-                for i in {1..3}; do
-                  ARKHAM_IMAGES=$(hdiutil info | grep -i "arkham" | grep "image-path" | awk '{print $3}')
-                  if [ -n "$ARKHAM_IMAGES" ]; then
-                    echo "$ARKHAM_IMAGES" | while read -r img; do
-                      hdiutil detach "$img" -force 2>/dev/null || true
-                    done
-                  fi
-
-                  for vol in /Volumes/Arkham\ Card\ Maker*; do
-                    [ -d "$vol" ] && hdiutil detach "$vol" -force 2>/dev/null || true
-                  done
-
-                  hdiutil info | grep -iq "arkham" || break
-                  sleep $((i * 3))
-                done
-
-                # 2. Ghost Mount Point Cleanup
-                for vol in /Volumes/Arkham\ Card\ Maker*; do
-                  [ -d "$vol" ] && rmdir "$vol" 2>/dev/null || true
-                done
-
-                # 3. Temporary DMG File Cleanup
-                find . -maxdepth 1 -name "rw.*.dmg" -type f 2>/dev/null | while read -r tmpfile; do
-                  rm -f "$tmpfile" 2>/dev/null || true
-                done
-                rm -f "$DMG_NAME" 2>/dev/null || true
-
-                echo "⏳ Waiting 10s before retry..."
-                sleep 10
-              else
-                echo ""
-                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                echo "💥 All retry attempts exhausted"
-                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                exit 1
-              fi
-            fi
-          done
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ DMG creation completed"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
       - name: Verify DMG
         run: |
@@ -313,6 +162,7 @@ jobs:
             echo "Size: $(du -sh '$DMG_FILE' | cut -f1)"
             echo "Architecture: ${{ matrix.arch }}"
             echo "For: ${{ matrix.arch_name }}"
+            echo "Build Method: dmgbuild (Python)"
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           else
             echo "❌ DMG not found!"
