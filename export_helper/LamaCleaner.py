@@ -146,8 +146,9 @@ class LamaCleaner:
             # 确认请求是否成功
             response.raise_for_status()
 
-            # 将返回的二进制图像数据转换为 PIL Image 对象
-            result_image = Image.open(io.BytesIO(response.content))
+            # 将返回的二进制图像数据转换为 PIL Image 对象并复制到内存
+            with Image.open(io.BytesIO(response.content)) as img:
+                result_image = img.copy()
             return result_image
 
         except requests.exceptions.HTTPError as http_err:
@@ -309,7 +310,8 @@ if __name__ == "__main__":
 
         # --- 加载原始图片 ---
         try:
-            original_image = Image.open('000174-raw.jpg')
+            with Image.open('000174-raw.jpg') as img:
+                original_image = img.copy()
         except FileNotFoundError:
             print("错误: 未找到 '000174-raw.jpg'。请确保当前目录下有此文件。")
             print("将创建一个 800x600 的示例图片用于测试。")

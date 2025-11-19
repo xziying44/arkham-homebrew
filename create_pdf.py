@@ -83,7 +83,8 @@ class PDFVectorDrawer:
                 print(f"错误: 背景图片 '{image_source}' 不存在。")
                 return
             image_path = image_source
-            pil_image = Image.open(image_source)
+            with Image.open(image_source) as img:
+                pil_image = img.copy()  # 复制到内存
         elif isinstance(image_source, Image.Image):
             image_path = None  # 对于PIL对象，没有文件路径
             pil_image = image_source
@@ -266,7 +267,8 @@ if __name__ == '__main__':
     drawer.add_page(BACKGROUND_IMAGE, text_info, RotationDirection.NORMAL)
 
     # 5. 添加页面 - 使用PIL图片对象并旋转
-    pil_image = Image.open(BACKGROUND_IMAGE)
+    with Image.open(BACKGROUND_IMAGE) as img:
+        pil_image = img.copy()  # 复制到内存
     drawer.add_page(pil_image, text_info, RotationDirection.RIGHT)
     drawer.add_page(pil_image, text_info, RotationDirection.LEFT)
 

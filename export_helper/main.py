@@ -410,8 +410,9 @@ def process_images_batch(input_directory, target_width, target_height, lama_clea
         try:
             print(f"\n[{i}/{len(image_files)}] 处理: {os.path.basename(image_path)}")
 
-            # 加载原始图片
-            original_image = Image.open(image_path)
+            # 加载原始图片并复制到内存
+            with Image.open(image_path) as img:
+                original_image = img.copy()
             original_size = original_image.size
             print(f"  原始尺寸: {original_size[0]}x{original_size[1]}")
 

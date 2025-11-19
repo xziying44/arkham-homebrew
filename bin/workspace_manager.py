@@ -1369,8 +1369,9 @@ class WorkspaceManager:
                 image_data = base64.b64decode(base64_data)
                 # 2. 将二进制数据读入一个内存中的字节流对象
                 image_stream = io.BytesIO(image_data)
-                # 3. 使用 PIL 的 Image.open() 从字节流中打开图片
-                picture_path = Image.open(image_stream)
+                # 3. 使用 PIL 的 Image.open() 从字节流中打开图片并复制到内存
+                with Image.open(image_stream) as img:
+                    picture_path = img.copy()  # 复制到内存，确保流可以安全关闭
             except Exception as e:
                 print(f"解码base64图片数据失败: {e}")
                 return None
@@ -1454,7 +1455,8 @@ class WorkspaceManager:
 
                 if os.path.exists(cardback_path):
                     # 创建Card对象并设置图片
-                    cardback_pil = Image.open(cardback_path)
+                    with Image.open(cardback_path) as img:
+                        cardback_pil = img.copy()  # 复制到内存
                     # 裁剪图片到指定大小
                     cardback_pil = self.center_crop_if_larger(cardback_pil, (739, 1049))
                     card = Card(cardback_pil.width, cardback_pil.height, image=cardback_pil)
@@ -1528,7 +1530,8 @@ class WorkspaceManager:
                 print(f"获取遭遇组图片路径: {encounter_group_picture_path}")
                 # 检查路径是否存在
                 if os.path.exists(encounter_group_picture_path):
-                    card.set_encounter_icon(Image.open(encounter_group_picture_path))
+                    with Image.open(encounter_group_picture_path) as encounter_img:
+                        card.set_encounter_icon(encounter_img.copy())
 
             # 画页脚
             illustrator = ""
@@ -1555,7 +1558,8 @@ class WorkspaceManager:
                     if footer_icon_name:
                         footer_icon_path = self._get_absolute_path(footer_icon_name)
                         if os.path.exists(footer_icon_path):
-                            footer_icon = Image.open(footer_icon_path)
+                            with Image.open(footer_icon_path) as icon_img:
+                                footer_icon = icon_img.copy()
 
                     card.set_footer_information(
                         illustrator,
@@ -2269,7 +2273,8 @@ class WorkspaceManager:
                 # 直接读取图片文件（相对工作目录路径）
                 image_path = self._get_absolute_path(card_path)
                 if os.path.exists(image_path):
-                    return Image.open(image_path)
+                    with Image.open(image_path) as img:
+                        return img.copy()  # 复制到内存并返回
 
             elif card_type == 'cardback':
                 # 固定的卡牌背面，从程序目录读取
@@ -2289,7 +2294,8 @@ class WorkspaceManager:
 
                 print(f"正在读取卡牌背面图片: {cardback_path} {os.path.exists(cardback_path)}")
                 if os.path.exists(cardback_path):
-                    return Image.open(cardback_path)
+                    with Image.open(cardback_path) as img:
+                        return img.copy()  # 复制到内存并返回
 
             elif card_type == 'card':
                 # 卡牌对象，需要读取卡牌JSON并生成图片
@@ -2514,7 +2520,8 @@ class WorkspaceManager:
                         # 直接读取图片文件
                         image_path = self._get_absolute_path(card_path)
                         if os.path.exists(image_path):
-                            source_image = Image.open(image_path)
+                            with Image.open(image_path) as img:
+                                source_image = img.copy()  # 复制到内存
 
                     elif card_type == 'cardback':
                         # 使用卡背图片
@@ -2532,7 +2539,8 @@ class WorkspaceManager:
                                 cardback_path = os.path.join(sys._MEIPASS, cardback_filename)
 
                             if os.path.exists(cardback_path):
-                                source_image = Image.open(cardback_path)
+                                with Image.open(cardback_path) as img:
+                                    source_image = img.copy()  # 复制到内存
 
                     # 如果成功获取到源图片，进行等比缩放处理
                     if source_image:

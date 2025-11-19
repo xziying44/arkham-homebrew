@@ -462,9 +462,8 @@ class PNPExporter:
             for copy_num in range(quantity):
                 # 读取图片获取尺寸
                 from PIL import Image as PILImage
-                front_img = PILImage.open(front_path)
-                width_px, height_px = front_img.size
-                front_img.close()
+                with PILImage.open(front_path) as front_img:
+                    width_px, height_px = front_img.size
 
                 # 转换为mm（假设DPI为300）
                 dpi = self.export_params.get('dpi', 300)
@@ -513,9 +512,8 @@ class PNPExporter:
 
         first_card = exported_cards[0]
         from PIL import Image as PILImage
-        card_img = PILImage.open(first_card['front_path'])
-        card_width_px, card_height_px = card_img.size
-        card_img.close()
+        with PILImage.open(first_card['front_path']) as card_img:
+            card_width_px, card_height_px = card_img.size
 
         # 转换为mm
         dpi = self.export_params.get('dpi', 300)
@@ -808,10 +806,11 @@ class PNPExporter:
                 back_path = card_info['back_path']
                 card_name = card_info.get('card_name', 'Unknown')
 
-                # 读取图片
+                # 读取图片并复制到内存
                 from PIL import Image as PILImage
-                front_img = PILImage.open(front_path)
-                back_img = PILImage.open(back_path)
+                with PILImage.open(front_path) as f_img, PILImage.open(back_path) as b_img:
+                    front_img = f_img.copy()
+                    back_img = b_img.copy()
 
                 # 为每个副本生成文件
                 for copy_idx in range(quantity):
@@ -834,9 +833,6 @@ class PNPExporter:
 
                     exported_count += 2
                     self._add_log(f"  ✓ 导出 {card_name} 副本 {copy_num}/{quantity}")
-
-                front_img.close()
-                back_img.close()
 
             except Exception as e:
                 self._add_log(f"✗ 导出卡牌图片失败: {e}")

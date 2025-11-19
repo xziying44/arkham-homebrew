@@ -943,9 +943,10 @@ def generate_card():
             try:
                 logger_manager.debug("勘误模式: 生成对比图")
                 original_image = current_workspace.get_card_base64(json_data)
-                # 如果picture_path为str则读取PIL图片
+                # 如果picture_path为str则读取PIL图片并复制到内存
                 if isinstance(original_image, str):
-                    original_image = Image.open(original_image)
+                    with Image.open(original_image) as img:
+                        original_image = img.copy()
 
                 # 处理图片旋转
                 if card_image.width > card_image.height and original_image.width < original_image.height:

@@ -182,11 +182,13 @@ class ImageManager:
         初始化图像管理器
         :param image_folder: 图片文件存放目录，默认为'images'
         """
-        self.image_map = {}  # 存储实际图片对象：英文键 -> Image
+        self.image_map = {}  # 懒加载缓存：英文键 -> Image（内存副本）
         self.name_mapping = {}  # 中文键 -> 英文文件名
+        self.available_images = {}  # 可用图片路径：英文键 -> 完整文件路径
+        self.image_folder_path = get_resource_path(image_folder)
 
         # 工作目录，默认为系统图片资源路径
-        self.working_directory = get_resource_path(image_folder)
+        self.working_directory = self.image_folder_path
 
         logger_manager.info(f"[ImageManager] 初始化，图片目录: {image_folder}")
         logger_manager.info(f"[ImageManager] 工作目录: {self.working_directory}")
@@ -196,10 +198,10 @@ class ImageManager:
         self.name_mapping = create_reverse_mapping(filename_mapping.get('images', {}))
         logger_manager.info(f"[ImageManager] 文件名映射数量: {len(self.name_mapping)}")
 
-        # 加载图片
-        self.load_images(image_folder)
+        # 扫描可用图片（懒加载，不打开文件）
+        self.scan_available_images()
 
-        logger_manager.info(f"[ImageManager] 加载完成，共加载 {len(self.image_map)} 张图片")
+        logger_manager.info(f"[ImageManager] 初始化完成，发现 {len(self.available_images)} 个可用图片文件")
 
     def set_working_directory(self, directory_path):
         """
@@ -222,8 +224,55 @@ class ImageManager:
         """
         return self.working_directory
 
+    def scan_available_images(self):
+        """
+        扫描图片目录，建立文件名到路径的映射（不打开图片文件）
+        用于懒加载机制的初始化
+        """
+        supported_ext = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
+        logger_manager.info(f"[ImageManager] 扫描图片目录: {self.image_folder_path}")
+
+        if not os.path.exists(self.image_folder_path):
+            logger_manager.info(f"[ImageManager] 错误：图片目录不存在 - {self.image_folder_path}")
+            return
+
+        try:
+            files = os.listdir(self.image_folder_path)
+            logger_manager.info(f"[ImageManager] 目录中的文件数: {len(files)}")
+
+            scanned_count = 0
+            for filename in files:
+                name, ext = os.path.splitext(filename)
+
+                if ext.lower() not in supported_ext:
+                    continue
+
+                file_path = os.path.join(self.image_folder_path, filename)
+
+                if not os.path.exists(file_path):
+                    continue
+
+                # 使用小写的英文文件名（无扩展名）作为键，存储完整路径
+                key = name.lower()
+                self.available_images[key] = file_path
+                scanned_count += 1
+
+                # 只打印前10个
+                if scanned_count <= 10:
+                    logger_manager.info(f"[ImageManager] #{scanned_count}: {filename} (key: {key})")
+
+            logger_manager.info(f"[ImageManager] 成功扫描 {scanned_count} 个图片文件")
+
+        except Exception as e:
+            logger_manager.info(f"[ImageManager] 图片扫描失败: {str(e)}")
+            import traceback
+            traceback.print_exc()
+
     def load_images(self, image_folder):
-        """加载图片目录下所有支持的图像文件"""
+        """
+        [已废弃] 原预加载方法，现已改为懒加载机制
+        保留此方法仅为兼容性，实际不再使用
+        """
         supported_ext = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
         image_folder_path = get_resource_path(image_folder)
         logger_manager.info(f"[ImageManager] 图片目录路径: {image_folder_path}")
@@ -270,16 +319,19 @@ class ImageManager:
 
     def open(self, path, **kwargs):
         """
-        打开指定图片文件
+        打开指定图片文件并复制到内存
         :param path: 图片路径
         :param kwargs: 传递给Image.open的额外参数
-        :return: PIL.Image对象，如果找不到返回None
+        :return: PIL.Image对象（内存副本），如果找不到返回None
         """
         try:
-            img = Image.open(path, **kwargs)
-            if img.mode not in ('RGB', 'RGBA'):
-                img = img.convert('RGB')
-            return img
+            with Image.open(path, **kwargs) as img:
+                # 转换模式并复制到内存
+                if img.mode not in ('RGB', 'RGBA'):
+                    img = img.convert('RGB')
+                # 复制图片到内存，确保原文件可以安全关闭
+                img_copy = img.copy()
+            return img_copy
         except Exception as e:
             logger_manager.info(f"[ImageManager] 无法打开图片 {path}: {str(e)}")
             return None
@@ -287,27 +339,43 @@ class ImageManager:
     def get_image(self, image_name):
         """
         获取图片（支持中文键名和英文键名）
+        使用懒加载机制：首次访问时加载并缓存
         :param image_name: 图片名称（可以是中文或英文，不带扩展名）
-        :return: 图片对象
+        :return: 图片对象（内存副本）
         """
         # 转换为小写
         key = image_name.lower()
 
-        # 方式1: 直接查找英文键
+        # 方式1: 从缓存中直接返回
         if key in self.image_map:
             return self.image_map[key]
 
-        # 方式2: 通过中文键查找映射的英文文件名
-        if key in self.name_mapping:
+        # 方式2: 查找文件路径并懒加载
+        file_path = None
+
+        # 2.1 直接查找英文键
+        if key in self.available_images:
+            file_path = self.available_images[key]
+        # 2.2 通过中文键查找映射的英文文件名
+        elif key in self.name_mapping:
             english_filename = self.name_mapping[key]
             english_key = os.path.splitext(english_filename)[0].lower()
 
-            if english_key in self.image_map:
-                return self.image_map[english_key]
+            if english_key in self.available_images:
+                file_path = self.available_images[english_key]
+
+        # 找到路径，懒加载图片
+        if file_path:
+            img = self.open(file_path)
+            if img:
+                # 缓存到内存
+                self.image_map[key] = img
+                logger_manager.info(f"[ImageManager] 懒加载图片: {image_name} (key: {key})")
+                return img
 
         # 找不到，打印调试信息
         logger_manager.info(f"[ImageManager] 找不到图片: {image_name} (key: {key})")
-        logger_manager.info(f"[ImageManager] 可用的英文键示例: {list(self.image_map.keys())[:5]}")
+        logger_manager.info(f"[ImageManager] 可用的英文键示例: {list(self.available_images.keys())[:5]}")
         logger_manager.info(f"[ImageManager] 可用的中文键示例: {list(self.name_mapping.keys())[:5]}")
 
         return None
@@ -362,12 +430,14 @@ class ImageManager:
         # 尝试打开图片
         if os.path.exists(actual_path):
             try:
-                img = Image.open(actual_path)
-                # 转换为 RGBA 模式以支持透明度
-                if img.mode not in ('RGB', 'RGBA'):
-                    img = img.convert('RGBA')
+                with Image.open(actual_path) as img:
+                    # 转换为 RGBA 模式以支持透明度
+                    if img.mode not in ('RGB', 'RGBA'):
+                        img = img.convert('RGBA')
+                    # 复制到内存，确保原文件可以安全关闭
+                    img_copy = img.copy()
                 logger_manager.info(f"[ImageManager] 成功加载图片: {actual_path}")
-                return img
+                return img_copy
             except Exception as e:
                 logger_manager.info(f"[ImageManager] 打开图片失败 {actual_path}: {str(e)}")
         else:

@@ -265,7 +265,8 @@ class DeckExporter:
                 # 直接读取图片文件（相对工作目录路径）
                 image_path = self.workspace_manager._get_absolute_path(card_path)
                 if os.path.exists(image_path):
-                    return Image.open(image_path)
+                    with Image.open(image_path) as img:
+                        return img.copy()  # 复制到内存并返回
 
             elif card_type == 'cardback':
                 # 固定的卡牌背面，从程序目录读取
@@ -285,7 +286,8 @@ class DeckExporter:
 
                 print(f"正在读取卡牌背面图片: {cardback_path} {os.path.exists(cardback_path)}")
                 if os.path.exists(cardback_path):
-                    return Image.open(cardback_path)
+                    with Image.open(cardback_path) as img:
+                        return img.copy()  # 复制到内存并返回
 
             elif card_type == 'card':
                 # 卡牌对象，需要读取卡牌JSON并生成图片

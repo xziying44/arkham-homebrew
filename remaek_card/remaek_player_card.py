@@ -301,10 +301,11 @@ class RemakeCardsTranslationTask:
         image_cache = {}
 
         def get_cached_image(image_path: str) -> Image.Image:
-            """获取缓存的图片，如果不存在则加载并缓存"""
+            """获取缓存的图片，如果不存在则加载并缓存（复制到内存）"""
             if image_path not in image_cache:
                 try:
-                    image_cache[image_path] = Image.open(image_path)
+                    with Image.open(image_path) as img:
+                        image_cache[image_path] = img.copy()  # 复制到内存并缓存
                 except Exception as e:
                     raise
             return image_cache[image_path]
@@ -328,12 +329,13 @@ class RemakeCardsTranslationTask:
 
             face_path = os.path.join(self.work_dir, 'download', self._get_alnum_str(custom_card['FaceURL']) + '.jpg')
             back_path = os.path.join(self.work_dir, 'download', self._get_alnum_str(custom_card['BackURL']) + '.jpg')
-            face_image = self.cutting_pictures(
-                image=Image.open(face_path),
-                num_width=custom_card['NumWidth'],
-                num_height=custom_card['NumHeight'],
-                index=custom_card['index']
-            )
+            with Image.open(face_path) as face_img:
+                face_image = self.cutting_pictures(
+                    image=face_img.copy(),
+                    num_width=custom_card['NumWidth'],
+                    num_height=custom_card['NumHeight'],
+                    index=custom_card['index']
+                )
             if custom_card['UniqueBack']:
                 # 独特卡背
                 back_image = self.cutting_pictures(

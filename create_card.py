@@ -130,8 +130,9 @@ class CardCreator:
             if isinstance(picture_path, Image.Image):
                 image = picture_path.copy()
             else:
-                # 如果传入的是路径，则打开图片
-                image = Image.open(picture_path)
+                # 如果传入的是路径，则打开图片并复制到内存
+                with Image.open(picture_path) as img:
+                    image = img.copy()  # 复制到内存，确保文件可以安全关闭
 
             if card_json.get('picture_enhanced', False):
                 # 增加亮度
