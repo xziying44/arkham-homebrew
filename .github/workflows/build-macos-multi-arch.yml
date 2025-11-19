@@ -387,19 +387,19 @@ jobs:
         include:
           # Debian 系列 - 生成 .deb 包（适用于 Ubuntu、Mint、Debian 及其衍生版）
           - distro: debian
-            runner: ubuntu-22.04
+            runner: ubuntu-24.04
             distro_name: "Debian/Ubuntu/Mint"
-            distro_version: "Debian 11+, Ubuntu 22.04+, Mint 21+"
+            distro_version: "Debian 12+, Ubuntu 24.04+, Mint 22+"
             pkg_format: deb
             pkg_manager: apt
-            dependencies: "libgtk-3-0, libwebkit2gtk-4.0-37, libayatana-appindicator3-1, gir1.2-gtk-3.0, gir1.2-webkit2-4.0, python3-gi, python3-gi-cairo"
+            dependencies: "libgtk-3-0, libwebkit2gtk-4.1-0, libayatana-appindicator3-1, gir1.2-gtk-3.0, gir1.2-webkit2-4.1, python3-gi, python3-gi-cairo"
             install_cmd: |
               sudo apt-get update
               sudo apt-get install -y \
                 python3 python3-pip python3-dev \
-                libgtk-3-0 libwebkit2gtk-4.0-37 \
+                libgtk-3-0 libwebkit2gtk-4.1-0 \
                 libayatana-appindicator3-1 gir1.2-ayatanaappindicator3-0.1 \
-                python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-webkit2-4.0 \
+                python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-webkit2-4.1 \
                 libgirepository1.0-dev libcairo2-dev pkg-config \
                 binutils patchelf ruby ruby-dev build-essential
               sudo gem install --no-document fpm
@@ -427,11 +427,12 @@ jobs:
                 ruby ruby-devel rubygems rpm-build
               gem install --no-document fpm
 
-          # 通用 Linux - 生成 tar.gz（适用于所有其他发行版）
-          - distro: generic
+          # 通用 Linux - Ubuntu 22.04 基础（适用于旧版发行版）
+          - distro: generic-ubuntu22
             runner: ubuntu-22.04
-            distro_name: "Generic Linux"
-            distro_version: "All distributions (Arch, openSUSE, Gentoo, etc.)"
+            distro_name: "Generic Linux (Ubuntu 22.04 base)"
+            distro_version: "Ubuntu 22.04 LTS, Debian 11, Mint 20-21, and compatible distributions"
+            ubuntu_version: "22.04"
             pkg_format: tar.gz
             pkg_manager: manual
             dependencies: ""
@@ -442,6 +443,25 @@ jobs:
                 libgtk-3-0 libwebkit2gtk-4.0-37 \
                 libayatana-appindicator3-1 gir1.2-ayatanaappindicator3-0.1 \
                 python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-webkit2-4.0 \
+                libgirepository1.0-dev libcairo2-dev pkg-config \
+                binutils patchelf
+
+          # 通用 Linux - Ubuntu 24.04 基础（适用于新版发行版）
+          - distro: generic-ubuntu24
+            runner: ubuntu-24.04
+            distro_name: "Generic Linux (Ubuntu 24.04 base)"
+            distro_version: "Ubuntu 24.04 LTS, Debian 12+, Mint 22+, and newer distributions"
+            ubuntu_version: "24.04"
+            pkg_format: tar.gz
+            pkg_manager: manual
+            dependencies: ""
+            install_cmd: |
+              sudo apt-get update
+              sudo apt-get install -y \
+                python3 python3-pip python3-dev \
+                libgtk-3-0 libwebkit2gtk-4.1-0 \
+                libayatana-appindicator3-1 gir1.2-ayatanaappindicator3-0.1 \
+                python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-webkit2-4.1 \
                 libgirepository1.0-dev libcairo2-dev pkg-config \
                 binutils patchelf
 
@@ -718,9 +738,9 @@ jobs:
           fi
 
           cd dist
-          tar -czf "../arkham-card-maker_${VERSION}_linux.tar.gz" "Arkham Card Maker"
+          tar -czf "../arkham-card-maker_${VERSION}_linux-ubuntu${{ matrix.ubuntu_version }}.tar.gz" "Arkham Card Maker"
           cd ..
-          echo "✅ Generic tar.gz created successfully"
+          echo "✅ Generic tar.gz (Ubuntu ${{ matrix.ubuntu_version }}) created successfully"
 
       - name: Verify tar.gz package
         if: matrix.pkg_format == 'tar.gz'
@@ -729,7 +749,7 @@ jobs:
           if [ -z "$VERSION" ] || [ "$VERSION" = "$GITHUB_REF_NAME" ]; then
             VERSION="1.0.0"
           fi
-          PACKAGE_FILE="arkham-card-maker_${VERSION}_linux.tar.gz"
+          PACKAGE_FILE="arkham-card-maker_${VERSION}_linux-ubuntu${{ matrix.ubuntu_version }}.tar.gz"
           if [ -f "$PACKAGE_FILE" ]; then
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             echo "📦 Generic Linux Package Information"
@@ -737,6 +757,7 @@ jobs:
             echo "File: $PACKAGE_FILE"
             echo "Size: $(du -sh '$PACKAGE_FILE' | cut -f1)"
             echo "Format: tar.gz"
+            echo "Base: Ubuntu ${{ matrix.ubuntu_version }} LTS"
             echo "Compatible: All Linux distributions"
             echo "Architecture: x86_64"
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -751,7 +772,7 @@ jobs:
           name: arkham-card-maker-${{ matrix.distro }}
           path: |
             arkham-card-maker_*_${{ matrix.distro }}.${{ matrix.pkg_format }}
-            arkham-card-maker_*_linux.tar.gz
+            arkham-card-maker_*_linux-ubuntu${{ matrix.ubuntu_version }}.tar.gz
           retention-days: 30
           if-no-files-found: error
 
@@ -792,24 +813,34 @@ jobs:
           ---
 
           ### 🐧 Linux
-          - **Debian/Ubuntu/Mint**: `arkham-card-maker_xxx_debian.deb`
+          - **Debian/Ubuntu 24.04+/Mint 22+**: `arkham-card-maker_xxx_debian.deb`
           - **Fedora/RHEL/CentOS**: `arkham-card-maker_xxx_fedora.rpm`
-          - **其他发行版**: `arkham-card-maker_xxx_linux.tar.gz`
+          - **通用版本（Ubuntu 22.04 base）**: `arkham-card-maker_xxx_linux-ubuntu22.04.tar.gz`
+          - **通用版本（Ubuntu 24.04 base）**: `arkham-card-maker_xxx_linux-ubuntu24.04.tar.gz`
 
           **安装（原生包）：**
           ```bash
-          # Debian/Ubuntu
+          # Debian/Ubuntu 24.04+
           sudo dpkg -i arkham-card-maker_*_debian.deb && sudo apt-get install -f
 
           # Fedora/RHEL
           sudo dnf install arkham-card-maker_*_fedora.rpm
           ```
 
-          **通用版本：**
+          **通用版本（选择匹配的基础版本）：**
           ```bash
-          tar -xzf arkham-card-maker_*_linux.tar.gz
+          # Ubuntu 22.04 / Debian 11 / Mint 20-21 / 旧版系统
+          tar -xzf arkham-card-maker_*_linux-ubuntu22.04.tar.gz
+          cd "Arkham Card Maker" && ./Arkham\ Card\ Maker
+
+          # Ubuntu 24.04 / Debian 12+ / Mint 22+ / 新版系统
+          tar -xzf arkham-card-maker_*_linux-ubuntu24.04.tar.gz
           cd "Arkham Card Maker" && ./Arkham\ Card\ Maker
           ```
+
+          **💡 选择指南：**
+          - **有疑问？** 选择 Ubuntu 22.04 版本（更好的兼容性）
+          - **最新系统？** 选择 Ubuntu 24.04 版本（更新的库）
 
           ---
 
@@ -865,9 +896,13 @@ jobs:
           FEDORA_RPM=$(find artifacts/arkham-card-maker-fedora -name "*.rpm")
           cp "$FEDORA_RPM" "release/arkham-card-maker-${VERSION}-fedora.rpm"
 
-          # Linux - Generic (tar.gz)
-          GENERIC_TAR=$(find artifacts/arkham-card-maker-generic -name "*_linux.tar.gz")
-          cp "$GENERIC_TAR" "release/arkham-card-maker-${VERSION}-linux.tar.gz"
+          # Linux - Generic Ubuntu 22.04 (tar.gz)
+          GENERIC_22=$(find artifacts/arkham-card-maker-generic-ubuntu22 -name "*ubuntu22.04.tar.gz")
+          cp "$GENERIC_22" "release/arkham-card-maker-${VERSION}-linux-ubuntu22.04.tar.gz"
+
+          # Linux - Generic Ubuntu 24.04 (tar.gz)
+          GENERIC_24=$(find artifacts/arkham-card-maker-generic-ubuntu24 -name "*ubuntu24.04.tar.gz")
+          cp "$GENERIC_24" "release/arkham-card-maker-${VERSION}-linux-ubuntu24.04.tar.gz"
 
           echo "Release assets prepared:"
           ls -lh release/
@@ -940,7 +975,8 @@ jobs:
             release/Arkham-Card-Maker-${{ env.VERSION }}-win.zip
             release/arkham-card-maker-${{ env.VERSION }}-debian.deb
             release/arkham-card-maker-${{ env.VERSION }}-fedora.rpm
-            release/arkham-card-maker-${{ env.VERSION }}-linux.tar.gz
+            release/arkham-card-maker-${{ env.VERSION }}-linux-ubuntu22.04.tar.gz
+            release/arkham-card-maker-${{ env.VERSION }}-linux-ubuntu24.04.tar.gz
           body: |
             ## 🎉 Arkham Card Maker ${{ env.VERSION }}
 
@@ -978,20 +1014,29 @@ jobs:
             ---
 
             #### 🐧 Linux
-            - **Debian/Ubuntu/Mint**: `arkham-card-maker-${{ env.VERSION }}-debian.deb`
+            - **Debian/Ubuntu/Mint**: `arkham-card-maker-${{ env.VERSION }}-debian.deb` (Ubuntu 24.04+ base)
             - **Fedora/RHEL/CentOS**: `arkham-card-maker-${{ env.VERSION }}-fedora.rpm`
-            - **其他发行版**: `arkham-card-maker-${{ env.VERSION }}-linux.tar.gz`
+            - **其他发行版**:
+              - **Ubuntu 22.04 LTS**: `arkham-card-maker-${{ env.VERSION }}-linux-ubuntu22.04.tar.gz`
+              - **Ubuntu 24.04 LTS**: `arkham-card-maker-${{ env.VERSION }}-linux-ubuntu24.04.tar.gz`
 
-            **安装：**
+            **安装（原生包）：**
             ```bash
-            # Debian/Ubuntu
+            # Debian/Ubuntu 24.04+
             sudo dpkg -i arkham-card-maker-${{ env.VERSION }}-debian.deb && sudo apt-get install -f
 
             # Fedora/RHEL
             sudo dnf install arkham-card-maker-${{ env.VERSION }}-fedora.rpm
+            ```
 
-            # 通用版本
-            tar -xzf arkham-card-maker-${{ env.VERSION }}-linux.tar.gz
+            **通用版本（选择匹配的 Ubuntu 版本）：**
+            ```bash
+            # Ubuntu 22.04 / Debian 11 / Mint 20-21
+            tar -xzf arkham-card-maker-${{ env.VERSION }}-linux-ubuntu22.04.tar.gz
+            cd "Arkham Card Maker" && ./Arkham\ Card\ Maker
+
+            # Ubuntu 24.04 / Debian 12+ / Mint 22+
+            tar -xzf arkham-card-maker-${{ env.VERSION }}-linux-ubuntu24.04.tar.gz
             cd "Arkham Card Maker" && ./Arkham\ Card\ Maker
             ```
 
