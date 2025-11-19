@@ -3,14 +3,8 @@ name: Build Desktop App (macOS + Windows)
 on:
   workflow_dispatch:
   push:
-    branches:
-      - master
-      - develop
     tags:
       - "*"
-  pull_request:
-    branches:
-      - master
 
 jobs:
   build-macos:
