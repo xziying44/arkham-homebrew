@@ -224,6 +224,55 @@ export default {
     applySuccess: '已应用到另一侧',
   },
 
+  // 职阶选择器
+  classSelector: {
+    guardian: '守护者',
+    seeker: '探求者',
+    rogue: '流浪者',
+    mystic: '潜修者',
+    survivor: '生存者',
+    neutral: '中立',
+    weakness: '弱点',
+    multiclass: '多职阶',
+    selectSubclasses: '选择子职阶（最多3个）'
+  },
+
+  // 槽位选择器
+  slotSelector: {
+    ally: '盟友',
+    body: '身体',
+    accessory: '饰品',
+    hand: '手部',
+    twoHands: '双手',
+    arcane: '法术',
+    twoArcane: '双法术',
+    tarot: '塔罗'
+  },
+
+  // 数值徽章
+  statBadge: {
+    none: '无',
+    infinite: '无限',
+    custom: '自定义',
+    enterValue: '输入数值',
+    valuePlaceholder: '请输入0-99的数值'
+  },
+
+  // 费用金币
+  costCoin: {
+    noCost: '无费用',
+    xCost: 'X费用',
+    custom: '自定义',
+    enterValue: '输入费用',
+    valuePlaceholder: '请输入0-99的数值'
+  },
+
+  // 等级星环
+  levelRing: {
+    customize: '定制',
+    none: '无等级'
+  },
+
   // 标签编辑
   tags: {
     title: '卡牌标签',

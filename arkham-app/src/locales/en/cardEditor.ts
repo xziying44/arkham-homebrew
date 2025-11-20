@@ -219,6 +219,55 @@ export default {
     applySuccess: 'Applied to the other side',
   },
 
+  // Class Selector
+  classSelector: {
+    guardian: 'Guardian',
+    seeker: 'Seeker',
+    rogue: 'Rogue',
+    mystic: 'Mystic',
+    survivor: 'Survivor',
+    neutral: 'Neutral',
+    weakness: 'Weakness',
+    multiclass: 'Multiclass',
+    selectSubclasses: 'Select subclasses (max 3)'
+  },
+
+  // Slot Selector
+  slotSelector: {
+    ally: 'Ally',
+    body: 'Body',
+    accessory: 'Accessory',
+    hand: 'Hand',
+    twoHands: 'Two-Handed',
+    arcane: 'Arcane',
+    twoArcane: 'Two Arcane',
+    tarot: 'Tarot'
+  },
+
+  // Stat Badge
+  statBadge: {
+    none: 'None',
+    infinite: 'Infinite',
+    custom: 'Custom',
+    enterValue: 'Enter Value',
+    valuePlaceholder: 'Enter a value from 0-99'
+  },
+
+  // Cost Coin
+  costCoin: {
+    noCost: 'No Cost',
+    xCost: 'X Cost',
+    custom: 'Custom',
+    enterValue: 'Enter Cost',
+    valuePlaceholder: 'Enter a value from 0-99'
+  },
+
+  // Level Ring
+  levelRing: {
+    customize: 'Customize',
+    none: 'No Level'
+  },
+
   // Tags Editor
   tags: {
     title: 'Card Tags',

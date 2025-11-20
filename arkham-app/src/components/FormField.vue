@@ -246,6 +246,91 @@
       @focus="loadEncounterGroups" />
   </n-form-item>
 
+  <!-- 职阶选择器 -->
+  <n-form-item v-else-if="field.type === 'class-selector'" :path="field.key">
+    <template #label>
+      <div class="field-label">
+        <span>{{ field.name }}</span>
+        <n-button v-if="field.helpText" size="tiny" @click="showHelpModal = true" class="help-button"
+          :title="$t('cardEditor.field.viewFieldDescription')">
+          <template #icon>
+            <n-icon :component="HelpCircleOutline" size="14" />
+          </template>
+          {{ $t('cardEditor.field.help') }}
+        </n-button>
+      </div>
+    </template>
+    <ClassSelector :value="value" @update:value="$emit('update:value', $event)" />
+  </n-form-item>
+
+  <!-- 槽位选择器 -->
+  <n-form-item v-else-if="field.type === 'slot-selector'" :path="field.key">
+    <template #label>
+      <div class="field-label">
+        <span>{{ field.name }}</span>
+        <n-button v-if="field.helpText" size="tiny" @click="showHelpModal = true" class="help-button"
+          :title="$t('cardEditor.field.viewFieldDescription')">
+          <template #icon>
+            <n-icon :component="HelpCircleOutline" size="14" />
+          </template>
+          {{ $t('cardEditor.field.help') }}
+        </n-button>
+      </div>
+    </template>
+    <SlotSelector :value="value || ''" @update:value="$emit('update:value', $event)" />
+  </n-form-item>
+
+  <!-- 生命/理智徽章 -->
+  <n-form-item v-else-if="field.type === 'stat-badge'" :path="field.key">
+    <template #label>
+      <div class="field-label">
+        <span>{{ field.name }}</span>
+        <n-button v-if="field.helpText" size="tiny" @click="showHelpModal = true" class="help-button"
+          :title="$t('cardEditor.field.viewFieldDescription')">
+          <template #icon>
+            <n-icon :component="HelpCircleOutline" size="14" />
+          </template>
+          {{ $t('cardEditor.field.help') }}
+        </n-button>
+      </div>
+    </template>
+    <StatBadge :type="field.statType || 'health'" :value="value ?? -1" @update:value="$emit('update:value', $event)" />
+  </n-form-item>
+
+  <!-- 费用金币 -->
+  <n-form-item v-else-if="field.type === 'cost-coin'" :path="field.key">
+    <template #label>
+      <div class="field-label">
+        <span>{{ field.name }}</span>
+        <n-button v-if="field.helpText" size="tiny" @click="showHelpModal = true" class="help-button"
+          :title="$t('cardEditor.field.viewFieldDescription')">
+          <template #icon>
+            <n-icon :component="HelpCircleOutline" size="14" />
+          </template>
+          {{ $t('cardEditor.field.help') }}
+        </n-button>
+      </div>
+    </template>
+    <CostCoin :value="value ?? -1" @update:value="$emit('update:value', $event)" />
+  </n-form-item>
+
+  <!-- 等级星环 -->
+  <n-form-item v-else-if="field.type === 'level-ring'" :path="field.key">
+    <template #label>
+      <div class="field-label">
+        <span>{{ field.name }}</span>
+        <n-button v-if="field.helpText" size="tiny" @click="showHelpModal = true" class="help-button"
+          :title="$t('cardEditor.field.viewFieldDescription')">
+          <template #icon>
+            <n-icon :component="HelpCircleOutline" size="14" />
+          </template>
+          {{ $t('cardEditor.field.help') }}
+        </n-button>
+      </div>
+    </template>
+    <LevelRing :value="value ?? -1" @update:value="$emit('update:value', $event)" />
+  </n-form-item>
+
   <!-- 图片上传 -->
   <n-form-item v-else-if="field.type === 'image'" :path="field.key">
     <template #label>
@@ -324,6 +409,12 @@ import { useI18n } from 'vue-i18n'; // 新增
 import type { FormField } from '@/config/cardTypeConfigs';
 import { ConfigService } from '@/api';
 import { getIconUrlByChinese } from '@/config/locationIcons';
+// 导入新的特殊组件
+import ClassSelector from './ClassSelector.vue';
+import SlotSelector from './SlotSelector.vue';
+import StatBadge from './StatBadge.vue';
+import CostCoin from './CostCoin.vue';
+import LevelRing from './LevelRing.vue';
 
 interface Props {
   field: FormField;

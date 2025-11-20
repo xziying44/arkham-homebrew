@@ -13,7 +13,7 @@ export interface ShowCondition {
 export interface FormField {
   key: string;
   name: string;
-  type: 'text' | 'textarea' | 'number' | 'select' | 'multi-select' | 'string-array' | 'image' | 'encounter-group-select'; // Add new type
+  type: 'text' | 'textarea' | 'number' | 'select' | 'multi-select' | 'string-array' | 'image' | 'encounter-group-select' | 'class-selector' | 'slot-selector' | 'stat-badge' | 'cost-coin' | 'level-ring'; // Add new type
   layout?: 'full' | 'half' | 'third' | 'quarter';
   min?: number;
   max?: number;
@@ -25,6 +25,7 @@ export interface FormField {
   maxSize?: number;
   defaultValue?: any;
   helpText?: string;
+  statType?: 'health' | 'horror'; // For stat-badge type
 }
 
 export interface CardTypeConfig {
@@ -141,74 +142,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'class',
         name: '⚔️ Class',
-        type: 'select',
-        layout: 'full',
-        options: [
-          { label: '🛡️ Guardian', value: '守护者' },
-          { label: '🔍 Seeker', value: '探求者' },
-          { label: '🏃 Rogue', value: '流浪者' },
-          { label: '🔮 Mystic', value: '潜修者' },
-          { label: '💪 Survivor', value: '生存者' },
-          { label: '🌟 Multi-class', value: '多职阶' },
-          { label: '💀 Weakness', value: '弱点' },
-          { label: '⚪ Neutral', value: '中立' }
-        ]
-      },
-      {
-        key: 'subclass',
-        index: 0,
-        showCondition: {
-          field: 'class',
-          value: '多职阶'
-        },
-        name: '1️⃣ First Class',
-        type: 'select',
-        layout: 'third',
-        options: [
-          { label: '🛡️ Guardian', value: '守护者' },
-          { label: '🔍 Seeker', value: '探求者' },
-          { label: '🏃 Rogue', value: '流浪者' },
-          { label: '🔮 Mystic', value: '潜修者' },
-          { label: '💪 Survivor', value: '生存者' }
-        ]
-      },
-      {
-        key: 'subclass',
-        index: 1,
-        showCondition: {
-          field: 'class',
-          value: '多职阶'
-        },
-        name: '2️⃣ Second Class',
-        type: 'select',
-        layout: 'third',
-        options: [
-          { label: '🚫 No Class', value: null },
-          { label: '🛡️ Guardian', value: '守护者' },
-          { label: '🔍 Seeker', value: '探求者' },
-          { label: '🏃 Rogue', value: '流浪者' },
-          { label: '🔮 Mystic', value: '潜修者' },
-          { label: '💪 Survivor', value: '生存者' }
-        ]
-      },
-      {
-        key: 'subclass',
-        index: 2,
-        showCondition: {
-          field: 'class',
-          value: '多职阶'
-        },
-        name: '3️⃣ Third Class',
-        type: 'select',
-        layout: 'third',
-        options: [
-          { label: '🚫 No Class', value: null },
-          { label: '🛡️ Guardian', value: '守护者' },
-          { label: '🔍 Seeker', value: '探求者' },
-          { label: '🏃 Rogue', value: '流浪者' },
-          { label: '🔮 Mystic', value: '潜修者' },
-          { label: '💪 Survivor', value: '生存者' }
-        ]
+        type: 'class-selector',
+        layout: 'full'
       },
       {
         key: 'weakness_type',
@@ -228,86 +163,42 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'health',
         name: '❤️ Health',
-        type: 'select',
-        layout: 'half',
-        options: [
-          { label: '🚫 No Health', value: -1 },
-          { label: '⭐ Infinite Health', value: -2 },
-          { label: '💀 Health-0', value: 0 },
-          ...Array.from({ length: 99 }, (_, i) => ({ label: `❤️ Health-${i + 1}`, value: i + 1 }))
-        ]
+        type: 'stat-badge',
+        statType: 'health',
+        layout: 'half'
       },
       {
         key: 'horror',
         name: '🧠 Sanity',
-        type: 'select',
-        layout: 'half',
-        options: [
-          { label: '🚫 No Sanity', value: -1 },
-          { label: '⭐ Infinite Sanity', value: -2 },
-          { label: '😵 Sanity-0', value: 0 },
-          ...Array.from({ length: 99 }, (_, i) => ({ label: `🧠 Sanity-${i + 1}`, value: i + 1 }))
-        ]
+        type: 'stat-badge',
+        statType: 'horror',
+        layout: 'half'
       },
       {
         key: 'slots',
         name: '🎒 Slot',
-        type: 'select',
-        layout: 'half',
-        options: [
-          { label: '🚫 No Slot', value: null },
-          { label: '👥 Ally', value: '盟友' },
-          { label: '👕 Body', value: '身体' },
-          { label: '💍 Accessory', value: '饰品' },
-          { label: '✋ Hand', value: '手部' },
-          { label: '🙌 Two-Handed', value: '双手' },
-          { label: '🔮 Spell', value: '法术' },
-          { label: '✨ Two-Spell', value: '双法术' },
-          { label: '🃏 Tarot', value: '塔罗' }
-        ]
+        type: 'slot-selector',
+        layout: 'half'
       },
       {
         key: 'slots2',
         name: '🎒 Second Slot',
-        type: 'select',
-        layout: 'half',
-        options: [
-          { label: '🚫 No Slot', value: null },
-          { label: '👥 Ally', value: '盟友' },
-          { label: '👕 Body', value: '身体' },
-          { label: '💍 Accessory', value: '饰品' },
-          { label: '✋ Hand', value: '手部' },
-          { label: '🙌 Two-Handed', value: '双手' },
-          { label: '🔮 Spell', value: '法术' },
-          { label: '✨ Two-Spell', value: '双法术' },
-          { label: '🃏 Tarot', value: '塔罗' }
-        ]
+        type: 'slot-selector',
+        layout: 'half'
       },
       {
         key: 'level',
         name: '⭐ Card Level',
-        type: 'select',
+        type: 'level-ring',
         layout: 'half',
-        defaultValue: -1,
-        options: [
-          { label: '🧩 Custom Level', value: -2 },
-          { label: '🚫 No Level', value: -1 },
-          { label: '0️⃣ Level-0', value: 0 },
-          ...Array.from({ length: 5 }, (_, i) => ({ label: `${['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][i]} Level-${i + 1}`, value: i + 1 }))
-        ]
+        defaultValue: -1
       },
       {
         key: 'cost',
         name: '💰 Cost',
-        type: 'select',
+        type: 'cost-coin',
         layout: 'half',
-        defaultValue: -1,
-        options: [
-          { label: '🆓 No Cost', value: -1 },
-          { label: '✖️ X Cost', value: -2 },
-          { label: '0️⃣ Cost-0', value: 0 },
-          ...Array.from({ length: 99 }, (_, i) => ({ label: `💰 Cost-${i + 1}`, value: i + 1 }))
-        ]
+        defaultValue: -1
       },
       {
         key: 'submit_icon',
@@ -446,74 +337,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'class',
         name: '⚔️ Class',
-        type: 'select',
-        layout: 'full',
-        options: [
-          { label: '🛡️ Guardian', value: '守护者' },
-          { label: '🔍 Seeker', value: '探求者' },
-          { label: '🏃 Rogue', value: '流浪者' },
-          { label: '🔮 Mystic', value: '潜修者' },
-          { label: '💪 Survivor', value: '生存者' },
-          { label: '🌟 Multi-class', value: '多职阶' },
-          { label: '💀 Weakness', value: '弱点' },
-          { label: '⚪ Neutral', value: '中立' }
-        ]
-      },
-      {
-        key: 'subclass',
-        index: 0,
-        showCondition: {
-          field: 'class',
-          value: '多职阶'
-        },
-        name: '1️⃣ First Class',
-        type: 'select',
-        layout: 'third',
-        options: [
-          { label: '🛡️ Guardian', value: '守护者' },
-          { label: '🔍 Seeker', value: '探求者' },
-          { label: '🏃 Rogue', value: '流浪者' },
-          { label: '🔮 Mystic', value: '潜修者' },
-          { label: '💪 Survivor', value: '生存者' }
-        ]
-      },
-      {
-        key: 'subclass',
-        index: 1,
-        showCondition: {
-          field: 'class',
-          value: '多职阶'
-        },
-        name: '2️⃣ Second Class',
-        type: 'select',
-        layout: 'third',
-        options: [
-          { label: '🚫 No Class', value: null },
-          { label: '🛡️ Guardian', value: '守护者' },
-          { label: '🔍 Seeker', value: '探求者' },
-          { label: '🏃 Rogue', value: '流浪者' },
-          { label: '🔮 Mystic', value: '潜修者' },
-          { label: '💪 Survivor', value: '生存者' }
-        ]
-      },
-      {
-        key: 'subclass',
-        index: 2,
-        showCondition: {
-          field: 'class',
-          value: '多职阶'
-        },
-        name: '3️⃣ Third Class',
-        type: 'select',
-        layout: 'third',
-        options: [
-          { label: '🚫 No Class', value: null },
-          { label: '🛡️ Guardian', value: '守护者' },
-          { label: '🔍 Seeker', value: '探求者' },
-          { label: '🏃 Rogue', value: '流浪者' },
-          { label: '🔮 Mystic', value: '潜修者' },
-          { label: '💪 Survivor', value: '生存者' }
-        ]
+        type: 'class-selector',
+        layout: 'full'
       },
       {
         key: 'weakness_type',
@@ -533,28 +358,16 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'level',
         name: '⭐ Card Level',
-        type: 'select',
+        type: 'level-ring',
         layout: 'half',
-        defaultValue: -1,
-        options: [
-          { label: '🧩 Custom Level', value: -2 },
-          { label: '🚫 No Level', value: -1 },
-          { label: '0️⃣ Level-0', value: 0 },
-          ...Array.from({ length: 5 }, (_, i) => ({ label: `${['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][i]} Level-${i + 1}`, value: i + 1 }))
-        ]
+        defaultValue: -1
       },
       {
         key: 'cost',
         name: '💰 Cost',
-        type: 'select',
+        type: 'cost-coin',
         layout: 'half',
-        defaultValue: -1,
-        options: [
-          { label: '🆓 No Cost', value: -1 },
-          { label: '✖️ X Cost', value: -2 },
-          { label: '0️⃣ Cost-0', value: 0 },
-          ...Array.from({ length: 99 }, (_, i) => ({ label: `💰 Cost-${i + 1}`, value: i + 1 }))
-        ]
+        defaultValue: -1
       },
       {
         key: 'submit_icon',
@@ -626,17 +439,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'class',
         name: '⚔️ Class',
-        type: 'select',
-        layout: 'full',
-        options: [
-          { label: '🛡️ Guardian', value: '守护者' },
-          { label: '🔍 Seeker', value: '探求者' },
-          { label: '🏃 Rogue', value: '流浪者' },
-          { label: '🔮 Mystic', value: '潜修者' },
-          { label: '💪 Survivor', value: '生存者' },
-          { label: '💀 Weakness', value: '弱点' },
-          { label: '⚪ Neutral', value: '中立' }
-        ]
+        type: 'class-selector',
+        layout: 'full'
       },
       {
         key: 'weakness_type',
@@ -656,15 +460,9 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'level',
         name: '⭐ Card Level',
-        type: 'select',
+        type: 'level-ring',
         layout: 'full',
-        defaultValue: -1,
-        options: [
-          { label: '🧩 Custom Level', value: -2 },
-          { label: '🚫 No Level', value: -1 },
-          { label: '0️⃣ Level-0', value: 0 },
-          ...Array.from({ length: 5 }, (_, i) => ({ label: `${['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][i]} Level-${i + 1}`, value: i + 1 }))
-        ]
+        defaultValue: -1
       },
       {
         key: 'submit_icon',
@@ -753,16 +551,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'class',
         name: '⚔️ Class',
-        type: 'select',
-        layout: 'full',
-        options: [
-          { label: '🛡️ Guardian', value: '守护者' },
-          { label: '🔍 Seeker', value: '探求者' },
-          { label: '🏃 Rogue', value: '流浪者' },
-          { label: '🔮 Mystic', value: '潜修者' },
-          { label: '💪 Survivor', value: '生存者' },
-          { label: '⚪ Neutral', value: '中立' }
-        ]
+        type: 'class-selector',
+        layout: 'full'
       },
       {
         key: 'attribute',
@@ -803,24 +593,16 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'health',
         name: '❤️ Health',
-        type: 'select',
-        layout: 'half',
-        options: [
-          { label: '🚫 No Health', value: -1 },
-          { label: '💀 Health-0', value: 0 },
-          ...Array.from({ length: 99 }, (_, i) => ({ label: `❤️ Health-${i + 1}`, value: i + 1 }))
-        ]
+        type: 'stat-badge',
+        statType: 'health',
+        layout: 'half'
       },
       {
         key: 'horror',
         name: '🧠 Sanity',
-        type: 'select',
-        layout: 'half',
-        options: [
-          { label: '🚫 No Sanity', value: -1 },
-          { label: '😵 Sanity-0', value: 0 },
-          ...Array.from({ length: 99 }, (_, i) => ({ label: `🧠 Sanity-${i + 1}`, value: i + 1 }))
-        ]
+        type: 'stat-badge',
+        statType: 'horror',
+        layout: 'half'
       },
       {
         key: 'traits',
@@ -883,16 +665,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'class',
         name: '⚔️ Class',
-        type: 'select',
-        layout: 'full',
-        options: [
-          { label: '🛡️ Guardian', value: '守护者' },
-          { label: '🔍 Seeker', value: '探求者' },
-          { label: '🏃 Rogue', value: '流浪者' },
-          { label: '🔮 Mystic', value: '潜修者' },
-          { label: '💪 Survivor', value: '生存者' },
-          { label: '⚪ Neutral', value: '中立' }
-        ]
+        type: 'class-selector',
+        layout: 'full'
       },
       {
         key: 'card_back.size',
