@@ -39,3 +39,4 @@ output_card.png
 /.cache/
 /.gemini/
 /language_config.json
+arkham-app/components.d.ts
