@@ -26,32 +26,37 @@
         <n-card :ref="setPropertiesSection" v-if="currentSideType && currentFormConfig" :title="$t('cardEditor.panel.cardProperties')"
             size="small" class="form-card">
             <n-form ref="dynamicFormRef" :model="sideCardData" label-placement="top" size="small">
-                <div v-for="(row, rowIndex) in formFieldRows" :key="rowIndex" class="form-row">
-                    <div v-for="field in row"
-                        :key="field.key + (field.index !== undefined ? `_${field.index}` : '')"
-                        class="form-field" :class="getFieldLayoutClass(field.layout)">
-                        <FormFieldComponent :field="field" :value="getFieldValue(field)"
-                            :subclasses="sideCardData.subclass || []"
-                            :new-string-value="newStringValue" @update:value="setFieldValue(field, $event)"
-                            @update:subclasses="updateSubclasses"
-                            @update:new-string-value="newStringValue = $event"
-                            @add-multi-select-item="addMultiSelectItem(field, $event)"
-                            @remove-multi-select-item="removeMultiSelectItem(field, $event)"
-                            @add-string-array-item="addStringArrayItem(field)"
-                            @remove-string-array-item="removeStringArrayItem(field, $event)"
-                            @move-string-array-item-up="moveStringArrayItemUp(field, $event)"
-                            @move-string-array-item-down="moveStringArrayItemDown(field, $event)"
-                            @edit-string-array-item="(index, newValue) => editStringArrayItem(field, index, newValue)"
-                            @remove-image="removeImage(field)" />
+                <n-tabs v-if="fieldGroupTabs.length" v-model:value="activeFieldGroup" type="line" animated>
+                    <n-tab-pane v-for="tab in fieldGroupTabs" :key="tab.key" :name="tab.key"
+                        :tab="$t(`cardEditor.groups.${tab.key}`)">
+                        <div v-for="(row, rowIndex) in fieldGroupRows[tab.key] || []" :key="rowIndex" class="form-row">
+                            <div v-for="field in row"
+                                :key="field.key + (field.index !== undefined ? `_${field.index}` : '')"
+                                class="form-field" :class="getFieldLayoutClass(field.layout)">
+                                <FormFieldComponent :field="field" :value="getFieldValue(field)"
+                                    :subclasses="sideCardData.subclass || []"
+                                    :new-string-value="newStringValue" @update:value="setFieldValue(field, $event)"
+                                    @update:subclasses="updateSubclasses"
+                                    @update:new-string-value="newStringValue = $event"
+                                    @add-multi-select-item="addMultiSelectItem(field, $event)"
+                                    @remove-multi-select-item="removeMultiSelectItem(field, $event)"
+                                    @add-string-array-item="addStringArrayItem(field)"
+                                    @remove-string-array-item="removeStringArrayItem(field, $event)"
+                                    @move-string-array-item-up="moveStringArrayItemUp(field, $event)"
+                                    @move-string-array-item-down="moveStringArrayItemDown(field, $event)"
+                                    @edit-string-array-item="(index, newValue) => editStringArrayItem(field, index, newValue)"
+                                    @remove-image="removeImage(field)" />
 
-                        <!-- 地点卡快捷操作按钮放在“连接地点图标”字段下方 -->
-                        <div v-if="isLocationType && field.key === 'location_link'" style="margin-top: 6px; display: flex; justify-content: flex-end;">
-                            <n-button tertiary size="small" @click="applyLocationToOtherSide">
-                                {{ $t('cardEditor.locationActions.applyToOtherSide') }}
-                            </n-button>
+                                <!-- 地点卡快捷操作按钮放在“连接地点图标”字段下方 -->
+                                <div v-if="isLocationType && field.key === 'location_link'" style="margin-top: 6px; display: flex; justify-content: flex-end;">
+                                    <n-button tertiary size="small" @click="applyLocationToOtherSide">
+                                        {{ $t('cardEditor.locationActions.applyToOtherSide') }}
+                                    </n-button>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
+                    </n-tab-pane>
+                </n-tabs>
             </n-form>
 
             <!-- 插画布局设置展开按钮 -->
@@ -203,6 +208,7 @@ import { ref, computed, reactive, watch, nextTick } from 'vue';
 import { useMessage } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import type { FormField, CardTypeConfig, ShowCondition } from '@/config/cardTypeConfigs';
+import { cardFieldGroups } from '@/config/cardFieldGroups';
 import FormFieldComponent from './FormField.vue';
 import IllustrationLayoutEditor from './IllustrationLayoutEditor.vue';
 import TextBoundaryEditor from './TextBoundaryEditor.vue';
@@ -213,6 +219,11 @@ interface Props {
     cardTypeConfigs: Record<string, CardTypeConfig>;
     cardTypeOptions: any[];
     languageOptions: any[];
+}
+
+interface FieldGroupTab {
+    key: string;
+    fields: FormField[];
 }
 
 const props = defineProps<Props>();
@@ -338,14 +349,12 @@ const visibleFields = computed(() => {
     });
 });
 
-// 布局系统 - 基于可见字段
-const formFieldRows = computed(() => {
-    const fields = visibleFields.value;
-    const rows = [];
-    let currentRow = [];
+const buildFieldRows = (fields: FormField[]) => {
+    const rows: FormField[][] = [];
+    let currentRow: FormField[] = [];
     let currentRowWidth = 0;
 
-    const layoutWeights = {
+    const layoutWeights: Record<string, number> = {
         'full': 1,
         'half': 0.5,
         'third': 1 / 3,
@@ -379,6 +388,48 @@ const formFieldRows = computed(() => {
     }
 
     return rows;
+};
+
+const fieldGroupTabs = computed<FieldGroupTab[]>(() => {
+    if (!currentFormConfig.value) return [];
+
+    const groups = cardFieldGroups.default;
+    const usedKeys = new Set<string>();
+
+    const tabs = groups
+        .map(group => {
+            const matchedFields = visibleFields.value.filter(field => group.fields.includes(field.key));
+            matchedFields.forEach(field => usedKeys.add(field.key));
+            return { key: group.key, fields: matchedFields } as FieldGroupTab;
+        })
+        .filter(group => group.fields.length > 0);
+
+    const otherFields = visibleFields.value.filter(field => !usedKeys.has(field.key));
+    if (otherFields.length > 0) {
+        tabs.push({ key: 'other', fields: otherFields });
+    }
+
+    return tabs;
+});
+
+const activeFieldGroup = ref<string>('');
+
+watch(fieldGroupTabs, (tabs) => {
+    if (!tabs.length) {
+        activeFieldGroup.value = '';
+        return;
+    }
+    if (!tabs.some(tab => tab.key === activeFieldGroup.value)) {
+        activeFieldGroup.value = tabs[0].key;
+    }
+}, { immediate: true });
+
+const fieldGroupRows = computed<Record<string, FormField[][]>>(() => {
+    const rowsMap: Record<string, FormField[][]> = {};
+    fieldGroupTabs.value.forEach(tab => {
+        rowsMap[tab.key] = buildFieldRows(tab.fields);
+    });
+    return rowsMap;
 });
 
 const getFieldLayoutClass = (layout: string = 'full') => {

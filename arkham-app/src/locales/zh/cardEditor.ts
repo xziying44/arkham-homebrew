@@ -176,6 +176,17 @@ export default {
     deckOptions: '牌库选项'
   },
 
+  // 卡牌属性分组标签
+  groups: {
+    basic: '基础信息',
+    stats: '数值属性',
+    text: '文本内容',
+    location: '地点属性',
+    encounter: '遭遇/剧本',
+    art: '插画与素材',
+    other: '其他'
+  },
+
   // IllustrationLayoutEditor component
   illustrationLayout: {
     title: '插画布局设置',

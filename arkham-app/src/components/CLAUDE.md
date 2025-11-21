@@ -122,7 +122,8 @@ CardSideEditor(
 ```
 Behavior
 - Manages a reactive clone of `cardData`; updates emit precise field changes and card type changes.
-- Integrates `FormField` for per‑field rendering and `IllustrationLayoutEditor` for art.
+- Card properties are grouped into tab panes via `src/config/cardFieldGroups.ts`; fields without a configured group fall into an “other” tab.
+- Integrates `FormField` for per-field rendering and `IllustrationLayoutEditor` for art.
 - Features collapsible illustration layout settings with toggle button at bottom of card properties panel.
 - Integrates `TextBoundaryEditor` via left-side drawer (no mask overlay) for advanced text boundary adjustments.
 - Exposes section refs and `expandIllustrationLayout()` method for parent navigation:

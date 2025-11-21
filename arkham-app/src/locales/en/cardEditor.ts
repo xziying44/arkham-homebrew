@@ -171,6 +171,17 @@ export default {
     deckOptions: 'Deck Options'
   },
 
+  // Card property groups
+  groups: {
+    basic: 'Basic',
+    stats: 'Stats',
+    text: 'Text',
+    location: 'Location',
+    encounter: 'Encounter',
+    art: 'Art & Assets',
+    other: 'Other'
+  },
+
   // IllustrationLayoutEditor component
   illustrationLayout: {
     title: 'Illustration Layout Settings',
