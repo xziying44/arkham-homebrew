@@ -766,7 +766,7 @@ class Card:
                     font_size=62,
                     font_color=(3, 0, 0),
                     effects=[
-                        {"type": "glow", "size": 18, "spread": 22, "opacity": 100, "color": (3, 0, 0)},
+                        {"type": "glow", "size": 8, "spread": 22, "opacity": 100, "color": (3, 0, 0)},
                         {"type": "stroke", "size": 3, "opacity": 100, "color": (165, 157, 153)}
                     ]
                 )
@@ -779,7 +779,7 @@ class Card:
                     font_size=62,
                     font_color=(3, 0, 0),
                     effects=[
-                        {"type": "glow", "size": 18, "spread": 22, "opacity": 100, "color": (3, 0, 0)},
+                        {"type": "glow", "size": 8, "spread": 22, "opacity": 100, "color": (3, 0, 0)},
                         {"type": "stroke", "size": 3, "opacity": 100, "color": (165, 157, 153)}
                     ]
                 )
@@ -792,7 +792,7 @@ class Card:
                     font_size=68,
                     font_color=(3, 0, 0),
                     effects=[
-                        {"type": "glow", "size": 18, "spread": 22, "opacity": 100, "color": (3, 0, 0)},
+                        {"type": "glow", "size": 8, "spread": 22, "opacity": 100, "color": (3, 0, 0)},
                         {"type": "stroke", "size": 3, "opacity": 100, "color": (165, 157, 153)}
                     ]
                 )
