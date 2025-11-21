@@ -1465,7 +1465,7 @@ class Card:
         if left_text:
             if self.font_manager.lang in ['zh', 'zh-CHT']:
                 pattern = r'([\u4e00-\u9fa5]+)'
-                left_text = re.sub(pattern, r'<font name="SourceHanSansSC-Regular" addsize="-2">\1</font>',
+                left_text = re.sub(pattern, r'<font name="思源黑体" addsize="-2" offset="-2">\1</font>',
                                      left_text)
             self.draw_left_text(
                 position=(pos_left[0], pos_left[1]),
@@ -1479,7 +1479,7 @@ class Card:
         if center_text:
             if self.font_manager.lang in ['zh', 'zh-CHT']:
                 pattern = r'([\u4e00-\u9fa5]+)'
-                center_text = re.sub(pattern, r'<font name="SourceHanSansSC-Regular" addsize="-2">\1</font>',
+                center_text = re.sub(pattern, r'<font name="思源黑体" addsize="-2" offset="-3">\1</font>',
                                      center_text)
             self.draw_centered_text(
                 position=(pos_center[0], pos_center[1] + 8),

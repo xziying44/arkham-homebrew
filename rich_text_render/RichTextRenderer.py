@@ -1001,6 +1001,7 @@ class RichTextRenderer:
             t_height = 0
             m_height = 0
             m_width = 0
+            font_offset_y = 0
 
             for item in parsed_items:
                 if item.tag == "text":
@@ -1019,7 +1020,8 @@ class RichTextRenderer:
                                 'width': c_w,
                                 'height': c_h,
                                 'spaced_height': spaced_h,
-                                'color': options.font_color
+                                'color': options.font_color,
+                                'offset_y': font_offset_y
                             })
                             if vertical:
                                 t_height += spaced_h
@@ -1037,7 +1039,8 @@ class RichTextRenderer:
                             'width': c_w,
                             'height': c_h,
                             'spaced_height': spaced_h,
-                            'color': options.font_color
+                            'color': options.font_color,
+                            'offset_y': font_offset_y
                         })
                         if vertical:
                             t_height += spaced_h
@@ -1050,6 +1053,7 @@ class RichTextRenderer:
                     f_name = item.attributes.get('name', options.font_name)
                     f_name = self.font_manager.get_lang_font(f_name).name
                     f_add = int(item.attributes.get('addsize', '0'))
+                    font_offset_y = int(item.attributes.get('offset', '0'))
                     try:
                         font_stack_local.push(font_cache_local.get_font(f_name, base_font_size + f_add), f_name)
                     except Exception as e:
@@ -1077,6 +1081,7 @@ class RichTextRenderer:
                         print(f"特质字体加载失败: {e}")
                 elif item.tag.startswith('/'):
                     if item.tag in ["/font", "/b", "/i", '/trait']:
+                        font_offset_y = 0
                         font_stack_local.pop()
 
             return segments, t_width, t_height, m_height, m_width
@@ -1214,7 +1219,8 @@ class RichTextRenderer:
                     border_width=border_width,
                     border_color=border_color,
                     opacity=options.opacity,
-                    effects=options.effects
+                    effects=options.effects,
+                    offset_y=segment['offset_y']
                 )
 
                 if vertical:
@@ -1245,6 +1251,7 @@ class RichTextRenderer:
                     offset_y = 0
                     if text_obj.font_name == 'SourceHanSansSC-Regular':
                         offset_y = -(text_obj.font_size * 0.4)
+                    offset_y += segment['offset_y']
 
                     render_item = RenderItem(
                         obj=text_obj,
