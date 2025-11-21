@@ -26,35 +26,39 @@
         <n-card :ref="setPropertiesSection" v-if="currentSideType && currentFormConfig" :title="$t('cardEditor.panel.cardProperties')"
             size="small" class="form-card">
             <n-form ref="dynamicFormRef" :model="sideCardData" label-placement="top" size="small">
-                <n-tabs v-if="fieldGroupTabs.length" v-model:value="activeFieldGroup" type="line" animated>
+                <n-tabs v-if="fieldGroupTabs.length" v-model:value="activeFieldGroup" type="line" :animated="false">
                     <n-tab-pane v-for="tab in fieldGroupTabs" :key="tab.key" :name="tab.key"
-                        :tab="$t(`cardEditor.groups.${tab.key}`)">
-                        <div v-for="(row, rowIndex) in fieldGroupRows[tab.key] || []" :key="rowIndex" class="form-row">
-                            <div v-for="field in row"
-                                :key="field.key + (field.index !== undefined ? `_${field.index}` : '')"
-                                class="form-field" :class="getFieldLayoutClass(field.layout)">
-                                <FormFieldComponent :field="field" :value="getFieldValue(field)"
-                                    :subclasses="sideCardData.subclass || []"
-                                    :new-string-value="newStringValue" @update:value="setFieldValue(field, $event)"
-                                    @update:subclasses="updateSubclasses"
-                                    @update:new-string-value="newStringValue = $event"
-                                    @add-multi-select-item="addMultiSelectItem(field, $event)"
-                                    @remove-multi-select-item="removeMultiSelectItem(field, $event)"
-                                    @add-string-array-item="addStringArrayItem(field)"
-                                    @remove-string-array-item="removeStringArrayItem(field, $event)"
-                                    @move-string-array-item-up="moveStringArrayItemUp(field, $event)"
-                                    @move-string-array-item-down="moveStringArrayItemDown(field, $event)"
-                                    @edit-string-array-item="(index, newValue) => editStringArrayItem(field, index, newValue)"
-                                    @remove-image="removeImage(field)" />
+                        :tab="$t(`cardEditor.groups.${tab.key}`)" display-directive="if">
+                        <transition name="card-props-fade" mode="out-in">
+                            <div :key="tab.key">
+                                <div v-for="(row, rowIndex) in fieldGroupRows[tab.key] || []" :key="rowIndex" class="form-row">
+                                    <div v-for="field in row"
+                                        :key="field.key + (field.index !== undefined ? `_${field.index}` : '')"
+                                        class="form-field" :class="getFieldLayoutClass(field.layout)">
+                                        <FormFieldComponent :field="field" :value="getFieldValue(field)"
+                                            :subclasses="sideCardData.subclass || []"
+                                            :new-string-value="newStringValue" @update:value="setFieldValue(field, $event)"
+                                            @update:subclasses="updateSubclasses"
+                                            @update:new-string-value="newStringValue = $event"
+                                            @add-multi-select-item="addMultiSelectItem(field, $event)"
+                                            @remove-multi-select-item="removeMultiSelectItem(field, $event)"
+                                            @add-string-array-item="addStringArrayItem(field)"
+                                            @remove-string-array-item="removeStringArrayItem(field, $event)"
+                                            @move-string-array-item-up="moveStringArrayItemUp(field, $event)"
+                                            @move-string-array-item-down="moveStringArrayItemDown(field, $event)"
+                                            @edit-string-array-item="(index, newValue) => editStringArrayItem(field, index, newValue)"
+                                            @remove-image="removeImage(field)" />
 
-                                <!-- 地点卡快捷操作按钮放在“连接地点图标”字段下方 -->
-                                <div v-if="isLocationType && field.key === 'location_link'" style="margin-top: 6px; display: flex; justify-content: flex-end;">
-                                    <n-button tertiary size="small" @click="applyLocationToOtherSide">
-                                        {{ $t('cardEditor.locationActions.applyToOtherSide') }}
-                                    </n-button>
+                                        <!-- 地点卡快捷操作按钮放在“连接地点图标”字段下方 -->
+                                        <div v-if="isLocationType && field.key === 'location_link'" style="margin-top: 6px; display: flex; justify-content: flex-end;">
+                                            <n-button tertiary size="small" @click="applyLocationToOtherSide">
+                                                {{ $t('cardEditor.locationActions.applyToOtherSide') }}
+                                            </n-button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        </transition>
                     </n-tab-pane>
                 </n-tabs>
             </n-form>
@@ -732,6 +736,17 @@ defineExpose({
 
 .form-card:hover {
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+.card-props-fade-enter-active,
+.card-props-fade-leave-active {
+    transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.card-props-fade-enter-from,
+.card-props-fade-leave-to {
+    opacity: 0;
+    transform: translateY(6px);
 }
 
 .form-row {
