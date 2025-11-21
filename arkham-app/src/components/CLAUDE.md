@@ -7,6 +7,9 @@ This document provides a complete, multi‑layer reference for the Vue 3 compone
 - Stack: Vue 3 + script setup + TypeScript, Composition API, Naive UI, vue‑i18n.
 - Conventions: Typed `defineProps`/`defineEmits`, event‑driven updates, reactive local copies of inputs, and internationalization via `useI18n`.
 
+Changelog (保存流程)
+- FormEditPanel：在单卡/批量保存前调用 `/api/tts/generate` 写入稳定 `tts_config.script_id`（v2），不再依赖手动刷新 GMNotes，确保引用 ID 不再随机。
+
 ## 2) Architecture & Dependencies
 - Core editors/panels orchestrate specialized subcomponents:
   - `FormEditPanel.vue`: Primary card editor shell; composes `CardSideEditor`, `IllustrationLayoutEditor`, `DeckOptionEditor`, and `TtsScriptEditor`.

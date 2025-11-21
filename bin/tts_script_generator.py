@@ -242,6 +242,32 @@ class TtsScriptGenerator:
         except Exception:
             return None
 
+    def _persist_script_id(self, rel_path: str, card_json: Optional[Dict[str, Any]], script_id: str) -> None:
+        """将生成的脚本 ID 写回卡牌文件（仅限工作区内）。"""
+        wm = self.workspace_manager
+        if not wm or not rel_path or not script_id or not card_json:
+            return
+        try:
+            if hasattr(wm, '_is_path_in_workspace') and not wm._is_path_in_workspace(rel_path):
+                return
+            abs_path = wm._get_absolute_path(rel_path) if hasattr(wm, '_get_absolute_path') else None
+            if not abs_path or not os.path.exists(abs_path):
+                return
+            tcfg = card_json.get('tts_config') if isinstance(card_json.get('tts_config'), dict) else {}
+            if tcfg.get('script_id') == script_id and str(tcfg.get('version', '')).lower() == 'v2':
+                return
+            tcfg = dict(tcfg)
+            tcfg['version'] = 'v2'
+            tcfg['script_id'] = script_id
+            card_json['tts_config'] = tcfg
+            if 'tts_script' in card_json:
+                del card_json['tts_script']
+            with open(abs_path, 'w', encoding='utf-8') as f:
+                json.dump(card_json, f, ensure_ascii=False, indent=2)
+        except Exception:
+            # 写入失败时不影响后续流程
+            pass
+
     def extract_script_id_from_card_json(self, card_json: Dict[str, Any]) -> Optional[str]:
         """Public helper: extract stable script id from a card json.
         Priority: v2 tts_config.script_id -> legacy GMNotes.id -> normalized card.id
@@ -285,6 +311,8 @@ class TtsScriptGenerator:
             if not sid:
                 # fallback to uuid8 for this card instance if cannot derive stable id
                 sid = self._uuid8()
+            # 将生成的 ID 写回卡文件，避免后续随机
+            self._persist_script_id(rel_path, card_json, sid)
             agg[sid] = agg.get(sid, 0) + count
         return [agg] if agg else []
 

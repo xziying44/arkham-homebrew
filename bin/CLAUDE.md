@@ -113,6 +113,7 @@
 - 其他：
   - Mini/custom 绑定：若 `mini.bind.path`/`custom.bind.path` 指向卡，脚本 ID 继承目标并追加 `-m`/`-c`。
   - 签名卡聚合：v2 接受 `{ path, count }`，解析脚本 ID 后按 ID 聚合计数输出到 GMNotes。
+  - 新增：当签名卡路径无稳定 `script_id` 时生成 UUID 并回写到源卡文件的 `tts_config.script_id`（v2），避免每次引用随机。
 
   #### `convert_deck_to_tts(deck_config: Dict[str, Any], face_url: str, back_url: str) -> Dict[str, Any]`（tts_card_converter.py:260）
   - Purpose: 生成符合 TTS 的完整对象 JSON（ObjectStates）。

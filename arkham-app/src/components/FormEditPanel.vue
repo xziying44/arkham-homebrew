@@ -324,7 +324,7 @@ import CardSideEditor from './CardSideEditor.vue';
 import { cardTypeConfigs as cardTypeConfigsZh, cardTypeOptions as cardTypeOptionsZh, cardBackConfigs as cardBackConfigsZh, type CardTypeConfig, getDefaultBackType as getDefaultBackTypeZh } from '@/config/cardTypeConfigs';
 import { cardTypeConfigs as cardTypeConfigsEn, cardTypeOptions as cardTypeOptionsEn, cardBackConfigs as cardBackConfigsEn, getDefaultBackType as getDefaultBackTypeEn } from '@/config/cardTypeConfigsEn';
 
-import { WorkspaceService, CardService, ConfigService, LanguageConfigService } from '@/api';
+import { WorkspaceService, CardService, ConfigService, LanguageConfigService, TtsScriptService } from '@/api';
 import type { CardData } from '@/api/types';
 import TtsScriptEditor from './TtsScriptEditor.vue';
 import CardTagsEditor from './CardTagsEditor.vue';
@@ -427,6 +427,50 @@ const computeSHA256Hex = async (text: string): Promise<string> => {
 const computeCardContentHash = async (cardObj: any): Promise<string> => {
     const payload = stableStringifyExcludingHash(cardObj);
     return await computeSHA256Hex(payload);
+};
+
+// 提取 GMNotes 中的脚本 ID
+const extractScriptIdFromGMNotes = (gmnotes: string): string => {
+    if (!gmnotes || typeof gmnotes !== 'string') return '';
+    try {
+        const parsed = JSON.parse(gmnotes);
+        if (parsed && typeof parsed === 'object' && parsed.id) {
+            return String(parsed.id);
+        }
+    } catch (err) {
+        console.warn('解析GMNotes获取脚本ID失败', err);
+    }
+    return '';
+};
+
+// 保存前调用后端生成 GMNotes，写回稳定脚本 ID（保持 v2，不写入旧字段）
+const ensureScriptIdByBackend = async (cardObj: any): Promise<string | null> => {
+    try {
+        const payload = JSON.parse(JSON.stringify(cardObj || {}));
+        payload.tts_config = {
+            ...(payload.tts_config || {}),
+            version: 'v2'
+        };
+        const result = await TtsScriptService.generateFromCard(payload);
+        let sid = extractScriptIdFromGMNotes(result?.GMNotes || '');
+        if (!sid && payload.tts_config?.script_id) {
+            sid = payload.tts_config.script_id;
+        }
+        if (sid) {
+            if (!cardObj.tts_config || typeof cardObj.tts_config !== 'object') {
+                cardObj.tts_config = {};
+            }
+            cardObj.tts_config.version = 'v2';
+            cardObj.tts_config.script_id = sid;
+            if ('tts_script' in cardObj) {
+                delete cardObj.tts_script;
+            }
+            return sid;
+        }
+    } catch (error) {
+        console.warn('调用后端生成GMNotes失败，保留现有脚本ID', error);
+    }
+    return null;
 };
 
 // 表单状态
@@ -1350,6 +1394,9 @@ const saveCard = async () => {
         // 清除防抖定时器，避免保存时生成预览
         clearDebounceTimer();
 
+        // 保存前生成 GMNotes，确保脚本 ID 持久化
+        await ensureScriptIdByBackend(currentCardData);
+
         // 生成卡片并检查box_position
         const result_card = await CardService.generateCard(currentCardData as CardData);
 
@@ -1926,6 +1973,9 @@ const saveAllUnsaved = async (unsavedPaths: string[], cacheMap: Map<string, any>
                 console.warn(`⚠️ 文件 ${filePath} 没有暂存数据，跳过`);
                 continue;
             }
+
+            // 保存前生成 GMNotes，确保脚本 ID 持久化
+            await ensureScriptIdByBackend(cachedData);
 
             // 在保存前计算并写入内容哈希（排除 content_hash 自身）
             try {
