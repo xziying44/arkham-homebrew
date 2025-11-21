@@ -81,6 +81,11 @@ export default {
     cardRemarks: '📝 卡牌备注信息',
     cardQuantity: '卡牌数量',
     copyright: '版权信息',
+    footerIcon: '底部图标（优先级高于工作区设置）',
+    footerIconPlaceholder: '可选：选择根目录下的 PNG 作为页脚图标',
+    investigatorFooterType: '调查员页脚样式',
+    investigatorFooterTypeNormal: '普通',
+    investigatorFooterTypeBigArt: '大画特效',
 
     // 操作按钮
     saveCard: '保存卡牌',

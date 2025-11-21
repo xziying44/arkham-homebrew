@@ -195,6 +195,7 @@
   #### `generate_card_image(json_data: Dict[str, Any], silence: bool = False)`（workspace_manager.py:1435）
   - Purpose: 调用渲染管线（CardCreator / FontManager / ImageManager）生成卡图或底图层。
   - Returns: (Card|None) 生成的卡对象。
+  - Footer handling: 单卡 `footer_icon_path` 覆盖系统配置；调查员可配置 `investigator_footer_type=big-art` 触发大画 glow/stroke 特效（降透明度、改深色字体）并透传到 `Card.set_footer_information`。
 
   #### `save_card_image(json_data: Dict[str, Any], filename: str, parent_path: Optional[str] = None) -> bool`（workspace_manager.py:1719）
   #### `save_card_image_enhanced(json_data: Dict[str, Any], filename: str, parent_path: Optional[str] = None, export_format: str = 'JPG', quality: int = 95, rotate_landscape: bool = False) -> Dict[str, Any]`（workspace_manager.py:1768）

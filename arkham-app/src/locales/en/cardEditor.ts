@@ -81,6 +81,11 @@ export default {
     cardRemarks: '📝 Card Notes',
     cardQuantity: 'Card Quantity',
     copyright: 'Copyright',
+    footerIcon: 'Footer Icon (overrides workspace setting when set)',
+    footerIconPlaceholder: 'Optional: choose a PNG in workspace root as footer icon',
+    investigatorFooterType: 'Investigator Footer Style',
+    investigatorFooterTypeNormal: 'Normal',
+    investigatorFooterTypeBigArt: 'Full-art effects',
 
     // Action buttons
     saveCard: 'Save Card',

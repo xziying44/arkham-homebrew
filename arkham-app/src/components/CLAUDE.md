@@ -130,6 +130,7 @@ Behavior
   - Uses function refs pattern (`setCardTypeSection`, `setPropertiesSection`, etc.) to capture DOM elements from `<n-card>` component instances
   - Exposes refs via `defineExpose` (auto‑unwrapped by Vue 3, accessible without extra `.value` from parent)
   - `expandIllustrationLayout()`: Programmatically expands illustration section when called from parent navigation
+- Card info footer: per-card footer icon picker (workspace root PNG with refresh) overrides workspace setting; investigator cards can toggle footer style (normal/full-art effects), defaulting to normal and retained on type switches.
 
 ### TextBoundaryEditor.vue
 Signature

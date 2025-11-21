@@ -178,6 +178,37 @@
                             @update:new-string-value="newStringValue = $event" />
                     </div>
                 </div>
+                <div class="form-row">
+                    <div class="form-field layout-half">
+                        <n-form-item :label="$t('cardEditor.panel.footerIcon')">
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <n-select
+                                    v-model:value="footerIconPath"
+                                    :options="footerIconOptions"
+                                    :loading="footerIconLoading"
+                                    :placeholder="$t('cardEditor.panel.footerIconPlaceholder')"
+                                    clearable
+                                    filterable />
+                                <n-button tertiary size="small" :loading="footerIconLoading" @click="loadFooterIconOptions">
+                                    {{ $t('common.buttons.refresh') }}
+                                </n-button>
+                            </div>
+                            <template #feedback v-if="footerIconPath">
+                                <span style="color: #888;">{{ footerIconPath }}</span>
+                            </template>
+                        </n-form-item>
+                    </div>
+                    <div class="form-field layout-half" v-if="isInvestigatorType">
+                        <n-form-item :label="$t('cardEditor.panel.investigatorFooterType')">
+                            <n-radio-group v-model:value="investigatorFooterType" size="small">
+                                <n-space>
+                                    <n-radio value="normal">{{ $t('cardEditor.panel.investigatorFooterTypeNormal') }}</n-radio>
+                                    <n-radio value="big-art">{{ $t('cardEditor.panel.investigatorFooterTypeBigArt') }}</n-radio>
+                                </n-space>
+                            </n-radio-group>
+                        </n-form-item>
+                    </div>
+                </div>
                 <!-- 卡牌备注信息 - 正反面都可编辑（独立数据）-->
                 <div class="form-row">
                     <div class="form-field layout-full">
@@ -208,11 +239,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, watch, nextTick } from 'vue';
+import { ref, computed, reactive, watch, nextTick, onMounted } from 'vue';
 import { useMessage } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import type { FormField, CardTypeConfig, ShowCondition } from '@/config/cardTypeConfigs';
 import { cardFieldGroups } from '@/config/cardFieldGroups';
+import type { TreeOption } from '@/api/types';
+import { WorkspaceService } from '@/api';
 import FormFieldComponent from './FormField.vue';
 import IllustrationLayoutEditor from './IllustrationLayoutEditor.vue';
 import TextBoundaryEditor from './TextBoundaryEditor.vue';
@@ -228,6 +261,10 @@ interface Props {
 interface FieldGroupTab {
     key: string;
     fields: FormField[];
+}
+
+interface ExtendedTreeOption extends TreeOption {
+    relativePath?: string;
 }
 
 const props = defineProps<Props>();
@@ -278,6 +315,7 @@ const quantity = computed({
 // 当前面的类型 - 必须在watch之前声明
 const currentSideType = ref(sideCardData.type || '');
 const isLocationType = computed(() => currentSideType.value === '地点卡');
+const isInvestigatorType = computed(() => currentSideType.value === '调查员');
 
 // 监听props变化，更新本地数据
 watch(() => props.cardData, (newData) => {
@@ -316,6 +354,31 @@ const currentFormConfig = computed((): CardTypeConfig | null => {
 
 // 表单操作状态
 const newStringValue = ref('');
+const footerIconLoading = ref(false);
+const rootImages = ref<ExtendedTreeOption[]>([]);
+const workspaceRootPath = ref('');
+const footerIconOptions = computed(() => rootImages.value
+    .filter(img => img.relativePath)
+    .map(img => ({
+        label: img.label,
+        value: img.relativePath as string
+    }))
+);
+const footerIconPath = computed({
+    get: () => sideCardData.footer_icon_path || '',
+    set: (value: string | null) => {
+        const nextValue = value || '';
+        sideCardData.footer_icon_path = nextValue;
+        updateSideData('footer_icon_path', nextValue);
+    }
+});
+const investigatorFooterType = computed({
+    get: () => sideCardData.investigator_footer_type || 'normal',
+    set: (value: string) => {
+        sideCardData.investigator_footer_type = value;
+        updateSideData('investigator_footer_type', value);
+    }
+});
 
 // 文本边界编辑器模态状态
 const showTextBoundaryModal = ref(false);
@@ -351,6 +414,60 @@ const visibleFields = computed(() => {
         if (!field.showCondition) return true;
         return checkShowCondition(field.showCondition);
     });
+});
+
+const getRelativePath = (absolutePath: string, rootPath: string): string => {
+    if (!absolutePath || !rootPath) return '';
+    const normalizedAbsolute = absolutePath.replace(/\\/g, '/');
+    const normalizedRoot = rootPath.replace(/\\/g, '/');
+    if (normalizedAbsolute.startsWith(normalizedRoot)) {
+        const relative = normalizedAbsolute.slice(normalizedRoot.length);
+        return relative.startsWith('/') ? relative.slice(1) : relative;
+    }
+    return absolutePath;
+};
+
+const extractRootImages = (rootNode: TreeOption, rootPath: string): ExtendedTreeOption[] => {
+    const images: ExtendedTreeOption[] = [];
+    if (rootNode.children) {
+        for (const child of rootNode.children) {
+            if (child.type === 'image' && child.path && child.label.toLowerCase().endsWith('.png')) {
+                const relativePath = getRelativePath(child.path, rootPath);
+                images.push({
+                    label: child.label,
+                    key: child.key,
+                    type: child.type,
+                    path: child.path,
+                    relativePath
+                });
+            }
+        }
+    }
+    return images.sort((a, b) => a.label.localeCompare(b.label));
+};
+
+const loadFooterIconOptions = async () => {
+    footerIconLoading.value = true;
+    try {
+        const fileTree = await WorkspaceService.getFileTree();
+        workspaceRootPath.value = fileTree.fileTree?.path || '';
+        rootImages.value = extractRootImages(fileTree.fileTree, workspaceRootPath.value);
+    } catch (error: any) {
+        console.warn('加载页脚图标失败', error);
+        message.warning(t('common.messages.operationFailed'));
+    } finally {
+        footerIconLoading.value = false;
+    }
+};
+
+watch(currentSideType, (newType) => {
+    if (newType === '调查员' && !sideCardData.investigator_footer_type) {
+        investigatorFooterType.value = 'normal';
+    }
+});
+
+onMounted(() => {
+    loadFooterIconOptions();
 });
 
 const buildFieldRows = (fields: FormField[]) => {
@@ -595,7 +712,7 @@ const updateLanguage = (value: string) => {
 // 卡牌类型变更处理
 const onCardTypeChange = (newType: string) => {
     // 保留需要保留的字段（移除quantity，因为现在是共享的）
-    const hiddenFields = ['id', 'created_at', 'version', 'type', 'name', 'language', 'footer_copyright'];
+    const hiddenFields = ['id', 'created_at', 'version', 'type', 'name', 'language', 'footer_copyright', 'footer_icon_path', 'investigator_footer_type'];
     const newData = {};
 
     hiddenFields.forEach(field => {

@@ -1552,30 +1552,38 @@ class WorkspaceManager:
                 footer_icon_name = json_data.get('footer_icon_path', '')
                 if not footer_icon_name:
                     footer_icon_name = self.config.get('footer_icon_dir', '')
-                footer_icon_font = json_data.get('footer_icon_font', '')
-                if not footer_icon_font or footer_icon_font == '':
-                    footer_icon = None
-                    if footer_icon_name:
-                        footer_icon_path = self._get_absolute_path(footer_icon_name)
-                        if os.path.exists(footer_icon_path):
-                            with Image.open(footer_icon_path) as icon_img:
-                                footer_icon = icon_img.copy()
+                footer_icon_font_value = json_data.get('footer_icon_font', '') or None
+                footer_icon = None
+                if not footer_icon_font_value and footer_icon_name:
+                    footer_icon_path = self._get_absolute_path(footer_icon_name)
+                    if os.path.exists(footer_icon_path):
+                        with Image.open(footer_icon_path) as icon_img:
+                            footer_icon = icon_img.copy()
 
-                    card.set_footer_information(
-                        illustrator,
-                        footer_copyright,
-                        encounter_group_number,
-                        card_number,
-                        footer_icon=footer_icon
-                    )
-                else:
-                    card.set_footer_information(
-                        illustrator,
-                        footer_copyright,
-                        encounter_group_number,
-                        card_number,
-                        footer_icon_font=footer_icon_font
-                    )
+                footer_effects = None
+                footer_opacity = None
+                footer_font_color = None
+                if card_type == '调查员':
+                    footer_style = json_data.get('investigator_footer_type', 'normal')
+                    if footer_style == 'big-art':
+                        footer_effects = [
+                            {"type": "glow", "size": 8, "spread": 22, "opacity": 36, "color": (3, 0, 0)},
+                            {"type": "stroke", "size": 2, "opacity": 63, "color": (165, 157, 153)}
+                        ]
+                        footer_opacity = 75
+                        footer_font_color = (3, 0, 0)
+
+                card.set_footer_information(
+                    illustrator,
+                    footer_copyright,
+                    encounter_group_number,
+                    card_number,
+                    footer_icon=footer_icon if not footer_icon_font_value else None,
+                    footer_icon_font=footer_icon_font_value if footer_icon_font_value else None,
+                    footer_effects=footer_effects,
+                    footer_opacity=footer_opacity,
+                    footer_font_color=footer_font_color
+                )
             return card
 
         except Exception as e:
