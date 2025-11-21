@@ -96,6 +96,10 @@ const classColors: Record<string, string> = {
   '多职阶': '#E5A53A'
 };
 
+const surfaceColor = '#FDFDFE';
+const neutralTextColor = '#1F2A44';
+const neutralBorder = '#D7DEE9';
+
 const mainClasses: ClassOption[] = [
   { value: '守护者', label: t('cardEditor.classSelector.guardian'), emoji: '🛡️', color: classColors['守护者'] },
   { value: '探求者', label: t('cardEditor.classSelector.seeker'), emoji: '🔍', color: classColors['探求者'] },
@@ -152,16 +156,18 @@ function getSlotStyle(index: number) {
   if (!value) {
     return {
       backgroundColor: 'transparent',
-      borderColor: '#d0d0d0',
+      borderColor: neutralBorder,
       color: '#999'
     };
   }
   const color = classColors[value] || '#666';
+  const blend = mixColor(surfaceColor, color, 0.32);
   return {
-    backgroundColor: color,
-    borderColor: color,
-    color: isLightColor(color) ? '#000' : '#fff',
-    cursor: 'pointer'
+    background: `linear-gradient(135deg, ${blend} 0%, ${withAlpha(color, 0.24)} 35%, ${withAlpha(color, 0.8)} 100%)`,
+    borderColor: withAlpha(color, 0.5),
+    color: readableTextColor(color),
+    cursor: 'pointer',
+    boxShadow: `0 4px 12px ${withAlpha(color, 0.22)}, inset 0 1px 0 ${withAlpha('#FFFFFF', 0.6)}`
   };
 }
 
@@ -189,45 +195,72 @@ function toggleSubclass(value: string) {
 }
 
 function getButtonStyle(value: string, selected: boolean) {
-  const color = classColors[value] || '#666';
+  const color = classColors[value] || '#64748B';
+  const softAccent = mixColor(surfaceColor, color, 0.3);
+  const neutralTint = mixColor(surfaceColor, '#A8B3C8', 0.12);
   if (selected) {
     return {
-      backgroundColor: color,
-      borderColor: color,
-      color: value === '弱点' ? '#fff' : (isLightColor(color) ? '#000' : '#fff')
+      background: `linear-gradient(135deg, ${softAccent} 0%, ${withAlpha(color, 0.18)} 40%, ${withAlpha(color, 0.85)} 100%)`,
+      borderColor: withAlpha(color, 0.45),
+      color: readableTextColor(color),
+      boxShadow: `0 6px 16px ${withAlpha(color, 0.24)}, inset 0 1px 0 ${withAlpha('#FFFFFF', 0.65)}`
     };
   }
   return {
-    backgroundColor: 'transparent',
-    borderColor: '#d0d0d0',
-    color: '#666'
+    background: `linear-gradient(135deg, ${neutralTint} 0%, ${mixColor(surfaceColor, color, 0.12)} 100%)`,
+    borderColor: neutralBorder,
+    color: neutralTextColor,
+    boxShadow: `0 2px 6px rgba(31, 42, 68, 0.08)`
   };
 }
 
 function getSubclassStyle(value: string) {
-  const color = classColors[value] || '#666';
+  const color = classColors[value] || '#64748B';
   const selected = isSubclassSelected(value);
+  const softAccent = mixColor(surfaceColor, color, 0.28);
   if (selected) {
     return {
-      backgroundColor: color,
-      borderColor: color,
-      color: isLightColor(color) ? '#000' : '#fff'
+      background: `linear-gradient(135deg, ${softAccent} 0%, ${withAlpha(color, 0.18)} 40%, ${withAlpha(color, 0.8)} 100%)`,
+      borderColor: withAlpha(color, 0.45),
+      color: readableTextColor(color),
+      boxShadow: `0 6px 14px ${withAlpha(color, 0.22)}, inset 0 1px 0 ${withAlpha('#FFFFFF', 0.6)}`
     };
   }
   return {
-    backgroundColor: 'transparent',
-    borderColor: '#d0d0d0',
-    color: '#666'
+    background: `linear-gradient(135deg, ${mixColor(surfaceColor, '#A8B3C8', 0.08)} 0%, ${mixColor(surfaceColor, color, 0.1)} 100%)`,
+    borderColor: neutralBorder,
+    color: neutralTextColor
   };
 }
 
-function isLightColor(color: string): boolean {
-  const hex = color.replace('#', '');
-  const r = parseInt(hex.substr(0, 2), 16);
-  const g = parseInt(hex.substr(2, 2), 16);
-  const b = parseInt(hex.substr(4, 2), 16);
+function hexToRgb(hex: string) {
+  const clean = hex.replace('#', '');
+  const full = clean.length === 3 ? clean.split('').map(c => c + c).join('') : clean;
+  const r = parseInt(full.substring(0, 2), 16);
+  const g = parseInt(full.substring(2, 4), 16);
+  const b = parseInt(full.substring(4, 6), 16);
+  return { r, g, b };
+}
+
+function mixColor(base: string, color: string, ratio: number) {
+  const baseRgb = hexToRgb(base);
+  const accent = hexToRgb(color);
+  const clamp = (v: number) => Math.max(0, Math.min(255, v));
+  const r = clamp(Math.round(baseRgb.r * (1 - ratio) + accent.r * ratio));
+  const g = clamp(Math.round(baseRgb.g * (1 - ratio) + accent.g * ratio));
+  const b = clamp(Math.round(baseRgb.b * (1 - ratio) + accent.b * ratio));
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+function withAlpha(color: string, alpha: number) {
+  const { r, g, b } = hexToRgb(color);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function readableTextColor(baseColor: string, fallback: string = neutralTextColor) {
+  const { r, g, b } = hexToRgb(baseColor);
   const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-  return brightness > 155;
+  return brightness > 80 ? fallback : '#FFFFFF';
 }
 </script>
 
@@ -264,11 +297,11 @@ function isLightColor(color: string): boolean {
 
 .class-button:hover {
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px rgba(31, 42, 68, 0.12);
 }
 
 .class-button.selected {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 3px 12px rgba(31, 42, 68, 0.18);
 }
 
 .class-emoji {
@@ -281,8 +314,10 @@ function isLightColor(color: string): boolean {
 
 .subclass-section {
   padding: 12px;
-  background: #f5f5f5;
-  border-radius: 8px;
+  background: linear-gradient(135deg, #fdfdfe 0%, #f3f5fb 100%);
+  border-radius: 10px;
+  border: 1px solid #d7dee9;
+  box-shadow: 0 2px 8px rgba(31, 42, 68, 0.08);
 }
 
 /* Subclass slots */
@@ -292,13 +327,14 @@ function isLightColor(color: string): boolean {
 
 .subclass-slots-label {
   font-size: 12px;
-  color: #666;
+  color: #1f2a44;
   margin-bottom: 8px;
 }
 
 .slots-container {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .subclass-slot {
@@ -307,8 +343,9 @@ function isLightColor(color: string): boolean {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px dashed #d0d0d0;
-  border-radius: 6px;
+  border: 2px dashed #d7dee9;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #f9fbff 0%, #eef1f8 100%);
   font-size: 12px;
   transition: all 0.2s ease;
 }
@@ -336,7 +373,7 @@ function isLightColor(color: string): boolean {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.6);
   font-size: 10px;
   font-weight: bold;
 }
@@ -348,7 +385,7 @@ function isLightColor(color: string): boolean {
 
 .subclass-label {
   font-size: 12px;
-  color: #666;
+  color: #1f2a44;
   margin-bottom: 8px;
 }
 
@@ -391,6 +428,8 @@ function isLightColor(color: string): boolean {
 /* Dark mode support */
 :global(.dark) .subclass-section {
   background: #2a2a2a;
+  border-color: #444;
+  box-shadow: none;
 }
 
 :global(.dark) .class-button:not(.selected),
@@ -401,6 +440,7 @@ function isLightColor(color: string): boolean {
 
 :global(.dark) .subclass-slot {
   border-color: #444;
+  background: #2f2f2f;
 }
 
 :global(.dark) .slot-empty {

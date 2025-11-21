@@ -179,6 +179,9 @@ FileTreePanel(
 Behavior
 - Hosts project tree interactions, export actions, and integrations with services (`WorkspaceService`, `CardService`, etc.).
 
+Changelog (2025‑11‑21)
+- CardSideEditor：专项控件配色与可读性调整，ClassSelector/SlotSelector 保留职阶与槽位辨识的亮色玻璃渐变，CostCoin/LevelRing/StatBadge 采用柔和琥珀系与浅灰玻璃风，文字对比度在亮底下可读。
+
 Changelog (2025‑11‑10)
 - FormEditPanel.vue: 当正面选择“调查员小卡”时，自动初始化背面为同类型，默认前=normal、后=grayscale 且共享插画。
 - TtsScriptEditor.vue: 新增“调查员小卡”绑定调查员卡牌（选择路径）；绑定后脚本ID禁用，后端生成 `<investigator_id>-m`。

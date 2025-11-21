@@ -95,14 +95,16 @@ function setLevel(level: number) {
   align-items: center;
   gap: 2px;
   padding: 8px 12px;
-  background: #f5f5f5;
+  background: linear-gradient(135deg, #f9fbff 0%, #f1f4fb 100%);
   border-radius: 20px;
   position: relative;
+  border: 1px solid #d7dee9;
+  box-shadow: 0 2px 8px rgba(31, 42, 68, 0.08);
 }
 
 .star {
   font-size: 20px;
-  color: #d0d0d0;
+  color: #c3cddd;
   cursor: pointer;
   transition: all 0.2s ease;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
@@ -113,8 +115,8 @@ function setLevel(level: number) {
 }
 
 .star.filled {
-  color: #ffc107;
-  text-shadow: 0 0 8px rgba(255, 193, 7, 0.5);
+  color: #ffc870;
+  text-shadow: 0 0 8px rgba(255, 200, 112, 0.55);
 }
 
 .special-indicator {
@@ -165,10 +167,10 @@ function setLevel(level: number) {
 .quick-button {
   width: 42px;
   height: 42px;
-  border: 1px solid #d0d0d0;
-  border-radius: 6px;
-  background: #fff;
-  color: #333;
+  border: 1px solid #d7dee9;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #f9fafc 0%, #eef1f8 100%);
+  color: #1f2a44;
   font-size: 16px;
   font-weight: 500;
   cursor: pointer;
@@ -176,17 +178,19 @@ function setLevel(level: number) {
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 6px rgba(31, 42, 68, 0.08);
 }
 
 .quick-button:hover {
-  border-color: #999;
-  background: #f0f0f0;
+  border-color: rgba(210, 173, 116, 0.55);
+  background: linear-gradient(135deg, #fdfdfe 0%, #f1f4fb 100%);
 }
 
 .quick-button.selected {
-  border-color: #ffc107;
-  background: #fff8e1;
-  color: #f57f17;
+  border-color: rgba(210, 173, 116, 0.55);
+  background: linear-gradient(135deg, #fff5dc 0%, #ffe7bb 100%);
+  color: #2f2415;
+  box-shadow: 0 3px 10px rgba(234, 194, 135, 0.28);
 }
 
 .quick-button.special {

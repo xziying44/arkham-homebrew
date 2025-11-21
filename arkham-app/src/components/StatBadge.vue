@@ -139,9 +139,11 @@ function confirmCustomValue() {
   cursor: pointer;
   font-weight: bold;
   font-size: 18px;
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  color: #1f2a44;
+  border: 1px solid #d7dee9;
+  box-shadow: 0 4px 12px rgba(31, 42, 68, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.6);
   transition: transform 0.2s ease;
+  background: linear-gradient(135deg, #f9fafc 0%, #eef1f8 100%);
 }
 
 .stat-badge:hover {
@@ -149,19 +151,23 @@ function confirmCustomValue() {
 }
 
 .stat-badge.health {
-  background: linear-gradient(135deg, #ff5252 0%, #e53935 50%, #c62828 100%);
+  background: linear-gradient(140deg, #fff7f7 0%, #f8dedd 38%, #f2b7b7 100%);
+  border-color: rgba(212, 120, 120, 0.6);
+  color: #4a1f1f;
   box-shadow:
-    0 4px 12px rgba(229, 57, 53, 0.4),
-    0 0 20px rgba(229, 57, 53, 0.2),
-    inset 0 2px 4px rgba(255, 255, 255, 0.3);
+    0 6px 14px rgba(212, 120, 120, 0.28),
+    0 0 16px rgba(242, 183, 183, 0.22),
+    inset 0 1px 2px rgba(255, 255, 255, 0.7);
 }
 
 .stat-badge.horror {
-  background: linear-gradient(135deg, #42a5f5 0%, #1e88e5 50%, #1565c0 100%);
+  background: linear-gradient(140deg, #f3f7ff 0%, #dbe7ff 42%, #bcd3ff 100%);
+  border-color: rgba(120, 150, 210, 0.6);
+  color: #12345c;
   box-shadow:
-    0 4px 12px rgba(30, 136, 229, 0.4),
-    0 0 20px rgba(30, 136, 229, 0.2),
-    inset 0 2px 4px rgba(255, 255, 255, 0.3);
+    0 6px 14px rgba(120, 150, 210, 0.24),
+    0 0 16px rgba(188, 211, 255, 0.2),
+    inset 0 1px 2px rgba(255, 255, 255, 0.7);
 }
 
 .stat-badge.pulse {
@@ -181,7 +187,7 @@ function confirmCustomValue() {
 }
 
 .stat-value {
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.6);
 }
 
 .quick-buttons {
@@ -218,10 +224,10 @@ function confirmCustomValue() {
 .quick-button {
   width: 42px;
   height: 42px;
-  border: 1px solid #d0d0d0;
-  border-radius: 6px;
-  background: #fff;
-  color: #333;
+  border: 1px solid #d7dee9;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #f9fafc 0%, #eef1f8 100%);
+  color: #1f2a44;
   font-size: 16px;
   font-weight: 500;
   cursor: pointer;
@@ -229,17 +235,19 @@ function confirmCustomValue() {
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 6px rgba(31, 42, 68, 0.08);
 }
 
 .quick-button:hover {
-  border-color: #999;
-  background: #f0f0f0;
+  border-color: rgba(210, 173, 116, 0.55);
+  background: linear-gradient(135deg, #fdfdfe 0%, #f1f4fb 100%);
 }
 
 .quick-button.selected {
-  border-color: #333;
-  background: #333;
-  color: #fff;
+  border-color: rgba(210, 173, 116, 0.55);
+  background: linear-gradient(135deg, #fff5dc 0%, #ffe7bb 100%);
+  color: #2f2415;
+  box-shadow: 0 3px 10px rgba(234, 194, 135, 0.28);
 }
 
 .quick-button.special {
@@ -265,9 +273,9 @@ function confirmCustomValue() {
 }
 
 :global(.dark) .quick-button.selected {
-  border-color: #f5f5f5;
-  background: #f5f5f5;
-  color: #333;
+  border-color: #f2c06f;
+  background: #3d2c00;
+  color: #ffd54f;
 }
 
 /* Mobile */
