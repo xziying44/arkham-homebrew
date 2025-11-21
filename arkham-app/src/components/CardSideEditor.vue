@@ -31,7 +31,9 @@
                         :key="field.key + (field.index !== undefined ? `_${field.index}` : '')"
                         class="form-field" :class="getFieldLayoutClass(field.layout)">
                         <FormFieldComponent :field="field" :value="getFieldValue(field)"
+                            :subclasses="sideCardData.subclass || []"
                             :new-string-value="newStringValue" @update:value="setFieldValue(field, $event)"
+                            @update:subclasses="updateSubclasses"
                             @update:new-string-value="newStringValue = $event"
                             @add-multi-select-item="addMultiSelectItem(field, $event)"
                             @remove-multi-select-item="removeMultiSelectItem(field, $event)"
@@ -457,6 +459,11 @@ const setArrayValue = (arrayPath: string, index: number, value: any) => {
     }
 
     array[index] = value;
+};
+
+const updateSubclasses = (value: string[]) => {
+    setDeepValue(sideCardData, 'subclass', value);
+    updateSideData('subclass', value);
 };
 
 const addMultiSelectItem = (field: FormField, value: string) => {

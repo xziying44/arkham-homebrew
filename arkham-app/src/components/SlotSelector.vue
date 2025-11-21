@@ -44,7 +44,12 @@ const slots: SlotOption[] = [
 ];
 
 function selectSlot(value: string) {
-  emit('update:value', value);
+  // Toggle: if already selected, clear; otherwise select
+  if (props.value === value) {
+    emit('update:value', '');
+  } else {
+    emit('update:value', value);
+  }
 }
 </script>
 
@@ -68,6 +73,9 @@ function selectSlot(value: string) {
   transition: all 0.2s ease;
   background: transparent;
   color: #666;
+  /* Fixed width for consistent layout */
+  width: 120px;
+  flex-shrink: 0;
 }
 
 .slot-button:hover {

@@ -17,22 +17,42 @@
 
     <!-- Subclass selector (shown when multi-class is selected) -->
     <div v-if="showSubclasses" class="subclass-section">
+      <!-- Subclass slots display -->
+      <div class="subclass-slots">
+        <div class="subclass-slots-label">{{ $t('cardEditor.classSelector.selectedSubclasses') }}</div>
+        <div class="slots-container">
+          <div
+            v-for="i in maxSubclassCount"
+            :key="i"
+            class="subclass-slot"
+            :class="{ filled: selectedSubclassAt(i - 1) }"
+            :style="getSlotStyle(i - 1)"
+            @click="removeSubclassAt(i - 1)"
+          >
+            <span v-if="selectedSubclassAt(i - 1)" class="slot-content">
+              <span class="slot-position">{{ i }}</span>
+              <span class="slot-label">{{ getSubclassLabel(i - 1) }}</span>
+            </span>
+            <span v-else class="slot-empty">{{ i }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Available subclasses to select -->
       <div class="subclass-label">{{ $t('cardEditor.classSelector.selectSubclasses') }}</div>
       <div class="subclass-buttons">
         <button
-          v-for="(cls, index) in availableSubclasses"
+          v-for="cls in availableSubclasses"
           :key="cls.value"
           class="subclass-button"
           :class="{
             selected: isSubclassSelected(cls.value),
-            ['position-' + getSubclassPosition(cls.value)]: isSubclassSelected(cls.value)
+            disabled: !isSubclassSelected(cls.value) && currentSubclasses.length >= maxSubclassCount
           }"
           :style="getSubclassStyle(cls.value)"
           @click="toggleSubclass(cls.value)"
+          :disabled="!isSubclassSelected(cls.value) && currentSubclasses.length >= maxSubclassCount"
         >
-          <span class="subclass-position" v-if="isSubclassSelected(cls.value)">
-            {{ getSubclassPosition(cls.value) }}
-          </span>
           <span class="subclass-label">{{ cls.label }}</span>
         </button>
       </div>
@@ -95,19 +115,54 @@ const availableSubclasses = computed(() => {
 
 const showSubclasses = computed(() => props.value === '多职阶');
 
-const maxSubclassCount = computed(() => props.maxSubclasses || 2);
+const maxSubclassCount = computed(() => props.maxSubclasses || 3);
+
+const currentSubclasses = computed(() => props.subclasses || []);
 
 function isSelected(value: string): boolean {
   return props.value === value;
 }
 
 function isSubclassSelected(value: string): boolean {
-  return (props.subclasses || []).includes(value);
+  return currentSubclasses.value.includes(value);
 }
 
-function getSubclassPosition(value: string): number {
-  const index = (props.subclasses || []).indexOf(value);
-  return index + 1;
+function selectedSubclassAt(index: number): string | null {
+  return currentSubclasses.value[index] || null;
+}
+
+function getSubclassLabel(index: number): string {
+  const value = currentSubclasses.value[index];
+  if (!value) return '';
+  const cls = mainClasses.find(c => c.value === value);
+  return cls ? cls.label : value;
+}
+
+function removeSubclassAt(index: number): void {
+  const value = currentSubclasses.value[index];
+  if (value) {
+    const newSubclasses = [...currentSubclasses.value];
+    newSubclasses.splice(index, 1);
+    emit('update:subclasses', newSubclasses);
+  }
+}
+
+function getSlotStyle(index: number) {
+  const value = currentSubclasses.value[index];
+  if (!value) {
+    return {
+      backgroundColor: 'transparent',
+      borderColor: '#d0d0d0',
+      color: '#999'
+    };
+  }
+  const color = classColors[value] || '#666';
+  return {
+    backgroundColor: color,
+    borderColor: color,
+    color: isLightColor(color) ? '#000' : '#fff',
+    cursor: 'pointer'
+  };
 }
 
 function selectClass(value: string) {
@@ -122,11 +177,14 @@ function toggleSubclass(value: string) {
   const index = current.indexOf(value);
 
   if (index >= 0) {
+    // Remove the subclass
     current.splice(index, 1);
   } else if (current.length < maxSubclassCount.value) {
+    // Add the subclass
     current.push(value);
   }
 
+  // Emit the updated array to trigger reactive update
   emit('update:subclasses', current);
 }
 
@@ -189,6 +247,7 @@ function isLightColor(color: string): boolean {
 .class-button {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   padding: 6px 12px;
   border: 2px solid;
@@ -198,6 +257,9 @@ function isLightColor(color: string): boolean {
   cursor: pointer;
   transition: all 0.2s ease;
   background: transparent;
+  /* Fixed width for consistent layout */
+  width: 120px;
+  flex-shrink: 0;
 }
 
 .class-button:hover {
@@ -223,6 +285,67 @@ function isLightColor(color: string): boolean {
   border-radius: 8px;
 }
 
+/* Subclass slots */
+.subclass-slots {
+  margin-bottom: 12px;
+}
+
+.subclass-slots-label {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.slots-container {
+  display: flex;
+  gap: 8px;
+}
+
+.subclass-slot {
+  flex: 1;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed #d0d0d0;
+  border-radius: 6px;
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.subclass-slot.filled {
+  border-style: solid;
+  cursor: pointer;
+}
+
+.subclass-slot.filled:hover {
+  opacity: 0.8;
+  transform: scale(0.98);
+}
+
+.slot-content {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.slot-position {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.slot-empty {
+  color: #ccc;
+  font-weight: bold;
+}
+
 .subclass-label {
   font-size: 12px;
   color: #666;
@@ -238,30 +361,31 @@ function isLightColor(color: string): boolean {
 .subclass-button {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
-  padding: 4px 10px;
+  padding: 6px 12px;
   border: 2px solid;
   border-radius: 4px;
   font-size: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
   background: transparent;
+  /* Fixed width for consistent layout */
+  width: 120px;
+  flex-shrink: 0;
 }
 
-.subclass-button:hover {
+.subclass-button:hover:not(:disabled) {
   transform: translateY(-1px);
 }
 
-.subclass-position {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
-  font-size: 10px;
-  font-weight: bold;
+.subclass-button.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.subclass-button .subclass-label {
+  margin: 0;
 }
 
 /* Dark mode support */
@@ -272,6 +396,19 @@ function isLightColor(color: string): boolean {
 :global(.dark) .class-button:not(.selected),
 :global(.dark) .subclass-button:not(.selected) {
   border-color: #444;
+  color: #aaa;
+}
+
+:global(.dark) .subclass-slot {
+  border-color: #444;
+}
+
+:global(.dark) .slot-empty {
+  color: #555;
+}
+
+:global(.dark) .subclass-slots-label,
+:global(.dark) .subclass-label {
   color: #aaa;
 }
 
@@ -288,6 +425,15 @@ function isLightColor(color: string): boolean {
 
   .class-label {
     font-size: 11px;
+  }
+
+  .slots-container {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .subclass-slot {
+    min-height: 32px;
   }
 }
 </style>

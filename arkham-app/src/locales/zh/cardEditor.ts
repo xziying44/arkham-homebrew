@@ -234,7 +234,8 @@ export default {
     neutral: '中立',
     weakness: '弱点',
     multiclass: '多职阶',
-    selectSubclasses: '选择子职阶（最多3个）'
+    selectSubclasses: '选择子职阶（最多3个）',
+    selectedSubclasses: '已选职阶（点击移除）'
   },
 
   // 槽位选择器

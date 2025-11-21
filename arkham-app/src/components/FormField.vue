@@ -260,7 +260,12 @@
         </n-button>
       </div>
     </template>
-    <ClassSelector :value="value" @update:value="$emit('update:value', $event)" />
+    <ClassSelector
+      :value="value"
+      :subclasses="props.subclasses || []"
+      @update:value="$emit('update:value', $event)"
+      @update:subclasses="$emit('update:subclasses', $event)"
+    />
   </n-form-item>
 
   <!-- 槽位选择器 -->
@@ -420,11 +425,13 @@ interface Props {
   field: FormField;
   value: any;
   newStringValue: string;
+  subclasses?: string[];
 }
 
 const props = defineProps<Props>();
 const emit = defineEmits<{
   'update:value': [value: any];
+  'update:subclasses': [value: string[]];
   'update:new-string-value': [value: string];
   'add-multi-select-item': [value: string];
   'remove-multi-select-item': [index: number];

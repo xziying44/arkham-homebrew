@@ -10,38 +10,43 @@
 
     <!-- Quick select buttons -->
     <div class="quick-buttons">
-      <!-- Special values -->
-      <button
-        v-for="special in specialValues"
-        :key="special.value"
-        class="quick-button special"
-        :class="{ selected: value === special.value }"
-        @click="selectValue(special.value)"
-        :title="$t(`cardEditor.costCoin.${special.label}`)"
-      >
-        {{ special.icon }}
-      </button>
+      <!-- Row 1: Special values (铺满宽度) -->
+      <div class="special-row">
+        <button
+          v-for="special in specialValues"
+          :key="special.value"
+          class="quick-button special"
+          :class="{ selected: value === special.value }"
+          @click="selectValue(special.value)"
+          :title="$t(`cardEditor.costCoin.${special.label}`)"
+        >
+          {{ special.icon }}
+        </button>
+      </div>
 
-      <!-- Quick numeric values -->
-      <button
-        v-for="num in quickValues"
-        :key="num"
-        class="quick-button"
-        :class="{ selected: value === num }"
-        @click="selectValue(num)"
-      >
-        {{ num }}
-      </button>
-
-      <!-- Custom input trigger -->
-      <button
-        class="quick-button custom"
-        :class="{ selected: isCustomValue }"
-        @click="showInput = true"
-        :title="$t('cardEditor.costCoin.custom')"
-      >
-        ...
-      </button>
+      <!-- Row 2+: Numbers 0-9 + Custom (响应式布局) -->
+      <div class="number-rows">
+        <button
+          v-for="num in quickValues"
+          :key="num"
+          class="quick-button"
+          :class="{ selected: value === num }"
+          @click="selectValue(num)"
+        >
+          {{ num }}
+        </button>
+        <!-- Custom input trigger -->
+        <button
+          class="quick-button custom"
+          :class="{ selected: isCustomValue }"
+          @click="showInput = true"
+          :title="$t('cardEditor.costCoin.custom')"
+        >
+          <n-icon :size="14">
+            <SettingsOutline />
+          </n-icon>
+        </button>
+      </div>
     </div>
 
     <!-- Custom input modal -->
@@ -63,7 +68,8 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { NModal, NInputNumber, NButton } from 'naive-ui';
+import { NModal, NInputNumber, NButton, NIcon } from 'naive-ui';
+import { SettingsOutline } from '@vicons/ionicons5';
 import { useI18n } from 'vue-i18n';
 import { defaultQuickSettingsConfig } from '@/config/quickSettingsConfig';
 
@@ -129,39 +135,86 @@ function confirmCustomValue() {
   font-weight: bold;
   font-size: 18px;
   color: #5d4037;
-  background: linear-gradient(135deg, #ffd54f, #ffb300);
+  background: linear-gradient(135deg, #ffd54f 0%, #ffb300 50%, #ff8f00 100%);
   box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.3),
-    inset 0 2px 4px rgba(255, 255, 255, 0.4),
+    0 4px 12px rgba(255, 143, 0, 0.4),
+    0 0 20px rgba(255, 179, 0, 0.2),
+    inset 0 2px 4px rgba(255, 255, 255, 0.5),
     inset 0 -2px 4px rgba(0, 0, 0, 0.2);
   transition: transform 0.2s ease;
   border: 2px solid #ff8f00;
+  position: relative;
+  overflow: hidden;
+}
+
+.cost-coin::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.4) 50%, transparent 70%);
+  animation: shine 3s ease-in-out infinite;
+}
+
+@keyframes shine {
+  0% {
+    transform: translateX(-100%) rotate(0deg);
+  }
+  100% {
+    transform: translateX(100%) rotate(0deg);
+  }
 }
 
 .cost-coin:hover {
-  transform: scale(1.05);
+  transform: scale(1.05) rotate(5deg);
 }
 
 .coin-value {
   text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+  position: relative;
+  z-index: 1;
 }
 
 .quick-buttons {
   display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: stretch;
+  width: 100%;
+  max-width: 280px;
+}
+
+.special-row {
+  display: flex;
+  gap: 4px;
+  justify-content: space-between;
+  width: 100%;
+}
+
+/* Special value buttons auto-fill width */
+.special-row .quick-button {
+  flex: 1;
+  width: auto;
+  min-width: 42px;
+}
+
+.number-rows {
+  display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  justify-content: center;
-  max-width: 200px;
+  justify-content: flex-start;
+  width: 100%;
 }
 
 .quick-button {
-  width: 28px;
-  height: 28px;
+  width: 42px;
+  height: 42px;
   border: 1px solid #d0d0d0;
-  border-radius: 4px;
+  border-radius: 6px;
   background: #fff;
   color: #333;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -182,12 +235,13 @@ function confirmCustomValue() {
 }
 
 .quick-button.special {
-  font-size: 14px;
+  font-size: 18px;
 }
 
 .quick-button.custom {
-  font-size: 10px;
-  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Dark mode */
@@ -217,9 +271,9 @@ function confirmCustomValue() {
   }
 
   .quick-button {
-    width: 24px;
-    height: 24px;
-    font-size: 11px;
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
   }
 }
 </style>

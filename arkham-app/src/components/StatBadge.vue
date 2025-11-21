@@ -11,38 +11,43 @@
 
     <!-- Quick select buttons -->
     <div class="quick-buttons">
-      <!-- Special values -->
-      <button
-        v-for="special in specialValues"
-        :key="special.value"
-        class="quick-button special"
-        :class="{ selected: value === special.value }"
-        @click="selectValue(special.value)"
-        :title="$t(`cardEditor.statBadge.${special.label}`)"
-      >
-        {{ special.icon }}
-      </button>
+      <!-- Row 1: Special values (铺满宽度) -->
+      <div class="special-row">
+        <button
+          v-for="special in specialValues"
+          :key="special.value"
+          class="quick-button special"
+          :class="{ selected: value === special.value }"
+          @click="selectValue(special.value)"
+          :title="$t(`cardEditor.statBadge.${special.label}`)"
+        >
+          {{ special.icon }}
+        </button>
+      </div>
 
-      <!-- Quick numeric values -->
-      <button
-        v-for="num in quickValues"
-        :key="num"
-        class="quick-button"
-        :class="{ selected: value === num }"
-        @click="selectValue(num)"
-      >
-        {{ num }}
-      </button>
-
-      <!-- Custom input trigger -->
-      <button
-        class="quick-button custom"
-        :class="{ selected: isCustomValue }"
-        @click="showInput = true"
-        :title="$t('cardEditor.statBadge.custom')"
-      >
-        ...
-      </button>
+      <!-- Row 2+: Numbers 1-9 + Custom (响应式布局) -->
+      <div class="number-rows">
+        <button
+          v-for="num in quickValues"
+          :key="num"
+          class="quick-button"
+          :class="{ selected: value === num }"
+          @click="selectValue(num)"
+        >
+          {{ num }}
+        </button>
+        <!-- Custom input trigger -->
+        <button
+          class="quick-button custom"
+          :class="{ selected: isCustomValue }"
+          @click="showInput = true"
+          :title="$t('cardEditor.statBadge.custom')"
+        >
+          <n-icon :size="14">
+            <SettingsOutline />
+          </n-icon>
+        </button>
+      </div>
     </div>
 
     <!-- Custom input modal -->
@@ -64,7 +69,8 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { NModal, NInputNumber, NButton } from 'naive-ui';
+import { NModal, NInputNumber, NButton, NIcon } from 'naive-ui';
+import { SettingsOutline } from '@vicons/ionicons5';
 import { useI18n } from 'vue-i18n';
 import { defaultQuickSettingsConfig, type QuickSettingsFieldType } from '@/config/quickSettingsConfig';
 
@@ -143,11 +149,19 @@ function confirmCustomValue() {
 }
 
 .stat-badge.health {
-  background: linear-gradient(135deg, #e53935, #c62828);
+  background: linear-gradient(135deg, #ff5252 0%, #e53935 50%, #c62828 100%);
+  box-shadow:
+    0 4px 12px rgba(229, 57, 53, 0.4),
+    0 0 20px rgba(229, 57, 53, 0.2),
+    inset 0 2px 4px rgba(255, 255, 255, 0.3);
 }
 
 .stat-badge.horror {
-  background: linear-gradient(135deg, #1e88e5, #1565c0);
+  background: linear-gradient(135deg, #42a5f5 0%, #1e88e5 50%, #1565c0 100%);
+  box-shadow:
+    0 4px 12px rgba(30, 136, 229, 0.4),
+    0 0 20px rgba(30, 136, 229, 0.2),
+    inset 0 2px 4px rgba(255, 255, 255, 0.3);
 }
 
 .stat-badge.pulse {
@@ -156,10 +170,13 @@ function confirmCustomValue() {
 
 @keyframes pulse {
   0%, 100% {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transform: scale(1);
   }
   50% {
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    transform: scale(1.05);
+    box-shadow:
+      0 6px 20px rgba(0, 0, 0, 0.4),
+      0 0 30px rgba(0, 0, 0, 0.3);
   }
 }
 
@@ -169,20 +186,43 @@ function confirmCustomValue() {
 
 .quick-buttons {
   display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: stretch;
+  width: 100%;
+  max-width: 280px;
+}
+
+.special-row {
+  display: flex;
+  gap: 4px;
+  justify-content: space-between;
+  width: 100%;
+}
+
+/* Special value buttons auto-fill width */
+.special-row .quick-button {
+  flex: 1;
+  width: auto;
+  min-width: 42px;
+}
+
+.number-rows {
+  display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  justify-content: center;
-  max-width: 200px;
+  justify-content: flex-start;
+  width: 100%;
 }
 
 .quick-button {
-  width: 28px;
-  height: 28px;
+  width: 42px;
+  height: 42px;
   border: 1px solid #d0d0d0;
-  border-radius: 4px;
+  border-radius: 6px;
   background: #fff;
   color: #333;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -203,12 +243,13 @@ function confirmCustomValue() {
 }
 
 .quick-button.special {
-  font-size: 14px;
+  font-size: 18px;
 }
 
 .quick-button.custom {
-  font-size: 10px;
-  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Dark mode */
@@ -238,9 +279,9 @@ function confirmCustomValue() {
   }
 
   .quick-button {
-    width: 24px;
-    height: 24px;
-    font-size: 11px;
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
   }
 }
 </style>

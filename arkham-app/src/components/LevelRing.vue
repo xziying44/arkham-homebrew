@@ -18,28 +18,33 @@
 
     <!-- Quick select buttons -->
     <div class="quick-buttons">
-      <!-- Special values -->
-      <button
-        v-for="special in specialValues"
-        :key="special.value"
-        class="quick-button special"
-        :class="{ selected: value === special.value }"
-        @click="selectValue(special.value)"
-        :title="$t(`cardEditor.levelRing.${special.label}`)"
-      >
-        {{ special.icon }}
-      </button>
+      <!-- Row 1: Special values (铺满宽度) -->
+      <div class="special-row">
+        <button
+          v-for="special in specialValues"
+          :key="special.value"
+          class="quick-button special"
+          :class="{ selected: value === special.value }"
+          @click="selectValue(special.value)"
+          :title="$t(`cardEditor.levelRing.${special.label}`)"
+        >
+          <span v-if="special.value === -1" class="no-level-icon">○</span>
+          <span v-else>{{ special.icon }}</span>
+        </button>
+      </div>
 
-      <!-- Level buttons 0-5 -->
-      <button
-        v-for="num in quickValues"
-        :key="num"
-        class="quick-button"
-        :class="{ selected: value === num }"
-        @click="selectValue(num)"
-      >
-        {{ num }}
-      </button>
+      <!-- Row 2+: Level buttons 0-5 (响应式布局) -->
+      <div class="number-rows">
+        <button
+          v-for="num in quickValues"
+          :key="num"
+          class="quick-button"
+          :class="{ selected: value === num }"
+          @click="selectValue(num)"
+        >
+          {{ num }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -128,19 +133,43 @@ function setLevel(level: number) {
 
 .quick-buttons {
   display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: stretch;
+  width: 100%;
+  max-width: 280px;
+}
+
+.special-row {
+  display: flex;
+  gap: 4px;
+  justify-content: space-between;
+  width: 100%;
+}
+
+/* Special value buttons auto-fill width */
+.special-row .quick-button {
+  flex: 1;
+  width: auto;
+  min-width: 42px;
+}
+
+.number-rows {
+  display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  justify-content: center;
+  justify-content: flex-start;
+  width: 100%;
 }
 
 .quick-button {
-  width: 28px;
-  height: 28px;
+  width: 42px;
+  height: 42px;
   border: 1px solid #d0d0d0;
-  border-radius: 4px;
+  border-radius: 6px;
   background: #fff;
   color: #333;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -161,7 +190,12 @@ function setLevel(level: number) {
 }
 
 .quick-button.special {
-  font-size: 14px;
+  font-size: 18px;
+}
+
+.no-level-icon {
+  font-size: 20px;
+  color: #999;
 }
 
 /* Dark mode */
@@ -205,9 +239,9 @@ function setLevel(level: number) {
   }
 
   .quick-button {
-    width: 24px;
-    height: 24px;
-    font-size: 11px;
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
   }
 }
 </style>
