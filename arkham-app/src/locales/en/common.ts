@@ -1,4 +1,8 @@
 export default {
+  // flat aliases for convenience
+  confirm: 'Confirm',
+  cancel: 'Cancel',
+
   buttons: {
     confirm: 'Confirm',
     cancel: 'Cancel',

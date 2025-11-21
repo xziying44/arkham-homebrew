@@ -268,6 +268,8 @@ export default {
   costCoin: {
     noCost: 'No Cost',
     xCost: 'X Cost',
+    none: 'No Cost',
+    variable: 'Variable Cost',
     custom: 'Custom',
     enterValue: 'Enter Cost',
     valuePlaceholder: 'Enter a value from 0-99'
@@ -276,6 +278,7 @@ export default {
   // Level Ring
   levelRing: {
     customize: 'Customize',
+    customizable: 'Customizable',
     none: 'No Level'
   },
 

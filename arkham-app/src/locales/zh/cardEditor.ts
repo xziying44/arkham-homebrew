@@ -273,6 +273,8 @@ export default {
   // 费用金币
   costCoin: {
     noCost: '无费用',
+    none: '无费用',
+    variable: '变动费用',
     xCost: 'X费用',
     custom: '自定义',
     enterValue: '输入费用',
@@ -282,6 +284,7 @@ export default {
   // 等级星环
   levelRing: {
     customize: '定制',
+    customizable: '可自定义',
     none: '无等级'
   },
 
