@@ -539,7 +539,7 @@ const renderLocationOptionLabel = (option: any) => {
   const src = getIconUrlByChinese(option.value as string);
   const text = stripEmoji(String(option.label ?? option.value ?? ''));
   const imgStyle = 'width:14px;height:14px;display:inline-block;vertical-align:middle;object-fit:contain;';
-  return h('div', { class: 'loc-opt', style: 'display:inline-flex;align-items:center;gap:6px;' }, [
+  return h('div', { class: 'loc-opt', style: 'display:inline-flex;align-items:center;gap:6px;margin-top: 5px;' }, [
     src ? h('img', { src, class: 'loc-icon', style: imgStyle }) : null,
     h('span', { style: 'line-height:1;display:inline-block;vertical-align:middle;' }, text)
   ]);

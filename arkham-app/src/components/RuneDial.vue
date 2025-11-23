@@ -97,8 +97,8 @@ const dialConfig = computed(() => {
                 { val: 1, txt: '1' }, { val: 2, txt: '2' }, { val: 3, txt: '3' },
                 { val: 4, txt: '4' }, { val: 5, txt: '5' }, { val: 6, txt: '6' },
                 { val: 7, txt: '7' }, { val: 8, txt: '8' }, { val: 9, txt: '9' },
-                { val: -1, txt: '🚫', type: 'special' }, // 无 (-1)
-                { val: -2, txt: '∞', type: 'special' }, // 无限 (-2)
+                { val: -1, txt: '➖', type: 'special' }, // 无 (-1)
+                { val: -2, txt: '♾️', type: 'special' }, // 无限 (-2)
                 { val: 'edit', txt: '✎', type: 'edit' }
             ];
             break;
@@ -110,7 +110,7 @@ const dialConfig = computed(() => {
                 { val: 4, txt: '4' }, { val: 5, txt: '5' }, { val: 6, txt: '6' },
                 { val: 7, txt: '7' }, { val: 8, txt: '8' }, { val: 9, txt: '9' },
                 { val: 0, txt: '0' },
-                { val: -1, txt: '🚫', type: 'special' }, // 无 (-1)
+                { val: -1, txt: '➖', type: 'special' }, // 无 (-1)
                 { val: -2, txt: 'X', type: 'special' }, // X (-2)
                 { val: 'edit', txt: '✎', type: 'edit' }
             ];
@@ -122,7 +122,7 @@ const dialConfig = computed(() => {
                 { val: 1, txt: '1' }, { val: 2, txt: '2' }, { val: 3, txt: '3' },
                 { val: 4, txt: '4' }, { val: 5, txt: '5' },
                 { val: 0, txt: '0' },
-                { val: -1, txt: '🚫', type: 'special' }, // 无 (-1)
+                { val: -1, txt: '➖', type: 'special' }, // 无 (-1)
                 { val: -2, txt: '🧩', type: 'special' }  // 定制 (-2)
             ];
             break;
@@ -132,12 +132,12 @@ const dialConfig = computed(() => {
 
 const displayValue = computed(() => {
     if (props.value === -1) {
-        return '🚫';
+        return '➖';
     }
     if (props.value === -2) {
         if (props.theme === 'cost') return 'X';
         if (props.theme === 'level') return '🧩';
-        return '∞';
+        return '♾️';
     }
     return props.value;
 });
@@ -335,12 +335,18 @@ onUnmounted(() => {
     box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
+
 .current-value {
     font-size: 24px;
     font-weight: 700;
     color: var(--theme-color);
     line-height: 1;
+
+    /* 新增以下两行 */
+    position: relative; /* 确保 transform 生效 */
+    transform: translateY(-2px); /* 向上移动 2px，具体数值可以微调 */
 }
+
 
 /* 3. 符文环 */
 .rune-ring {
