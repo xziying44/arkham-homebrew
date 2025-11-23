@@ -387,6 +387,34 @@ const showTextBoundaryModal = ref(false);
 // 插画布局编辑器折叠状态（默认收起）
 const illustrationLayoutCollapsed = ref<string[]>([]);
 
+// 工具函数：获取深层嵌套值
+const getDeepValue = (obj: any, path: string) => {
+    const keys = path.split('.');
+    let value = obj;
+    for (const key of keys) {
+        if (value && typeof value === 'object' && key in value) {
+            value = value[key];
+        } else {
+            return undefined;
+        }
+    }
+    return value;
+};
+
+// 工具函数：获取字段值
+const getFieldValue = (field: FormField) => {
+    if (field.index !== undefined) {
+        const array = getDeepValue(sideCardData, field.key);
+        if (Array.isArray(array)) {
+            return array[field.index] !== undefined ? array[field.index] : '';
+        }
+        // 如果不是数组，尝试从旧的单值格式读取
+        const oldValue = getDeepValue(sideCardData, field.key);
+        return oldValue !== undefined ? oldValue : '';
+    }
+    return getDeepValue(sideCardData, field.key);
+};
+
 // 检查显示条件
 const checkShowCondition = (condition: ShowCondition): boolean => {
     const fieldValue = getFieldValue({ key: condition.field } as FormField);
@@ -565,32 +593,6 @@ const getFieldLayoutClass = (layout: string = 'full') => {
 };
 
 // 表单操作方法
-const getFieldValue = (field: FormField) => {
-    if (field.index !== undefined) {
-        const array = getDeepValue(sideCardData, field.key);
-        if (Array.isArray(array)) {
-            return array[field.index] !== undefined ? array[field.index] : '';
-        }
-        // 如果不是数组，尝试从旧的单值格式读取
-        const oldValue = getDeepValue(sideCardData, field.key);
-        return oldValue !== undefined ? oldValue : '';
-    }
-    return getDeepValue(sideCardData, field.key);
-};
-
-const getDeepValue = (obj: any, path: string) => {
-    const keys = path.split('.');
-    let value = obj;
-    for (const key of keys) {
-        if (value && typeof value === 'object' && key in value) {
-            value = value[key];
-        } else {
-            return undefined;
-        }
-    }
-    return value;
-};
-
 const setFieldValue = (field: FormField, value: any) => {
     if (field.index !== undefined) {
         setArrayValue(field.key, field.index, value);
