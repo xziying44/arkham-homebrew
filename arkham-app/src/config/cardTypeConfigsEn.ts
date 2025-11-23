@@ -175,18 +175,6 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         layout: 'half'
       },
       {
-        key: 'slots',
-        name: '🎒 Slot',
-        type: 'slot-selector',
-        layout: 'half'
-      },
-      {
-        key: 'slots2',
-        name: '🎒 Second Slot',
-        type: 'slot-selector',
-        layout: 'half'
-      },
-      {
         key: 'level',
         name: '⭐ Card Level',
         type: 'level-ring',
@@ -199,6 +187,18 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
         type: 'cost-coin',
         layout: 'half',
         defaultValue: -1
+      },
+      {
+        key: 'slots',
+        name: '🎒 Slot',
+        type: 'slot-selector',
+        layout: 'half'
+      },
+      {
+        key: 'slots2',
+        name: '🎒 Second Slot',
+        type: 'slot-selector',
+        layout: 'half'
       },
       {
         key: 'submit_icon',
