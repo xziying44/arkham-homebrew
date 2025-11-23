@@ -285,7 +285,7 @@
     <SlotSelector :value="value || ''" @update:value="$emit('update:value', $event)" />
   </n-form-item>
 
-  <!-- 生命/理智徽章 -->
+  <!-- 生命/理智徽章 (RuneDial) -->
   <n-form-item v-else-if="field.type === 'stat-badge'" :path="field.key">
     <template #label>
       <div class="field-label">
@@ -299,10 +299,15 @@
         </n-button>
       </div>
     </template>
-    <StatBadge :type="field.statType || 'health'" :value="value ?? -1" @update:value="$emit('update:value', $event)" />
+    <RuneDial
+      :theme="field.statType === 'horror' ? 'sanity' : 'health'"
+      :label="field.statType === 'horror' ? '理智' : '生命'"
+      :value="value ?? -1"
+      @update:value="$emit('update:value', $event)"
+    />
   </n-form-item>
 
-  <!-- 费用金币 -->
+  <!-- 费用金币 (RuneDial) -->
   <n-form-item v-else-if="field.type === 'cost-coin'" :path="field.key">
     <template #label>
       <div class="field-label">
@@ -316,10 +321,15 @@
         </n-button>
       </div>
     </template>
-    <CostCoin :value="value ?? -1" @update:value="$emit('update:value', $event)" />
+    <RuneDial
+      theme="cost"
+      label="费用"
+      :value="value ?? -1"
+      @update:value="$emit('update:value', $event)"
+    />
   </n-form-item>
 
-  <!-- 等级星环 -->
+  <!-- 等级星环 (RuneDial) -->
   <n-form-item v-else-if="field.type === 'level-ring'" :path="field.key">
     <template #label>
       <div class="field-label">
@@ -333,7 +343,12 @@
         </n-button>
       </div>
     </template>
-    <LevelRing :value="value ?? -1" @update:value="$emit('update:value', $event)" />
+    <RuneDial
+      theme="level"
+      label="等级"
+      :value="value ?? -1"
+      @update:value="$emit('update:value', $event)"
+    />
   </n-form-item>
 
   <!-- 图片上传 -->
@@ -417,9 +432,7 @@ import { getIconUrlByChinese } from '@/config/locationIcons';
 // 导入新的特殊组件
 import ClassSelector from './ClassSelector.vue';
 import SlotSelector from './SlotSelector.vue';
-import StatBadge from './StatBadge.vue';
-import CostCoin from './CostCoin.vue';
-import LevelRing from './LevelRing.vue';
+import RuneDial from './RuneDial.vue';
 
 interface Props {
   field: FormField;
