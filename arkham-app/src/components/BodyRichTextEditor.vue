@@ -119,7 +119,7 @@
       <!-- Icon Popover Grid -->
       <n-popover
         trigger="click"
-        placement="bottom-start"
+        placement="top-start"
         :width="320"
         v-model:show="showIconPopover"
       >
@@ -293,8 +293,10 @@ const spellcheckEnabled = ref(false);
 // Undo/Redo history management
 interface HistoryState {
   value: string;
-  cursorStart: number;
-  cursorEnd: number;
+  cursorBeforeStart: number;  // 操作前的光标位置
+  cursorBeforeEnd: number;
+  cursorAfterStart: number;   // 操作后的光标位置
+  cursorAfterEnd: number;
 }
 
 const history = ref<HistoryState[]>([]);
@@ -303,7 +305,14 @@ const isUndoRedo = ref(false);
 const MAX_HISTORY = 100;
 
 // Push state to history
-const pushHistory = (value: string, cursorStart: number, cursorEnd: number) => {
+// cursorBefore: 操作前光标位置, cursorAfter: 操作后光标位置
+const pushHistory = (
+  value: string,
+  cursorBeforeStart: number,
+  cursorBeforeEnd: number,
+  cursorAfterStart: number,
+  cursorAfterEnd: number
+) => {
   if (isUndoRedo.value) return;
 
   // Remove any future states if we're not at the end
@@ -314,13 +323,16 @@ const pushHistory = (value: string, cursorStart: number, cursorEnd: number) => {
   // Don't push if the value is the same as the last state
   const lastState = history.value[history.value.length - 1];
   if (lastState && lastState.value === value) {
-    // Just update cursor position
-    lastState.cursorStart = cursorStart;
-    lastState.cursorEnd = cursorEnd;
     return;
   }
 
-  history.value.push({ value, cursorStart, cursorEnd });
+  history.value.push({
+    value,
+    cursorBeforeStart,
+    cursorBeforeEnd,
+    cursorAfterStart,
+    cursorAfterEnd
+  });
 
   // Limit history size
   if (history.value.length > MAX_HISTORY) {
@@ -335,17 +347,22 @@ const undo = () => {
   if (historyIndex.value <= 0) return;
 
   isUndoRedo.value = true;
-  historyIndex.value--;
-  const state = history.value[historyIndex.value];
 
-  emit('update:value', state.value);
+  // 当前条目的 cursorBefore 是"这次操作前"的光标位置
+  const currentState = history.value[historyIndex.value];
+
+  historyIndex.value--;
+  const prevState = history.value[historyIndex.value];
+
+  emit('update:value', prevState.value);
 
   nextTick(() => {
     const textarea = textareaRef.value;
     if (textarea) {
       textarea.focus();
-      textarea.selectionStart = state.cursorStart;
-      textarea.selectionEnd = state.cursorEnd;
+      // 恢复到操作前的光标位置
+      textarea.selectionStart = currentState.cursorBeforeStart;
+      textarea.selectionEnd = currentState.cursorBeforeEnd;
     }
     isUndoRedo.value = false;
   });
@@ -365,8 +382,9 @@ const redo = () => {
     const textarea = textareaRef.value;
     if (textarea) {
       textarea.focus();
-      textarea.selectionStart = state.cursorStart;
-      textarea.selectionEnd = state.cursorEnd;
+      // 恢复到操作后的光标位置
+      textarea.selectionStart = state.cursorAfterStart;
+      textarea.selectionEnd = state.cursorAfterEnd;
     }
     isUndoRedo.value = false;
   });
@@ -377,7 +395,7 @@ watch(
   () => props.value,
   (newValue) => {
     if (!isUndoRedo.value && history.value.length === 0) {
-      pushHistory(newValue || '', 0, 0);
+      pushHistory(newValue || '', 0, 0, 0, 0);
     }
   },
   { immediate: true }
@@ -481,6 +499,10 @@ onMounted(() => {
       updateTextareaWidth();
     });
     resizeObserver.observe(textareaRef.value);
+
+    // Track cursor position for undo/redo
+    textareaRef.value.addEventListener('mouseup', updateLastCursor);
+    textareaRef.value.addEventListener('focus', updateLastCursor);
   }
 });
 
@@ -488,6 +510,10 @@ onUnmounted(() => {
   if (resizeObserver) {
     resizeObserver.disconnect();
     resizeObserver = null;
+  }
+  if (textareaRef.value) {
+    textareaRef.value.removeEventListener('mouseup', updateLastCursor);
+    textareaRef.value.removeEventListener('focus', updateLastCursor);
   }
   measureCanvas = null;
   measureContext = null;
@@ -524,17 +550,31 @@ const iconList = computed(() => {
   ];
 });
 
+// Track last cursor position for handleInput
+let lastCursorStart = 0;
+let lastCursorEnd = 0;
+
+// Update last cursor position on various events
+const updateLastCursor = () => {
+  if (textareaRef.value) {
+    lastCursorStart = textareaRef.value.selectionStart;
+    lastCursorEnd = textareaRef.value.selectionEnd;
+  }
+};
+
 // Handlers
 const handleInput = (e: Event) => {
   const target = e.target as HTMLTextAreaElement;
   const newValue = target.value;
+  const cursorAfter = target.selectionStart;
+
   emit('update:value', newValue);
 
-  // Push to history after input
+  // Push to history with cursor before (from lastCursor) and after
   nextTick(() => {
-    if (textareaRef.value) {
-      pushHistory(newValue, textareaRef.value.selectionStart, textareaRef.value.selectionEnd);
-    }
+    pushHistory(newValue, lastCursorStart, lastCursorEnd, cursorAfter, cursorAfter);
+    // Update last cursor for next operation
+    updateLastCursor();
   });
 };
 
@@ -545,6 +585,9 @@ const syncScroll = () => {
 };
 
 const handleKeydown = (e: KeyboardEvent) => {
+  // Update last cursor position before any key action
+  updateLastCursor();
+
   // Handle Ctrl+Z for undo
   if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
     e.preventDefault();
@@ -570,11 +613,12 @@ const handleKeydown = (e: KeyboardEvent) => {
     const value = props.value;
 
     const newValue = value.substring(0, start) + '  ' + value.substring(end);
+    const newCursorPos = start + 2;
     emit('update:value', newValue);
 
     nextTick(() => {
-      textarea.selectionStart = textarea.selectionEnd = start + 2;
-      pushHistory(newValue, start + 2, start + 2);
+      textarea.selectionStart = textarea.selectionEnd = newCursorPos;
+      pushHistory(newValue, start, end, newCursorPos, newCursorPos);
     });
   }
 };
@@ -615,7 +659,8 @@ const insertAtCursor = (before: string, after: string, moveInsideIfNoSelection =
   nextTick(() => {
     textarea.focus();
     textarea.selectionStart = textarea.selectionEnd = newCursorPos;
-    pushHistory(newValue, newCursorPos, newCursorPos);
+    // 记录操作前光标(start, end)和操作后光标(newCursorPos)
+    pushHistory(newValue, start, end, newCursorPos, newCursorPos);
   });
 };
 
@@ -633,7 +678,8 @@ const insertText = (text: string) => {
   nextTick(() => {
     textarea.focus();
     textarea.selectionStart = textarea.selectionEnd = newCursorPos;
-    pushHistory(newValue, newCursorPos, newCursorPos);
+    // 记录操作前光标(start, end)和操作后光标(newCursorPos)
+    pushHistory(newValue, start, end, newCursorPos, newCursorPos);
   });
 };
 
