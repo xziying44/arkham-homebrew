@@ -222,7 +222,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 卡牌效果',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -333,7 +333,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 卡牌效果',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -427,7 +427,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 卡牌效果',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -553,7 +553,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 卡牌效果',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -719,7 +719,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 卡牌效果',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -740,7 +740,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 卡牌效果',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -812,7 +812,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 卡牌效果',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -944,7 +944,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 卡牌效果',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -1079,7 +1079,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 卡牌效果',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -1167,7 +1167,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 卡牌效果',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -1238,7 +1238,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 卡牌效果',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -1301,7 +1301,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 卡牌效果',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -1366,7 +1366,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 卡牌效果',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -1427,7 +1427,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
           value: 2
         },
         name: '📄 正文内容',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -1540,7 +1540,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 正文内容',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },

@@ -15,6 +15,7 @@ import languageWelcome from './languageWelcome'
 import languageConfig from './languageConfig'
 import arkhamdbImport from './arkhamdbImport'
 import fileBrowser from './fileBrowser'
+import bodyRichTextEditor from './bodyRichTextEditor'
 
 export default {
   common,
@@ -34,4 +35,5 @@ export default {
   arkhamdbImport,
   fileBrowser,
   languageConfig,
+  bodyRichTextEditor,
 }

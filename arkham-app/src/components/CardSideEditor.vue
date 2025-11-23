@@ -37,6 +37,7 @@
                                         class="form-field" :class="getFieldLayoutClass(field.layout)">
                                         <FormFieldComponent :field="field" :value="getFieldValue(field)"
                                             :subclasses="sideCardData.subclass || []"
+                                            :card-language="sideCardData.language || 'zh'"
                                             :new-string-value="newStringValue" @update:value="setFieldValue(field, $event)"
                                             @update:subclasses="updateSubclasses"
                                             @update:new-string-value="newStringValue = $event"

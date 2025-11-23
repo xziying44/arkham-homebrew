@@ -222,7 +222,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 Card Text',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -391,7 +391,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 Card Text',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -486,7 +486,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 Card Text',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -613,7 +613,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 Card Text',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -725,7 +725,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 Card Text',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -747,7 +747,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 Card Text',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -820,7 +820,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 Card Text',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -953,7 +953,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 Card Text',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -1089,7 +1089,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 Card Text',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -1178,7 +1178,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 Card Text',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -1250,7 +1250,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 Card Text',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -1314,7 +1314,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 Card Text',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -1380,7 +1380,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 Card Text',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -1442,7 +1442,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
           value: 2
         },
         name: '📄 Card Text',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -1556,7 +1556,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 Body Text',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },

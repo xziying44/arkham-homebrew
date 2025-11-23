@@ -36,6 +36,27 @@
       :autosize="{ minRows: field.rows || 5, maxRows: (field.rows || 5) + 3 }" />
   </n-form-item>
 
+  <!-- 卡牌效果富文本编辑器 -->
+  <n-form-item v-else-if="field.type === 'body-editor'" :path="field.key">
+    <template #label>
+      <div class="field-label">
+        <span>{{ field.name }}</span>
+        <n-button v-if="field.helpText" size="tiny" @click="showHelpModal = true" class="help-button"
+          :title="$t('cardEditor.field.viewFieldDescription')">
+          <template #icon>
+            <n-icon :component="HelpCircleOutline" size="14" />
+          </template>
+          {{ $t('cardEditor.field.help') }}
+        </n-button>
+      </div>
+    </template>
+    <BodyRichTextEditor
+      :value="value || ''"
+      :card-language="props.cardLanguage || 'zh'"
+      @update:value="$emit('update:value', $event)"
+    />
+  </n-form-item>
+
   <!-- 数字输入 -->
   <n-form-item v-else-if="field.type === 'number'" :path="field.key">
     <template #label>
@@ -433,12 +454,14 @@ import { getIconUrlByChinese } from '@/config/locationIcons';
 import ClassSelector from './ClassSelector.vue';
 import SlotSelector from './SlotSelector.vue';
 import RuneDial from './RuneDial.vue';
+import BodyRichTextEditor from './BodyRichTextEditor.vue';
 
 interface Props {
   field: FormField;
   value: any;
   newStringValue: string;
   subclasses?: string[];
+  cardLanguage?: string;
 }
 
 const props = defineProps<Props>();
