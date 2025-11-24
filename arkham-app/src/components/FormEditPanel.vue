@@ -135,8 +135,10 @@
                             :card-type-configs="cardTypeConfigs"
                             :card-type-options="cardTypeOptions"
                             :language-options="languageOptions"
+                            :active-field-group-key="getActiveFieldGroupKey('front')"
                             @update-card-data="updateCardSideData"
                             @update-card-type="updateCardSideType"
+                            @update:active-field-group="updateActiveFieldGroup('front', $event)"
                             @trigger-preview="triggerDebouncedPreviewUpdate" />
                     </div>
 
@@ -149,8 +151,10 @@
                             :card-type-configs="cardTypeConfigs"
                             :card-type-options="cardTypeOptions"
                             :language-options="languageOptions"
+                            :active-field-group-key="getActiveFieldGroupKey('back')"
                             @update-card-data="updateCardSideData"
                             @update-card-type="updateCardSideType"
+                            @update:active-field-group="updateActiveFieldGroup('back', $event)"
                             @trigger-preview="triggerDebouncedPreviewUpdate" />
                     </div>
 
@@ -496,8 +500,31 @@ const currentCardData = reactive({
 });
 
 // 双面卡牌状态
-const currentSide = ref<'front' | 'back'>('front');
+type CardSideKey = 'front' | 'back';
+const currentSide = ref<CardSideKey>('front');
 const isDoubleSided = computed(() => currentCardData.version === '2.0');
+
+// 记忆每张卡各面的字段分组标签
+const activeFieldGroupMap = ref<Record<string, Partial<Record<CardSideKey, string>>>>({});
+const currentCardKey = computed(() => {
+    if (props.selectedFile && props.selectedFile.type === 'card') {
+        return String((props.selectedFile as any).path || props.selectedFile.key || '');
+    }
+    return '';
+});
+
+const getActiveFieldGroupKey = (side: CardSideKey) => {
+    const cardKey = currentCardKey.value;
+    if (!cardKey) return '';
+    return activeFieldGroupMap.value[cardKey]?.[side] || '';
+};
+
+const updateActiveFieldGroup = (side: CardSideKey, tabKey: string) => {
+    const cardKey = currentCardKey.value;
+    if (!cardKey || !tabKey) return;
+    const next = { ...(activeFieldGroupMap.value[cardKey] || {}), [side]: tabKey };
+    activeFieldGroupMap.value = { ...activeFieldGroupMap.value, [cardKey]: next };
+};
 
 
 // 当前面的语言

@@ -257,6 +257,7 @@ interface Props {
     cardTypeConfigs: Record<string, CardTypeConfig>;
     cardTypeOptions: any[];
     languageOptions: any[];
+    activeFieldGroupKey?: string;
 }
 
 interface FieldGroupTab {
@@ -274,6 +275,7 @@ const emit = defineEmits<{
     'update-card-data': [side: string, fieldKey: string, value: any];
     'update-card-type': [side: string, type: string];
     'trigger-preview': [];
+    'update:active-field-group': [value: string];
 }>();
 
 const { t } = useI18n();
@@ -564,15 +566,36 @@ const fieldGroupTabs = computed<FieldGroupTab[]>(() => {
 
 const activeFieldGroup = ref<string>('');
 
-watch(fieldGroupTabs, (tabs) => {
-    if (!tabs.length) {
-        activeFieldGroup.value = '';
-        return;
+const resolveActiveFieldGroup = (candidate?: string) => {
+    const tabs = fieldGroupTabs.value;
+    if (!tabs.length) return '';
+    if (candidate && tabs.some(tab => tab.key === candidate)) {
+        return candidate;
     }
-    if (!tabs.some(tab => tab.key === activeFieldGroup.value)) {
-        activeFieldGroup.value = tabs[0].key;
+    return tabs[0].key;
+};
+
+watch(
+    [fieldGroupTabs, () => props.activeFieldGroupKey],
+    ([, activeKey]) => {
+        const next = resolveActiveFieldGroup(activeKey || activeFieldGroup.value);
+        if (activeFieldGroup.value !== next) {
+            activeFieldGroup.value = next;
+        }
+
+        // 如果父级传入的值无效，回退时通知父级同步
+        if (activeKey && activeKey !== next) {
+            emit('update:active-field-group', next);
+        }
+    },
+    { immediate: true }
+);
+
+watch(activeFieldGroup, (val, oldVal) => {
+    if (val !== oldVal) {
+        emit('update:active-field-group', val);
     }
-}, { immediate: true });
+});
 
 const fieldGroupRows = computed<Record<string, FormField[][]>>(() => {
     const rowsMap: Record<string, FormField[][]> = {};
