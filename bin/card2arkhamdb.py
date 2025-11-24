@@ -89,11 +89,14 @@ class Card2ArkhamDBConverter:
             signature_to_investigator: 签名卡ID到调查员ID的映射字典
         """
         self.encounter_sets = encounter_sets
-        adapter = CardAdapter(card_data, workspace_manager.font_manager)
+        back = card_data.get('back') if isinstance(card_data, dict) else None
+        back_name = back.get('name') if isinstance(back, dict) and isinstance(back.get('name'), str) else None
+        adapter = CardAdapter(card_data, workspace_manager.font_manager, other_side_name=back_name)
         self.card_data = adapter.convert(True)
         card_data_back = card_data.get('back', {})
         if card_data_back and isinstance(card_data_back, dict):
-            adapter = CardAdapter(card_data_back, workspace_manager.font_manager)
+            front_name = card_data.get('name') if isinstance(card_data.get('name'), str) else None
+            adapter = CardAdapter(card_data_back, workspace_manager.font_manager, other_side_name=front_name)
             self.card_data['back'] = adapter.convert(True)
         self.card_meta = card_meta
         self.pack_code = pack_code

@@ -81,6 +81,11 @@ export default {
     cardRemarks: '📝 卡牌备注信息',
     cardQuantity: '卡牌数量',
     copyright: '版权信息',
+    footerIcon: '底部图标（优先级高于工作区设置）',
+    footerIconPlaceholder: '可选：选择根目录下的 PNG 作为页脚图标',
+    investigatorFooterType: '调查员页脚样式',
+    investigatorFooterTypeNormal: '普通',
+    investigatorFooterTypeBigArt: '大画特效',
 
     // 操作按钮
     saveCard: '保存卡牌',
@@ -176,6 +181,17 @@ export default {
     deckOptions: '牌库选项'
   },
 
+  // 卡牌属性分组标签
+  groups: {
+    basic: '基础信息',
+    stats: '数值属性',
+    text: '文本内容',
+    location: '地点属性',
+    encounter: '遭遇/剧本',
+    art: '插画与素材',
+    other: '其他'
+  },
+
   // IllustrationLayoutEditor component
   illustrationLayout: {
     title: '插画布局设置',
@@ -222,6 +238,59 @@ export default {
   locationActions: {
     applyToOtherSide: '将地点图标应用到另一侧',
     applySuccess: '已应用到另一侧',
+  },
+
+  // 职阶选择器
+  classSelector: {
+    guardian: '守护者',
+    seeker: '探求者',
+    rogue: '流浪者',
+    mystic: '潜修者',
+    survivor: '生存者',
+    neutral: '中立',
+    weakness: '弱点',
+    multiclass: '多职阶',
+    selectSubclasses: '选择子职阶（最多3个）',
+    selectedSubclasses: '已选职阶（点击移除）'
+  },
+
+  // 槽位选择器
+  slotSelector: {
+    ally: '盟友',
+    body: '身体',
+    accessory: '饰品',
+    hand: '手部',
+    twoHands: '双手',
+    arcane: '法术',
+    twoArcane: '双法术',
+    tarot: '塔罗'
+  },
+
+  // 数值徽章
+  statBadge: {
+    none: '无',
+    infinite: '无限',
+    custom: '自定义',
+    enterValue: '输入数值',
+    valuePlaceholder: '请输入0-99的数值'
+  },
+
+  // 费用金币
+  costCoin: {
+    noCost: '无费用',
+    none: '无费用',
+    variable: '变动费用',
+    xCost: 'X费用',
+    custom: '自定义',
+    enterValue: '输入费用',
+    valuePlaceholder: '请输入0-99的数值'
+  },
+
+  // 等级星环
+  levelRing: {
+    customize: '定制',
+    customizable: '可自定义',
+    none: '无等级'
   },
 
   // 标签编辑

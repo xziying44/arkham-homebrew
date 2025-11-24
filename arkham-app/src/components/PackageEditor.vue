@@ -20,6 +20,7 @@
           :config="uploadConfigSnapshot || packageData"
           :is-batch="isCurrentUploadBatch"
           @confirm="handleUploadConfirm"
+          @fail="handleUploadFail"
           @cancel="closeUploadPage"
         />
       </div>
@@ -66,7 +67,7 @@
 
       <!-- 编辑器内容 -->
     <div class="editor-content">
-      <n-tabs type="card" default-value="info" animated>
+      <n-tabs v-model:value="activeTab" type="card" default-value="info" animated>
         <!-- 基础信息标签页 -->
         <n-tab-pane name="info" :tab="$t('contentPackage.editor.tabs.info')">
           <div class="info-panel">
@@ -938,6 +939,7 @@
         :current-item="{ banner_base64: (uploadConfigSnapshot || packageData).banner_base64, meta: (uploadConfigSnapshot || packageData).meta }"
         :config="uploadConfigSnapshot || packageData"
         @confirm="handleUploadBanner"
+        @fail="handleUploadFail"
         @cancel="showUploadBannerDialog = false" />
       <template #action>
         <n-space>
@@ -957,6 +959,7 @@
         :current-item="uploadingCard"
         :config="uploadConfigSnapshot || packageData"
         @confirm="handleUploadCard"
+        @fail="handleUploadFail"
         @cancel="showUploadCardDialog = false; uploadingCard = null" />
       <template #action>
         <n-space>
@@ -978,6 +981,7 @@
         :config="uploadConfigSnapshot || packageData"
         :is-batch="true"
         @confirm="handleBatchUpload"
+        @fail="handleUploadFail"
         @cancel="showBatchUploadDialog = false" />
       <template #action>
         <n-space>
@@ -1003,6 +1007,7 @@
         :current-item="uploadingEncounter"
         :config="packageData"
         @confirm="handleUploadEncounter"
+        @fail="handleUploadFail"
         @cancel="showUploadEncounterDialog = false; uploadingEncounter = null" />
       <template #action>
         <n-space>
@@ -1024,6 +1029,7 @@
         :config="packageData"
         :is-batch="true"
         @confirm="handleBatchEncounterUpload"
+        @fail="handleUploadFail"
         @cancel="showBatchEncounterUploadDialog = false" />
       <template #action>
         <n-space>
@@ -1038,7 +1044,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue';
+import { ref, computed, watch, nextTick, onMounted } from 'vue';
 import {
   useMessage,
   type FormInst,
@@ -1088,6 +1094,15 @@ interface Emits {
   (e: 'update:package', value: ContentPackageFile): void;
 }
 
+interface UploadFailPayload {
+  message: string;
+  code?: number;
+  host?: string;
+  uploadType: 'banner' | 'card' | 'encounter';
+  isBatch: boolean;
+  itemName?: string;
+}
+
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 
@@ -1108,6 +1123,8 @@ const isCurrentUploadBatch = ref(false);
 const uploadDialogRef = ref<any>(null);
 // 是否批量上传“已修改”卡牌
 const isBatchModifiedUpload = ref(false);
+// 记住当前标签页，避免上传返回后跳回基础信息
+const activeTab = ref<'info' | 'cards' | 'encounters' | string>('info');
 
 // 上传会话隔离：在打开上传页瞬间冻结包配置，避免切包导致上传写错目标包
 const uploadConfigSnapshot = ref<any>(null);
@@ -1190,7 +1207,7 @@ const pnpExportResult = ref<any>(null);
 const pnpExportMode = ref<'single_card' | 'print_sheet' | 'images'>('single_card');
 const pnpPaperSize = ref('A4');
 const pnpOutputFilename = ref('pnp_export');
-const pnpExportParams = ref({
+const getDefaultPnpExportParams = () => ({
   format: 'PNG',
   dpi: 300,
   size: '63.5mm × 88.9mm (2.5″ × 3.5″)',
@@ -1204,6 +1221,7 @@ const pnpExportParams = ref({
   encounter_group_mode: 'range', // 'classic' (经典模式-独立编号) 或 'range' (范围模式-复制图片)
   prefix: '' // 文件名前缀(仅在images模式下使用)
 });
+const pnpExportParams = ref(getDefaultPnpExportParams());
 
 // PNP导出选项
 const paperSizeOptions = computed(() => [
@@ -1244,6 +1262,32 @@ const formatOptions = [
   { label: 'PNG', value: 'PNG' },
   { label: 'JPG', value: 'JPG' }
 ];
+
+const PNP_EXPORT_CONFIG_KEY = 'pnp_export_params';
+const loadPnpExportParams = async () => {
+  try {
+    const stored = await ConfigService.getConfigItem<typeof pnpExportParams.value | null>(PNP_EXPORT_CONFIG_KEY, null);
+    pnpExportParams.value = {
+      ...getDefaultPnpExportParams(),
+      ...(stored || {})
+    };
+  } catch (error) {
+    console.warn('加载PNP导出参数配置失败:', error);
+    pnpExportParams.value = getDefaultPnpExportParams();
+  }
+};
+
+const persistPnpExportParams = async () => {
+  try {
+    await ConfigService.updateConfigItem(PNP_EXPORT_CONFIG_KEY, pnpExportParams.value);
+  } catch (error) {
+    console.warn('保存PNP导出参数配置失败:', error);
+  }
+};
+
+onMounted(() => {
+  void loadPnpExportParams();
+});
 
 // 卡牌预览生成队列
 const previewGenerationQueue = ref<string[]>([]);
@@ -2184,6 +2228,32 @@ const handleUploadConfirm = (updatedPackage: any) => {
   }
 };
 
+// 上传失败回调：清理对应 loading 并反馈更清晰的错误信息
+const handleUploadFail = (payload: UploadFailPayload) => {
+  if (!payload) return;
+
+  if (payload.uploadType === 'banner') {
+    isBannerUploading.value = false;
+  } else if (payload.uploadType === 'card') {
+    if (payload.isBatch) {
+      batchUploading.value = false;
+    } else {
+      isCardUploading.value = false;
+    }
+  } else if (payload.uploadType === 'encounter') {
+    if (payload.isBatch) {
+      batchEncounterUploading.value = false;
+    } else {
+      isEncounterUploading.value = false;
+    }
+  }
+
+  // 兜底：旧流程的统一 loading
+  isUploading.value = false;
+
+  message.error(payload.message || t('common.unknownError'));
+};
+
 // 显示上传卡牌对话框 (废弃,保留用于兼容)
 const openUploadCardDialog = (card: ContentPackageCard) => {
   openCardUploadPage(card);
@@ -3029,6 +3099,12 @@ const exportToPnp = async () => {
   };
 
   try {
+    try {
+      await persistPnpExportParams();
+    } catch (error) {
+      console.warn('持久化PNP导出参数失败:', error);
+    }
+
     const modeText = pnpExportMode.value === 'single_card'
       ? t('contentPackage.pnp.exportParams.singleCard')
       : pnpExportMode.value === 'print_sheet'

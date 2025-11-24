@@ -36,6 +36,27 @@
       :autosize="{ minRows: field.rows || 5, maxRows: (field.rows || 5) + 3 }" />
   </n-form-item>
 
+  <!-- 卡牌效果富文本编辑器 -->
+  <n-form-item v-else-if="field.type === 'body-editor'" :path="field.key">
+    <template #label>
+      <div class="field-label">
+        <span>{{ field.name }}</span>
+        <n-button v-if="field.helpText" size="tiny" @click="showHelpModal = true" class="help-button"
+          :title="$t('cardEditor.field.viewFieldDescription')">
+          <template #icon>
+            <n-icon :component="HelpCircleOutline" size="14" />
+          </template>
+          {{ $t('cardEditor.field.help') }}
+        </n-button>
+      </div>
+    </template>
+    <BodyRichTextEditor
+      :value="value || ''"
+      :card-language="props.cardLanguage || 'zh'"
+      @update:value="$emit('update:value', $event)"
+    />
+  </n-form-item>
+
   <!-- 数字输入 -->
   <n-form-item v-else-if="field.type === 'number'" :path="field.key">
     <template #label>
@@ -246,6 +267,111 @@
       @focus="loadEncounterGroups" />
   </n-form-item>
 
+  <!-- 职阶选择器 -->
+  <n-form-item v-else-if="field.type === 'class-selector'" :path="field.key">
+    <template #label>
+      <div class="field-label">
+        <span>{{ field.name }}</span>
+        <n-button v-if="field.helpText" size="tiny" @click="showHelpModal = true" class="help-button"
+          :title="$t('cardEditor.field.viewFieldDescription')">
+          <template #icon>
+            <n-icon :component="HelpCircleOutline" size="14" />
+          </template>
+          {{ $t('cardEditor.field.help') }}
+        </n-button>
+      </div>
+    </template>
+    <ClassSelector
+      :value="value"
+      :subclasses="props.subclasses || []"
+      @update:value="$emit('update:value', $event)"
+      @update:subclasses="$emit('update:subclasses', $event)"
+    />
+  </n-form-item>
+
+  <!-- 槽位选择器 -->
+  <n-form-item v-else-if="field.type === 'slot-selector'" :path="field.key">
+    <template #label>
+      <div class="field-label">
+        <span>{{ field.name }}</span>
+        <n-button v-if="field.helpText" size="tiny" @click="showHelpModal = true" class="help-button"
+          :title="$t('cardEditor.field.viewFieldDescription')">
+          <template #icon>
+            <n-icon :component="HelpCircleOutline" size="14" />
+          </template>
+          {{ $t('cardEditor.field.help') }}
+        </n-button>
+      </div>
+    </template>
+    <SlotSelector :value="value || ''" @update:value="$emit('update:value', $event)" />
+  </n-form-item>
+
+  <!-- 生命/理智徽章 (RuneDial) -->
+  <n-form-item v-else-if="field.type === 'stat-badge'" :path="field.key">
+    <template #label>
+      <div class="field-label">
+        <span>{{ field.name }}</span>
+        <n-button v-if="field.helpText" size="tiny" @click="showHelpModal = true" class="help-button"
+          :title="$t('cardEditor.field.viewFieldDescription')">
+          <template #icon>
+            <n-icon :component="HelpCircleOutline" size="14" />
+          </template>
+          {{ $t('cardEditor.field.help') }}
+        </n-button>
+      </div>
+    </template>
+    <RuneDial
+      :theme="field.statType === 'horror' ? 'sanity' : 'health'"
+      :label="field.statType === 'horror' ? '理智' : '生命'"
+      :value="value ?? -1"
+      @update:value="$emit('update:value', $event)"
+    />
+  </n-form-item>
+
+  <!-- 费用金币 (RuneDial) -->
+  <n-form-item v-else-if="field.type === 'cost-coin'" :path="field.key">
+    <template #label>
+      <div class="field-label">
+        <span>{{ field.name }}</span>
+        <n-button v-if="field.helpText" size="tiny" @click="showHelpModal = true" class="help-button"
+          :title="$t('cardEditor.field.viewFieldDescription')">
+          <template #icon>
+            <n-icon :component="HelpCircleOutline" size="14" />
+          </template>
+          {{ $t('cardEditor.field.help') }}
+        </n-button>
+      </div>
+    </template>
+    <RuneDial
+      theme="cost"
+      label="费用"
+      :value="value ?? -1"
+      @update:value="$emit('update:value', $event)"
+    />
+  </n-form-item>
+
+  <!-- 等级星环 (RuneDial) -->
+  <n-form-item v-else-if="field.type === 'level-ring'" :path="field.key">
+    <template #label>
+      <div class="field-label">
+        <span>{{ field.name }}</span>
+        <n-button v-if="field.helpText" size="tiny" @click="showHelpModal = true" class="help-button"
+          :title="$t('cardEditor.field.viewFieldDescription')">
+          <template #icon>
+            <n-icon :component="HelpCircleOutline" size="14" />
+          </template>
+          {{ $t('cardEditor.field.help') }}
+        </n-button>
+      </div>
+    </template>
+    <RuneDial
+      theme="level"
+      label="等级"
+      :value="value ?? -1"
+      @update:value="$emit('update:value', $event)"
+    />
+  </n-form-item>
+
   <!-- 图片上传 -->
   <n-form-item v-else-if="field.type === 'image'" :path="field.key">
     <template #label>
@@ -324,16 +450,24 @@ import { useI18n } from 'vue-i18n'; // 新增
 import type { FormField } from '@/config/cardTypeConfigs';
 import { ConfigService } from '@/api';
 import { getIconUrlByChinese } from '@/config/locationIcons';
+// 导入新的特殊组件
+import ClassSelector from './ClassSelector.vue';
+import SlotSelector from './SlotSelector.vue';
+import RuneDial from './RuneDial.vue';
+import BodyRichTextEditor from './BodyRichTextEditor.vue';
 
 interface Props {
   field: FormField;
   value: any;
   newStringValue: string;
+  subclasses?: string[];
+  cardLanguage?: string;
 }
 
 const props = defineProps<Props>();
 const emit = defineEmits<{
   'update:value': [value: any];
+  'update:subclasses': [value: string[]];
   'update:new-string-value': [value: string];
   'add-multi-select-item': [value: string];
   'remove-multi-select-item': [index: number];
@@ -428,7 +562,7 @@ const renderLocationOptionLabel = (option: any) => {
   const src = getIconUrlByChinese(option.value as string);
   const text = stripEmoji(String(option.label ?? option.value ?? ''));
   const imgStyle = 'width:14px;height:14px;display:inline-block;vertical-align:middle;object-fit:contain;';
-  return h('div', { class: 'loc-opt', style: 'display:inline-flex;align-items:center;gap:6px;' }, [
+  return h('div', { class: 'loc-opt', style: 'display:inline-flex;align-items:center;gap:6px;margin-top: 5px;' }, [
     src ? h('img', { src, class: 'loc-icon', style: imgStyle }) : null,
     h('span', { style: 'line-height:1;display:inline-block;vertical-align:middle;' }, text)
   ]);

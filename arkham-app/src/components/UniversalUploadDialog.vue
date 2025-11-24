@@ -232,6 +232,7 @@ import { ImageHostService } from '@/api/image-host-service';
 import { DirectoryService } from '@/api/directory-service';
 import { CardService } from '@/api/card-service';
 import { WorkspaceService } from '@/api/workspace-service';
+import { ApiError } from '@/api/http-client';
 import { InformationCircleOutline, ImageOutline, ImagesOutline } from '@vicons/ionicons5';
 import type { ImageHostType } from '@/api/types';
 import type { ContentPackageCard, EncounterSet } from '@/types/content-package';
@@ -251,6 +252,7 @@ interface Props {
 interface Emits {
   (e: 'confirm', updatedPackage: any): void;
   (e: 'cancel'): void;
+  (e: 'fail', payload: { message: string; code?: number; host?: string; uploadType: UploadType; isBatch: boolean; itemName?: string }): void;
 }
 
 const props = defineProps<Props>();
@@ -262,6 +264,42 @@ const { t } = useI18n();
 // 本地化辅助函数
 const tMessage = (key: string, params?: Record<string, string | number>) => {
   return params ? t(key, params) : t(key);
+};
+
+// 统一错误提取与上报，确保日志和父组件都能拿到清晰信息
+const buildErrorDetail = (error: unknown) => {
+  if (error instanceof ApiError) {
+    const original = error.originalError as any;
+    const backendMsg = [original?.msg, original?.message, original?.data?.msg].find((m) => typeof m === 'string');
+    const backendCode = typeof original?.code === 'number' ? original.code : undefined;
+    const mergedMsg = backendMsg && backendMsg !== error.message
+      ? `${error.message}（${backendMsg}）`
+      : error.message;
+    return { code: backendCode ?? error.code, message: mergedMsg };
+  }
+  const rawMessage = (error as any)?.message || String(error || '未知错误');
+  return { message: rawMessage };
+};
+
+const emitFail = (error: unknown, context: { phase: string; itemName?: string }) => {
+  const detail = buildErrorDetail(error);
+  const segments = [
+    context.phase,
+    context.itemName ? `目标: ${context.itemName}` : '',
+    detail.code ? `错误码: ${detail.code}` : '',
+    `图床: ${selectedHost.value}`,
+    `原因: ${detail.message}`
+  ].filter(Boolean);
+  const composed = segments.join(' | ');
+  addLog(composed, 'error');
+  emit('fail', {
+    message: composed,
+    code: detail.code,
+    host: selectedHost.value,
+    uploadType: props.uploadType,
+    isBatch: isBatch.value,
+    itemName: context.itemName
+  });
 };
 
 // 上传状态
@@ -591,7 +629,7 @@ const uploadBanner = async () => {
 
   } catch (error) {
     console.error('上传封面失败:', error);
-    message.error(`上传失败: ${error.message}`);
+    emitFail(error, { phase: '封面上传', itemName: currentItem.value?.meta?.name || currentItem.value?.meta?.code || 'banner' });
   } finally {
     isUploading.value = false;
   }
@@ -623,8 +661,10 @@ const uploadSingleItem = async (item: any) => {
 
   } catch (error) {
     console.error('上传失败:', error);
-    addLog(`上传失败: ${error.message}`, 'error');
-    throw error;
+    emitFail(error, {
+      phase: props.uploadType === 'card' ? '卡牌上传' : '遭遇组上传',
+      itemName: getItemName(currentItem.value)
+    });
   } finally {
     isUploading.value = false;
   }
@@ -720,6 +760,8 @@ const uploadCard = async (card: ContentPackageCard) => {
 
   let uploadedCount = 0;
   const totalFiles = filesToUpload.size;
+  let hadError = false;
+  let firstError: string | null = null;
 
   for (const [filePath, onlineName] of filesToUpload.entries()) {
     try {
@@ -745,7 +787,13 @@ const uploadCard = async (card: ContentPackageCard) => {
 
       addLog(`图片上传成功: ${onlineName}`, 'info');
     } catch (error) {
-      addLog(`图片上传失败: ${onlineName} - ${error.message}`, 'error');
+      const detail = buildErrorDetail(error);
+      const failMsg = [`图片上传失败: ${onlineName}`, detail.code ? `错误码: ${detail.code}` : '', `图床: ${selectedHost.value}`, `原因: ${detail.message}`].filter(Boolean).join(' | ');
+      addLog(failMsg, 'error');
+      hadError = true;
+      if (!firstError) {
+        firstError = failMsg;
+      }
     }
   }
 
@@ -772,6 +820,10 @@ const uploadCard = async (card: ContentPackageCard) => {
       back_thumbnail_url: uploadedUrls.back_thumbnail_url,
       uploaded_hash: newUploadedHash
     };
+  }
+
+  if (hadError) {
+    throw new Error(firstError || `卡牌 ${card.filename} 部分图片上传失败`);
   }
 
   emit('confirm', updatedPackage);
@@ -890,6 +942,8 @@ const batchUpload = async () => {
     const totalItems = itemsToUpload.length;
     let successCount = 0;
     let failureCount = 0;
+    const failureReasons: string[] = [];
+    let firstFailItemName = '';
 
     // 更新包数据
     const updatedPackage = { ...props.config };
@@ -913,12 +967,28 @@ const batchUpload = async () => {
 
       } catch (error) {
         console.error(`上传失败: ${getItemName(item)}`, error);
-        addLog(`${getItemName(item)} 上传失败: ${error.message}`, 'error');
+        const detail = buildErrorDetail(error);
+        const failMsg = [`${getItemName(item)} 上传失败`, detail.code ? `错误码: ${detail.code}` : '', `图床: ${selectedHostType}`, `原因: ${detail.message}`].filter(Boolean).join(' | ');
+        addLog(failMsg, 'error');
         failureCount++;
+        if (!firstFailItemName) {
+          firstFailItemName = getItemName(item);
+        }
+        failureReasons.push(failMsg);
       }
 
       // 短暂延迟避免过于频繁的请求
       await new Promise(resolve => setTimeout(resolve, 300));
+    }
+
+    if (failureCount > 0) {
+      const summary = `批量上传完成，但存在失败：成功 ${successCount}/${totalItems}，失败 ${failureCount}/${totalItems}`;
+      addLog(summary, 'error');
+      if (failureReasons.length > 0) {
+        addLog(`首个失败原因：${failureReasons[0]}`, 'error');
+      }
+      emitFail(new Error(summary), { phase: '批量上传', itemName: firstFailItemName || undefined });
+      return;
     }
 
     uploadProgress.value = 100;
@@ -933,8 +1003,7 @@ const batchUpload = async () => {
 
   } catch (error) {
     console.error('批量上传失败:', error);
-    addLog(`批量上传失败: ${error.message}`, 'error');
-    message.error('批量上传失败');
+    emitFail(error, { phase: '批量上传' });
   } finally {
     isUploading.value = false;
   }
@@ -1015,6 +1084,9 @@ const uploadCardInBatch = async (card: ContentPackageCard, updatedPackage: any, 
     uploadedUrls.back_thumbnail_url = fixedBackUrl;
   }
 
+  let hadError = false;
+  let firstError: string | null = null;
+
   for (const [filePath, onlineName] of filesToUpload.entries()) {
     try {
       let url: string;
@@ -1057,7 +1129,13 @@ const uploadCardInBatch = async (card: ContentPackageCard, updatedPackage: any, 
 
       addLog(`图片上传成功: ${onlineName}`, 'info');
     } catch (error) {
-      addLog(`图片上传失败: ${onlineName} - ${error.message}`, 'error');
+      const detail = buildErrorDetail(error);
+      const failMsg = [`图片上传失败: ${onlineName}`, detail.code ? `错误码: ${detail.code}` : '', `图床: ${selectedHostType}`, `原因: ${detail.message}`].filter(Boolean).join(' | ');
+      addLog(failMsg, 'error');
+      hadError = true;
+      if (!firstError) {
+        firstError = failMsg;
+      }
     }
   }
 
@@ -1079,6 +1157,10 @@ const uploadCardInBatch = async (card: ContentPackageCard, updatedPackage: any, 
       back_thumbnail_url: uploadedUrls.back_thumbnail_url,
       uploaded_hash: newUploadedHash
     };
+  }
+
+  if (hadError) {
+    throw new Error(firstError || `卡牌 ${card.filename} 部分图片上传失败`);
   }
 };
 

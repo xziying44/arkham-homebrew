@@ -1,4 +1,8 @@
 export default {
+  // 扁平别名，便于直接调用
+  confirm: '确认',
+  cancel: '取消',
+
   // 通用按钮
   buttons: {
     confirm: '确认',

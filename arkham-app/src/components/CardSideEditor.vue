@@ -26,30 +26,42 @@
         <n-card :ref="setPropertiesSection" v-if="currentSideType && currentFormConfig" :title="$t('cardEditor.panel.cardProperties')"
             size="small" class="form-card">
             <n-form ref="dynamicFormRef" :model="sideCardData" label-placement="top" size="small">
-                <div v-for="(row, rowIndex) in formFieldRows" :key="rowIndex" class="form-row">
-                    <div v-for="field in row"
-                        :key="field.key + (field.index !== undefined ? `_${field.index}` : '')"
-                        class="form-field" :class="getFieldLayoutClass(field.layout)">
-                        <FormFieldComponent :field="field" :value="getFieldValue(field)"
-                            :new-string-value="newStringValue" @update:value="setFieldValue(field, $event)"
-                            @update:new-string-value="newStringValue = $event"
-                            @add-multi-select-item="addMultiSelectItem(field, $event)"
-                            @remove-multi-select-item="removeMultiSelectItem(field, $event)"
-                            @add-string-array-item="addStringArrayItem(field)"
-                            @remove-string-array-item="removeStringArrayItem(field, $event)"
-                            @move-string-array-item-up="moveStringArrayItemUp(field, $event)"
-                            @move-string-array-item-down="moveStringArrayItemDown(field, $event)"
-                            @edit-string-array-item="(index, newValue) => editStringArrayItem(field, index, newValue)"
-                            @remove-image="removeImage(field)" />
+                <n-tabs v-if="fieldGroupTabs.length" v-model:value="activeFieldGroup" type="line" :animated="false">
+                    <n-tab-pane v-for="tab in fieldGroupTabs" :key="tab.key" :name="tab.key"
+                        :tab="$t(`cardEditor.groups.${tab.key}`)" display-directive="if">
+                        <transition name="card-props-fade" mode="out-in">
+                            <div :key="tab.key">
+                                <div v-for="(row, rowIndex) in fieldGroupRows[tab.key] || []" :key="rowIndex" class="form-row">
+                                    <div v-for="field in row"
+                                        :key="field.key + (field.index !== undefined ? `_${field.index}` : '')"
+                                        class="form-field" :class="getFieldLayoutClass(field.layout)">
+                                        <FormFieldComponent :field="field" :value="getFieldValue(field)"
+                                            :subclasses="sideCardData.subclass || []"
+                                            :card-language="sideCardData.language || 'zh'"
+                                            :new-string-value="newStringValue" @update:value="setFieldValue(field, $event)"
+                                            @update:subclasses="updateSubclasses"
+                                            @update:new-string-value="newStringValue = $event"
+                                            @add-multi-select-item="addMultiSelectItem(field, $event)"
+                                            @remove-multi-select-item="removeMultiSelectItem(field, $event)"
+                                            @add-string-array-item="addStringArrayItem(field)"
+                                            @remove-string-array-item="removeStringArrayItem(field, $event)"
+                                            @move-string-array-item-up="moveStringArrayItemUp(field, $event)"
+                                            @move-string-array-item-down="moveStringArrayItemDown(field, $event)"
+                                            @edit-string-array-item="(index, newValue) => editStringArrayItem(field, index, newValue)"
+                                            @remove-image="removeImage(field)" />
 
-                        <!-- 地点卡快捷操作按钮放在“连接地点图标”字段下方 -->
-                        <div v-if="isLocationType && field.key === 'location_link'" style="margin-top: 6px; display: flex; justify-content: flex-end;">
-                            <n-button tertiary size="small" @click="applyLocationToOtherSide">
-                                {{ $t('cardEditor.locationActions.applyToOtherSide') }}
-                            </n-button>
-                        </div>
-                    </div>
-                </div>
+                                        <!-- 地点卡快捷操作按钮放在“连接地点图标”字段下方 -->
+                                        <div v-if="isLocationType && field.key === 'location_link'" style="margin-top: 6px; display: flex; justify-content: flex-end;">
+                                            <n-button tertiary size="small" @click="applyLocationToOtherSide">
+                                                {{ $t('cardEditor.locationActions.applyToOtherSide') }}
+                                            </n-button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </transition>
+                    </n-tab-pane>
+                </n-tabs>
             </n-form>
 
             <!-- 插画布局设置展开按钮 -->
@@ -167,6 +179,37 @@
                             @update:new-string-value="newStringValue = $event" />
                     </div>
                 </div>
+                <div class="form-row">
+                    <div class="form-field layout-half">
+                        <n-form-item :label="$t('cardEditor.panel.footerIcon')">
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <n-select
+                                    v-model:value="footerIconPath"
+                                    :options="footerIconOptions"
+                                    :loading="footerIconLoading"
+                                    :placeholder="$t('cardEditor.panel.footerIconPlaceholder')"
+                                    clearable
+                                    filterable />
+                                <n-button tertiary size="small" :loading="footerIconLoading" @click="loadFooterIconOptions">
+                                    {{ $t('common.buttons.refresh') }}
+                                </n-button>
+                            </div>
+                            <template #feedback v-if="footerIconPath">
+                                <span style="color: #888;">{{ footerIconPath }}</span>
+                            </template>
+                        </n-form-item>
+                    </div>
+                    <div class="form-field layout-half" v-if="isInvestigatorType">
+                        <n-form-item :label="$t('cardEditor.panel.investigatorFooterType')">
+                            <n-radio-group v-model:value="investigatorFooterType" size="small">
+                                <n-space>
+                                    <n-radio value="normal">{{ $t('cardEditor.panel.investigatorFooterTypeNormal') }}</n-radio>
+                                    <n-radio value="big-art">{{ $t('cardEditor.panel.investigatorFooterTypeBigArt') }}</n-radio>
+                                </n-space>
+                            </n-radio-group>
+                        </n-form-item>
+                    </div>
+                </div>
                 <!-- 卡牌备注信息 - 正反面都可编辑（独立数据）-->
                 <div class="form-row">
                     <div class="form-field layout-full">
@@ -197,10 +240,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, watch, nextTick } from 'vue';
+import { ref, computed, reactive, watch, nextTick, onMounted } from 'vue';
 import { useMessage } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import type { FormField, CardTypeConfig, ShowCondition } from '@/config/cardTypeConfigs';
+import { cardFieldGroups } from '@/config/cardFieldGroups';
+import type { TreeOption } from '@/api/types';
+import { WorkspaceService } from '@/api';
 import FormFieldComponent from './FormField.vue';
 import IllustrationLayoutEditor from './IllustrationLayoutEditor.vue';
 import TextBoundaryEditor from './TextBoundaryEditor.vue';
@@ -211,6 +257,16 @@ interface Props {
     cardTypeConfigs: Record<string, CardTypeConfig>;
     cardTypeOptions: any[];
     languageOptions: any[];
+    activeFieldGroupKey?: string;
+}
+
+interface FieldGroupTab {
+    key: string;
+    fields: FormField[];
+}
+
+interface ExtendedTreeOption extends TreeOption {
+    relativePath?: string;
 }
 
 const props = defineProps<Props>();
@@ -219,6 +275,7 @@ const emit = defineEmits<{
     'update-card-data': [side: string, fieldKey: string, value: any];
     'update-card-type': [side: string, type: string];
     'trigger-preview': [];
+    'update:active-field-group': [value: string];
 }>();
 
 const { t } = useI18n();
@@ -261,6 +318,7 @@ const quantity = computed({
 // 当前面的类型 - 必须在watch之前声明
 const currentSideType = ref(sideCardData.type || '');
 const isLocationType = computed(() => currentSideType.value === '地点卡');
+const isInvestigatorType = computed(() => currentSideType.value === '调查员');
 
 // 监听props变化，更新本地数据
 watch(() => props.cardData, (newData) => {
@@ -299,12 +357,65 @@ const currentFormConfig = computed((): CardTypeConfig | null => {
 
 // 表单操作状态
 const newStringValue = ref('');
+const footerIconLoading = ref(false);
+const rootImages = ref<ExtendedTreeOption[]>([]);
+const workspaceRootPath = ref('');
+const footerIconOptions = computed(() => rootImages.value
+    .filter(img => img.relativePath)
+    .map(img => ({
+        label: img.label,
+        value: img.relativePath as string
+    }))
+);
+const footerIconPath = computed({
+    get: () => sideCardData.footer_icon_path || '',
+    set: (value: string | null) => {
+        const nextValue = value || '';
+        sideCardData.footer_icon_path = nextValue;
+        updateSideData('footer_icon_path', nextValue);
+    }
+});
+const investigatorFooterType = computed({
+    get: () => sideCardData.investigator_footer_type || 'normal',
+    set: (value: string) => {
+        sideCardData.investigator_footer_type = value;
+        updateSideData('investigator_footer_type', value);
+    }
+});
 
 // 文本边界编辑器模态状态
 const showTextBoundaryModal = ref(false);
 
 // 插画布局编辑器折叠状态（默认收起）
 const illustrationLayoutCollapsed = ref<string[]>([]);
+
+// 工具函数：获取深层嵌套值
+const getDeepValue = (obj: any, path: string) => {
+    const keys = path.split('.');
+    let value = obj;
+    for (const key of keys) {
+        if (value && typeof value === 'object' && key in value) {
+            value = value[key];
+        } else {
+            return undefined;
+        }
+    }
+    return value;
+};
+
+// 工具函数：获取字段值
+const getFieldValue = (field: FormField) => {
+    if (field.index !== undefined) {
+        const array = getDeepValue(sideCardData, field.key);
+        if (Array.isArray(array)) {
+            return array[field.index] !== undefined ? array[field.index] : '';
+        }
+        // 如果不是数组，尝试从旧的单值格式读取
+        const oldValue = getDeepValue(sideCardData, field.key);
+        return oldValue !== undefined ? oldValue : '';
+    }
+    return getDeepValue(sideCardData, field.key);
+};
 
 // 检查显示条件
 const checkShowCondition = (condition: ShowCondition): boolean => {
@@ -336,14 +447,66 @@ const visibleFields = computed(() => {
     });
 });
 
-// 布局系统 - 基于可见字段
-const formFieldRows = computed(() => {
-    const fields = visibleFields.value;
-    const rows = [];
-    let currentRow = [];
+const getRelativePath = (absolutePath: string, rootPath: string): string => {
+    if (!absolutePath || !rootPath) return '';
+    const normalizedAbsolute = absolutePath.replace(/\\/g, '/');
+    const normalizedRoot = rootPath.replace(/\\/g, '/');
+    if (normalizedAbsolute.startsWith(normalizedRoot)) {
+        const relative = normalizedAbsolute.slice(normalizedRoot.length);
+        return relative.startsWith('/') ? relative.slice(1) : relative;
+    }
+    return absolutePath;
+};
+
+const extractRootImages = (rootNode: TreeOption, rootPath: string): ExtendedTreeOption[] => {
+    const images: ExtendedTreeOption[] = [];
+    if (rootNode.children) {
+        for (const child of rootNode.children) {
+            if (child.type === 'image' && child.path && child.label.toLowerCase().endsWith('.png')) {
+                const relativePath = getRelativePath(child.path, rootPath);
+                images.push({
+                    label: child.label,
+                    key: child.key,
+                    type: child.type,
+                    path: child.path,
+                    relativePath
+                });
+            }
+        }
+    }
+    return images.sort((a, b) => a.label.localeCompare(b.label));
+};
+
+const loadFooterIconOptions = async () => {
+    footerIconLoading.value = true;
+    try {
+        const fileTree = await WorkspaceService.getFileTree();
+        workspaceRootPath.value = fileTree.fileTree?.path || '';
+        rootImages.value = extractRootImages(fileTree.fileTree, workspaceRootPath.value);
+    } catch (error: any) {
+        console.warn('加载页脚图标失败', error);
+        message.warning(t('common.messages.operationFailed'));
+    } finally {
+        footerIconLoading.value = false;
+    }
+};
+
+watch(currentSideType, (newType) => {
+    if (newType === '调查员' && !sideCardData.investigator_footer_type) {
+        investigatorFooterType.value = 'normal';
+    }
+});
+
+onMounted(() => {
+    loadFooterIconOptions();
+});
+
+const buildFieldRows = (fields: FormField[]) => {
+    const rows: FormField[][] = [];
+    let currentRow: FormField[] = [];
     let currentRowWidth = 0;
 
-    const layoutWeights = {
+    const layoutWeights: Record<string, number> = {
         'full': 1,
         'half': 0.5,
         'third': 1 / 3,
@@ -377,6 +540,69 @@ const formFieldRows = computed(() => {
     }
 
     return rows;
+};
+
+const fieldGroupTabs = computed<FieldGroupTab[]>(() => {
+    if (!currentFormConfig.value) return [];
+
+    const groups = cardFieldGroups.default;
+    const usedKeys = new Set<string>();
+
+    const tabs = groups
+        .map(group => {
+            const matchedFields = visibleFields.value.filter(field => group.fields.includes(field.key));
+            matchedFields.forEach(field => usedKeys.add(field.key));
+            return { key: group.key, fields: matchedFields } as FieldGroupTab;
+        })
+        .filter(group => group.fields.length > 0);
+
+    const otherFields = visibleFields.value.filter(field => !usedKeys.has(field.key));
+    if (otherFields.length > 0) {
+        tabs.push({ key: 'other', fields: otherFields });
+    }
+
+    return tabs;
+});
+
+const activeFieldGroup = ref<string>('');
+
+const resolveActiveFieldGroup = (candidate?: string) => {
+    const tabs = fieldGroupTabs.value;
+    if (!tabs.length) return '';
+    if (candidate && tabs.some(tab => tab.key === candidate)) {
+        return candidate;
+    }
+    return tabs[0].key;
+};
+
+watch(
+    [fieldGroupTabs, () => props.activeFieldGroupKey],
+    ([, activeKey]) => {
+        const next = resolveActiveFieldGroup(activeKey || activeFieldGroup.value);
+        if (activeFieldGroup.value !== next) {
+            activeFieldGroup.value = next;
+        }
+
+        // 如果父级传入的值无效，回退时通知父级同步
+        if (activeKey && activeKey !== next) {
+            emit('update:active-field-group', next);
+        }
+    },
+    { immediate: true }
+);
+
+watch(activeFieldGroup, (val, oldVal) => {
+    if (val !== oldVal) {
+        emit('update:active-field-group', val);
+    }
+});
+
+const fieldGroupRows = computed<Record<string, FormField[][]>>(() => {
+    const rowsMap: Record<string, FormField[][]> = {};
+    fieldGroupTabs.value.forEach(tab => {
+        rowsMap[tab.key] = buildFieldRows(tab.fields);
+    });
+    return rowsMap;
 });
 
 const getFieldLayoutClass = (layout: string = 'full') => {
@@ -390,32 +616,6 @@ const getFieldLayoutClass = (layout: string = 'full') => {
 };
 
 // 表单操作方法
-const getFieldValue = (field: FormField) => {
-    if (field.index !== undefined) {
-        const array = getDeepValue(sideCardData, field.key);
-        if (Array.isArray(array)) {
-            return array[field.index] !== undefined ? array[field.index] : '';
-        }
-        // 如果不是数组，尝试从旧的单值格式读取
-        const oldValue = getDeepValue(sideCardData, field.key);
-        return oldValue !== undefined ? oldValue : '';
-    }
-    return getDeepValue(sideCardData, field.key);
-};
-
-const getDeepValue = (obj: any, path: string) => {
-    const keys = path.split('.');
-    let value = obj;
-    for (const key of keys) {
-        if (value && typeof value === 'object' && key in value) {
-            value = value[key];
-        } else {
-            return undefined;
-        }
-    }
-    return value;
-};
-
 const setFieldValue = (field: FormField, value: any) => {
     if (field.index !== undefined) {
         setArrayValue(field.key, field.index, value);
@@ -457,6 +657,11 @@ const setArrayValue = (arrayPath: string, index: number, value: any) => {
     }
 
     array[index] = value;
+};
+
+const updateSubclasses = (value: string[]) => {
+    setDeepValue(sideCardData, 'subclass', value);
+    updateSideData('subclass', value);
 };
 
 const addMultiSelectItem = (field: FormField, value: string) => {
@@ -533,7 +738,7 @@ const updateLanguage = (value: string) => {
 // 卡牌类型变更处理
 const onCardTypeChange = (newType: string) => {
     // 保留需要保留的字段（移除quantity，因为现在是共享的）
-    const hiddenFields = ['id', 'created_at', 'version', 'type', 'name', 'language', 'footer_copyright'];
+    const hiddenFields = ['id', 'created_at', 'version', 'type', 'name', 'language', 'footer_copyright', 'footer_icon_path', 'investigator_footer_type'];
     const newData = {};
 
     hiddenFields.forEach(field => {
@@ -674,6 +879,17 @@ defineExpose({
 
 .form-card:hover {
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+.card-props-fade-enter-active,
+.card-props-fade-leave-active {
+    transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.card-props-fade-enter-from,
+.card-props-fade-leave-to {
+    opacity: 0;
+    transform: translateY(6px);
 }
 
 .form-row {

@@ -135,8 +135,10 @@
                             :card-type-configs="cardTypeConfigs"
                             :card-type-options="cardTypeOptions"
                             :language-options="languageOptions"
+                            :active-field-group-key="getActiveFieldGroupKey('front')"
                             @update-card-data="updateCardSideData"
                             @update-card-type="updateCardSideType"
+                            @update:active-field-group="updateActiveFieldGroup('front', $event)"
                             @trigger-preview="triggerDebouncedPreviewUpdate" />
                     </div>
 
@@ -149,8 +151,10 @@
                             :card-type-configs="cardTypeConfigs"
                             :card-type-options="cardTypeOptions"
                             :language-options="languageOptions"
+                            :active-field-group-key="getActiveFieldGroupKey('back')"
                             @update-card-data="updateCardSideData"
                             @update-card-type="updateCardSideType"
+                            @update:active-field-group="updateActiveFieldGroup('back', $event)"
                             @trigger-preview="triggerDebouncedPreviewUpdate" />
                     </div>
 
@@ -324,7 +328,7 @@ import CardSideEditor from './CardSideEditor.vue';
 import { cardTypeConfigs as cardTypeConfigsZh, cardTypeOptions as cardTypeOptionsZh, cardBackConfigs as cardBackConfigsZh, type CardTypeConfig, getDefaultBackType as getDefaultBackTypeZh } from '@/config/cardTypeConfigs';
 import { cardTypeConfigs as cardTypeConfigsEn, cardTypeOptions as cardTypeOptionsEn, cardBackConfigs as cardBackConfigsEn, getDefaultBackType as getDefaultBackTypeEn } from '@/config/cardTypeConfigsEn';
 
-import { WorkspaceService, CardService, ConfigService, LanguageConfigService } from '@/api';
+import { WorkspaceService, CardService, ConfigService, LanguageConfigService, TtsScriptService } from '@/api';
 import type { CardData } from '@/api/types';
 import TtsScriptEditor from './TtsScriptEditor.vue';
 import CardTagsEditor from './CardTagsEditor.vue';
@@ -429,6 +433,62 @@ const computeCardContentHash = async (cardObj: any): Promise<string> => {
     return await computeSHA256Hex(payload);
 };
 
+// 创建保存用的深拷贝快照，并冻结当次保存的文件路径
+const createSaveSnapshot = (filePath?: string | null) => {
+    if (!filePath) return null;
+    try {
+        const snapshot = JSON.parse(JSON.stringify(currentCardData));
+        return { filePath, snapshot };
+    } catch (error) {
+        console.error('创建保存快照失败:', error);
+        return null;
+    }
+};
+
+// 提取 GMNotes 中的脚本 ID
+const extractScriptIdFromGMNotes = (gmnotes: string): string => {
+    if (!gmnotes || typeof gmnotes !== 'string') return '';
+    try {
+        const parsed = JSON.parse(gmnotes);
+        if (parsed && typeof parsed === 'object' && parsed.id) {
+            return String(parsed.id);
+        }
+    } catch (err) {
+        console.warn('解析GMNotes获取脚本ID失败', err);
+    }
+    return '';
+};
+
+// 保存前调用后端生成 GMNotes，写回稳定脚本 ID（保持 v2，不写入旧字段）
+const ensureScriptIdByBackend = async (cardObj: any): Promise<string | null> => {
+    try {
+        const payload = JSON.parse(JSON.stringify(cardObj || {}));
+        payload.tts_config = {
+            ...(payload.tts_config || {}),
+            version: 'v2'
+        };
+        const result = await TtsScriptService.generateFromCard(payload);
+        let sid = extractScriptIdFromGMNotes(result?.GMNotes || '');
+        if (!sid && payload.tts_config?.script_id) {
+            sid = payload.tts_config.script_id;
+        }
+        if (sid) {
+            if (!cardObj.tts_config || typeof cardObj.tts_config !== 'object') {
+                cardObj.tts_config = {};
+            }
+            cardObj.tts_config.version = 'v2';
+            cardObj.tts_config.script_id = sid;
+            if ('tts_script' in cardObj) {
+                delete cardObj.tts_script;
+            }
+            return sid;
+        }
+    } catch (error) {
+        console.warn('调用后端生成GMNotes失败，保留现有脚本ID', error);
+    }
+    return null;
+};
+
 // 表单状态
 const currentCardData = reactive({
     type: '',
@@ -440,8 +500,31 @@ const currentCardData = reactive({
 });
 
 // 双面卡牌状态
-const currentSide = ref<'front' | 'back'>('front');
+type CardSideKey = 'front' | 'back';
+const currentSide = ref<CardSideKey>('front');
 const isDoubleSided = computed(() => currentCardData.version === '2.0');
+
+// 记忆每张卡各面的字段分组标签
+const activeFieldGroupMap = ref<Record<string, Partial<Record<CardSideKey, string>>>>({});
+const currentCardKey = computed(() => {
+    if (props.selectedFile && props.selectedFile.type === 'card') {
+        return String((props.selectedFile as any).path || props.selectedFile.key || '');
+    }
+    return '';
+});
+
+const getActiveFieldGroupKey = (side: CardSideKey) => {
+    const cardKey = currentCardKey.value;
+    if (!cardKey) return '';
+    return activeFieldGroupMap.value[cardKey]?.[side] || '';
+};
+
+const updateActiveFieldGroup = (side: CardSideKey, tabKey: string) => {
+    const cardKey = currentCardKey.value;
+    if (!cardKey || !tabKey) return;
+    const next = { ...(activeFieldGroupMap.value[cardKey] || {}), [side]: tabKey };
+    activeFieldGroupMap.value = { ...activeFieldGroupMap.value, [cardKey]: next };
+};
 
 
 // 当前面的语言
@@ -1334,79 +1417,72 @@ const loadCardData = async () => {
 
 // 修改 saveCard 方法
 const saveCard = async () => {
-    // 优先使用原始文件信息，如果没有则使用当前选中文件
     const fileToSave = originalFileInfo.value || props.selectedFile;
-    if (!fileToSave || !fileToSave.path) {
+    const frozenPath = fileToSave?.path;
+    const frozenLabel = fileToSave?.label;
+
+    if (!frozenPath) {
         message.warning(t('cardEditor.panel.noFileSelected'));
         return false;
     }
-    // 如果已经在保存，直接返回
+
     if (saving.value) {
         console.log('已在保存中，跳过');
         return false;
     }
+
+    // 记录保存前的状态签名，用于检测保存过程中是否有进一步修改
+    const stateBeforeSave = JSON.stringify(currentCardData);
+    const snapshotResult = createSaveSnapshot(frozenPath);
+    if (!snapshotResult) {
+        message.error(t('cardEditor.panel.saveCardFailed'));
+        return false;
+    }
+
+    let snapshotData: any | null = snapshotResult.snapshot;
+
     try {
         saving.value = true;
-        // 清除防抖定时器，避免保存时生成预览
         clearDebounceTimer();
 
-        // 生成卡片并检查box_position
-        const result_card = await CardService.generateCard(currentCardData as CardData);
-
-        // 检查是否为定制卡且有box_position参数 → 将坐标保存到 tts_config，由后端统一生成 Lua
-        if (currentCardData.type === '定制卡' && result_card?.box_position && result_card.box_position.length > 0) {
-            console.log('🎯 定制卡检测到 box_position，保存到 tts_config:', result_card.box_position);
-            (currentCardData as any).tts_config = {
-                ...((currentCardData as any).tts_config || {}),
-                version: 'v2',
-                upgrade: {
-                    coordinates: result_card.box_position,
-                },
-            };
-            if ('tts_script' in (currentCardData as any)) delete (currentCardData as any).tts_script;
-        }
+        // 保存前生成 GMNotes，确保脚本 ID 持久化（仅操作快照，避免污染实时表单数据）
+        await ensureScriptIdByBackend(snapshotData);
 
         // 在保存前计算并写入内容哈希（排除 content_hash 自身）
         try {
-            const hash = await computeCardContentHash(currentCardData);
-            // 写回根级 content_hash
-            (currentCardData as any).content_hash = hash;
+            const hash = await computeCardContentHash(snapshotData);
+            snapshotData.content_hash = hash;
         } catch (e) {
             console.warn('计算卡牌内容哈希失败，将继续保存:', e);
         }
 
-        // 保存JSON文件
-        const jsonContent = JSON.stringify(currentCardData, null, 2);
-        await WorkspaceService.saveFileContent(fileToSave.path, jsonContent);
-        // 更新原始数据状态
-        saveOriginalData();
+        // 保存JSON文件（使用冻结路径与快照数据）
+        const jsonContent = JSON.stringify(snapshotData, null, 2);
+        await WorkspaceService.saveFileContent(snapshotResult.filePath, jsonContent);
 
-        // 【新增】保存成功后清除暂存
-        emit('clear-cache', fileToSave.path as string);
+        // 【新增】保存成功后清除暂存（按冻结路径）
+        emit('clear-cache', snapshotResult.filePath);
 
-        // 显示卡图（使用已生成的结果）
-        const imageBase64 = result_card?.image;
-        if (imageBase64) {
-            // 检查是否为双面卡牌，确保传递正确的数据格式
-            if (result_card?.back_image) {
-                const doubleSidedImage = {
-                    front: imageBase64,
-                    back: result_card.back_image
-                };
-                emit('update-preview-image', doubleSidedImage);
-                console.log('✅ 保存后双面卡牌预览更新成功');
-            } else {
-                emit('update-preview-image', imageBase64);
-                console.log('✅ 保存后单面卡牌预览更新成功');
+        // 若保存期间用户未再修改，则同步关键字段并更新“已保存”状态
+        const stateAfterSave = JSON.stringify(currentCardData);
+        if (stateAfterSave === stateBeforeSave) {
+            if (snapshotData.tts_config !== undefined) {
+                (currentCardData as any).tts_config = JSON.parse(JSON.stringify(snapshotData.tts_config));
             }
+            if (snapshotData.content_hash !== undefined) {
+                (currentCardData as any).content_hash = snapshotData.content_hash;
+            }
+            saveOriginalData();
         }
-        message.success(t('cardEditor.panel.cardSavedSuccessfully'));
+
+        message.success(frozenLabel ? `${frozenLabel} ${t('cardEditor.panel.cardSavedSuccessfully')}` : t('cardEditor.panel.cardSavedSuccessfully'));
         return true;
     } catch (error) {
         console.error('保存卡牌失败:', error);
         message.error(t('cardEditor.panel.saveCardFailed'));
         return false;
     } finally {
+        snapshotData = null; // 显式清理快照引用，便于 GC
         saving.value = false;
     }
 };
@@ -1927,23 +2003,39 @@ const saveAllUnsaved = async (unsavedPaths: string[], cacheMap: Map<string, any>
                 continue;
             }
 
+            // 冻结路径并为本次保存创建快照，避免保存过程被后续修改污染
+            const frozenPath = filePath;
+            let snapshot: any | null = null;
+            try {
+                snapshot = JSON.parse(JSON.stringify(cachedData));
+            } catch (e) {
+                console.error('创建批量保存快照失败:', e);
+                failCount++;
+                continue;
+            }
+
+            // 保存前生成 GMNotes，确保脚本 ID 持久化
+            await ensureScriptIdByBackend(snapshot);
+
             // 在保存前计算并写入内容哈希（排除 content_hash 自身）
             try {
-                const hash = await computeCardContentHash(cachedData);
-                (cachedData as any).content_hash = hash;
+                const hash = await computeCardContentHash(snapshot);
+                (snapshot as any).content_hash = hash;
             } catch (e) {
                 console.warn('计算卡牌内容哈希失败（批量保存）:', e);
             }
 
             // 直接保存JSON文件（不需要生成预览）
-            const jsonContent = JSON.stringify(cachedData, null, 2);
-            await WorkspaceService.saveFileContent(filePath, jsonContent);
+            const jsonContent = JSON.stringify(snapshot, null, 2);
+            await WorkspaceService.saveFileContent(frozenPath, jsonContent);
 
             // 清除暂存
-            emit('clear-cache', filePath);
+            emit('clear-cache', frozenPath);
+
+            snapshot = null; // 显式清理，便于 GC
 
             successCount++;
-            console.log(`✅ 保存成功: ${filePath}`);
+            console.log(`✅ 保存成功: ${frozenPath}`);
         } catch (error) {
             console.error(`❌ 保存失败: ${filePath}`, error);
             failCount++;
@@ -1955,7 +2047,11 @@ const saveAllUnsaved = async (unsavedPaths: string[], cacheMap: Map<string, any>
 
     // 如果当前文件也被保存了，更新原始数据状态
     if (props.selectedFile?.path && unsavedPaths.includes(props.selectedFile.path as string)) {
-        saveOriginalData();
+        const currentState = JSON.stringify(currentCardData);
+        const cachedState = JSON.stringify(cacheMap.get(props.selectedFile.path as string));
+        if (currentState === cachedState) {
+            saveOriginalData();
+        }
     }
 
     // 显示保存结果

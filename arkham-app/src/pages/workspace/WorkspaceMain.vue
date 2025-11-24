@@ -170,7 +170,7 @@ const shouldShowImagePreview = computed(() => {
 const showFileTree = ref(true);
 const showImagePreview = ref(true);
 const fileTreeWidth = ref(280);
-const imageWidth = ref(600);
+const imageWidth = ref(500);
 
 // 移动端模态框控制
 const showMobileFileTree = ref(false);

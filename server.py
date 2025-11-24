@@ -2321,22 +2321,21 @@ def export_card():
         return error_response
 
     data = request.get_json()
-    if not data or 'card_path' not in data or 'export_filename' not in data or 'export_params' not in data or 'params_hash' not in data:
+    if not data or 'card_path' not in data or 'export_filename' not in data or 'export_params' not in data:
         return jsonify(create_response(
             code=12001,
-            msg="请提供卡牌路径、导出文件名、导出参数和参数哈希"
+            msg="请提供卡牌路径、导出文件名和导出参数"
         )), 400
 
     card_path = data['card_path']
     export_filename = data['export_filename']
     export_params = data['export_params']
-    params_hash = data['params_hash']
 
     logger_manager.info(f"导出卡牌: {card_path} -> {export_filename}")
 
     # 导出卡牌
     success = current_workspace.export_card_with_params(
-        card_path, export_filename, export_params, params_hash
+        card_path, export_filename, export_params
     )
 
     if success:

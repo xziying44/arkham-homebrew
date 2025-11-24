@@ -33,8 +33,11 @@ class ContentPackageManager:
             "调查员小卡": ["PlayerCard"],
             "调查员背面": ["Investigator", "PlayerCard"],
             "定制卡": ["PlayerCard"],
+            "大画-技能卡": ["PlayerCard"],
             "技能卡": ["PlayerCard"],
+            "大画-事件卡": ["PlayerCard"],
             "事件卡": ["PlayerCard"],
+            "大画-支援卡": ["Asset", "PlayerCard"],
             "支援卡": ["Asset", "PlayerCard"],
             "敌人卡": ["ScenarioCard"],
             "诡计卡": ["ScenarioCard"],
@@ -522,7 +525,7 @@ class ContentPackageManager:
                 "types": meta_info.get("types", []),
                 "status": meta_info.get("status", "final"),
                 "date_updated": datetime.now().isoformat() + 'Z',
-                "generator": "Arkham Card Maker v3.3"
+                "generator": "Arkham Card Maker v3.4"
             },
             "data": {
                 "cards": cards,

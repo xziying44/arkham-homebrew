@@ -113,6 +113,7 @@
 - 其他：
   - Mini/custom 绑定：若 `mini.bind.path`/`custom.bind.path` 指向卡，脚本 ID 继承目标并追加 `-m`/`-c`。
   - 签名卡聚合：v2 接受 `{ path, count }`，解析脚本 ID 后按 ID 聚合计数输出到 GMNotes。
+  - 新增：当签名卡路径无稳定 `script_id` 时生成 UUID 并回写到源卡文件的 `tts_config.script_id`（v2），避免每次引用随机。
 
   #### `convert_deck_to_tts(deck_config: Dict[str, Any], face_url: str, back_url: str) -> Dict[str, Any]`（tts_card_converter.py:260）
   - Purpose: 生成符合 TTS 的完整对象 JSON（ObjectStates）。
@@ -195,6 +196,7 @@
   #### `generate_card_image(json_data: Dict[str, Any], silence: bool = False)`（workspace_manager.py:1435）
   - Purpose: 调用渲染管线（CardCreator / FontManager / ImageManager）生成卡图或底图层。
   - Returns: (Card|None) 生成的卡对象。
+  - Footer handling: 单卡 `footer_icon_path` 覆盖系统配置；调查员可配置 `investigator_footer_type=big-art` 触发大画 glow/stroke 特效（降透明度、改深色字体）并透传到 `Card.set_footer_information`。
 
   #### `save_card_image(json_data: Dict[str, Any], filename: str, parent_path: Optional[str] = None) -> bool`（workspace_manager.py:1719）
   #### `save_card_image_enhanced(json_data: Dict[str, Any], filename: str, parent_path: Optional[str] = None, export_format: str = 'JPG', quality: int = 95, rotate_landscape: bool = False) -> Dict[str, Any]`（workspace_manager.py:1768）
@@ -329,3 +331,6 @@
 - tts_script_generator.py：公开 `extract_script_id_from_card_json`；新增定制卡绑定逻辑（`<base_id>-c`）。
 - content_package_manager.py：ArkhamDB 导出新增第二遍扫描定制卡，构建 `customization_text_map` 并在冲突时输出警告。
 - card2arkhamdb.py：命中 `customization_text_map` 时注入 `customization_text` 与 `customization_options`；空行忽略，`xp` 取每行“□/☐”数量，最少 1。
+
+Changelog (配置扩展)
+- workspace_manager.py：系统配置允许 `advanced_export_params`、`pnp_export_params` 持久化导出参数；导出卡牌不再依赖参数哈希缓存。

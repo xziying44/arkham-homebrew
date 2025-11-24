@@ -648,6 +648,8 @@ class WorkspaceManager:
         # ImgBB图床配置
         "imgbb_api_key",  # ImgBB API密钥
         "imgbb_expiration",  # ImgBB图片过期时间
+        "advanced_export_params",  # 高级导出参数缓存
+        "pnp_export_params",  # 内容包实体导出参数缓存
         # 可以在这里添加更多系统级配置字段
     ]
 
@@ -701,7 +703,6 @@ class WorkspaceManager:
         self.deck_exporter = DeckExporter(self)
 
         self._export_helper = None
-        self._export_params_hash = None
         self.card_lock = threading.Lock()
 
         # 初始化缓存相关属性
@@ -1552,30 +1553,38 @@ class WorkspaceManager:
                 footer_icon_name = json_data.get('footer_icon_path', '')
                 if not footer_icon_name:
                     footer_icon_name = self.config.get('footer_icon_dir', '')
-                footer_icon_font = json_data.get('footer_icon_font', '')
-                if not footer_icon_font or footer_icon_font == '':
-                    footer_icon = None
-                    if footer_icon_name:
-                        footer_icon_path = self._get_absolute_path(footer_icon_name)
-                        if os.path.exists(footer_icon_path):
-                            with Image.open(footer_icon_path) as icon_img:
-                                footer_icon = icon_img.copy()
+                footer_icon_font_value = json_data.get('footer_icon_font', '') or None
+                footer_icon = None
+                if not footer_icon_font_value and footer_icon_name:
+                    footer_icon_path = self._get_absolute_path(footer_icon_name)
+                    if os.path.exists(footer_icon_path):
+                        with Image.open(footer_icon_path) as icon_img:
+                            footer_icon = icon_img.copy()
 
-                    card.set_footer_information(
-                        illustrator,
-                        footer_copyright,
-                        encounter_group_number,
-                        card_number,
-                        footer_icon=footer_icon
-                    )
-                else:
-                    card.set_footer_information(
-                        illustrator,
-                        footer_copyright,
-                        encounter_group_number,
-                        card_number,
-                        footer_icon_font=footer_icon_font
-                    )
+                footer_effects = None
+                footer_opacity = None
+                footer_font_color = None
+                if card_type == '调查员':
+                    footer_style = json_data.get('investigator_footer_type', 'normal')
+                    if footer_style == 'big-art':
+                        footer_effects = [
+                            {"type": "glow", "size": 8, "spread": 22, "opacity": 36, "color": (3, 0, 0)},
+                            {"type": "stroke", "size": 2, "opacity": 63, "color": (165, 157, 153)}
+                        ]
+                        footer_opacity = 75
+                        footer_font_color = (3, 0, 0)
+
+                card.set_footer_information(
+                    illustrator,
+                    footer_copyright,
+                    encounter_group_number,
+                    card_number,
+                    footer_icon=footer_icon if not footer_icon_font_value else None,
+                    footer_icon_font=footer_icon_font_value if footer_icon_font_value else None,
+                    footer_effects=footer_effects,
+                    footer_opacity=footer_opacity,
+                    footer_font_color=footer_font_color
+                )
             return card
 
         except Exception as e:
@@ -1614,6 +1623,13 @@ class WorkspaceManager:
             # 继承其他必要字段
             if 'version' not in back_json_data:
                 back_json_data['version'] = json_data.get('version', '2.0')
+
+            # 为背面注入正面名称，便于 CardAdapter 获取 <fullnameb>
+            if 'front_name' not in back_json_data and isinstance(json_data.get('name'), str):
+                back_json_data['front_name'] = json_data.get('name')
+
+            # 标记背面，确保适配器可判定对侧名称来源
+            back_json_data['is_back'] = True
 
             # 在生成背面卡牌前，处理共享正面插画与设置
             try:
@@ -2025,6 +2041,8 @@ class WorkspaceManager:
                 config[field] = "AH_LCG"  # Cloudinary默认文件夹
             elif field == "imgbb_expiration":
                 config[field] = 0  # ImgBB默认永不过期
+            elif field in ("advanced_export_params", "pnp_export_params"):
+                config[field] = {}
             else:
                 config[field] = ""
         return config
@@ -2689,8 +2707,7 @@ class WorkspaceManager:
             print(f"导出TTS物品失败: {e}")
             return False
 
-    def export_card_with_params(self, card_path: str, export_filename: str, export_params: Dict[str, Any],
-                                params_hash: str) -> bool:
+    def export_card_with_params(self, card_path: str, export_filename: str, export_params: Dict[str, Any]) -> bool:
         """
         使用指定的导出参数导出卡牌（支持单面和双面卡牌）
 
@@ -2698,7 +2715,6 @@ class WorkspaceManager:
             card_path: 卡牌文件相对路径
             export_filename: 导出文件名（不包含扩展名）
             export_params: 导出参数
-            params_hash: 参数哈希值，用于缓存判断
 
         Returns:
             bool: 导出是否成功
@@ -2719,17 +2735,10 @@ class WorkspaceManager:
                 print(f"不支持的导出格式: {export_format}")
                 return False
 
-            # 检查是否需要重新生成（通过参数哈希判断）
-            export_helper = getattr(self, '_export_helper', None)
-            current_hash = getattr(self, '_export_params_hash', None)
-
-            if export_helper is None or current_hash != params_hash:
-                from ExportHelper import ExportHelper
-                # 创建新的ExportHelper实例
-                export_helper = ExportHelper(export_params, self)
-                self._export_helper = export_helper
-                self._export_params_hash = params_hash
-                print("创建新的ExportHelper实例")
+            from ExportHelper import ExportHelper
+            # 直接基于传入参数构造导出助手（保持与前端同步参数）
+            export_helper = ExportHelper(export_params, self)
+            self._export_helper = export_helper
 
             # 导出卡牌（自动判断单面或双面）
             result = export_helper.export_card_auto(card_path)

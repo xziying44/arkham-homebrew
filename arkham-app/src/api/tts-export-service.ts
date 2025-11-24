@@ -145,21 +145,18 @@ export class TtsExportService {
      * @param cardPath 卡牌文件相对路径（例如：a.card 或 d/a.card）
      * @param exportFilename 导出文件名（不包含扩展名）
      * @param exportParams 导出参数对象
-     * @param paramsHash 导出参数的哈希值，用于缓存判断
      * @throws {ApiError} 当导出失败时抛出错误
      */
     public static async exportCard(
         cardPath: string,
         exportFilename: string,
-        exportParams: ExportCardParams,
-        paramsHash: string
+        exportParams: ExportCardParams
     ): Promise<void> {
         try {
             const requestData: ExportCardRequest = {
                 card_path: cardPath,
                 export_filename: exportFilename,
-                export_params: exportParams,
-                params_hash: paramsHash
+                export_params: exportParams
             };
 
             await httpClient.post(

@@ -81,6 +81,11 @@ export default {
     cardRemarks: '📝 Card Notes',
     cardQuantity: 'Card Quantity',
     copyright: 'Copyright',
+    footerIcon: 'Footer Icon (overrides workspace setting when set)',
+    footerIconPlaceholder: 'Optional: choose a PNG in workspace root as footer icon',
+    investigatorFooterType: 'Investigator Footer Style',
+    investigatorFooterTypeNormal: 'Normal',
+    investigatorFooterTypeBigArt: 'Full-art effects',
 
     // Action buttons
     saveCard: 'Save Card',
@@ -171,6 +176,17 @@ export default {
     deckOptions: 'Deck Options'
   },
 
+  // Card property groups
+  groups: {
+    basic: 'Basic',
+    stats: 'Stats',
+    text: 'Text',
+    location: 'Location',
+    encounter: 'Encounter',
+    art: 'Art & Assets',
+    other: 'Other'
+  },
+
   // IllustrationLayoutEditor component
   illustrationLayout: {
     title: 'Illustration Layout Settings',
@@ -217,6 +233,58 @@ export default {
   locationActions: {
     applyToOtherSide: 'Apply location icons to the other side',
     applySuccess: 'Applied to the other side',
+  },
+
+  // Class Selector
+  classSelector: {
+    guardian: 'Guardian',
+    seeker: 'Seeker',
+    rogue: 'Rogue',
+    mystic: 'Mystic',
+    survivor: 'Survivor',
+    neutral: 'Neutral',
+    weakness: 'Weakness',
+    multiclass: 'Multiclass',
+    selectSubclasses: 'Select subclasses (max 3)'
+  },
+
+  // Slot Selector
+  slotSelector: {
+    ally: 'Ally',
+    body: 'Body',
+    accessory: 'Accessory',
+    hand: 'Hand',
+    twoHands: 'Two-Handed',
+    arcane: 'Arcane',
+    twoArcane: 'Two Arcane',
+    tarot: 'Tarot'
+  },
+
+  // Stat Badge
+  statBadge: {
+    none: 'None',
+    infinite: 'Infinite',
+    custom: 'Custom',
+    enterValue: 'Enter Value',
+    valuePlaceholder: 'Enter a value from 0-99'
+  },
+
+  // Cost Coin
+  costCoin: {
+    noCost: 'No Cost',
+    xCost: 'X Cost',
+    none: 'No Cost',
+    variable: 'Variable Cost',
+    custom: 'Custom',
+    enterValue: 'Enter Cost',
+    valuePlaceholder: 'Enter a value from 0-99'
+  },
+
+  // Level Ring
+  levelRing: {
+    customize: 'Customize',
+    customizable: 'Customizable',
+    none: 'No Level'
   },
 
   // Tags Editor

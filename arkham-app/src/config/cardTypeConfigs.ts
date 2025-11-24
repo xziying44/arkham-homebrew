@@ -13,7 +13,7 @@ export interface ShowCondition {
 export interface FormField {
   key: string;
   name: string;
-  type: 'text' | 'textarea' | 'number' | 'select' | 'multi-select' | 'string-array' | 'image' | 'encounter-group-select'; // 添加新类型
+  type: 'text' | 'textarea' | 'number' | 'select' | 'multi-select' | 'string-array' | 'image' | 'encounter-group-select' | 'class-selector' | 'slot-selector' | 'stat-badge' | 'cost-coin' | 'level-ring'; // 添加新类型
   layout?: 'full' | 'half' | 'third' | 'quarter';
   min?: number;
   max?: number;
@@ -25,6 +25,7 @@ export interface FormField {
   maxSize?: number;
   defaultValue?: any;
   helpText?: string;
+  statType?: 'health' | 'horror'; // 用于 stat-badge 类型
 }
 
 
@@ -141,74 +142,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'class',
         name: '⚔️ 职阶',
-        type: 'select',
-        layout: 'full',
-        options: [
-          { label: '🛡️ 守护者', value: '守护者' },
-          { label: '🔍 探求者', value: '探求者' },
-          { label: '🏃 流浪者', value: '流浪者' },
-          { label: '🔮 潜修者', value: '潜修者' },
-          { label: '💪 生存者', value: '生存者' },
-          { label: '🌟 多职阶', value: '多职阶' },
-          { label: '💀 弱点', value: '弱点' },
-          { label: '⚪ 中立', value: '中立' }
-        ]
-      },
-      {
-        key: 'subclass',
-        index: 0,
-        showCondition: {
-          field: 'class',
-          value: '多职阶'
-        },
-        name: '1️⃣ 第一职阶',
-        type: 'select',
-        layout: 'third',
-        options: [
-          { label: '🛡️ 守护者', value: '守护者' },
-          { label: '🔍 探求者', value: '探求者' },
-          { label: '🏃 流浪者', value: '流浪者' },
-          { label: '🔮 潜修者', value: '潜修者' },
-          { label: '💪 生存者', value: '生存者' }
-        ]
-      },
-      {
-        key: 'subclass',
-        index: 1,
-        showCondition: {
-          field: 'class',
-          value: '多职阶'
-        },
-        name: '2️⃣ 第二职阶',
-        type: 'select',
-        layout: 'third',
-        options: [
-          { label: '🚫 无职介', value: null },
-          { label: '🛡️ 守护者', value: '守护者' },
-          { label: '🔍 探求者', value: '探求者' },
-          { label: '🏃 流浪者', value: '流浪者' },
-          { label: '🔮 潜修者', value: '潜修者' },
-          { label: '💪 生存者', value: '生存者' }
-        ]
-      },
-      {
-        key: 'subclass',
-        index: 2,
-        showCondition: {
-          field: 'class',
-          value: '多职阶'
-        },
-        name: '3️⃣ 第三职阶',
-        type: 'select',
-        layout: 'third',
-        options: [
-          { label: '🚫 无职介', value: null },
-          { label: '🛡️ 守护者', value: '守护者' },
-          { label: '🔍 探求者', value: '探求者' },
-          { label: '🏃 流浪者', value: '流浪者' },
-          { label: '🔮 潜修者', value: '潜修者' },
-          { label: '💪 生存者', value: '生存者' }
-        ]
+        type: 'class-selector',
+        layout: 'full'
       },
       {
         key: 'weakness_type',
@@ -228,86 +163,42 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'health',
         name: '❤️ 生命值',
-        type: 'select',
-        layout: 'half',
-        options: [
-          { label: '🚫 无生命值', value: -1 },
-          { label: '⭐ 无限生命值', value: -2 },
-          { label: '💀 生命值-0', value: 0 },
-          ...Array.from({ length: 99 }, (_, i) => ({ label: `❤️ 生命值-${i + 1}`, value: i + 1 }))
-        ]
+        type: 'stat-badge',
+        statType: 'health',
+        layout: 'half'
       },
       {
         key: 'horror',
         name: '🧠 理智值',
-        type: 'select',
-        layout: 'half',
-        options: [
-          { label: '🚫 无理智值', value: -1 },
-          { label: '⭐ 无限理智值', value: -2 },
-          { label: '😵 理智值-0', value: 0 },
-          ...Array.from({ length: 99 }, (_, i) => ({ label: `🧠 理智值-${i + 1}`, value: i + 1 }))
-        ]
-      },
-      {
-        key: 'slots',
-        name: '🎒 槽位',
-        type: 'select',
-        layout: 'half',
-        options: [
-          { label: '🚫 空槽位', value: null },
-          { label: '👥 盟友', value: '盟友' },
-          { label: '👕 身体', value: '身体' },
-          { label: '💍 饰品', value: '饰品' },
-          { label: '✋ 手部', value: '手部' },
-          { label: '🙌 双手', value: '双手' },
-          { label: '🔮 法术', value: '法术' },
-          { label: '✨ 双法术', value: '双法术' },
-          { label: '🃏 塔罗', value: '塔罗' }
-        ]
-      },
-      {
-        key: 'slots2',
-        name: '🎒 第二槽位',
-        type: 'select',
-        layout: 'half',
-        options: [
-          { label: '🚫 空槽位', value: null },
-          { label: '👥 盟友', value: '盟友' },
-          { label: '👕 身体', value: '身体' },
-          { label: '💍 饰品', value: '饰品' },
-          { label: '✋ 手部', value: '手部' },
-          { label: '🙌 双手', value: '双手' },
-          { label: '🔮 法术', value: '法术' },
-          { label: '✨ 双法术', value: '双法术' },
-          { label: '🃏 塔罗', value: '塔罗' }
-        ]
+        type: 'stat-badge',
+        statType: 'horror',
+        layout: 'half'
       },
       {
         key: 'level',
         name: '⭐ 卡牌等级',
-        type: 'select',
+        type: 'level-ring',
         layout: 'half',
-        defaultValue: -1,
-        options: [
-          { label: '🧩 定制标', value: -2 },
-          { label: '🚫 无等级', value: -1 },
-          { label: '0️⃣ 等级-0', value: 0 },
-          ...Array.from({ length: 5 }, (_, i) => ({ label: `${['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][i]} 等级-${i + 1}`, value: i + 1 }))
-        ]
+        defaultValue: -1
       },
       {
         key: 'cost',
         name: '💰 卡牌费用',
-        type: 'select',
+        type: 'cost-coin',
         layout: 'half',
-        defaultValue: -1,
-        options: [
-          { label: '🆓 无费用', value: -1 },
-          { label: '✖️ X费用', value: -2 },
-          { label: '0️⃣ 费用-0', value: 0 },
-          ...Array.from({ length: 99 }, (_, i) => ({ label: `💰 费用-${i + 1}`, value: i + 1 }))
-        ]
+        defaultValue: -1
+      },
+      {
+        key: 'slots',
+        name: '🎒 槽位',
+        type: 'slot-selector',
+        layout: 'half'
+      },
+      {
+        key: 'slots2',
+        name: '🎒 第二槽位',
+        type: 'slot-selector',
+        layout: 'half'
       },
       {
         key: 'submit_icon',
@@ -331,7 +222,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 卡牌效果',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -388,74 +279,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'class',
         name: '⚔️ 职阶',
-        type: 'select',
-        layout: 'full',
-        options: [
-          { label: '🛡️ 守护者', value: '守护者' },
-          { label: '🔍 探求者', value: '探求者' },
-          { label: '🏃 流浪者', value: '流浪者' },
-          { label: '🔮 潜修者', value: '潜修者' },
-          { label: '💪 生存者', value: '生存者' },
-          { label: '🌟 多职阶', value: '多职阶' },
-          { label: '💀 弱点', value: '弱点' },
-          { label: '⚪ 中立', value: '中立' }
-        ]
-      },
-      {
-        key: 'subclass',
-        index: 0,
-        showCondition: {
-          field: 'class',
-          value: '多职阶'
-        },
-        name: '1️⃣ 第一职阶',
-        type: 'select',
-        layout: 'third',
-        options: [
-          { label: '🛡️ 守护者', value: '守护者' },
-          { label: '🔍 探求者', value: '探求者' },
-          { label: '🏃 流浪者', value: '流浪者' },
-          { label: '🔮 潜修者', value: '潜修者' },
-          { label: '💪 生存者', value: '生存者' }
-        ]
-      },
-      {
-        key: 'subclass',
-        index: 1,
-        showCondition: {
-          field: 'class',
-          value: '多职阶'
-        },
-        name: '2️⃣ 第二职阶',
-        type: 'select',
-        layout: 'third',
-        options: [
-          { label: '🚫 无职介', value: null },
-          { label: '🛡️ 守护者', value: '守护者' },
-          { label: '🔍 探求者', value: '探求者' },
-          { label: '🏃 流浪者', value: '流浪者' },
-          { label: '🔮 潜修者', value: '潜修者' },
-          { label: '💪 生存者', value: '生存者' }
-        ]
-      },
-      {
-        key: 'subclass',
-        index: 2,
-        showCondition: {
-          field: 'class',
-          value: '多职阶'
-        },
-        name: '3️⃣ 第三职阶',
-        type: 'select',
-        layout: 'third',
-        options: [
-          { label: '🚫 无职介', value: null },
-          { label: '🛡️ 守护者', value: '守护者' },
-          { label: '🔍 探求者', value: '探求者' },
-          { label: '🏃 流浪者', value: '流浪者' },
-          { label: '🔮 潜修者', value: '潜修者' },
-          { label: '💪 生存者', value: '生存者' }
-        ]
+        type: 'class-selector',
+        layout: 'full'
       },
       {
         key: 'weakness_type',
@@ -475,28 +300,16 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'level',
         name: '⭐ 卡牌等级',
-        type: 'select',
+        type: 'level-ring',
         layout: 'half',
-        defaultValue: -1,
-        options: [
-          { label: '🧩 定制标', value: -2 },
-          { label: '🚫 无等级', value: -1 },
-          { label: '0️⃣ 等级-0', value: 0 },
-          ...Array.from({ length: 5 }, (_, i) => ({ label: `${['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][i]} 等级-${i + 1}`, value: i + 1 }))
-        ]
+        defaultValue: -1
       },
       {
         key: 'cost',
         name: '💰 卡牌费用',
-        type: 'select',
+        type: 'cost-coin',
         layout: 'half',
-        defaultValue: -1,
-        options: [
-          { label: '🆓 无费用', value: -1 },
-          { label: '✖️ X费用', value: -2 },
-          { label: '0️⃣ 费用-0', value: 0 },
-          ...Array.from({ length: 99 }, (_, i) => ({ label: `💰 费用-${i + 1}`, value: i + 1 }))
-        ]
+        defaultValue: -1
       },
       {
         key: 'submit_icon',
@@ -520,7 +333,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 卡牌效果',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -567,17 +380,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'class',
         name: '⚔️ 职阶',
-        type: 'select',
-        layout: 'full',
-        options: [
-          { label: '🛡️ 守护者', value: '守护者' },
-          { label: '🔍 探求者', value: '探求者' },
-          { label: '🏃 流浪者', value: '流浪者' },
-          { label: '🔮 潜修者', value: '潜修者' },
-          { label: '💪 生存者', value: '生存者' },
-          { label: '💀 弱点', value: '弱点' },
-          { label: '⚪ 中立', value: '中立' }
-        ]
+        type: 'class-selector',
+        layout: 'full'
       },
       {
         key: 'weakness_type',
@@ -597,15 +401,9 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'level',
         name: '⭐ 卡牌等级',
-        type: 'select',
+        type: 'level-ring',
         layout: 'full',
-        defaultValue: -1,
-        options: [
-          { label: '🧩 定制标', value: -2 },
-          { label: '🚫 无等级', value: -1 },
-          { label: '0️⃣ 等级-0', value: 0 },
-          ...Array.from({ length: 5 }, (_, i) => ({ label: `${['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][i]} 等级-${i + 1}`, value: i + 1 }))
-        ]
+        defaultValue: -1
       },
       {
         key: 'submit_icon',
@@ -629,7 +427,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 卡牌效果',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -693,16 +491,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'class',
         name: '⚔️ 职阶',
-        type: 'select',
-        layout: 'full',
-        options: [
-          { label: '🛡️ 守护者', value: '守护者' },
-          { label: '🔍 探求者', value: '探求者' },
-          { label: '🏃 流浪者', value: '流浪者' },
-          { label: '🔮 潜修者', value: '潜修者' },
-          { label: '💪 生存者', value: '生存者' },
-          { label: '⚪ 中立', value: '中立' }
-        ]
+        type: 'class-selector',
+        layout: 'full'
       },
       {
         key: 'attribute',
@@ -743,24 +533,16 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'health',
         name: '❤️ 生命值',
-        type: 'select',
-        layout: 'half',
-        options: [
-          { label: '🚫 无生命值', value: -1 },
-          { label: '💀 生命值-0', value: 0 },
-          ...Array.from({ length: 99 }, (_, i) => ({ label: `❤️ 生命值-${i + 1}`, value: i + 1 }))
-        ]
+        type: 'stat-badge',
+        statType: 'health',
+        layout: 'half'
       },
       {
         key: 'horror',
         name: '🧠 理智值',
-        type: 'select',
-        layout: 'half',
-        options: [
-          { label: '🚫 无理智值', value: -1 },
-          { label: '😵 理智值-0', value: 0 },
-          ...Array.from({ length: 99 }, (_, i) => ({ label: `🧠 理智值-${i + 1}`, value: i + 1 }))
-        ]
+        type: 'stat-badge',
+        statType: 'horror',
+        layout: 'half'
       },
       {
         key: 'traits',
@@ -771,7 +553,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 卡牌效果',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -878,16 +660,8 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'class',
         name: '⚔️ 职阶',
-        type: 'select',
-        layout: 'full',
-        options: [
-          { label: '🛡️ 守护者', value: '守护者' },
-          { label: '🔍 探求者', value: '探求者' },
-          { label: '🏃 流浪者', value: '流浪者' },
-          { label: '🔮 潜修者', value: '潜修者' },
-          { label: '💪 生存者', value: '生存者' },
-          { label: '⚪ 中立', value: '中立' }
-        ]
+        type: 'class-selector',
+        layout: 'full'
       },
       {
         key: 'card_back.size',
@@ -945,7 +719,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 卡牌效果',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -966,7 +740,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 卡牌效果',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -1038,7 +812,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 卡牌效果',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -1170,7 +944,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 卡牌效果',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -1305,7 +1079,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 卡牌效果',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -1393,7 +1167,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 卡牌效果',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -1464,7 +1238,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 卡牌效果',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -1527,7 +1301,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 卡牌效果',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -1592,7 +1366,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 卡牌效果',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -1653,7 +1427,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
           value: 2
         },
         name: '📄 正文内容',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },
@@ -1766,7 +1540,7 @@ export const cardTypeConfigs: Record<string, CardTypeConfig> = {
       {
         key: 'body',
         name: '📄 正文内容',
-        type: 'textarea',
+        type: 'body-editor',
         layout: 'full',
         helpText: bodyTip
       },

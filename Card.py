@@ -1,7 +1,7 @@
 import random
 import re
 import traceback
-from typing import Union
+from typing import Union, Optional
 
 from PIL import Image, ImageDraw, ImageFont, ImageChops
 
@@ -766,7 +766,7 @@ class Card:
                     font_size=62,
                     font_color=(3, 0, 0),
                     effects=[
-                        {"type": "glow", "size": 18, "spread": 22, "opacity": 100, "color": (3, 0, 0)},
+                        {"type": "glow", "size": 8, "spread": 22, "opacity": 100, "color": (3, 0, 0)},
                         {"type": "stroke", "size": 3, "opacity": 100, "color": (165, 157, 153)}
                     ]
                 )
@@ -779,7 +779,7 @@ class Card:
                     font_size=62,
                     font_color=(3, 0, 0),
                     effects=[
-                        {"type": "glow", "size": 18, "spread": 22, "opacity": 100, "color": (3, 0, 0)},
+                        {"type": "glow", "size": 8, "spread": 22, "opacity": 100, "color": (3, 0, 0)},
                         {"type": "stroke", "size": 3, "opacity": 100, "color": (165, 157, 153)}
                     ]
                 )
@@ -792,7 +792,7 @@ class Card:
                     font_size=68,
                     font_color=(3, 0, 0),
                     effects=[
-                        {"type": "glow", "size": 18, "spread": 22, "opacity": 100, "color": (3, 0, 0)},
+                        {"type": "glow", "size": 8, "spread": 22, "opacity": 100, "color": (3, 0, 0)},
                         {"type": "stroke", "size": 3, "opacity": 100, "color": (165, 157, 153)}
                     ]
                 )
@@ -1347,7 +1347,10 @@ class Card:
                                encounter_group_number: str,
                                card_number: str,
                                footer_icon: Image.Image = None,
-                               footer_icon_font: str = None):
+                               footer_icon_font: str = None,
+                               footer_effects: Optional[list[dict]] = None,
+                               footer_opacity: Optional[int] = None,
+                               footer_font_color: Optional[tuple[int, int, int]] = None):
         """
         写页脚信息
         :param illustrator: 插画信息
@@ -1356,18 +1359,28 @@ class Card:
         :param footer_icon: 图标
         :param card_number: 卡牌序号
         :param footer_icon_font:
+        :param footer_effects: 页脚特效配置
+        :param footer_opacity: 页脚文字透明度
+        :param footer_font_color: 页脚文字颜色
         :return:
         """
-        effects = None
-        opacity = 100
-        font_color = (255, 255, 255)
-        if self.card_type in ['大画-事件卡', '大画-支援卡', '大画-技能卡']:
+        effects = footer_effects
+        opacity = footer_opacity if footer_opacity is not None else 100
+        font_color = footer_font_color if footer_font_color is not None else (255, 255, 255)
+        if effects is None and self.card_type in ['大画-事件卡', '大画-支援卡', '大画-技能卡']:
             effects = [
-                {"type": "glow", "size": 18, "spread": 22, "opacity": 36, "color": (3, 0, 0)},
+                {"type": "glow", "size": 8, "spread": 22, "opacity": 36, "color": (3, 0, 0)},
                 {"type": "stroke", "size": 2, "opacity": 63, "color": (165, 157, 153)}
             ]
-            opacity = 75
-            font_color = (3, 0, 0)
+            if footer_opacity is None:
+                opacity = 75
+            if footer_font_color is None:
+                font_color = (3, 0, 0)
+        elif effects is not None:
+            if footer_opacity is None:
+                opacity = 75
+            if footer_font_color is None:
+                font_color = (3, 0, 0)
         if self.card_type == "纯图片":
             return
         if self.card_type in ['密谋卡', '场景卡', '调查员卡'] and self.is_back:
@@ -1450,6 +1463,10 @@ class Card:
             pass
         # 开始绘制
         if left_text:
+            if self.font_manager.lang in ['zh', 'zh-CHT']:
+                pattern = r'([\u4e00-\u9fa5]+)'
+                left_text = re.sub(pattern, r'<font name="思源黑体" addsize="-2" offset="-2">\1</font>',
+                                     left_text)
             self.draw_left_text(
                 position=(pos_left[0], pos_left[1]),
                 text=left_text,
@@ -1462,7 +1479,7 @@ class Card:
         if center_text:
             if self.font_manager.lang in ['zh', 'zh-CHT']:
                 pattern = r'([\u4e00-\u9fa5]+)'
-                center_text = re.sub(pattern, r'<font name="SourceHanSansSC-Regular" addsize="-2">\1</font>',
+                center_text = re.sub(pattern, r'<font name="思源黑体" addsize="-2" offset="-3">\1</font>',
                                      center_text)
             self.draw_centered_text(
                 position=(pos_center[0], pos_center[1] + 8),

@@ -7,6 +7,13 @@ This document provides a complete, multi‑layer reference for the Vue 3 compone
 - Stack: Vue 3 + script setup + TypeScript, Composition API, Naive UI, vue‑i18n.
 - Conventions: Typed `defineProps`/`defineEmits`, event‑driven updates, reactive local copies of inputs, and internationalization via `useI18n`.
 
+Changelog (保存流程)
+- FormEditPanel：在单卡/批量保存前调用 `/api/tts/generate` 写入稳定 `tts_config.script_id`（v2），不再依赖手动刷新 GMNotes，确保引用 ID 不再随机。
+
+Changelog (导出参数持久化)
+- FileTreePanel：高级导出参数改为从系统配置读取/保存，去除参数哈希缓存。
+- PackageEditor：实体（PNP）导出参数持久化到系统配置，后端无配置时回退组件默认值。
+
 ## 2) Architecture & Dependencies
 - Core editors/panels orchestrate specialized subcomponents:
   - `FormEditPanel.vue`: Primary card editor shell; composes `CardSideEditor`, `IllustrationLayoutEditor`, `DeckOptionEditor`, and `TtsScriptEditor`.
@@ -122,13 +129,16 @@ CardSideEditor(
 ```
 Behavior
 - Manages a reactive clone of `cardData`; updates emit precise field changes and card type changes.
-- Integrates `FormField` for per‑field rendering and `IllustrationLayoutEditor` for art.
+- Card properties are grouped into tab panes via `src/config/cardFieldGroups.ts`; fields without a configured group fall into an “other” tab.
+- Integrates `FormField` for per-field rendering and `IllustrationLayoutEditor` for art.
 - Features collapsible illustration layout settings with toggle button at bottom of card properties panel.
 - Integrates `TextBoundaryEditor` via left-side drawer (no mask overlay) for advanced text boundary adjustments.
 - Exposes section refs and `expandIllustrationLayout()` method for parent navigation:
   - Uses function refs pattern (`setCardTypeSection`, `setPropertiesSection`, etc.) to capture DOM elements from `<n-card>` component instances
   - Exposes refs via `defineExpose` (auto‑unwrapped by Vue 3, accessible without extra `.value` from parent)
   - `expandIllustrationLayout()`: Programmatically expands illustration section when called from parent navigation
+- Card info footer: per-card footer icon picker (workspace root PNG with refresh) overrides workspace setting; investigator cards can toggle footer style (normal/full-art effects), defaulting to normal and retained on type switches.
+- Field group tabs: accepts controlled `activeFieldGroupKey` with `update:active-field-group`; parents may persist per-card/per-side tab selection. Switching card sides keeps the remembered tab; switching to another card falls back to the first tab.
 
 ### TextBoundaryEditor.vue
 Signature
@@ -177,6 +187,9 @@ FileTreePanel(
 ```
 Behavior
 - Hosts project tree interactions, export actions, and integrations with services (`WorkspaceService`, `CardService`, etc.).
+
+Changelog (2025‑11‑21)
+- CardSideEditor：专项控件配色与可读性调整，ClassSelector/SlotSelector 保留职阶与槽位辨识的亮色玻璃渐变，CostCoin/LevelRing/StatBadge 采用柔和琥珀系与浅灰玻璃风，文字对比度在亮底下可读。
 
 Changelog (2025‑11‑10)
 - FormEditPanel.vue: 当正面选择“调查员小卡”时，自动初始化背面为同类型，默认前=normal、后=grayscale 且共享插画。
