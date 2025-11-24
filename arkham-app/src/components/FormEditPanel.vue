@@ -429,6 +429,18 @@ const computeCardContentHash = async (cardObj: any): Promise<string> => {
     return await computeSHA256Hex(payload);
 };
 
+// 创建保存用的深拷贝快照，并冻结当次保存的文件路径
+const createSaveSnapshot = (filePath?: string | null) => {
+    if (!filePath) return null;
+    try {
+        const snapshot = JSON.parse(JSON.stringify(currentCardData));
+        return { filePath, snapshot };
+    } catch (error) {
+        console.error('创建保存快照失败:', error);
+        return null;
+    }
+};
+
 // 提取 GMNotes 中的脚本 ID
 const extractScriptIdFromGMNotes = (gmnotes: string): string => {
     if (!gmnotes || typeof gmnotes !== 'string') return '';
@@ -1378,82 +1390,100 @@ const loadCardData = async () => {
 
 // 修改 saveCard 方法
 const saveCard = async () => {
-    // 优先使用原始文件信息，如果没有则使用当前选中文件
     const fileToSave = originalFileInfo.value || props.selectedFile;
-    if (!fileToSave || !fileToSave.path) {
+    const frozenPath = fileToSave?.path;
+    const frozenLabel = fileToSave?.label;
+
+    if (!frozenPath) {
         message.warning(t('cardEditor.panel.noFileSelected'));
         return false;
     }
-    // 如果已经在保存，直接返回
+
     if (saving.value) {
         console.log('已在保存中，跳过');
         return false;
     }
+
+    // 记录保存前的状态签名，用于检测保存过程中是否有进一步修改
+    const stateBeforeSave = JSON.stringify(currentCardData);
+    const snapshotResult = createSaveSnapshot(frozenPath);
+    if (!snapshotResult) {
+        message.error(t('cardEditor.panel.saveCardFailed'));
+        return false;
+    }
+
+    let snapshotData: any | null = snapshotResult.snapshot;
+
     try {
         saving.value = true;
-        // 清除防抖定时器，避免保存时生成预览
         clearDebounceTimer();
 
-        // 保存前生成 GMNotes，确保脚本 ID 持久化
-        await ensureScriptIdByBackend(currentCardData);
+        // 保存前生成 GMNotes，确保脚本 ID 持久化（仅操作快照，避免污染实时表单数据）
+        await ensureScriptIdByBackend(snapshotData);
 
         // 生成卡片并检查box_position
-        const result_card = await CardService.generateCard(currentCardData as CardData);
+        const result_card = await CardService.generateCard(snapshotData as CardData);
 
         // 检查是否为定制卡且有box_position参数 → 将坐标保存到 tts_config，由后端统一生成 Lua
-        if (currentCardData.type === '定制卡' && result_card?.box_position && result_card.box_position.length > 0) {
+        if (snapshotData.type === '定制卡' && result_card?.box_position && result_card.box_position.length > 0) {
             console.log('🎯 定制卡检测到 box_position，保存到 tts_config:', result_card.box_position);
-            (currentCardData as any).tts_config = {
-                ...((currentCardData as any).tts_config || {}),
+            snapshotData.tts_config = {
+                ...(snapshotData.tts_config || {}),
                 version: 'v2',
                 upgrade: {
                     coordinates: result_card.box_position,
                 },
             };
-            if ('tts_script' in (currentCardData as any)) delete (currentCardData as any).tts_script;
+            if ('tts_script' in snapshotData) delete snapshotData.tts_script;
         }
 
         // 在保存前计算并写入内容哈希（排除 content_hash 自身）
         try {
-            const hash = await computeCardContentHash(currentCardData);
-            // 写回根级 content_hash
-            (currentCardData as any).content_hash = hash;
+            const hash = await computeCardContentHash(snapshotData);
+            snapshotData.content_hash = hash;
         } catch (e) {
             console.warn('计算卡牌内容哈希失败，将继续保存:', e);
         }
 
-        // 保存JSON文件
-        const jsonContent = JSON.stringify(currentCardData, null, 2);
-        await WorkspaceService.saveFileContent(fileToSave.path, jsonContent);
-        // 更新原始数据状态
-        saveOriginalData();
+        // 保存JSON文件（使用冻结路径与快照数据）
+        const jsonContent = JSON.stringify(snapshotData, null, 2);
+        await WorkspaceService.saveFileContent(snapshotResult.filePath, jsonContent);
 
-        // 【新增】保存成功后清除暂存
-        emit('clear-cache', fileToSave.path as string);
+        // 【新增】保存成功后清除暂存（按冻结路径）
+        emit('clear-cache', snapshotResult.filePath);
 
         // 显示卡图（使用已生成的结果）
         const imageBase64 = result_card?.image;
         if (imageBase64) {
-            // 检查是否为双面卡牌，确保传递正确的数据格式
             if (result_card?.back_image) {
-                const doubleSidedImage = {
-                    front: imageBase64,
-                    back: result_card.back_image
-                };
-                emit('update-preview-image', doubleSidedImage);
+                emit('update-preview-image', { front: imageBase64, back: result_card.back_image });
                 console.log('✅ 保存后双面卡牌预览更新成功');
             } else {
                 emit('update-preview-image', imageBase64);
                 console.log('✅ 保存后单面卡牌预览更新成功');
             }
         }
-        message.success(t('cardEditor.panel.cardSavedSuccessfully'));
+
+        // 若保存期间用户未再修改，则同步关键字段并更新“已保存”状态
+        const stateAfterSave = JSON.stringify(currentCardData);
+        if (stateAfterSave === stateBeforeSave) {
+            if (snapshotData.tts_config !== undefined) {
+                (currentCardData as any).tts_config = JSON.parse(JSON.stringify(snapshotData.tts_config));
+            }
+            if (snapshotData.content_hash !== undefined) {
+                (currentCardData as any).content_hash = snapshotData.content_hash;
+            }
+            saveOriginalData();
+        }
+
+        message.success(frozenLabel ? `${frozenLabel} ${t('cardEditor.panel.cardSavedSuccessfully')}` : t('cardEditor.panel.cardSavedSuccessfully'));
         return true;
     } catch (error) {
         console.error('保存卡牌失败:', error);
         message.error(t('cardEditor.panel.saveCardFailed'));
         return false;
     } finally {
+        snapshotData = null; // 显式清理快照引用，便于 GC
         saving.value = false;
     }
 };
@@ -1974,26 +2004,39 @@ const saveAllUnsaved = async (unsavedPaths: string[], cacheMap: Map<string, any>
                 continue;
             }
 
+            // 冻结路径并为本次保存创建快照，避免保存过程被后续修改污染
+            const frozenPath = filePath;
+            let snapshot: any | null = null;
+            try {
+                snapshot = JSON.parse(JSON.stringify(cachedData));
+            } catch (e) {
+                console.error('创建批量保存快照失败:', e);
+                failCount++;
+                continue;
+            }
+
             // 保存前生成 GMNotes，确保脚本 ID 持久化
-            await ensureScriptIdByBackend(cachedData);
+            await ensureScriptIdByBackend(snapshot);
 
             // 在保存前计算并写入内容哈希（排除 content_hash 自身）
             try {
-                const hash = await computeCardContentHash(cachedData);
-                (cachedData as any).content_hash = hash;
+                const hash = await computeCardContentHash(snapshot);
+                (snapshot as any).content_hash = hash;
             } catch (e) {
                 console.warn('计算卡牌内容哈希失败（批量保存）:', e);
             }
 
             // 直接保存JSON文件（不需要生成预览）
-            const jsonContent = JSON.stringify(cachedData, null, 2);
-            await WorkspaceService.saveFileContent(filePath, jsonContent);
+            const jsonContent = JSON.stringify(snapshot, null, 2);
+            await WorkspaceService.saveFileContent(frozenPath, jsonContent);
 
             // 清除暂存
-            emit('clear-cache', filePath);
+            emit('clear-cache', frozenPath);
+
+            snapshot = null; // 显式清理，便于 GC
 
             successCount++;
-            console.log(`✅ 保存成功: ${filePath}`);
+            console.log(`✅ 保存成功: ${frozenPath}`);
         } catch (error) {
             console.error(`❌ 保存失败: ${filePath}`, error);
             failCount++;
@@ -2005,7 +2048,11 @@ const saveAllUnsaved = async (unsavedPaths: string[], cacheMap: Map<string, any>
 
     // 如果当前文件也被保存了，更新原始数据状态
     if (props.selectedFile?.path && unsavedPaths.includes(props.selectedFile.path as string)) {
-        saveOriginalData();
+        const currentState = JSON.stringify(currentCardData);
+        const cachedState = JSON.stringify(cacheMap.get(props.selectedFile.path as string));
+        if (currentState === cachedState) {
+            saveOriginalData();
+        }
     }
 
     // 显示保存结果
