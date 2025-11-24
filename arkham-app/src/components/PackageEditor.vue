@@ -67,7 +67,7 @@
 
       <!-- 编辑器内容 -->
     <div class="editor-content">
-      <n-tabs type="card" default-value="info" animated>
+      <n-tabs v-model:value="activeTab" type="card" default-value="info" animated>
         <!-- 基础信息标签页 -->
         <n-tab-pane name="info" :tab="$t('contentPackage.editor.tabs.info')">
           <div class="info-panel">
@@ -1123,6 +1123,8 @@ const isCurrentUploadBatch = ref(false);
 const uploadDialogRef = ref<any>(null);
 // 是否批量上传“已修改”卡牌
 const isBatchModifiedUpload = ref(false);
+// 记住当前标签页，避免上传返回后跳回基础信息
+const activeTab = ref<'info' | 'cards' | 'encounters' | string>('info');
 
 // 上传会话隔离：在打开上传页瞬间冻结包配置，避免切包导致上传写错目标包
 const uploadConfigSnapshot = ref<any>(null);
