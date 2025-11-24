@@ -725,6 +725,19 @@ const activeExportTasks = ref<{ cardPath: string, cardName: string }[]>([]);
 const exportQueue = ref<string[]>([]);
 const completedTasks = ref(0);
 
+const getDefaultAdvancedExportParams = (): ExportCardParams => ({
+  format: 'PNG',
+  quality: 95,
+  size: '63.5mm × 88.9mm (2.5″ × 3.5″)',
+  dpi: 300,
+  bleed: 2,
+  bleed_mode: '裁剪',
+  bleed_model: '镜像出血',
+  saturation: 1.0,
+  brightness: 1.0,
+  gamma: 1.0
+});
+
 // 高级导出相关状态
 const showAdvancedExportDialog = ref(false);
 const advancedExporting = ref(false);
@@ -737,18 +750,7 @@ const advancedExportLogs = ref<{ type: 'success' | 'error' | 'warning', message:
 const advancedExportAborted = ref(false);
 
 // 高级导出参数
-const advancedExportParams = ref<ExportCardParams>({
-  format: 'PNG',
-  quality: 95,
-  size: '63.5mm × 88.9mm (2.5″ × 3.5″)',
-  dpi: 300,
-  bleed: 2,
-  bleed_mode: '裁剪',
-  bleed_model: '镜像出血',
-  saturation: 1.0,
-  brightness: 1.0,
-  gamma: 1.0
-});
+const advancedExportParams = ref<ExportCardParams>(getDefaultAdvancedExportParams());
 
 // 高级导出参数选项
 const formatOptions = computed(() => [
@@ -801,6 +803,30 @@ const bleedModelOptions = computed(() => [
   { label: t('workspaceMain.fileTree.advancedExport.bleedModel.mirror'), value: '镜像出血' },
   { label: t('workspaceMain.fileTree.advancedExport.bleedModel.lama'), value: 'LaMa模型出血' }
 ]);
+
+const ADVANCED_EXPORT_CONFIG_KEY = 'advanced_export_params';
+const mergeAdvancedExportParams = (stored?: ExportCardParams | null) => ({
+  ...getDefaultAdvancedExportParams(),
+  ...(stored || {})
+});
+
+const loadAdvancedExportParams = async () => {
+  try {
+    const stored = await ConfigService.getConfigItem<ExportCardParams | null>(ADVANCED_EXPORT_CONFIG_KEY, null);
+    advancedExportParams.value = mergeAdvancedExportParams(stored);
+  } catch (error) {
+    console.warn('加载高级导出配置失败:', error);
+    advancedExportParams.value = getDefaultAdvancedExportParams();
+  }
+};
+
+const persistAdvancedExportParams = async () => {
+  try {
+    await ConfigService.updateConfigItem(ADVANCED_EXPORT_CONFIG_KEY, advancedExportParams.value);
+  } catch (error) {
+    console.warn('同步高级导出配置失败:', error);
+  }
+};
 
 
 // 文件树数据
@@ -2673,19 +2699,9 @@ const startAdvancedExportProcess = async () => {
   }
 };
 
-// 生成导出参数哈希值
-const generateParamsHash = (params: ExportCardParams): string => {
-  const paramString = JSON.stringify(params, Object.keys(params).sort());
-  // 先用 encodeURIComponent 转换为 ASCII 安全的字符串
-  const encodedString = encodeURIComponent(paramString);
-  return btoa(encodedString).replace(/[+/=]/g, '');
-};
-
-
 // 高级导出单个卡牌
 const advancedExportCard = async (cardPath: string): Promise<{ success: boolean, cardName: string, error?: string }> => {
   const cardName = cardPath.split('/').pop()?.replace('.card', '') || `card_${Date.now()}`;
-  const paramsHash = generateParamsHash(advancedExportParams.value);
 
   try {
     // 构建导出文件名（不包含扩展名）
@@ -2695,8 +2711,7 @@ const advancedExportCard = async (cardPath: string): Promise<{ success: boolean,
     await TtsExportService.exportCard(
       cardPath,
       exportFilename,
-      advancedExportParams.value,
-      paramsHash
+      advancedExportParams.value
     );
 
     return { success: true, cardName };
@@ -2714,6 +2729,12 @@ const startAdvancedExport = async () => {
   advancedExportProgress.value = 0;
   advancedExportCompleted.value = false;
   advancedExportAborted.value = false;
+
+  try {
+    await persistAdvancedExportParams();
+  } catch (error) {
+    console.warn('持久化高级导出参数失败:', error);
+  }
 
   addAdvancedExportLog('info', t('workspaceMain.fileTree.advancedExport.startLog'));
   addAdvancedExportLog('info', t('workspaceMain.fileTree.advancedExport.paramsLog', {
@@ -2788,20 +2809,6 @@ const closeAdvancedExportDialog = () => {
   advancedExportProgress.value = 0;
   advancedExportCompleted.value = false;
   advancedExportAborted.value = false;
-
-  // 重置高级导出参数为默认值
-  advancedExportParams.value = {
-    format: 'PNG',
-    quality: 95,
-    size: '63.5mm × 88.9mm (2.5″ × 3.5″)',
-    dpi: 300,
-    bleed: 2,
-    bleed_mode: '裁剪',
-    bleed_model: '镜像出血',
-    saturation: 1.0,
-    brightness: 1.0,
-    gamma: 1.0
-  };
 };
 
 // 添加高级导出日志
@@ -3255,6 +3262,7 @@ watch(() => props.selectedFile, (newFile) => {
 
 // 组件挂载时加载数据
 onMounted(() => {
+  void loadAdvancedExportParams();
   void loadBookmarksFromConfig();
   loadFileTree();
   console.log(`检测到 CPU 核心数: ${cpuCores.value}`);

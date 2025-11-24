@@ -331,3 +331,6 @@
 - tts_script_generator.py：公开 `extract_script_id_from_card_json`；新增定制卡绑定逻辑（`<base_id>-c`）。
 - content_package_manager.py：ArkhamDB 导出新增第二遍扫描定制卡，构建 `customization_text_map` 并在冲突时输出警告。
 - card2arkhamdb.py：命中 `customization_text_map` 时注入 `customization_text` 与 `customization_options`；空行忽略，`xp` 取每行“□/☐”数量，最少 1。
+
+Changelog (配置扩展)
+- workspace_manager.py：系统配置允许 `advanced_export_params`、`pnp_export_params` 持久化导出参数；导出卡牌不再依赖参数哈希缓存。

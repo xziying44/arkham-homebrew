@@ -375,6 +375,21 @@ export interface ApiConfig {
 export interface ConfigData {
   encounter_groups_dir?: string;
   other_setting?: string;
+  advanced_export_params?: ExportCardParams;
+  pnp_export_params?: {
+    format?: string;
+    dpi?: number;
+    size?: string;
+    bleed?: number;
+    bleed_mode?: string;
+    bleed_model?: string;
+    quality?: number;
+    saturation?: number;
+    brightness?: number;
+    gamma?: number;
+    encounter_group_mode?: string;
+    prefix?: string;
+  };
   [key: string]: any; // 允许其他配置项
 }
 
@@ -502,7 +517,6 @@ export interface ExportCardRequest {
   card_path: string;
   export_filename: string;
   export_params: ExportCardParams;
-  params_hash: string;
 }
 export type ExportCardResponse = BaseResponse<null>;
 

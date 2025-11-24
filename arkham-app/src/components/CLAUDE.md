@@ -10,6 +10,10 @@ This document provides a complete, multi‑layer reference for the Vue 3 compone
 Changelog (保存流程)
 - FormEditPanel：在单卡/批量保存前调用 `/api/tts/generate` 写入稳定 `tts_config.script_id`（v2），不再依赖手动刷新 GMNotes，确保引用 ID 不再随机。
 
+Changelog (导出参数持久化)
+- FileTreePanel：高级导出参数改为从系统配置读取/保存，去除参数哈希缓存。
+- PackageEditor：实体（PNP）导出参数持久化到系统配置，后端无配置时回退组件默认值。
+
 ## 2) Architecture & Dependencies
 - Core editors/panels orchestrate specialized subcomponents:
   - `FormEditPanel.vue`: Primary card editor shell; composes `CardSideEditor`, `IllustrationLayoutEditor`, `DeckOptionEditor`, and `TtsScriptEditor`.

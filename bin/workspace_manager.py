@@ -648,6 +648,8 @@ class WorkspaceManager:
         # ImgBB图床配置
         "imgbb_api_key",  # ImgBB API密钥
         "imgbb_expiration",  # ImgBB图片过期时间
+        "advanced_export_params",  # 高级导出参数缓存
+        "pnp_export_params",  # 内容包实体导出参数缓存
         # 可以在这里添加更多系统级配置字段
     ]
 
@@ -701,7 +703,6 @@ class WorkspaceManager:
         self.deck_exporter = DeckExporter(self)
 
         self._export_helper = None
-        self._export_params_hash = None
         self.card_lock = threading.Lock()
 
         # 初始化缓存相关属性
@@ -2033,6 +2034,8 @@ class WorkspaceManager:
                 config[field] = "AH_LCG"  # Cloudinary默认文件夹
             elif field == "imgbb_expiration":
                 config[field] = 0  # ImgBB默认永不过期
+            elif field in ("advanced_export_params", "pnp_export_params"):
+                config[field] = {}
             else:
                 config[field] = ""
         return config
@@ -2697,8 +2700,7 @@ class WorkspaceManager:
             print(f"导出TTS物品失败: {e}")
             return False
 
-    def export_card_with_params(self, card_path: str, export_filename: str, export_params: Dict[str, Any],
-                                params_hash: str) -> bool:
+    def export_card_with_params(self, card_path: str, export_filename: str, export_params: Dict[str, Any]) -> bool:
         """
         使用指定的导出参数导出卡牌（支持单面和双面卡牌）
 
@@ -2706,7 +2708,6 @@ class WorkspaceManager:
             card_path: 卡牌文件相对路径
             export_filename: 导出文件名（不包含扩展名）
             export_params: 导出参数
-            params_hash: 参数哈希值，用于缓存判断
 
         Returns:
             bool: 导出是否成功
@@ -2727,17 +2728,10 @@ class WorkspaceManager:
                 print(f"不支持的导出格式: {export_format}")
                 return False
 
-            # 检查是否需要重新生成（通过参数哈希判断）
-            export_helper = getattr(self, '_export_helper', None)
-            current_hash = getattr(self, '_export_params_hash', None)
-
-            if export_helper is None or current_hash != params_hash:
-                from ExportHelper import ExportHelper
-                # 创建新的ExportHelper实例
-                export_helper = ExportHelper(export_params, self)
-                self._export_helper = export_helper
-                self._export_params_hash = params_hash
-                print("创建新的ExportHelper实例")
+            from ExportHelper import ExportHelper
+            # 直接基于传入参数构造导出助手（保持与前端同步参数）
+            export_helper = ExportHelper(export_params, self)
+            self._export_helper = export_helper
 
             # 导出卡牌（自动判断单面或双面）
             result = export_helper.export_card_auto(card_path)

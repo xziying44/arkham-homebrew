@@ -1038,7 +1038,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue';
+import { ref, computed, watch, nextTick, onMounted } from 'vue';
 import {
   useMessage,
   type FormInst,
@@ -1190,7 +1190,7 @@ const pnpExportResult = ref<any>(null);
 const pnpExportMode = ref<'single_card' | 'print_sheet' | 'images'>('single_card');
 const pnpPaperSize = ref('A4');
 const pnpOutputFilename = ref('pnp_export');
-const pnpExportParams = ref({
+const getDefaultPnpExportParams = () => ({
   format: 'PNG',
   dpi: 300,
   size: '63.5mm × 88.9mm (2.5″ × 3.5″)',
@@ -1204,6 +1204,7 @@ const pnpExportParams = ref({
   encounter_group_mode: 'range', // 'classic' (经典模式-独立编号) 或 'range' (范围模式-复制图片)
   prefix: '' // 文件名前缀(仅在images模式下使用)
 });
+const pnpExportParams = ref(getDefaultPnpExportParams());
 
 // PNP导出选项
 const paperSizeOptions = computed(() => [
@@ -1244,6 +1245,32 @@ const formatOptions = [
   { label: 'PNG', value: 'PNG' },
   { label: 'JPG', value: 'JPG' }
 ];
+
+const PNP_EXPORT_CONFIG_KEY = 'pnp_export_params';
+const loadPnpExportParams = async () => {
+  try {
+    const stored = await ConfigService.getConfigItem<typeof pnpExportParams.value | null>(PNP_EXPORT_CONFIG_KEY, null);
+    pnpExportParams.value = {
+      ...getDefaultPnpExportParams(),
+      ...(stored || {})
+    };
+  } catch (error) {
+    console.warn('加载PNP导出参数配置失败:', error);
+    pnpExportParams.value = getDefaultPnpExportParams();
+  }
+};
+
+const persistPnpExportParams = async () => {
+  try {
+    await ConfigService.updateConfigItem(PNP_EXPORT_CONFIG_KEY, pnpExportParams.value);
+  } catch (error) {
+    console.warn('保存PNP导出参数配置失败:', error);
+  }
+};
+
+onMounted(() => {
+  void loadPnpExportParams();
+});
 
 // 卡牌预览生成队列
 const previewGenerationQueue = ref<string[]>([]);
@@ -3029,6 +3056,12 @@ const exportToPnp = async () => {
   };
 
   try {
+    try {
+      await persistPnpExportParams();
+    } catch (error) {
+      console.warn('持久化PNP导出参数失败:', error);
+    }
+
     const modeText = pnpExportMode.value === 'single_card'
       ? t('contentPackage.pnp.exportParams.singleCard')
       : pnpExportMode.value === 'print_sheet'
