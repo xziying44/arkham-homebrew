@@ -525,7 +525,7 @@ class ContentPackageManager:
                 "types": meta_info.get("types", []),
                 "status": meta_info.get("status", "final"),
                 "date_updated": datetime.now().isoformat() + 'Z',
-                "generator": "Arkham Card Maker v3.3"
+                "generator": "Arkham Card Maker v3.4"
             },
             "data": {
                 "cards": cards,
