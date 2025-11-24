@@ -1421,22 +1421,6 @@ const saveCard = async () => {
         // 保存前生成 GMNotes，确保脚本 ID 持久化（仅操作快照，避免污染实时表单数据）
         await ensureScriptIdByBackend(snapshotData);
 
-        // 生成卡片并检查box_position
-        const result_card = await CardService.generateCard(snapshotData as CardData);
-
-        // 检查是否为定制卡且有box_position参数 → 将坐标保存到 tts_config，由后端统一生成 Lua
-        if (snapshotData.type === '定制卡' && result_card?.box_position && result_card.box_position.length > 0) {
-            console.log('🎯 定制卡检测到 box_position，保存到 tts_config:', result_card.box_position);
-            snapshotData.tts_config = {
-                ...(snapshotData.tts_config || {}),
-                version: 'v2',
-                upgrade: {
-                    coordinates: result_card.box_position,
-                },
-            };
-            if ('tts_script' in snapshotData) delete snapshotData.tts_script;
-        }
-
         // 在保存前计算并写入内容哈希（排除 content_hash 自身）
         try {
             const hash = await computeCardContentHash(snapshotData);
@@ -1451,18 +1435,6 @@ const saveCard = async () => {
 
         // 【新增】保存成功后清除暂存（按冻结路径）
         emit('clear-cache', snapshotResult.filePath);
-
-        // 显示卡图（使用已生成的结果）
-        const imageBase64 = result_card?.image;
-        if (imageBase64) {
-            if (result_card?.back_image) {
-                emit('update-preview-image', { front: imageBase64, back: result_card.back_image });
-                console.log('✅ 保存后双面卡牌预览更新成功');
-            } else {
-                emit('update-preview-image', imageBase64);
-                console.log('✅ 保存后单面卡牌预览更新成功');
-            }
-        }
 
         // 若保存期间用户未再修改，则同步关键字段并更新“已保存”状态
         const stateAfterSave = JSON.stringify(currentCardData);
