@@ -5,15 +5,20 @@ export default {
     trait: 'Trait tag {xxx}',
     italic: 'Italic text <i>',
     center: 'Center text <center>',
+    paragraph: 'Paragraph tag <p>',
     flavor: 'Flavor text tag',
     hr: 'Insert horizontal line',
     fontSize: 'Font size adjustment',
     fullname: 'Insert card name',
-    upg: 'Customization checkbox'
+    upg: 'Customization checkbox',
+    nbsp: 'Non-breaking space <nbsp>'
   },
 
   // Icon button
   icons: 'Icons',
+
+  // Keyword button
+  keywords: 'Keywords',
 
   // Icon labels
   iconLabels: {
@@ -42,6 +47,16 @@ export default {
     guardian: 'Guardian',
     mystic: 'Mystic',
     seeker: 'Seeker'
+  },
+
+  keywordLabels: {
+    pre: 'Prey',
+    spa: 'Spawn',
+    forced: 'Forced',
+    haunted: 'Haunted',
+    objective: 'Objective',
+    patrol: 'Patrol',
+    revelation: 'Revelation'
   },
 
   // Spellcheck

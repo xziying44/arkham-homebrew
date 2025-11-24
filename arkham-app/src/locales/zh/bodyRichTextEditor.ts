@@ -5,15 +5,20 @@ export default {
     trait: '特性标签 {xxx}',
     italic: '斜体文本 <i>',
     center: '居中文本 <center>',
+    paragraph: '段落标签 <p>',
     flavor: '风味文本标签',
     hr: '插入横线',
     fontSize: '字体大小调整',
     fullname: '插入卡牌名称',
-    upg: '定制卡方块'
+    upg: '定制卡方块',
+    nbsp: '连词空格 <nbsp>'
   },
 
   // Icon button
   icons: '图标',
+
+  // Keyword button
+  keywords: '关键词',
 
   // Icon labels
   iconLabels: {
@@ -42,6 +47,16 @@ export default {
     guardian: '守护者',
     mystic: '潜修者',
     seeker: '探求者'
+  },
+
+  keywordLabels: {
+    pre: '猎物 / Prey',
+    spa: '生成 / Spawn',
+    forced: '强制 / Forced',
+    haunted: '闹鬼 / Haunted',
+    objective: '目标 / Objective',
+    patrol: '巡逻 / Patrol',
+    revelation: '显现 / Revelation'
   },
 
   // Spellcheck

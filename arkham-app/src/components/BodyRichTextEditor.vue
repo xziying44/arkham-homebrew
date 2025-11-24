@@ -6,6 +6,18 @@
       <n-space size="small" class="toolbar-group">
         <n-tooltip trigger="hover">
           <template #trigger>
+            <n-button size="small" @click="wrapWithParagraph">
+              <template #icon>
+                <n-icon :component="ReorderFourOutline" />
+              </template>
+              P
+            </n-button>
+          </template>
+          {{ t('bodyRichTextEditor.tooltip.paragraph') }}
+        </n-tooltip>
+
+        <n-tooltip trigger="hover">
+          <template #trigger>
             <n-button size="small" @click="insertTag('bold')">
               <template #icon>
                 <n-icon :component="TextOutline" />
@@ -49,6 +61,46 @@
           </template>
           {{ t('bodyRichTextEditor.tooltip.center') }}
         </n-tooltip>
+
+        <n-tooltip v-if="isEnglishCard" trigger="hover">
+          <template #trigger>
+            <n-button size="small" @click="insertText('<nbsp>')">
+              <template #icon>
+                <n-icon :component="RemoveOutline" />
+              </template>
+              nbsp
+            </n-button>
+          </template>
+          {{ t('bodyRichTextEditor.tooltip.nbsp') }}
+        </n-tooltip>
+
+        <n-popover
+          trigger="click"
+          placement="top-start"
+          :width="220"
+          v-model:show="showKeywordPopover"
+        >
+          <template #trigger>
+            <n-button size="small">
+              <template #icon>
+                <n-icon :component="SparklesOutline" />
+              </template>
+              {{ t('bodyRichTextEditor.keywords') }}
+              <n-icon :component="ChevronDownOutline" style="margin-left: 4px;" />
+            </n-button>
+          </template>
+          <div class="keyword-list">
+            <div
+              v-for="keyword in keywordList"
+              :key="keyword.value"
+              class="keyword-item"
+              @click="handleKeywordSelect(keyword.value)"
+            >
+              <span class="keyword-tag">{{ keyword.value }}</span>
+              <span class="keyword-label">{{ keyword.label }}</span>
+            </div>
+          </div>
+        </n-popover>
       </n-space>
 
       <n-divider vertical />
@@ -287,6 +339,7 @@ const DEFAULT_FLAVOR_CONFIG = {
 const showFlavorModal = ref(false);
 const showSizeModal = ref(false);
 const showIconPopover = ref(false);
+const showKeywordPopover = ref(false);
 const fontSizeValue = ref(2);
 const spellcheckEnabled = ref(false);
 
@@ -409,6 +462,35 @@ const alignOptions = [
   { label: 'left', value: 'left' },
   { label: 'center', value: 'center' }
 ];
+
+const isEnglishCard = computed(() => {
+  const lang = props.cardLanguage?.toLowerCase() || '';
+  return !(lang === 'zh' || lang === 'zh-cht');
+});
+
+const keywordList = computed(() => {
+  if (isEnglishCard.value) {
+    return [
+      { value: '<pre>', label: t('bodyRichTextEditor.keywordLabels.pre') },
+      { value: '<spa>', label: t('bodyRichTextEditor.keywordLabels.spa') },
+      { value: '<for>', label: t('bodyRichTextEditor.keywordLabels.forced') },
+      { value: '<hau>', label: t('bodyRichTextEditor.keywordLabels.haunted') },
+      { value: '<obj>', label: t('bodyRichTextEditor.keywordLabels.objective') },
+      { value: '<pat>', label: t('bodyRichTextEditor.keywordLabels.patrol') },
+      { value: '<rev>', label: t('bodyRichTextEditor.keywordLabels.revelation') }
+    ];
+  }
+
+  return [
+    { value: '<猎物>', label: t('bodyRichTextEditor.keywordLabels.pre') },
+    { value: '<生成>', label: t('bodyRichTextEditor.keywordLabels.spa') },
+    { value: '<强制>', label: t('bodyRichTextEditor.keywordLabels.forced') },
+    { value: '<闹鬼>', label: t('bodyRichTextEditor.keywordLabels.haunted') },
+    { value: '<目标>', label: t('bodyRichTextEditor.keywordLabels.objective') },
+    { value: '<巡逻>', label: t('bodyRichTextEditor.keywordLabels.patrol') },
+    { value: '<显现>', label: t('bodyRichTextEditor.keywordLabels.revelation') }
+  ];
+});
 
 // Initialize spellcheck based on language
 watch(
@@ -683,6 +765,10 @@ const insertText = (text: string) => {
   });
 };
 
+const wrapWithParagraph = () => {
+  insertAtCursor('<p>', '</p>');
+};
+
 const insertTag = (tagType: 'bold' | 'trait' | 'italic' | 'center') => {
   const tagMap = {
     bold: { before: '【', after: '】' },
@@ -725,6 +811,11 @@ const insertSizeTag = () => {
 const handleIconSelect = (emoji: string) => {
   insertText(emoji);
   showIconPopover.value = false;
+};
+
+const handleKeywordSelect = (value: string) => {
+  insertText(value);
+  showKeywordPopover.value = false;
 };
 </script>
 
@@ -851,5 +942,39 @@ const handleIconSelect = (emoji: string) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.keyword-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.keyword-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.keyword-item:hover {
+  background-color: rgba(128, 128, 128, 0.15);
+}
+
+.keyword-tag {
+  font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
+  color: var(--n-text-color);
+}
+
+.keyword-label {
+  font-size: 12px;
+  color: rgba(128, 128, 128, 0.8);
+  margin-left: 12px;
 }
 </style>
