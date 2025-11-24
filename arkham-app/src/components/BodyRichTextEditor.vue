@@ -156,6 +156,17 @@
 
         <n-tooltip trigger="hover">
           <template #trigger>
+            <n-button size="small" @click="insertText('<fullnameb>')">
+              <template #icon>
+                <n-icon :component="PersonOutline" />
+              </template>
+            </n-button>
+          </template>
+          {{ t('bodyRichTextEditor.tooltip.fullnameBack') }}
+        </n-tooltip>
+
+        <n-tooltip trigger="hover">
+          <template #trigger>
             <n-button size="small" @click="insertText('<upg>')">
               <template #icon>
                 <n-icon :component="CheckboxOutline" />

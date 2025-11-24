@@ -1,6 +1,6 @@
 import re
 import json
-from typing import Dict, Any, List, Tuple, TYPE_CHECKING
+from typing import Dict, Any, List, Tuple, TYPE_CHECKING, Optional
 from copy import deepcopy
 
 if TYPE_CHECKING:
@@ -73,7 +73,7 @@ class CardAdapter:
         "scenario_card.elder_thing",
     ]
 
-    def __init__(self, card_data: Dict[str, Any], font_manager: 'FontManager'):
+    def __init__(self, card_data: Dict[str, Any], font_manager: 'FontManager', other_side_name: Optional[str] = None):
         """
         初始化卡牌适配器
         Args:
@@ -87,10 +87,14 @@ class CardAdapter:
         self.font_manager = font_manager
         self.lang = font_manager.lang if hasattr(font_manager, 'lang') else 'en'
 
+        type_value = str(self.original_data.get('type', ''))
+        self.is_back = bool(self.original_data.get('is_back', False) or '背' in type_value or type_value.endswith('back'))
+
         fullname = self.original_data.get('name', '')
         if not isinstance(fullname, str):
             fullname = ''
         fullname = self.clean_name(fullname)
+        other_fullname = self._resolve_other_side_name(other_side_name)
         self.conversion_rules = self.get_conversion_rules() + [
             (r"<pre>|<猎物>", font_manager.get_font_text('prey')),
             (r"<spa>|<生成>", font_manager.get_font_text('spawn')),
@@ -100,6 +104,7 @@ class CardAdapter:
             (r"<pat>|<巡逻>", font_manager.get_font_text('patrol')),
             (r"<rev>|<显现>", font_manager.get_font_text('revelation')),
             (r"<fullname>|<名称>", fullname),
+            (r"<fullnameb>|<背面名称>", other_fullname),
         ]
         if font_manager.lang in ['zh', 'zh-CHT']:
             self.conversion_rules.append(
@@ -118,6 +123,29 @@ class CardAdapter:
             for pattern, replacement in self.conversion_rules
         ]
         self.font_manager = font_manager
+
+    def _resolve_other_side_name(self, other_side_name: Optional[str]) -> str:
+        """获取对侧名称，未找到时返回空字符串"""
+        if isinstance(other_side_name, str):
+            return self.clean_name(other_side_name)
+
+        # 当前为正面时尝试从 back 中取 name
+        if not self.is_back:
+            back = self.original_data.get('back')
+            if isinstance(back, dict):
+                back_name = back.get('name')
+                if isinstance(back_name, str):
+                    return self.clean_name(back_name)
+
+        # 当前为背面且有 front 字段时尝试回取
+        if self.is_back:
+            front = self.original_data.get('front')
+            if isinstance(front, dict):
+                front_name = front.get('name')
+                if isinstance(front_name, str):
+                    return self.clean_name(front_name)
+
+        return ''
 
     @staticmethod
     def clean_name(name: str) -> str:

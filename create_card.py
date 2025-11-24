@@ -120,6 +120,37 @@ class CardCreator:
         padding = flavor.get('padding', 20)
         return int(padding) if padding is not None else 0
 
+    def _get_other_side_name(self, card_data: dict) -> str:
+        """提取对侧名称，缺失时返回空字符串"""
+        if not isinstance(card_data, dict):
+            return ''
+
+        type_value = str(card_data.get('type', ''))
+        is_back = bool(card_data.get('is_back', False) or '背' in type_value or type_value.endswith('back'))
+
+        if is_back:
+            for key in ['front_name', 'name_front']:
+                name_value = card_data.get(key)
+                if isinstance(name_value, str) and name_value:
+                    return name_value
+            front = card_data.get('front')
+            if isinstance(front, dict):
+                name_value = front.get('name')
+                if isinstance(name_value, str):
+                    return name_value
+        else:
+            back = card_data.get('back')
+            if isinstance(back, dict):
+                name_value = back.get('name')
+                if isinstance(name_value, str):
+                    return name_value
+            for key in ['back_name', 'name_back']:
+                name_value = card_data.get(key)
+                if isinstance(name_value, str) and name_value:
+                    return name_value
+
+        return ''
+
     def _open_picture(self, card_json: dict, picture_path: Union[str, Image.Image, None]) -> Optional[Image.Image]:
         """打开图片 - 支持路径和PIL图片对象"""
         if picture_path is None:
@@ -2225,7 +2256,8 @@ class CardCreator:
             Card: 创建的卡牌对象
         """
         # 标签适配器
-        adapter = CardAdapter(card_json, self.font_manager)
+        other_side_name = self._get_other_side_name(card_json)
+        adapter = CardAdapter(card_json, self.font_manager, other_side_name=other_side_name)
         card_json = adapter.convert()
         # 预处理
         card_json = self._preprocessing_json(card_json)

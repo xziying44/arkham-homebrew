@@ -638,6 +638,11 @@ class ExportHelper:
             if 'language' not in back_json:
                 back_json['language'] = card_json.get('language', 'zh')
 
+            # 标记背面并注入正面名称，便于背面渲染 <fullnameb>
+            back_json['is_back'] = True
+            if 'front_name' not in back_json and isinstance(card_json.get('name'), str):
+                back_json['front_name'] = card_json.get('name')
+
             back_json = self.workspace_manager.creator._preprocessing_json(back_json)
 
             # 背面共享正面插画与设置（调查员小卡等）

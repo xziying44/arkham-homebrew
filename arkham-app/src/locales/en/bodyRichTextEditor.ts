@@ -10,6 +10,7 @@ export default {
     hr: 'Insert horizontal line',
     fontSize: 'Font size adjustment',
     fullname: 'Insert card name',
+    fullnameBack: 'Insert back side name',
     upg: 'Customization checkbox',
     nbsp: 'Non-breaking space <nbsp>'
   },

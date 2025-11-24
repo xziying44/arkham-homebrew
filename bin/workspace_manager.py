@@ -1624,6 +1624,13 @@ class WorkspaceManager:
             if 'version' not in back_json_data:
                 back_json_data['version'] = json_data.get('version', '2.0')
 
+            # 为背面注入正面名称，便于 CardAdapter 获取 <fullnameb>
+            if 'front_name' not in back_json_data and isinstance(json_data.get('name'), str):
+                back_json_data['front_name'] = json_data.get('name')
+
+            # 标记背面，确保适配器可判定对侧名称来源
+            back_json_data['is_back'] = True
+
             # 在生成背面卡牌前，处理共享正面插画与设置
             try:
                 share_flag = back_json_data.get('share_front_picture', 0)

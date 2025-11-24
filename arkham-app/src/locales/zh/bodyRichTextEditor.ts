@@ -10,6 +10,7 @@ export default {
     hr: '插入横线',
     fontSize: '字体大小调整',
     fullname: '插入卡牌名称',
+    fullnameBack: '插入背面名称',
     upg: '定制卡方块',
     nbsp: '连词空格 <nbsp>'
   },
