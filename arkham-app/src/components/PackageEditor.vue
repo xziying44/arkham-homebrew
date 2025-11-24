@@ -20,6 +20,7 @@
           :config="uploadConfigSnapshot || packageData"
           :is-batch="isCurrentUploadBatch"
           @confirm="handleUploadConfirm"
+          @fail="handleUploadFail"
           @cancel="closeUploadPage"
         />
       </div>
@@ -938,6 +939,7 @@
         :current-item="{ banner_base64: (uploadConfigSnapshot || packageData).banner_base64, meta: (uploadConfigSnapshot || packageData).meta }"
         :config="uploadConfigSnapshot || packageData"
         @confirm="handleUploadBanner"
+        @fail="handleUploadFail"
         @cancel="showUploadBannerDialog = false" />
       <template #action>
         <n-space>
@@ -957,6 +959,7 @@
         :current-item="uploadingCard"
         :config="uploadConfigSnapshot || packageData"
         @confirm="handleUploadCard"
+        @fail="handleUploadFail"
         @cancel="showUploadCardDialog = false; uploadingCard = null" />
       <template #action>
         <n-space>
@@ -978,6 +981,7 @@
         :config="uploadConfigSnapshot || packageData"
         :is-batch="true"
         @confirm="handleBatchUpload"
+        @fail="handleUploadFail"
         @cancel="showBatchUploadDialog = false" />
       <template #action>
         <n-space>
@@ -1003,6 +1007,7 @@
         :current-item="uploadingEncounter"
         :config="packageData"
         @confirm="handleUploadEncounter"
+        @fail="handleUploadFail"
         @cancel="showUploadEncounterDialog = false; uploadingEncounter = null" />
       <template #action>
         <n-space>
@@ -1024,6 +1029,7 @@
         :config="packageData"
         :is-batch="true"
         @confirm="handleBatchEncounterUpload"
+        @fail="handleUploadFail"
         @cancel="showBatchEncounterUploadDialog = false" />
       <template #action>
         <n-space>
@@ -1086,6 +1092,15 @@ interface Props {
 interface Emits {
   (e: 'save'): void;
   (e: 'update:package', value: ContentPackageFile): void;
+}
+
+interface UploadFailPayload {
+  message: string;
+  code?: number;
+  host?: string;
+  uploadType: 'banner' | 'card' | 'encounter';
+  isBatch: boolean;
+  itemName?: string;
 }
 
 const props = defineProps<Props>();
@@ -2209,6 +2224,32 @@ const handleUploadConfirm = (updatedPackage: any) => {
       message.success(t('contentPackage.encounters.success.uploadSuccess'));
     }
   }
+};
+
+// 上传失败回调：清理对应 loading 并反馈更清晰的错误信息
+const handleUploadFail = (payload: UploadFailPayload) => {
+  if (!payload) return;
+
+  if (payload.uploadType === 'banner') {
+    isBannerUploading.value = false;
+  } else if (payload.uploadType === 'card') {
+    if (payload.isBatch) {
+      batchUploading.value = false;
+    } else {
+      isCardUploading.value = false;
+    }
+  } else if (payload.uploadType === 'encounter') {
+    if (payload.isBatch) {
+      batchEncounterUploading.value = false;
+    } else {
+      isEncounterUploading.value = false;
+    }
+  }
+
+  // 兜底：旧流程的统一 loading
+  isUploading.value = false;
+
+  message.error(payload.message || t('common.unknownError'));
 };
 
 // 显示上传卡牌对话框 (废弃,保留用于兼容)
