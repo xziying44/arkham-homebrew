@@ -766,7 +766,6 @@ class RichTextRenderer:
                 font_name = font_stack.get_top_font_name()
 
                 offset_y = 0 + font_offset_y
-                offset_x = 0
                 if font_name == '方正舒体':
                     offset_y = -2
                 elif font_name == 'SourceHanSansSC-Regular':
@@ -778,6 +777,8 @@ class RichTextRenderer:
                 if item.type == TextType.OTHER:
                     # 一个一个push
                     for char in item.content:
+                        char_offset_x = 0
+                        char_offset_y = offset_y
                         if font_name == 'simfang-Italic':
                             # 使用仿宋计算字体
                             text_width, text_height = self._get_text_box(char, simfang_font)
@@ -786,15 +787,15 @@ class RichTextRenderer:
                             text_width, text_height = self._get_text_box(char, font)
                         if char == '﹒':
                             text_width = int(text_width * 0.5)
-                            offset_x = -int(text_width * 0.5)
+                            char_offset_x = -int(text_width * 0.5)
                         success = virtual_text_box.push(
                             TextObject(char, font, font_name, font.size + font_addsize, text_height, text_width,
-                                       base_options.font_color, offset_x=offset_x, offset_y=offset_y)
+                                       base_options.font_color, offset_x=char_offset_x, offset_y=char_offset_y)
                         )
                 else:
                     text_box = self._get_text_box(item.content, font)
                     text_object = TextObject(item.content, font, font_name, font.size, text_box[1], text_box[0],
-                                             base_options.font_color, offset_x=offset_x, offset_y=offset_y)
+                                             base_options.font_color, offset_x=0, offset_y=offset_y)
                     if self.font_manager.lang in ['zh', 'zh-CHT']:
                         virtual_text_box.push(text_object)
                     else:
