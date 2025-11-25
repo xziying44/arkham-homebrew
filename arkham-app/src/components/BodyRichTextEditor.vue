@@ -175,6 +175,18 @@
           </template>
           {{ t('bodyRichTextEditor.tooltip.upg') }}
         </n-tooltip>
+
+        <n-tooltip trigger="hover">
+          <template #trigger>
+            <n-button size="small" @click="showIblockModal = true">
+              <template #icon>
+                <n-icon :component="PricetagsOutline" />
+              </template>
+              IB
+            </n-button>
+          </template>
+          {{ t('bodyRichTextEditor.tooltip.iblock') }}
+        </n-tooltip>
       </n-space>
 
       <n-divider vertical />
@@ -220,11 +232,13 @@
     <!-- Editor with Line Numbers -->
     <div class="editor-container">
       <div class="line-numbers" ref="lineNumbersRef">
-        <template v-for="(lineInfo, index) in lineInfoList" :key="index">
+        <div class="line-number-spacer" :style="{ height: lineNumberPaddingTop + 'px' }" />
+        <template v-for="(lineInfo, index) in visibleLineInfoList" :key="lineNumberStartIndex + index">
           <div class="line-number" :style="{ height: lineInfo.height + 'px' }">
             {{ lineInfo.lineNum > 0 ? lineInfo.lineNum : '' }}
           </div>
         </template>
+        <div class="line-number-spacer" :style="{ height: lineNumberPaddingBottom + 'px' }" />
       </div>
       <textarea
         ref="textareaRef"
@@ -244,7 +258,7 @@
       :title="t('bodyRichTextEditor.flavorModal.title')"
       style="width: 480px;"
     >
-      <n-form label-placement="left" label-width="80px">
+      <n-form label-placement="left" label-width="120px">
         <n-form-item :label="t('bodyRichTextEditor.flavorModal.align')">
           <n-select
             v-model:value="flavorConfig.align"
@@ -271,6 +285,45 @@
         <n-space>
           <n-button @click="showFlavorModal = false">{{ t('bodyRichTextEditor.common.cancel') }}</n-button>
           <n-button type="primary" @click="insertFlavorTag">{{ t('bodyRichTextEditor.common.confirm') }}</n-button>
+        </n-space>
+      </template>
+    </n-modal>
+
+    <!-- Icon Block Modal -->
+    <n-modal
+      v-model:show="showIblockModal"
+      preset="dialog"
+      :title="t('bodyRichTextEditor.iblockModal.title')"
+      style="width: 720px;"
+    >
+      <n-form label-placement="left" label-width="120px">
+        <n-form-item :label="t('bodyRichTextEditor.iblockModal.icon')">
+          <div class="icon-grid icon-grid--selectable">
+            <div
+              v-for="icon in iblockIconGrid"
+              :key="icon.key"
+              class="icon-grid-item"
+              :class="{ active: icon.value === iblockConfig.icon }"
+              @click="iblockConfig.icon = icon.value"
+            >
+              <span class="icon-emoji">{{ icon.emoji }}</span>
+              <span class="icon-label">{{ icon.label }}</span>
+            </div>
+          </div>
+        </n-form-item>
+        <n-form-item :label="t('bodyRichTextEditor.iblockModal.gap')">
+          <n-input-number
+            v-model:value="iblockConfig.gap"
+            :min="0"
+            :max="200"
+            style="width: 100%;"
+          />
+        </n-form-item>
+      </n-form>
+      <template #action>
+        <n-space>
+          <n-button @click="showIblockModal = false">{{ t('bodyRichTextEditor.common.cancel') }}</n-button>
+          <n-button type="primary" @click="insertIblockTag">{{ t('bodyRichTextEditor.common.confirm') }}</n-button>
         </n-space>
       </template>
     </n-modal>
@@ -308,6 +361,7 @@ import { useI18n } from 'vue-i18n';
 import {
   TextOutline,
   PricetagOutline,
+  PricetagsOutline,
   ReorderFourOutline,
   ChatbubbleEllipsesOutline,
   RemoveOutline,
@@ -346,13 +400,81 @@ const DEFAULT_FLAVOR_CONFIG = {
   flex: true
 };
 
+const DEFAULT_IBLOCK_CONFIG = {
+  icon: '',
+  gap: 5
+};
+
+interface IblockOption {
+  labelKey: string;
+  value: string;
+}
+
+const IBLOCK_ICON_OPTIONS_ZH: IblockOption[] = [
+  { labelKey: 'guardian', value: '守护者' },
+  { labelKey: 'seeker', value: '探求者' },
+  { labelKey: 'rogue', value: '流浪者' },
+  { labelKey: 'mystic', value: '潜修者' },
+  { labelKey: 'survivor', value: '生存者' },
+  { labelKey: 'investigator', value: '调查员' },
+  { labelKey: 'reaction', value: '反应' },
+  { labelKey: 'action', value: '启动' },
+  { labelKey: 'free', value: '免费' },
+  { labelKey: 'skull', value: '骷髅' },
+  { labelKey: 'cultist', value: '异教徒' },
+  { labelKey: 'tablet', value: '石板' },
+  { labelKey: 'elderThing', value: '古神' },
+  { labelKey: 'tentacle', value: '触手' },
+  { labelKey: 'elderSign', value: '旧印' },
+  { labelKey: 'brain', value: '脑' },
+  { labelKey: 'book', value: '书' },
+  { labelKey: 'fist', value: '拳' },
+  { labelKey: 'foot', value: '脚' },
+  { labelKey: 'wild', value: '?' },
+  { labelKey: 'unique', value: '独特' },
+  { labelKey: 'dot', value: 'bul' },
+  { labelKey: 'bless', value: '祝福' },
+  { labelKey: 'curse', value: '诅咒' },
+  { labelKey: 'frost', value: '雪花' }
+];
+
+const IBLOCK_ICON_OPTIONS_EN: IblockOption[] = [
+  { labelKey: 'guardian', value: 'gua' },
+  { labelKey: 'seeker', value: 'see' },
+  { labelKey: 'rogue', value: 'rog' },
+  { labelKey: 'mystic', value: 'mys' },
+  { labelKey: 'survivor', value: 'sur' },
+  { labelKey: 'investigator', value: 'per' },
+  { labelKey: 'reaction', value: 'rea' },
+  { labelKey: 'action', value: 'act' },
+  { labelKey: 'free', value: 'fre' },
+  { labelKey: 'skull', value: 'sku' },
+  { labelKey: 'cultist', value: 'cul' },
+  { labelKey: 'tablet', value: 'tab' },
+  { labelKey: 'elderThing', value: 'mon' },
+  { labelKey: 'tentacle', value: 'ten' },
+  { labelKey: 'elderSign', value: 'eld' },
+  { labelKey: 'brain', value: 'wil' },
+  { labelKey: 'book', value: 'int' },
+  { labelKey: 'fist', value: 'com' },
+  { labelKey: 'foot', value: 'agi' },
+  { labelKey: 'wild', value: 'wild' },
+  { labelKey: 'unique', value: 'uni' },
+  { labelKey: 'dot', value: 'bul' },
+  { labelKey: 'bless', value: 'ble' },
+  { labelKey: 'curse', value: 'cur' },
+  { labelKey: 'frost', value: 'frost' }
+];
+
 // State
 const showFlavorModal = ref(false);
 const showSizeModal = ref(false);
 const showIconPopover = ref(false);
 const showKeywordPopover = ref(false);
+const showIblockModal = ref(false);
 const fontSizeValue = ref(2);
 const spellcheckEnabled = ref(false);
+const iblockConfig = ref({ ...DEFAULT_IBLOCK_CONFIG });
 
 // Undo/Redo history management
 interface HistoryState {
@@ -479,6 +601,8 @@ const isEnglishCard = computed(() => {
   return !(lang === 'zh' || lang === 'zh-cht');
 });
 
+const defaultIblockIcon = computed(() => 'bul');
+
 const keywordList = computed(() => {
   if (isEnglishCard.value) {
     return [
@@ -503,6 +627,58 @@ const keywordList = computed(() => {
   ];
 });
 
+const resolveIblockIcon = () => {
+  const options = iblockIconOptions.value;
+  if (options.length === 0) return '';
+
+  const matchedCurrent = options.find((option) => option.value === iblockConfig.value.icon);
+  if (matchedCurrent) return matchedCurrent.value;
+
+  const matchedDefault = options.find((option) => option.value === defaultIblockIcon.value);
+  return (matchedDefault || options[0]).value;
+};
+
+const iblockIconOptions = computed(() => {
+  const source = isEnglishCard.value ? IBLOCK_ICON_OPTIONS_EN : IBLOCK_ICON_OPTIONS_ZH;
+  return source.map((item) => ({
+    label: t(`bodyRichTextEditor.iconLabels.${item.labelKey}`),
+    value: item.value
+  }));
+});
+
+const iblockIconGrid = computed(() => {
+  const source = isEnglishCard.value ? IBLOCK_ICON_OPTIONS_EN : IBLOCK_ICON_OPTIONS_ZH;
+  const valueMap = source.reduce<Record<string, string>>((acc, cur) => {
+    acc[cur.labelKey] = cur.value;
+    return acc;
+  }, {});
+
+  return iconList.value
+    .filter((item) => valueMap[item.key])
+    .map((item) => ({
+      key: item.key,
+      label: item.label,
+      value: valueMap[item.key],
+      emoji: item.emoji
+    }));
+});
+
+watch(
+  iblockIconOptions,
+  (options) => {
+    if (options.length === 0) {
+      iblockConfig.value.icon = DEFAULT_IBLOCK_CONFIG.icon;
+      return;
+    }
+
+    const resolvedIcon = resolveIblockIcon();
+    if (iblockConfig.value.icon !== resolvedIcon) {
+      iblockConfig.value.icon = resolvedIcon;
+    }
+  },
+  { immediate: true }
+);
+
 // Initialize spellcheck based on language
 watch(
   () => props.cardLanguage,
@@ -515,6 +691,10 @@ watch(
 
 // Line height constant (matches CSS: 14px * 1.6 = 22.4px)
 const LINE_HEIGHT = 22.4;
+const MIN_VISIBLE_LINE_COUNT = 10;
+const LINE_BUFFER_COUNT = 5;
+const textareaHeight = ref(0);
+const textareaScrollTop = ref(0);
 
 // Measure helper canvas for text width calculation
 let measureCanvas: HTMLCanvasElement | null = null;
@@ -535,10 +715,11 @@ const getMeasureContext = (): CanvasRenderingContext2D | null => {
 // Get textarea width for text wrap calculation
 const textareaWidth = ref(0);
 
-const updateTextareaWidth = () => {
+const updateTextareaMetrics = () => {
   if (textareaRef.value) {
     // Subtract padding (12px left + 12px right = 24px)
     textareaWidth.value = textareaRef.value.clientWidth - 24;
+    textareaHeight.value = textareaRef.value.clientHeight;
   }
 };
 
@@ -552,7 +733,7 @@ const lineInfoList = computed<LineInfo[]>(() => {
   const lines = (props.value || '').split('\n');
   const result: LineInfo[] = [];
   const ctx = getMeasureContext();
-  const containerWidth = textareaWidth.value || 300; // Fallback width
+  const containerWidth = textareaWidth.value > 0 ? textareaWidth.value : 300; // Fallback width
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -581,15 +762,41 @@ const lineInfoList = computed<LineInfo[]>(() => {
   return result;
 });
 
+const lineNumberVirtualData = computed(() => {
+  const total = lineInfoList.value.length;
+  const viewportLineCount = Math.max(
+    MIN_VISIBLE_LINE_COUNT,
+    Math.ceil((textareaHeight.value || 0) / LINE_HEIGHT)
+  );
+  const rawStartIndex = Math.max(
+    0,
+    Math.floor((textareaScrollTop.value || 0) / LINE_HEIGHT) - LINE_BUFFER_COUNT
+  );
+  const startIndex = Math.min(rawStartIndex, Math.max(total - viewportLineCount, 0));
+  const endIndex = Math.min(total, startIndex + viewportLineCount + LINE_BUFFER_COUNT * 2);
+
+  return {
+    items: lineInfoList.value.slice(startIndex, endIndex),
+    paddingTop: startIndex * LINE_HEIGHT,
+    paddingBottom: Math.max(0, (total - endIndex) * LINE_HEIGHT),
+    startIndex
+  };
+});
+
+const visibleLineInfoList = computed(() => lineNumberVirtualData.value.items);
+const lineNumberPaddingTop = computed(() => lineNumberVirtualData.value.paddingTop);
+const lineNumberPaddingBottom = computed(() => lineNumberVirtualData.value.paddingBottom);
+const lineNumberStartIndex = computed(() => lineNumberVirtualData.value.startIndex);
+
 // Setup resize observer for textarea width changes
 let resizeObserver: ResizeObserver | null = null;
 
 onMounted(() => {
-  updateTextareaWidth();
+  updateTextareaMetrics();
 
   if (textareaRef.value) {
     resizeObserver = new ResizeObserver(() => {
-      updateTextareaWidth();
+      updateTextareaMetrics();
     });
     resizeObserver.observe(textareaRef.value);
 
@@ -597,6 +804,10 @@ onMounted(() => {
     textareaRef.value.addEventListener('mouseup', updateLastCursor);
     textareaRef.value.addEventListener('focus', updateLastCursor);
   }
+
+  nextTick(() => {
+    textareaScrollTop.value = textareaRef.value?.scrollTop || 0;
+  });
 });
 
 onUnmounted(() => {
@@ -668,12 +879,17 @@ const handleInput = (e: Event) => {
     pushHistory(newValue, lastCursorStart, lastCursorEnd, cursorAfter, cursorAfter);
     // Update last cursor for next operation
     updateLastCursor();
+    syncScroll();
   });
 };
 
 const syncScroll = () => {
-  if (textareaRef.value && lineNumbersRef.value) {
-    lineNumbersRef.value.scrollTop = textareaRef.value.scrollTop;
+  if (textareaRef.value) {
+    const { scrollTop } = textareaRef.value;
+    textareaScrollTop.value = scrollTop;
+    if (lineNumbersRef.value) {
+      lineNumbersRef.value.scrollTop = scrollTop;
+    }
   }
 };
 
@@ -819,6 +1035,22 @@ const insertSizeTag = () => {
   fontSizeValue.value = 2;
 };
 
+const insertIblockTag = () => {
+  const icon = resolveIblockIcon();
+  const rawGap = Number.isFinite(iblockConfig.value.gap) ? Math.round(iblockConfig.value.gap) : DEFAULT_IBLOCK_CONFIG.gap;
+  const gap = Math.min(200, Math.max(0, rawGap));
+
+  if (!icon) {
+    showIblockModal.value = false;
+    iblockConfig.value = { ...DEFAULT_IBLOCK_CONFIG };
+    return;
+  }
+
+  insertAtCursor(`<iblock icon="${icon}" gap="${gap}">`, '</iblock>');
+  showIblockModal.value = false;
+  iblockConfig.value = { ...DEFAULT_IBLOCK_CONFIG, icon };
+};
+
 const handleIconSelect = (emoji: string) => {
   insertText(emoji);
   showIconPopover.value = false;
@@ -885,6 +1117,11 @@ const handleKeywordSelect = (value: string) => {
   box-sizing: border-box;
 }
 
+.line-number-spacer {
+  width: 100%;
+  flex-shrink: 0;
+}
+
 .editor-textarea {
   flex: 1;
   padding: 8px 12px;
@@ -918,7 +1155,7 @@ const handleKeywordSelect = (value: string) => {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 4px;
-  max-height: 300px;
+  max-height: 320px;
   overflow-y: auto;
 }
 
@@ -932,6 +1169,7 @@ const handleKeywordSelect = (value: string) => {
   cursor: pointer;
   transition: background-color 0.2s;
   min-height: 52px;
+  border: 1px solid transparent;
 }
 
 .icon-grid-item:hover {
@@ -953,6 +1191,18 @@ const handleKeywordSelect = (value: string) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.icon-grid--selectable {
+  margin-top: 4px;
+  width: 100%;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 8px;
+}
+
+.icon-grid--selectable .icon-grid-item.active {
+  border-color: var(--n-primary-color);
+  background-color: rgba(24, 160, 88, 0.08);
 }
 
 .keyword-list {

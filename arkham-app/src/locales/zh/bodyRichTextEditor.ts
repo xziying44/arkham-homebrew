@@ -12,7 +12,8 @@ export default {
     fullname: '插入卡牌名称',
     fullnameBack: '插入背面名称',
     upg: '定制卡方块',
-    nbsp: '连词空格 <nbsp>'
+    nbsp: '连词空格 <nbsp>',
+    iblock: '图标标签块'
   },
 
   // Icon button
@@ -76,6 +77,12 @@ export default {
   sizeModal: {
     title: '字体大小调整',
     value: '大小值'
+  },
+
+  iblockModal: {
+    title: '图标标签块',
+    icon: '标签图标',
+    gap: '图标与文本距离（0-200）'
   },
 
   // Common

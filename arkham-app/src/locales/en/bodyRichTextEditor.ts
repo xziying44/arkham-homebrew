@@ -12,7 +12,8 @@ export default {
     fullname: 'Insert card name',
     fullnameBack: 'Insert back side name',
     upg: 'Customization checkbox',
-    nbsp: 'Non-breaking space <nbsp>'
+    nbsp: 'Non-breaking space <nbsp>',
+    iblock: 'Icon block'
   },
 
   // Icon button
@@ -76,6 +77,12 @@ export default {
   sizeModal: {
     title: 'Font Size Adjustment',
     value: 'Size value'
+  },
+
+  iblockModal: {
+    title: 'Icon Block',
+    icon: 'Icon',
+    gap: 'Gap between icon and text (0-200)'
   },
 
   // Common
