@@ -817,6 +817,10 @@ class RichTextRenderer:
                 virtual_text_box.set_line_center()
             elif item.tag == "/center":
                 virtual_text_box.cancel_line_center()
+            elif item.tag == "right":
+                virtual_text_box.set_line_right()
+            elif item.tag == "/right":
+                virtual_text_box.cancel_line_right()
             elif item.tag == "flavor":
                 html_tag_stack.push("flavor")
                 # 是否添加引用线
@@ -830,8 +834,11 @@ class RichTextRenderer:
                                 self.default_fonts.italic)
                 virtual_text_box.set_line_padding(int(item.attributes.get('padding', 15)))
                 # 是否居中
-                if item.attributes.get('align', 'center') == 'center':
+                flavor_align = item.attributes.get('align', 'center')
+                if flavor_align == 'center':
                     virtual_text_box.set_line_center()
+                elif flavor_align == 'right':
+                    virtual_text_box.set_line_right()
             elif item.tag.startswith('/'):
                 if item.tag == "/font":
                     font_offset_y = 0
@@ -845,6 +852,7 @@ class RichTextRenderer:
                     font_stack.pop()
                     virtual_text_box.cancel_line_padding()
                     virtual_text_box.cancel_line_center()
+                    virtual_text_box.cancel_line_right()
                     virtual_text_box.cancel_guide_lines()
                 elif item.tag == "/iblock":
                     success = pop_cache()

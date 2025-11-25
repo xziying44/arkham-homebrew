@@ -5,6 +5,7 @@ export default {
     trait: '特性标签 {xxx}',
     italic: '斜体文本 <i>',
     center: '居中文本 <center>',
+    right: '右对齐文本 <right>',
     paragraph: '段落标签 <p>',
     flavor: '风味文本标签',
     hr: '插入横线',

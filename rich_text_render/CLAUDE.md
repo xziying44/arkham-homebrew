@@ -15,7 +15,7 @@ Provides rich text rendering for Arkham Horror DIY cards, turning HTML‑like an
   - `TextType` enum: `ENGLISH`, `NUMBER`, `PUNCTUATION`, `SPACE`, `OTHER`, `HTML_START`, `HTML_END`, `HTML_SELF_CLOSE`, `ENGLISH_BLOCK`.
   - `ParsedItem`: tag + type + attributes + content.
   - `RichTextParser`:
-    - Tag handling: supports `b`, `i`, `u`, `p`, `font`, `trait`, `flavor`, `em`, `br`, `hr`, `par`, `flex`, `nbsp`, `center`, `img`, `iblock`.
+    - Tag handling: supports `b`, `i`, `u`, `p`, `font`, `trait`, `flavor`, `em`, `br`, `hr`, `par`, `flex`, `nbsp`, `center`, `right`, `img`, `iblock`.
     - Attribute parsing (`name="value" | 'value' | value`).
     - Text splitting: per‑char classification in zh modes; compact block splitting for en modes; handles `&nbsp;`, hyphenated ranges, apostrophes, and newlines → `br`.
     - Balanced tag scanning with nested matching.
@@ -25,7 +25,7 @@ Provides rich text rendering for Arkham Horror DIY cards, turning HTML‑like an
   - `VirtualTextBox` core:
     - Polygonal line bounds sampling; padding; paragraph spacing; line padding.
     - Wrapping rules for punctuation: `cannot_be_line_start` / `cannot_be_line_end`.
-    - Line‑level behaviors: `set_line_center`/`cancel_line_center`, guide lines (`set_guide_lines`/`cancel_guide_lines`/`get_guide_line_segments`).
+    - Line‑level behaviors: `set_line_center`/`cancel_line_center`, `set_line_right`/`cancel_line_right`, guide lines (`set_guide_lines`/`cancel_guide_lines`/`get_guide_line_segments`).
     - Hanging indent: `set_hanging_indent(width)`/`cancel_hanging_indent()` for icon block indentation.
     - Flow control: `newline`, `new_paragraph`, `add_flex`, `get_render_list`, `get_remaining_vertical_distance`.
 

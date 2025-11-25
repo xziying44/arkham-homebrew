@@ -34,6 +34,7 @@ Changelog (导出参数持久化)
 - Editors
   - `FormEditPanel.vue` – Card editing hub (single/double‑sided cards, preview, cache & save workflows)
   - `CardSideEditor.vue` – Side‑specific card fields editor, type/language switching, collapsible illustration layout, text boundary drawer
+  - `BodyRichTextEditor.vue` – 富文本正文编辑器，支持标签插入（`<p>`/`<center>`/`<right>`/`<flavor>`/`<iblock>`/`<size>` 等）、工具栏快捷操作与行号同步
   - `IllustrationLayoutEditor.vue` – Visual crop/offset/scale/rotate/flip editor for card art
   - `TextBoundaryEditor.vue` – Advanced text boundary adjustment (body boundaries + flavor padding)
   - `DeckOptionEditor.vue` – Investigator deck building options editor

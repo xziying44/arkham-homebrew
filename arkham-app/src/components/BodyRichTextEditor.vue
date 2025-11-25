@@ -55,11 +55,26 @@
           <template #trigger>
             <n-button size="small" @click="insertTag('center')">
               <template #icon>
-                <n-icon :component="ReorderFourOutline" />
+                <span class="align-icon align-icon--center" aria-hidden="true">
+                  <span></span><span></span><span></span>
+                </span>
               </template>
             </n-button>
           </template>
           {{ t('bodyRichTextEditor.tooltip.center') }}
+        </n-tooltip>
+
+        <n-tooltip trigger="hover">
+          <template #trigger>
+            <n-button size="small" @click="insertTag('right')">
+              <template #icon>
+                <span class="align-icon align-icon--right" aria-hidden="true">
+                  <span></span><span></span><span></span>
+                </span>
+              </template>
+            </n-button>
+          </template>
+          {{ t('bodyRichTextEditor.tooltip.right') }}
         </n-tooltip>
 
         <n-tooltip v-if="isEnglishCard" trigger="hover">
@@ -394,7 +409,7 @@ const lineNumbersRef = ref<HTMLDivElement | null>(null);
 
 // Constants
 const DEFAULT_FLAVOR_CONFIG = {
-  align: 'left' as 'left' | 'center',
+  align: 'left' as 'left' | 'center' | 'right',
   padding: 0,
   quote: false,
   flex: true
@@ -593,7 +608,8 @@ const flavorConfig = ref({ ...DEFAULT_FLAVOR_CONFIG });
 // Align options for flavor modal
 const alignOptions = [
   { label: 'left', value: 'left' },
-  { label: 'center', value: 'center' }
+  { label: 'center', value: 'center' },
+  { label: 'right', value: 'right' }
 ];
 
 const isEnglishCard = computed(() => {
@@ -996,12 +1012,13 @@ const wrapWithParagraph = () => {
   insertAtCursor('<p>', '</p>');
 };
 
-const insertTag = (tagType: 'bold' | 'trait' | 'italic' | 'center') => {
+const insertTag = (tagType: 'bold' | 'trait' | 'italic' | 'center' | 'right') => {
   const tagMap = {
     bold: { before: '【', after: '】' },
     trait: { before: '{', after: '}' },
     italic: { before: '<i>', after: '</i>' },
-    center: { before: '<center>', after: '</center>' }
+    center: { before: '<center>', after: '</center>' },
+    right: { before: '<right>', after: '</right>' }
   };
 
   const tag = tagMap[tagType];
@@ -1143,6 +1160,40 @@ const handleKeywordSelect = (value: string) => {
 /* Dark mode adjustments */
 :deep(.n-button) {
   min-width: 32px;
+}
+
+.align-icon {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  width: 18px;
+  height: 14px;
+}
+
+.align-icon span {
+  display: block;
+  height: 1.6px;
+  background: currentColor;
+  border-radius: 1px;
+  opacity: 0.85;
+  width: 14px;
+}
+
+.align-icon--center span {
+  align-self: center;
+}
+
+.align-icon--center span:nth-child(2) {
+  width: 7px;
+}
+
+.align-icon--right span {
+  align-self: flex-end;
+}
+
+.align-icon--right span:nth-child(2) {
+  width: 7px;
 }
 
 :deep(.n-divider--vertical) {

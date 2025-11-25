@@ -5,6 +5,7 @@ export default {
     trait: 'Trait tag {xxx}',
     italic: 'Italic text <i>',
     center: 'Center text <center>',
+    right: 'Right align text <right>',
     paragraph: 'Paragraph tag <p>',
     flavor: 'Flavor text tag',
     hr: 'Insert horizontal line',

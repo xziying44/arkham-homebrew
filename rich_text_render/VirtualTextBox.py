@@ -108,6 +108,7 @@ class VirtualTextBox:
 
         # --- 用于行居中状态的属性 ---
         self._is_line_centering_enabled: bool = False
+        self._is_line_right_alignment_enabled: bool = False
 
         # --- 用于辅助线状态的属性 ---
         self._guide_lines_active: bool = False
@@ -135,7 +136,17 @@ class VirtualTextBox:
         启用后，当一行因内容超出而自动换行时，该行的所有对象将被水平居中。
         此设置会持续生效，直到调用 cancel_line_center。
         """
+        self._is_line_right_alignment_enabled = False
         self._is_line_centering_enabled = True
+
+    def set_line_right(self) -> None:
+        """
+        启用行右对齐模式。
+        启用后，当一行因内容超出而自动换行时，该行的所有对象将被水平右对齐。
+        此设置会持续生效，直到调用 cancel_line_right。
+        """
+        self._is_line_centering_enabled = False
+        self._is_line_right_alignment_enabled = True
 
     # --- 取消行居中方法 ---
     def cancel_line_center(self) -> None:
@@ -149,6 +160,17 @@ class VirtualTextBox:
             # 在关闭标志之前，对当前行执行一次居中操作
             self._recenter_current_line()
         self._is_line_centering_enabled = False
+
+    def cancel_line_right(self) -> None:
+        """
+        取消行右对齐模式。
+        调用此方法会立即对当前行（光标所在的行）的内容进行右对齐处理，
+        并将光标移动到调整后最后一个对象的右侧。
+        后续添加的对象将恢复默认对齐。
+        """
+        if self._is_line_right_alignment_enabled:
+            self._align_current_line('right')
+        self._is_line_right_alignment_enabled = False
 
     # --- 辅助线方法 ---
     def _add_guide_segment_for_line(self, line_y: int, line_left: int, line_height: int):
@@ -217,10 +239,9 @@ class VirtualTextBox:
         return self.drawn_lines
 
     # --- 实际执行居中操作的私有方法 ---
-    def _recenter_current_line(self) -> None:
+    def _align_current_line(self, alignment: str) -> None:
         """
-        将当前行的所有对象（RenderItem）在其可用空间内水平居中。
-        同时更新光标x坐标到行尾。
+        将当前行的所有对象根据指定方式对齐（center/right），并更新光标位置。
         """
         items_on_line = []
         if not self.render_list:
@@ -242,17 +263,21 @@ class VirtualTextBox:
         if not items_on_line:
             return  # 当前行没有对象，无需操作
 
-        # 计算行内所有对象的总宽度
         total_content_width = sum(item.obj.width for item in items_on_line)
-        # 获取当前行的可用宽度
         available_width = self.current_line_right - self.current_line_left
 
-        # 计算居中所需的左边距
-        if available_width > total_content_width:
-            offset = (available_width - total_content_width) / 2
-            current_x = self.current_line_left + offset
+        if alignment == 'center':
+            if available_width > total_content_width:
+                offset = (available_width - total_content_width) / 2
+                current_x = self.current_line_left + offset
+            else:
+                current_x = self.current_line_left
+        elif alignment == 'right':
+            if available_width > total_content_width:
+                current_x = self.current_line_right - total_content_width
+            else:
+                current_x = self.current_line_left
         else:
-            # 如果内容本身比可用空间还宽（不太可能，但作为保护），则左对齐
             current_x = self.current_line_left
 
         # 重新定位该行上的每一个对象
@@ -262,6 +287,13 @@ class VirtualTextBox:
 
         # 更新光标位置到最后一个对象之后
         self.cursor_x = round(current_x)
+
+    def _recenter_current_line(self) -> None:
+        """
+        将当前行的所有对象（RenderItem）在其可用空间内水平居中。
+        同时更新光标x坐标到行尾。
+        """
+        self._align_current_line('center')
 
     def _update_line_bounds(self) -> None:
         if self.cursor_y >= self.max_y - self.padding:
@@ -300,6 +332,8 @@ class VirtualTextBox:
         # 在移动到下一行之前，检查是否需要居中当前行
         if self._is_line_centering_enabled:
             self._recenter_current_line()
+        elif self._is_line_right_alignment_enabled:
+            self._align_current_line('right')
 
         # 如果辅助线功能已激活，为即将离开的行记录线段
         if self._guide_lines_active:
@@ -472,6 +506,7 @@ class VirtualTextBox:
             'using_line_padding': self.use_line_padding,
             'line_padding_value': self.line_padding if self.use_line_padding else 0,
             'is_line_centering': self._is_line_centering_enabled,
+            'is_line_right_alignment': self._is_line_right_alignment_enabled,
             'is_guide_lines_active': self._guide_lines_active,
             'is_hanging_indent_active': self._hanging_indent_active,
             'hanging_indent_value': self._hanging_indent if self._hanging_indent_active else 0,
