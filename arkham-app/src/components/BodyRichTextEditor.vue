@@ -491,9 +491,9 @@ const lineNumbersRef = ref<HTMLDivElement | null>(null);
 // Constants
 const DEFAULT_FLAVOR_CONFIG = {
   align: 'left' as 'left' | 'center' | 'right',
-  padding: 0,
+  padding: 20,
   quote: false,
-  flex: true
+  flex: false
 };
 
 const DEFAULT_IBLOCK_CONFIG = {
@@ -1195,14 +1195,19 @@ const insertTag = (tagType: 'bold' | 'trait' | 'italic' | 'center' | 'right') =>
 const insertFlavorTag = () => {
   const { align, padding, quote, flex } = flavorConfig.value;
 
-  // Build attributes, only include non-default values
-  const attrs: string[] = [];
-  if (align !== 'left') attrs.push(`align="${align}"`);
-  if (flex !== true) attrs.push(`flex="${flex}"`);
-  if (padding !== 0) attrs.push(`padding="${padding}"`);
-  if (quote !== false) attrs.push(`quote="${quote}"`);
+  const alignValue = align || DEFAULT_FLAVOR_CONFIG.align;
+  const paddingValue = Number.isFinite(padding) ? padding : DEFAULT_FLAVOR_CONFIG.padding;
+  const quoteValue = typeof quote === 'boolean' ? quote : DEFAULT_FLAVOR_CONFIG.quote;
+  const flexValue = typeof flex === 'boolean' ? flex : DEFAULT_FLAVOR_CONFIG.flex;
 
-  const attrStr = attrs.length > 0 ? ' ' + attrs.join(' ') : '';
+  const attrs: string[] = [
+    `align="${alignValue}"`,
+    `flex="${flexValue}"`,
+    `padding="${paddingValue}"`,
+    `quote="${quoteValue}"`
+  ];
+
+  const attrStr = ' ' + attrs.join(' ');
   const before = `<flavor${attrStr}>`;
   const after = '</flavor>';
 
