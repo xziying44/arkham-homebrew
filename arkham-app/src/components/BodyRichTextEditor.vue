@@ -202,6 +202,17 @@
           </template>
           {{ t('bodyRichTextEditor.tooltip.iblock') }}
         </n-tooltip>
+
+        <n-tooltip trigger="hover">
+          <template #trigger>
+            <n-button size="small" @click="openColumnModal">
+              <template #icon>
+                <n-icon :component="GridOutline" />
+              </template>
+            </n-button>
+          </template>
+          {{ t('bodyRichTextEditor.tooltip.column') }}
+        </n-tooltip>
       </n-space>
 
       <n-divider vertical />
@@ -343,6 +354,75 @@
       </template>
     </n-modal>
 
+    <!-- Column Layout Modal -->
+    <n-modal
+      v-model:show="showColumnModal"
+      preset="dialog"
+      :title="t('bodyRichTextEditor.columnModal.title')"
+      style="width: 760px;"
+    >
+      <n-form label-placement="left" label-width="120px">
+        <n-form-item :label="t('bodyRichTextEditor.columnModal.gap')">
+          <n-input-number
+            :value="columnConfig.gap"
+            :min="0"
+            :max="100"
+            :precision="0"
+            style="width: 100%;"
+            @update:value="handleGapChange"
+          />
+        </n-form-item>
+        <n-form-item :label="t('bodyRichTextEditor.columnModal.count')">
+          <n-input-number
+            :value="columnConfig.colCount"
+            :min="2"
+            :max="4"
+            :precision="0"
+            style="width: 100%;"
+            @update:value="handleColumnCountChange"
+          />
+        </n-form-item>
+        <div class="column-config-list">
+          <div
+            v-for="(col, index) in visibleColumns"
+            :key="index"
+            class="column-config-item"
+          >
+            <div class="column-config-header">
+              <n-text strong>{{ t('bodyRichTextEditor.columnModal.columnTitle', { index: index + 1 }) }}</n-text>
+              <n-text depth="3">{{ t('bodyRichTextEditor.columnModal.weightHint') }}</n-text>
+            </div>
+            <n-space vertical size="small">
+              <n-input-number
+                v-model:value="col.weight"
+                :min="1"
+                :max="99"
+                :precision="0"
+                style="width: 220px;"
+              >
+                <template #suffix>wt</template>
+              </n-input-number>
+              <n-checkbox v-model:checked="col.wrapIblock">
+                {{ t('bodyRichTextEditor.columnModal.wrapIblock') }}
+              </n-checkbox>
+              <n-input
+                v-model:value="col.text"
+                type="textarea"
+                :autosize="{ minRows: 2, maxRows: 5 }"
+                :placeholder="t('bodyRichTextEditor.columnModal.textPlaceholder')"
+              />
+            </n-space>
+          </div>
+        </div>
+      </n-form>
+      <template #action>
+        <n-space>
+          <n-button @click="closeColumnModal">{{ t('bodyRichTextEditor.common.cancel') }}</n-button>
+          <n-button type="primary" @click="insertColumnLayout">{{ t('bodyRichTextEditor.columnModal.confirm') }}</n-button>
+        </n-space>
+      </template>
+    </n-modal>
+
     <!-- Font Size Modal -->
     <n-modal
       v-model:show="showSizeModal"
@@ -384,7 +464,8 @@ import {
   PersonOutline,
   CheckboxOutline,
   SparklesOutline,
-  ChevronDownOutline
+  ChevronDownOutline,
+  GridOutline
 } from '@vicons/ionicons5';
 
 interface Props {
@@ -419,6 +500,34 @@ const DEFAULT_IBLOCK_CONFIG = {
   icon: '',
   gap: 5
 };
+
+const DEFAULT_COLUMN_GAP = 20;
+const DEFAULT_COLUMN_COUNT = 2;
+const DEFAULT_COLUMN_WEIGHT = 5;
+
+interface ColumnItem {
+  weight: number;
+  text: string;
+  wrapIblock: boolean;
+}
+
+interface ColumnConfig {
+  gap: number;
+  colCount: number;
+  columns: ColumnItem[];
+}
+
+const createDefaultColumnItem = (): ColumnItem => ({
+  weight: DEFAULT_COLUMN_WEIGHT,
+  text: '',
+  wrapIblock: true
+});
+
+const createDefaultColumnConfig = (colCount = DEFAULT_COLUMN_COUNT): ColumnConfig => ({
+  gap: DEFAULT_COLUMN_GAP,
+  colCount,
+  columns: Array.from({ length: colCount }, () => createDefaultColumnItem())
+});
 
 interface IblockOption {
   labelKey: string;
@@ -487,9 +596,11 @@ const showSizeModal = ref(false);
 const showIconPopover = ref(false);
 const showKeywordPopover = ref(false);
 const showIblockModal = ref(false);
+const showColumnModal = ref(false);
 const fontSizeValue = ref(2);
 const spellcheckEnabled = ref(false);
 const iblockConfig = ref({ ...DEFAULT_IBLOCK_CONFIG });
+const columnConfig = ref<ColumnConfig>(createDefaultColumnConfig());
 
 // Undo/Redo history management
 interface HistoryState {
@@ -694,6 +805,62 @@ watch(
   },
   { immediate: true }
 );
+
+const clampColumnCount = (count: number | null | undefined) => {
+  if (!Number.isFinite(count as number)) return DEFAULT_COLUMN_COUNT;
+  const value = Math.round(count as number);
+  return Math.min(4, Math.max(2, value));
+};
+
+const clampGap = (gap: number | null | undefined) => {
+  if (!Number.isFinite(gap as number)) return DEFAULT_COLUMN_GAP;
+  const value = Math.round(gap as number);
+  return Math.min(100, Math.max(0, value));
+};
+
+const clampWeight = (weight: number | null | undefined) => {
+  if (!Number.isFinite(weight as number)) return DEFAULT_COLUMN_WEIGHT;
+  const value = Math.round(weight as number);
+  return Math.min(99, Math.max(1, value));
+};
+
+const ensureColumnLength = (targetCount: number) => {
+  const cols = [...columnConfig.value.columns];
+  if (cols.length > targetCount) {
+    cols.length = targetCount;
+  } else {
+    while (cols.length < targetCount) {
+      cols.push(createDefaultColumnItem());
+    }
+  }
+  columnConfig.value.columns = cols;
+};
+
+const handleColumnCountChange = (count: number | null) => {
+  const target = clampColumnCount(count);
+  columnConfig.value.colCount = target;
+  ensureColumnLength(target);
+};
+
+const handleGapChange = (gap: number | null) => {
+  columnConfig.value.gap = clampGap(gap);
+};
+
+const visibleColumns = computed(() => columnConfig.value.columns.slice(0, columnConfig.value.colCount));
+
+const resetColumnConfig = () => {
+  columnConfig.value = createDefaultColumnConfig();
+};
+
+const openColumnModal = () => {
+  resetColumnConfig();
+  showColumnModal.value = true;
+};
+
+const closeColumnModal = () => {
+  showColumnModal.value = false;
+  resetColumnConfig();
+};
 
 // Initialize spellcheck based on language
 watch(
@@ -1068,6 +1235,53 @@ const insertIblockTag = () => {
   iblockConfig.value = { ...DEFAULT_IBLOCK_CONFIG, icon };
 };
 
+const indentMultiline = (text: string, indent: string) => {
+  return text
+    .split('\n')
+    .map((line) => `${indent}${line}`)
+    .join('\n');
+};
+
+const buildColumnLayoutMarkup = () => {
+  const gap = clampGap(columnConfig.value.gap);
+  const colCount = clampColumnCount(columnConfig.value.colCount);
+  ensureColumnLength(colCount);
+
+  const colBlocks = columnConfig.value.columns.slice(0, colCount).map((col) => {
+    const weight = clampWeight(col.weight);
+    const rawText = col.text ?? '';
+    const content = col.wrapIblock !== false ? `<iblock icon=bul gap=5>${rawText}</iblock>` : rawText;
+    const contentIndented =
+      content.indexOf('\n') >= 0 ? indentMultiline(content, '    ') : `    ${content}`;
+    return `  <col weight=${weight}>\n${contentIndented}\n  </col>`;
+  });
+
+  return `<column gap=${gap}>\n${colBlocks.join('\n')}\n</column>`;
+};
+
+const insertColumnLayout = () => {
+  const textarea = textareaRef.value;
+  if (!textarea) return;
+
+  const markup = buildColumnLayoutMarkup();
+  const { start, end } = getSelection();
+  const value = props.value;
+
+  const newValue = value.substring(0, start) + markup + value.substring(end);
+  const newCursorPos = start + markup.length;
+
+  emit('update:value', newValue);
+
+  nextTick(() => {
+    textarea.focus();
+    textarea.selectionStart = textarea.selectionEnd = newCursorPos;
+    pushHistory(newValue, start, end, newCursorPos, newCursorPos);
+  });
+
+  showColumnModal.value = false;
+  resetColumnConfig();
+};
+
 const handleIconSelect = (emoji: string) => {
   insertText(emoji);
   showIconPopover.value = false;
@@ -1194,6 +1408,27 @@ const handleKeywordSelect = (value: string) => {
 
 .align-icon--right span:nth-child(2) {
   width: 7px;
+}
+
+.column-config-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.column-config-item {
+  border: 1px solid var(--n-border-color);
+  border-radius: 6px;
+  padding: 12px;
+  background: rgba(128, 128, 128, 0.04);
+}
+
+.column-config-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
 }
 
 :deep(.n-divider--vertical) {

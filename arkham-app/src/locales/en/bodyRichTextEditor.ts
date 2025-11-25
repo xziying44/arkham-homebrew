@@ -14,7 +14,8 @@ export default {
     fullnameBack: 'Insert back side name',
     upg: 'Customization checkbox',
     nbsp: 'Non-breaking space <nbsp>',
-    iblock: 'Icon block'
+    iblock: 'Icon block',
+    column: 'Column layout tag'
   },
 
   // Icon button
@@ -84,6 +85,17 @@ export default {
     title: 'Icon Block',
     icon: 'Icon',
     gap: 'Gap between icon and text (0-200)'
+  },
+
+  columnModal: {
+    title: 'Column Layout',
+    gap: 'Column gap (0-100)',
+    count: 'Columns (2-4)',
+    columnTitle: 'Column {index}',
+    weightHint: 'Weight controls relative width, default 5',
+    wrapIblock: 'Wrap text with <iblock icon=bul gap=5>',
+    textPlaceholder: 'Enter column content (multiline allowed)',
+    confirm: 'Insert column layout'
   },
 
   // Common

@@ -14,7 +14,8 @@ export default {
     fullnameBack: '插入背面名称',
     upg: '定制卡方块',
     nbsp: '连词空格 <nbsp>',
-    iblock: '图标标签块'
+    iblock: '图标标签块',
+    column: '列布局标签'
   },
 
   // Icon button
@@ -84,6 +85,17 @@ export default {
     title: '图标标签块',
     icon: '标签图标',
     gap: '图标与文本距离（0-200）'
+  },
+
+  columnModal: {
+    title: '列布局',
+    gap: '列间距（0-100）',
+    count: '列数（2-4）',
+    columnTitle: '列 {index}',
+    weightHint: '权重代表列宽比例，默认 5',
+    wrapIblock: '使用 <iblock icon=bul gap=5> 包裹文本',
+    textPlaceholder: '输入列内容（可换行）',
+    confirm: '插入列布局'
   },
 
   // Common
