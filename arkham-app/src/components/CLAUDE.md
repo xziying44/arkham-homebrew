@@ -139,6 +139,7 @@ Behavior
   - `expandIllustrationLayout()`: Programmatically expands illustration section when called from parent navigation
 - Card info footer: per-card footer icon picker (workspace root PNG with refresh) overrides workspace setting; investigator cards can toggle footer style (normal/full-art effects), defaulting to normal and retained on type switches.
 - Field group tabs: accepts controlled `activeFieldGroupKey` with `update:active-field-group`; parents may persist per-card/per-side tab selection. Switching card sides keeps the remembered tab; switching to another card falls back to the first tab.
+- Adventure Reference: `scenario_card.groups` UI for mixed chaos token combos (skull/cultist/tablet/elder_thing), shown when `scenario_type != 2`; tokens are unique across groups, support add/edit/delete, and emit nested updates for preview.
 
 ### TextBoundaryEditor.vue
 Signature

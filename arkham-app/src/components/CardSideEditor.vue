@@ -62,6 +62,59 @@
                         </transition>
                     </n-tab-pane>
                 </n-tabs>
+
+                <!-- 冒险参考卡：组合标记效果 -->
+                <div v-if="showScenarioTokenGroups" class="scenario-groups-section">
+                    <div class="scenario-groups-header">
+                        <div class="scenario-groups-title">
+                            {{ $t('cardEditor.scenarioGroups.title') }}
+                        </div>
+                        <div class="scenario-groups-hint">
+                            {{ $t('cardEditor.scenarioGroups.tokensHint') }}
+                        </div>
+                    </div>
+
+                    <div v-for="(group, index) in scenarioGroups" :key="index" class="scenario-group-card">
+                        <div class="scenario-group-card__header">
+                            <div class="scenario-group-card__title">
+                                {{ $t('cardEditor.scenarioGroups.groupLabel', { index: index + 1 }) }}
+                            </div>
+                            <n-button quaternary type="error" size="tiny" @click="removeScenarioGroup(index)">
+                                {{ $t('cardEditor.scenarioGroups.remove') }}
+                            </n-button>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-field layout-half">
+                                <n-form-item :label="$t('cardEditor.scenarioGroups.tokensLabel')">
+                                    <n-select
+                                        :value="group.tokens || []"
+                                        multiple
+                                        :options="getScenarioTokenOptions(index)"
+                                        :placeholder="$t('cardEditor.scenarioGroups.tokensPlaceholder')"
+                                        @update:value="updateScenarioGroupTokens(index, $event)" />
+                                </n-form-item>
+                            </div>
+                            <div class="form-field layout-half">
+                                <n-form-item :label="$t('cardEditor.scenarioGroups.textLabel')">
+                                    <n-input
+                                        type="textarea"
+                                        :rows="2"
+                                        :value="group.text || ''"
+                                        :placeholder="$t('cardEditor.scenarioGroups.textPlaceholder')"
+                                        @update:value="updateScenarioGroupText(index, $event)" />
+                                </n-form-item>
+                            </div>
+                        </div>
+                    </div>
+
+                    <n-button dashed block class="scenario-groups-add" :disabled="!hasAvailableScenarioTokens" @click="addScenarioGroup">
+                        {{ $t('cardEditor.scenarioGroups.add') }}
+                    </n-button>
+                    <div v-if="!hasAvailableScenarioTokens" class="scenario-groups-exhausted">
+                        {{ $t('cardEditor.scenarioGroups.allUsedHint') }}
+                    </div>
+                </div>
             </n-form>
 
             <!-- 插画布局设置展开按钮 -->
@@ -319,6 +372,8 @@ const quantity = computed({
 const currentSideType = ref(sideCardData.type || '');
 const isLocationType = computed(() => currentSideType.value === '地点卡');
 const isInvestigatorType = computed(() => currentSideType.value === '调查员');
+const isScenarioReferenceType = computed(() => currentSideType.value === '冒险参考卡');
+const showScenarioTokenGroups = computed(() => isScenarioReferenceType.value && sideCardData.scenario_type !== 2);
 
 // 监听props变化，更新本地数据
 watch(() => props.cardData, (newData) => {
@@ -382,6 +437,115 @@ const investigatorFooterType = computed({
         updateSideData('investigator_footer_type', value);
     }
 });
+
+// 冒险参考卡：组合标记配置
+const scenarioTokenOptions = computed(() => ([
+    { label: `💀 ${t('cardEditor.scenarioGroups.tokenSkull')}`, value: 'skull' },
+    { label: `👥 ${t('cardEditor.scenarioGroups.tokenCultist')}`, value: 'cultist' },
+    { label: `📜 ${t('cardEditor.scenarioGroups.tokenTablet')}`, value: 'tablet' },
+    { label: `👁️ ${t('cardEditor.scenarioGroups.tokenElderThing')}`, value: 'elder_thing' }
+]));
+
+const getScenarioCard = (ensure = true) => {
+    const current = sideCardData.scenario_card;
+    if (!isScenarioReferenceType.value) {
+        return ensure ? {} : current;
+    }
+    if (!current || typeof current !== 'object') {
+        if (!ensure) return current;
+        sideCardData.scenario_card = {};
+    }
+    return sideCardData.scenario_card;
+};
+
+const scenarioGroups = computed(() => {
+    if (!showScenarioTokenGroups.value) return [];
+    const scenarioCard = getScenarioCard();
+    if (!Array.isArray(scenarioCard.groups)) {
+        scenarioCard.groups = [];
+    }
+    return scenarioCard.groups;
+});
+
+const isTokenUsed = (token: string, excludeIndex?: number) => {
+    return scenarioGroups.value.some((group, index) => {
+        if (excludeIndex !== undefined && index === excludeIndex) return false;
+        return Array.isArray(group.tokens) && group.tokens.includes(token);
+    });
+};
+
+const getScenarioTokenOptions = (currentIndex: number) => {
+    return scenarioTokenOptions.value.map(option => ({
+        ...option,
+        disabled: isTokenUsed(option.value, currentIndex)
+    }));
+};
+
+const getAvailableScenarioTokens = (excludeIndex?: number) => {
+    return scenarioTokenOptions.value
+        .map(option => option.value as string)
+        .filter(token => !isTokenUsed(token, excludeIndex));
+};
+
+const hasAvailableScenarioTokens = computed(() => getAvailableScenarioTokens().length > 0);
+
+const commitScenarioGroups = (groups: Array<{ tokens?: string[]; text?: string }>) => {
+    if (!showScenarioTokenGroups.value) return;
+    const scenarioCard = getScenarioCard();
+    scenarioCard.groups = groups.map(group => ({
+        tokens: Array.isArray(group.tokens) ? group.tokens.filter(Boolean) : [],
+        text: group.text || ''
+    }));
+    updateSideData('scenario_card.groups', scenarioCard.groups);
+};
+
+const addScenarioGroup = () => {
+    if (!showScenarioTokenGroups.value || !hasAvailableScenarioTokens.value) return;
+    const nextGroups = [...scenarioGroups.value.map(group => ({
+        tokens: Array.isArray(group.tokens) ? [...group.tokens] : [],
+        text: group.text || ''
+    }))];
+    nextGroups.push({ tokens: [], text: '' });
+    commitScenarioGroups(nextGroups);
+};
+
+const updateScenarioGroupTokens = (index: number, tokens: string[]) => {
+    if (!showScenarioTokenGroups.value) return;
+    const sanitizedTokens = Array.from(new Set(tokens || []))
+        .filter(token => !isTokenUsed(token, index));
+    const nextGroups = scenarioGroups.value.map((group, idx) => {
+        if (idx !== index) {
+            return {
+                tokens: Array.isArray(group.tokens) ? [...group.tokens] : [],
+                text: group.text || ''
+            };
+        }
+        return {
+            tokens: sanitizedTokens,
+            text: group.text || ''
+        };
+    });
+    commitScenarioGroups(nextGroups);
+};
+
+const updateScenarioGroupText = (index: number, text: string) => {
+    if (!showScenarioTokenGroups.value) return;
+    const nextGroups = scenarioGroups.value.map((group, idx) => ({
+        tokens: Array.isArray(group.tokens) ? [...group.tokens] : [],
+        text: idx === index ? text : (group.text || '')
+    }));
+    commitScenarioGroups(nextGroups);
+};
+
+const removeScenarioGroup = (index: number) => {
+    if (!showScenarioTokenGroups.value) return;
+    const nextGroups = scenarioGroups.value.filter((_, idx) => idx !== index)
+        .map(group => ({
+            tokens: Array.isArray(group.tokens) ? [...group.tokens] : [],
+            text: group.text || ''
+        }));
+    commitScenarioGroups(nextGroups);
+};
 
 // 文本边界编辑器模态状态
 const showTextBoundaryModal = ref(false);
@@ -953,5 +1117,63 @@ defineExpose({
         min-width: 0;
         width: 100%;
     }
+}
+
+.scenario-groups-section {
+    margin-top: 16px;
+    padding: 12px;
+    border: 1px dashed rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.65);
+}
+
+.scenario-groups-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.scenario-groups-title {
+    font-weight: 600;
+    color: #333;
+}
+
+.scenario-groups-hint {
+    color: #888;
+    font-size: 12px;
+}
+
+.scenario-group-card {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.75);
+    margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.scenario-group-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.scenario-group-card__title {
+    font-weight: 600;
+}
+
+.scenario-groups-add {
+    margin-top: 4px;
+}
+
+.scenario-groups-exhausted {
+    margin-top: 6px;
+    color: #a0a0a0;
+    font-size: 12px;
+    text-align: center;
 }
 </style>

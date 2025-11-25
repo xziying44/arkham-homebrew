@@ -478,27 +478,142 @@ class Card:
         line_height_img = line_height_img.crop((0, 0, width, bbox[3]))
         return line_height_img
 
+    def _draw_double_vertical_line(self, x, y, height, line_color=(35, 31, 32)):
+        """
+        绘制双竖线分隔符（用于多图标组合）
+
+        :param x: 双竖线左边缘的x坐标
+        :param y: 双竖线顶部的y坐标
+        :param height: 双竖线高度
+        :param line_color: 竖线颜色，默认棕色
+        """
+        from PIL import ImageDraw
+        draw = ImageDraw.Draw(self.image)
+        line_width = 2
+        gap = 4  # 两条竖线之间的间距
+        # 绘制左边的竖线
+        draw.line([(x, y), (x, y + height)], fill=line_color, width=line_width)
+        # 绘制右边的竖线
+        draw.line([(x + gap + line_width, y), (x + gap + line_width, y + height)], fill=line_color, width=line_width)
+
+    def _create_group_text_mark(self, width, text, font_name, font_size, font_color=(0, 0, 0)):
+        """
+        创建多图标组合的文本图层（与单图标版本相同，仅宽度可能不同）
+        """
+        return self.create_left_text_mark(width, text, font_name, font_size, font_color)
+
     def draw_scenario_card(self, scenario_card, resource_name=''):
-        """画冒险参考卡"""
-        scenario_card_object = []
-        for token_type in ['skull', 'cultist', 'tablet', 'elder_thing']:
-            if scenario_card.get(token_type, '') != '':
-                img = self.create_left_text_mark(
-                    width=450,
-                    text=scenario_card[token_type],
+        """
+        画冒险参考卡
+
+        支持混合格式：
+        - 旧格式字段: { skull: '文本', cultist: '文本', tablet: '文本', elder_thing: '文本' }
+        - 新格式 groups: { groups: [{ tokens: ['cultist', 'tablet'], text: '共享文本' }] }
+        - 可以同时存在，例如 skull 用旧格式，cultist+tablet 用 groups
+
+        排序优先级: skull > cultist > tablet > elder_thing
+        冲突处理: groups 中的 token 优先，忽略外部同名字段
+        """
+        TOKEN_PRIORITY = ['skull', 'cultist', 'tablet', 'elder_thing']
+
+        groups = scenario_card.get('groups', [])
+
+        # 收集 groups 中所有被使用的 tokens，用于冲突处理
+        tokens_in_groups = set()
+        for group in groups:
+            tokens_in_groups.update(group.get('tokens', []))
+
+        # 为每个 group 计算优先级（取组内最高优先级 token 的索引）
+        group_priorities = []
+        for i, group in enumerate(groups):
+            tokens = group.get('tokens', [])
+            if tokens:
+                # 找到组内优先级最高的 token
+                min_priority = min(TOKEN_PRIORITY.index(t) for t in tokens if t in TOKEN_PRIORITY)
+                group_priorities.append((min_priority, i, group))
+
+        # 构建渲染项列表，按优先级排序
+        render_items = []  # [(priority, type, data), ...]
+
+        # 处理 groups
+        for priority, group_idx, group in group_priorities:
+            tokens = group.get('tokens', [])
+            text = group.get('text', '')
+            if tokens and text:
+                render_items.append((priority, 'group', {'tokens': tokens, 'text': text}))
+
+        # 处理旧格式字段（仅当 token 不在 groups 中时）
+        for token in TOKEN_PRIORITY:
+            if token not in tokens_in_groups:
+                text = scenario_card.get(token, '')
+                if text:
+                    priority = TOKEN_PRIORITY.index(token)
+                    render_items.append((priority, 'single', {'token': token, 'text': text}))
+
+        # 按优先级排序
+        render_items.sort(key=lambda x: x[0])
+
+        # 渲染
+        self._render_scenario_items(render_items, resource_name)
+
+    def _render_scenario_items(self, render_items, resource_name=''):
+        """
+        渲染冒险参考卡的所有项（支持单 token 和多 token 组合）
+
+        render_items: [(priority, type, data), ...]
+            type='single': data={'token': str, 'text': str}
+            type='group': data={'tokens': list, 'text': str}
+        """
+        # 常量定义
+        TOKEN_SIZE = 84
+        TOKEN_GAP = 6
+        DOUBLE_LINE_WIDTH = 12
+        SINGLE_TOKEN_TEXT_WIDTH = 450
+        MULTI_TOKEN_TEXT_WIDTH = 430
+
+        # 预处理：为每个项生成图像并计算高度
+        item_objects = []
+        for priority, item_type, data in render_items:
+            if item_type == 'single':
+                # 单 token
+                text_img = self.create_left_text_mark(
+                    width=SINGLE_TOKEN_TEXT_WIDTH,
+                    text=data['text'],
                     font_name=self.font_manager.get_lang_font("正文字体").name,
                     font_size=32,
                     font_color=(0, 0, 0)
                 )
-                scenario_card_object.append({
-                    'token': token_type,
-                    'img': img,
+                item_height = max(text_img.height, TOKEN_SIZE)
+                item_objects.append({
+                    'type': 'single',
+                    'token': data['token'],
+                    'text_img': text_img,
+                    'height': item_height,
                 })
-        # 计算坐标
+            else:
+                # 多 token 组合
+                tokens = data['tokens']
+                text_img = self.create_left_text_mark(
+                    width=MULTI_TOKEN_TEXT_WIDTH,
+                    text=data['text'],
+                    font_name=self.font_manager.get_lang_font("正文字体").name,
+                    font_size=32,
+                    font_color=(0, 0, 0)
+                )
+                tokens_height = len(tokens) * TOKEN_SIZE + (len(tokens) - 1) * TOKEN_GAP
+                item_height = max(text_img.height, tokens_height)
+                item_objects.append({
+                    'type': 'group',
+                    'tokens': tokens,
+                    'text_img': text_img,
+                    'tokens_height': tokens_height,
+                    'height': item_height,
+                })
+
+        # 计算布局
         remaining_height = 630
-        if resource_name != '':
+        if resource_name:
             remaining_height = 500
-            # 画资源名称
             self.draw_centered_text(
                 (self.width // 2, 807),
                 text=resource_name,
@@ -506,47 +621,81 @@ class Card:
                 font_size=36,
                 font_color=(0, 0, 0)
             )
-        for token_object in scenario_card_object:
-            img = token_object['img']
-            remaining_height -= max(img.height, 84)
-            pass
+
+        total_content_height = sum(obj['height'] for obj in item_objects)
+        remaining_height -= total_content_height
         if remaining_height < 0:
             remaining_height = 0
-        if len(scenario_card_object) > 0:
-            gap = remaining_height // len(scenario_card_object)
-        else:
-            gap = 0
-        # 开始画
+
+        gap = remaining_height // len(item_objects) if item_objects else 0
+
+        # 开始绘制
         start_x = 88
         start_y = 300
-        current_x = 0
         current_y = 0
-        for token_object in scenario_card_object:
-            img = token_object['img']
-            token = token_object['token']
-            # 计算坐标
+
+        for item_obj in item_objects:
+            item_height = item_obj['height']
+            text_img = item_obj['text_img']
             current_x = 0
-            height = max(img.height, 84)
-            token_img = self._get_draw_scenario_card_token(token)
-            # 粘贴token
-            token_gap = (height - 84) // 2
-            self.paste_image(
-                token_img,
-                (start_x + current_x, start_y + current_y + token_gap, token_img.width, token_img.height),
-                resize_mode='contain',
-                extension=0
-            )
-            current_x += 94
-            # 粘贴文本
-            text_gap = (height - img.height) // 2
-            self.paste_image(
-                img,
-                (start_x + current_x, start_y + current_y + text_gap, img.width, img.height),
-                resize_mode='contain',
-                extension=0
-            )
-            current_y += height
-            current_y += gap
+
+            if item_obj['type'] == 'single':
+                # 单 token 绘制
+                token = item_obj['token']
+                token_img = self._get_draw_scenario_card_token(token)
+                if token_img:
+                    token_gap = (item_height - TOKEN_SIZE) // 2
+                    self.paste_image(
+                        token_img,
+                        (start_x + current_x, start_y + current_y + token_gap, token_img.width, token_img.height),
+                        resize_mode='contain',
+                        extension=0
+                    )
+                current_x += 94
+
+                # 粘贴文本
+                text_gap = (item_height - text_img.height) // 2
+                self.paste_image(
+                    text_img,
+                    (start_x + current_x, start_y + current_y + text_gap, text_img.width, text_img.height),
+                    resize_mode='contain',
+                    extension=0
+                )
+            else:
+                # 多 token 组合绘制
+                tokens = item_obj['tokens']
+                tokens_height = item_obj['tokens_height']
+
+                # 绘制多个 token（垂直排列）
+                token_start_y = (item_height - tokens_height) // 2
+                for i, token in enumerate(tokens):
+                    token_img = self._get_draw_scenario_card_token(token)
+                    if token_img:
+                        token_y = start_y + current_y + token_start_y + i * (TOKEN_SIZE + TOKEN_GAP)
+                        self.paste_image(
+                            token_img,
+                            (start_x + current_x, token_y, token_img.width, token_img.height),
+                            resize_mode='contain',
+                            extension=0
+                        )
+
+                current_x += 94
+
+                # 绘制双竖线
+                line_y = start_y + current_y + token_start_y
+                self._draw_double_vertical_line(start_x + current_x, line_y, tokens_height)
+                current_x += DOUBLE_LINE_WIDTH
+
+                # 粘贴文本
+                text_gap = (item_height - text_img.height) // 2
+                self.paste_image(
+                    text_img,
+                    (start_x + current_x + 5, start_y + current_y + text_gap, text_img.width, text_img.height),
+                    resize_mode='contain',
+                    extension=0
+                )
+
+            current_y += item_height + gap
 
     def _apply_boundary_offset(self, vertices, boundary, epsilon=1e-6):
         """
@@ -865,7 +1014,7 @@ class Card:
             if 0 < health < 100:
                 position, text, font_name, font_size = (605, 615), str(health), 'Arkhamic', 60
             elif health == -2:
-                position, text, font_name, font_size = (605, 615 +7), '*', 'star', 58
+                position, text, font_name, font_size = (605, 615 + 7), '*', 'star', 58
             else:
                 position, text, font_name, font_size = (605, 615), 'x', 'arkham-icons', 58
             self.draw_centered_text(
@@ -1466,7 +1615,7 @@ class Card:
             if self.font_manager.lang in ['zh', 'zh-CHT']:
                 pattern = r'([\u4e00-\u9fa5]+)'
                 left_text = re.sub(pattern, r'<font name="思源黑体" addsize="-2" offset="-2">\1</font>',
-                                     left_text)
+                                   left_text)
             self.draw_left_text(
                 position=(pos_left[0], pos_left[1]),
                 text=left_text,
@@ -1538,7 +1687,7 @@ class Card:
             font_size: 字体大小，默认28
             font_color: 字体颜色，默认黑色
         """
-        effects=None
+        effects = None
         if self.card_type in ['大画-事件卡', '大画-支援卡', '大画-技能卡']:
             font_color = (255, 255, 255)
             effects = [

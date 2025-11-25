@@ -181,6 +181,24 @@ export default {
     deckOptions: '牌库选项'
   },
 
+  // 冒险参考卡组合标记
+  scenarioGroups: {
+    title: '组合标记效果',
+    tokensLabel: '组合图标',
+    tokensPlaceholder: '选择本组合的图标',
+    tokensHint: '每个图标仅能使用一次',
+    textLabel: '效果文本',
+    textPlaceholder: '输入该组合的效果文本',
+    add: '新增组合',
+    remove: '删除组合',
+    groupLabel: '组合 {index}',
+    allUsedHint: '已使用全部可选标记',
+    tokenSkull: '骷髅',
+    tokenCultist: '异教徒',
+    tokenTablet: '石板',
+    tokenElderThing: '古神'
+  },
+
   // 卡牌属性分组标签
   groups: {
     basic: '基础信息',

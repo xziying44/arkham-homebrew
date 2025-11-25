@@ -2336,30 +2336,32 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "大画-技能卡",
-        "class": "流浪者",
-        "special_type": 1,
-        "level": 1,
-        "cost": -1,
-        "health": 3,
-        "horror": 1,
-        # "victory": 1,
-        "slots": '手部',
-        "slots2": '法术',
-        "name": "测试",
-        "subtitle": "副标题",
+        "type": "冒险参考卡",
+        "name": "Ice and Death",
         "id": "",
         "created_at": "",
         "version": "2.0",
-        "language": "zh",
-        "submit_icon": ['战力', '意志'],
-        "traits": ['悖论', '勇气'],
-        "back": {},
-        "body": "大画卡牌组专用。\n"
-                "【显现】 – 从对应职阶图层中选择一项：\n"
-                "<点>守卫者。              <点>探求者。\n"
-                "<点>流浪者。             <点>潜修者。",
-        "picture_path": r"C:\Users\xziyi\Desktop\BG.png"
+        "language": "en",
+        "deck_options": [],
+        "scenario_type": 0,
+        "subtitle": "Easy / Standard",
+        "encounter_group": "edge_of_the_earth_ice_and_death",
+        "card_number": "1",
+        "encounter_group_number": "1/4",
+        "scenario_card": {
+            "skull": "-X. X is half the shelter value of your location (rounded up).",
+            "cultist": "",
+            "tablet":"",
+            "elder_thing": "-3. For each point you fail by, discard the top card of your deck. Draw each weakness discarded by this effect.",
+            "groups": [
+                {
+                    "tokens": ["cultist", "tablet","elder_thing"],
+                    "text": "-2. If you fail, shuffle the top card of the Tekeli-li deck into your deck without looking at it (if you cannot, take 1 horror)."
+                }
+            ],
+        },
+        "footer_copyright": "© TEST",
+        "content_hash": "2ae03648f5cb1f3a58286b573a9399e3fa0efc8f6ea432011dbdb0955959c30d"
     }
 
     # 创建字体和图片管理器
@@ -2381,7 +2383,7 @@ if __name__ == '__main__':
     profiler = cProfile.Profile()
     profiler.enable()
 
-    fm.set_lang('zh')
+    fm.set_lang('en')
     card = creator.create_card(json_data, picture_path=json_data.get('picture_path', None))
     # 画页脚
     illustrator = "HVNT TCHEKT"
