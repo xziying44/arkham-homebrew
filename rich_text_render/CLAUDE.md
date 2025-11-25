@@ -34,6 +34,7 @@ Provides rich text rendering for Arkham Horror DIY cards, turning HTML‑like an
   - Config: `DefaultFonts`, `TextAlignment`, `DrawOptions`.
     - `DrawOptions` 新增 `opacity` (0~100) 与 `effects: list[dict]`，例如 `{"type":"shadow","size":8,"spread":20,"opacity":60,"color":(0,0,0)}`。
   - Helpers: `FontStack`, `HtmlTagStack`, `FontCache`, `ImageTag` (inline image sizing by width/height or by current font size).
+  - `_get_text_box` 通过 `FontManager.get_text_box` 复用字体缓存与文本盒持久化缓存，减少重复 `getbbox` 调用。
   - Preprocessing: merges adjacent `<flavor ...>` blocks; maps emojis/aliases (e.g., factions, stats, chaos tokens) → `<font name="arkham-icons">{char}</font>`.
   - Public API:
     - `find_best_fit_font_size(text, polygon_vertices, padding, options)` → `VirtualTextBox` sized via binary search.

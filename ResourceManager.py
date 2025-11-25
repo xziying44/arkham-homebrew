@@ -1,14 +1,28 @@
+import hashlib
 import json
 import os
 import sys
 import shutil
+from collections import deque
 from dataclasses import dataclass
-from typing import Optional, Dict
+from typing import Optional, Dict, Tuple
+import time
+import threading
 
 from PIL import Image, ImageFont
 
 from bin.logger import logger_manager
 from bin.config_directory_manager import config_dir_manager
+
+
+# ============================================
+# 常量定义（缓存上限可调）
+# ============================================
+FONT_CACHE_LIMIT = 30
+TEXT_BOX_CACHE_LIMIT = 500_000
+TEXT_BOX_CACHE_FILE = "text_box_cache.json"
+TEXT_BOX_CACHE_FLUSH_THRESHOLD = 2000
+TEXT_BOX_CACHE_FLUSH_INTERVAL = 60.0
 
 
 # ============================================
@@ -478,6 +492,17 @@ class FontManager:
         self.language_configs = {}
         self.lang = None
         self.silence = False  # 静默模式
+        self.font_cache_limit = FONT_CACHE_LIMIT
+        self._font_access_counts: Dict[Tuple[str, int], int] = {}
+        self._font_cache: Dict[Tuple[str, int], ImageFont.FreeTypeFont] = {}
+        self.text_box_cache_limit = TEXT_BOX_CACHE_LIMIT
+        self._text_box_cache_file = os.path.join(config_dir_manager.get_global_config_dir(), TEXT_BOX_CACHE_FILE)
+        self._text_box_cache: Dict[str, Tuple[str, int, str, int, int]] = {}
+        self._text_box_order = deque()
+        self._text_box_dirty = 0
+        self._text_box_last_flush = 0.0
+        self._text_box_saving = False
+        self._text_box_lock = threading.Lock()
 
         logger_manager.info(f"[FontManager] 初始化，字体目录: {self.font_folder}")
 
@@ -491,6 +516,8 @@ class FontManager:
         self._load_language_configs()
         # 设置默认语言
         self.set_lang(lang)
+        # 加载文本盒缓存
+        self._load_text_box_cache()
 
     def add_font_folder(self, folder: str):
         """添加额外的字体目录，并重新加载字体"""
@@ -738,17 +765,64 @@ class FontManager:
         :param size: 字体大小
         :return: PIL.ImageFont对象，如果找不到返回None
         """
+        font_key = (font_name.lower(), size)
         font_path = self.get_font_path(font_name)
 
         if font_path is None:
             return None
 
+        self._font_access_counts[font_key] = self._font_access_counts.get(font_key, 0) + 1
+
+        if font_key in self._font_cache:
+            logger_manager.info(f"[FontManager] 缓存命中 {font_name} (大小: {size})")
+            return self._font_cache[font_key]
+
         try:
-            return ImageFont.truetype(font_path, size)
+            font_obj = ImageFont.truetype(font_path, size)
+            self._maybe_cache_font(font_key, font_obj)
+            return font_obj
         except Exception as e:
             if not self.silence:
                 logger_manager.info(f"[FontManager] 无法加载字体 {font_name} (大小: {size}): {str(e)}")
             return None
+
+    def _maybe_cache_font(self, font_key: Tuple[str, int], font_obj: ImageFont.FreeTypeFont):
+        """记录访问后，将高频字体加入缓存并控制容量"""
+        if self.font_cache_limit <= 0:
+            return
+
+        current_count = self._font_access_counts.get(font_key, 0)
+
+        if font_key in self._font_cache:
+            self._font_cache[font_key] = font_obj
+            return
+
+        if len(self._font_cache) < self.font_cache_limit:
+            self._font_cache[font_key] = font_obj
+            return
+
+        # 找出当前缓存中的最低访问次数，只有达到前 N 才加入
+        min_key = min(self._font_cache, key=lambda k: self._font_access_counts.get(k, 0))
+        min_count = self._font_access_counts.get(min_key, 0)
+        if current_count < min_count:
+            return
+
+        self._font_cache[font_key] = font_obj
+
+        if len(self._font_cache) > self.font_cache_limit:
+            sorted_keys = sorted(self._font_cache, key=lambda k: self._font_access_counts.get(k, 0))
+            for candidate in sorted_keys:
+                if len(self._font_cache) <= self.font_cache_limit:
+                    break
+                if candidate == font_key:
+                    continue
+                self._font_cache.pop(candidate, None)
+
+            # 若仍超限（可能全部键相同计数），移除一个最低计数的键
+            if len(self._font_cache) > self.font_cache_limit:
+                extra = sorted(self._font_cache, key=lambda k: self._font_access_counts.get(k, 0))[0]
+                if extra != font_key:
+                    self._font_cache.pop(extra, None)
 
     def get_font_path(self, font_name: str) -> Optional[str]:
         """
@@ -845,3 +919,144 @@ class FontManager:
     def get_available_languages(self):
         """获取可用的语言列表"""
         return list(self.language_configs.keys())
+
+    # ==================== 文本盒缓存 ====================
+    def _build_text_box_key(self, font_name: str, font_size: int, text: str) -> str:
+        """使用字体名+字号+文本构建哈希键，避免长文本占用空间"""
+        base = f"{font_name}\u0001{font_size}\u0001{text}"
+        return hashlib.md5(base.encode('utf-8')).hexdigest()
+
+    def _store_text_box_cache_entry(self, key_hash: str, font_name: str, font_size: int,
+                                    text: str, width: int, height: int):
+        """存储文本盒缓存，维持容量并按阈值落盘"""
+        entry = (font_name, int(font_size), text, int(width), int(height))
+        with self._text_box_lock:
+            if key_hash in self._text_box_cache:
+                self._text_box_cache[key_hash] = entry
+                self._text_box_order = deque(k for k in self._text_box_order if k != key_hash)
+            else:
+                self._text_box_cache[key_hash] = entry
+            self._text_box_order.append(key_hash)
+            self._text_box_dirty += 1
+
+            while len(self._text_box_cache) > self.text_box_cache_limit and self._text_box_order:
+                old_key = self._text_box_order.popleft()
+                if old_key == key_hash and len(self._text_box_cache) <= self.text_box_cache_limit:
+                    break
+                self._text_box_cache.pop(old_key, None)
+
+        self._maybe_flush_text_box_cache()
+
+    def _load_text_box_cache(self):
+        """从磁盘加载文本盒缓存"""
+        try:
+            if not os.path.exists(self._text_box_cache_file):
+                return
+            with open(self._text_box_cache_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            records = data.get("m", {})
+            if not isinstance(records, dict):
+                return
+            for key_hash, value in records.items():
+                if not isinstance(value, list) or len(value) < 5:
+                    continue
+                font_name, font_size, text, width, height = value[:5]
+                self._text_box_cache[key_hash] = (
+                    str(font_name),
+                    int(font_size),
+                    str(text),
+                    int(width),
+                    int(height)
+                )
+                self._text_box_order.append(key_hash)
+
+            while len(self._text_box_cache) > self.text_box_cache_limit and self._text_box_order:
+                old_key = self._text_box_order.popleft()
+                self._text_box_cache.pop(old_key, None)
+        except Exception as e:
+            logger_manager.info(f"[FontManager] 加载文本盒缓存失败: {e}")
+
+    def _save_text_box_cache(self, snapshot: Optional[Dict[str, Tuple[str, int, str, int, int]]] = None,
+                             update_state: bool = True):
+        """将文本盒缓存持久化为紧凑 JSON（单字母字段名，无缩进），可传入快照异步写入"""
+        try:
+            cache_data = snapshot if snapshot is not None else self._text_box_cache
+            os.makedirs(os.path.dirname(self._text_box_cache_file), exist_ok=True)
+            data = {
+                "v": 1,
+                "m": {k: [v[0], v[1], v[2], v[3], v[4]] for k, v in cache_data.items()}
+            }
+            with open(self._text_box_cache_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, separators=(',', ':'))
+            if update_state:
+                self._text_box_dirty = 0
+                self._text_box_last_flush = time.time()
+        except Exception as e:
+            logger_manager.info(f"[FontManager] 保存文本盒缓存失败: {e}")
+            # 失败不清零脏计数，便于下次继续尝试
+
+    def _maybe_flush_text_box_cache(self, force: bool = False):
+        """按阈值/时间节流写盘，采用异步写入避免阻塞渲染线程"""
+        now = time.time()
+        with self._text_box_lock:
+            if not force:
+                if self._text_box_dirty < TEXT_BOX_CACHE_FLUSH_THRESHOLD:
+                    return
+                if (now - self._text_box_last_flush) < TEXT_BOX_CACHE_FLUSH_INTERVAL:
+                    return
+
+            if self._text_box_saving:
+                return
+
+            snapshot = dict(self._text_box_cache)
+            snapshot_dirty = self._text_box_dirty
+            snapshot_time = self._text_box_last_flush
+            self._text_box_saving = True
+
+        def _save_async():
+            try:
+                self._save_text_box_cache(snapshot, update_state=False)
+                with self._text_box_lock:
+                    if self._text_box_dirty <= snapshot_dirty:
+                        self._text_box_last_flush = time.time()
+                    self._text_box_dirty = max(0, self._text_box_dirty - snapshot_dirty)
+            finally:
+                self._text_box_saving = False
+
+        threading.Thread(target=_save_async, daemon=True).start()
+
+    def get_text_box(self, text: str, font: ImageFont.FreeTypeFont,
+                     font_name: Optional[str] = None) -> Tuple[int, int]:
+        """
+        获取文本 bbox 宽高，带缓存与持久化
+        :param text: 文本内容
+        :param font: 已加载的字体对象
+        :param font_name: 字体名称（可选，用于稳定缓存键）
+        :return: (宽度, 高度)
+        """
+        if font is None or text is None:
+            return 0, 0
+
+        resolved_font_name = font_name or (font.getname()[0] if hasattr(font, "getname") else "")
+        font_size = getattr(font, "size", 0)
+        key_hash = self._build_text_box_key(resolved_font_name, font_size, text)
+
+        cached = self._text_box_cache.get(key_hash)
+        if cached:
+            return cached[3], cached[4]
+
+        try:
+            bbox = font.getbbox(text)
+            width = int(bbox[2] - bbox[0])
+            height = int(bbox[3] - bbox[1])
+        except Exception as e:
+            if not self.silence:
+                logger_manager.info(f"[FontManager] 计算文本盒失败: {e}")
+            return 0, 0
+
+        self._store_text_box_cache_entry(key_hash, resolved_font_name, font_size, text, width, height)
+        return width, height
+
+    def flush_text_box_cache(self, force: bool = False):
+        """外部可调用，主动刷新文本盒缓存到磁盘（异步写入）"""
+        self._maybe_flush_text_box_cache(force=force)

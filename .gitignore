@@ -40,3 +40,4 @@ output_card.png
 /.gemini/
 /language_config.json
 arkham-app/components.d.ts
+/text_box_cache.json

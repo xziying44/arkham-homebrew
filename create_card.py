@@ -2336,32 +2336,87 @@ class CardCreator:
 # 使用示例
 if __name__ == '__main__':
     json_data = {
-        "type": "冒险参考卡",
-        "name": "Ice and Death",
+        "type": "调查员",
+        "name": "普瑞赛斯",
         "id": "",
         "created_at": "",
         "version": "2.0",
-        "language": "en",
-        "deck_options": [],
-        "scenario_type": 0,
-        "subtitle": "Easy / Standard",
-        "encounter_group": "edge_of_the_earth_ice_and_death",
-        "card_number": "1",
-        "encounter_group_number": "1/4",
-        "scenario_card": {
-            "skull": "-X. X is half the shelter value of your location (rounded up).",
-            "cultist": "",
-            "tablet":"",
-            "elder_thing": "-3. For each point you fail by, discard the top card of your deck. Draw each weakness discarded by this effect.",
-            "groups": [
-                {
-                    "tokens": ["cultist", "tablet","elder_thing"],
-                    "text": "-2. If you fail, shuffle the top card of the Tekeli-li deck into your deck without looking at it (if you cannot, take 1 horror)."
+        "language": "zh",
+        "deck_options": [
+            {
+                "id": "option_1",
+                "name": "option_2",
+                "text": [
+                    "谈判"
+                ],
+                "level": {
+                    "min": 0,
+                    "max": 3
                 }
-            ],
+            },
+            {
+                "id": "option_2",
+                "name": "职阶选择",
+                "faction_select": [
+                    "mystic"
+                ],
+                "level": {
+                    "min": 0,
+                    "max": 5
+                }
+            }
+        ],
+        "subtitle": "语言学家",
+        "class": "潜修者",
+        "attribute": [
+            4,
+            4,
+            3,
+            1
+        ],
+        "health": 5,
+        "horror": 9,
+        "traits": [
+            "罗德岛",
+            "学者"
+        ],
+        "body": "<启动>：{{谈判}}。选择场上的一张{源石}卡牌。直到下个调查阶段开始，忽略该卡牌及其同名卡牌对玩家卡牌造成的伤害。\n<免费> ：选择场上的一张活性源石。结算其强制效果并将其弃掉。\n<旧印>效果：+2。查找你的绑定卡牌，找出1张活性源石。将其混洗入遭遇牌库。",
+        "picture_layout": {
+            "mode": "custom",
+            "offset": {
+                "x": -54.2857142857143,
+                "y": 137.14285714285714
+            },
+            "scale": 1.01,
+            "crop": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+            },
+            "rotation": 0,
+            "flip_horizontal": False,
+            "flip_vertical": False
         },
-        "footer_copyright": "© TEST",
-        "content_hash": "2ae03648f5cb1f3a58286b573a9399e3fa0efc8f6ea432011dbdb0955959c30d"
+        "flavor": "“真好啊，我们又认识了一回呢。”",
+        "illustrator": "明日方舟",
+        "card_number": "1",
+        "footer_copyright": "© 2025 言峰真名",
+        "content_hash": "e9c6a4318e347e55ab99a27ceaf2a356cdc3796a51c0e108045f6d736fc44464",
+        "encounter_group_number": "",
+        "requirements": "",
+        "text_boundary": {
+            "body": {
+                "top": -12,
+                "bottom": 0,
+                "left": 0,
+                "right": 0
+            },
+            "flavor": {
+                "padding": 0
+            }
+        },
+        "investigator_footer_type": "big-art"
     }
 
     # 创建字体和图片管理器
@@ -2383,7 +2438,7 @@ if __name__ == '__main__':
     profiler = cProfile.Profile()
     profiler.enable()
 
-    fm.set_lang('en')
+    fm.set_lang('zh')
     card = creator.create_card(json_data, picture_path=json_data.get('picture_path', None))
     # 画页脚
     illustrator = "HVNT TCHEKT"

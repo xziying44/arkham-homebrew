@@ -595,8 +595,7 @@ class RichTextRenderer:
                 )
 
     def _get_text_box(self, text: str, font: ImageFont.FreeTypeFont) -> Tuple[int, int]:
-        bbox = font.getbbox(text)
-        return int(bbox[2] - bbox[0]), int(bbox[3] - bbox[1])
+        return self.font_manager.get_text_box(text, font)
 
     def find_best_fit_font_size(
             self,

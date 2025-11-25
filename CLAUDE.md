@@ -175,6 +175,9 @@
     - `set_lang(lang: str): None`
     - `get_lang_font(font_type: str) -> FontInfo` — 如“标题字体/正文字体”等类型
     - `get_font(font_name: str, size: int=20) -> ImageFont|None`
+      - 内置高频缓存：记录访问次数，仅前 N（默认10）字体+字号组合留在缓存以减少反复构造。
+    - `get_text_box(text: str, font, font_name?: str) -> tuple[int,int]`
+      - 基于 `font.getbbox` 计算文本宽高，结果最多缓存 50 万条（持久化到全局配置目录的紧凑 JSON）。
     - `get_font_text(text_key: str) -> str` — 多语言文案映射（含标点适配）
 
 ### ExportHelper.py（导出规格/出血）
