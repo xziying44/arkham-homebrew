@@ -280,6 +280,40 @@ class ImageTag:
 
 
 class RichTextRenderer:
+    # 图标块标签的图标映射：名称 -> (字符, 字体名称)
+    IBLOCK_ICON_MAP = {
+        # Faction Icons
+        '守护者': ('e', 'arkham-icons'), '守卫者': ('e', 'arkham-icons'), 'gua': ('e', 'arkham-icons'),
+        '探求者': ('f', 'arkham-icons'), 'see': ('f', 'arkham-icons'),
+        '流浪者': ('g', 'arkham-icons'), 'rog': ('g', 'arkham-icons'),
+        '潜修者': ('h', 'arkham-icons'), 'mys': ('h', 'arkham-icons'),
+        '生存者': ('i', 'arkham-icons'), '求生者': ('i', 'arkham-icons'), 'sur': ('i', 'arkham-icons'),
+        '调查员': ('v', 'arkham-icons'), 'per': ('v', 'arkham-icons'),
+        # Action Icons
+        '反应': ('l', 'arkham-icons'), 'rea': ('l', 'arkham-icons'),
+        '启动': ('j', 'arkham-icons'), '箭头': ('j', 'arkham-icons'), 'act': ('j', 'arkham-icons'),
+        '免费': ('k', 'arkham-icons'), 'fre': ('k', 'arkham-icons'),
+        # Chaos Token Icons
+        '骷髅': ('m', 'arkham-icons'), 'sku': ('m', 'arkham-icons'),
+        '异教徒': ('n', 'arkham-icons'), 'cul': ('n', 'arkham-icons'),
+        '石板': ('o', 'arkham-icons'), 'tab': ('o', 'arkham-icons'),
+        '古神': ('p', 'arkham-icons'), 'mon': ('p', 'arkham-icons'),
+        '触手': ('r', 'arkham-icons'), '大失败': ('r', 'arkham-icons'), 'ten': ('r', 'arkham-icons'),
+        '旧印': ('q', 'arkham-icons'), '大成功': ('q', 'arkham-icons'), 'eld': ('q', 'arkham-icons'),
+        # Stat Icons
+        '脑': ('.', 'arkham-icons'), 'wil': ('.', 'arkham-icons'),
+        '书': ('a', 'arkham-icons'), 'int': ('a', 'arkham-icons'),
+        '拳': ('b', 'arkham-icons'), 'com': ('b', 'arkham-icons'),
+        '脚': ('c', 'arkham-icons'), 'agi': ('c', 'arkham-icons'),
+        '?': ('d', 'arkham-icons'), 'wild': ('d', 'arkham-icons'),
+        # Other Game Icons
+        '独特': ('w', 'arkham-icons'), 'uni': ('w', 'arkham-icons'),
+        '点': ('y', 'arkham-icons'), 'bul': ('y', 'arkham-icons'),
+        '祝福': ('s', 'arkham-icons'), 'ble': ('s', 'arkham-icons'),
+        '诅咒': ('t', 'arkham-icons'), 'cur': ('t', 'arkham-icons'),
+        '雪花': ('u', 'arkham-icons'), 'frost': ('u', 'arkham-icons'),
+    }
+
     # ==================== 修改 __init__ 方法 ====================
     def __init__(self, font_manager: 'FontManager', image_manager: 'ImageManager',
                  image: Image.Image, lang='zh'):
@@ -812,8 +846,50 @@ class RichTextRenderer:
                     virtual_text_box.cancel_line_padding()
                     virtual_text_box.cancel_line_center()
                     virtual_text_box.cancel_guide_lines()
+                elif item.tag == "/iblock":
+                    success = pop_cache()
+                    html_tag_stack.pop()
+                    virtual_text_box.cancel_hanging_indent()
             elif item.tag == "flex":
                 virtual_text_box.add_flex()
+            elif item.tag == "iblock":
+                # 处理图标块标签：渲染图标+间距，设置悬挂缩进
+                icon_name = item.attributes.get('icon', '')
+                try:
+                    gap = int(item.attributes.get('gap', '5'))
+                except (ValueError, TypeError):
+                    gap = 0
+
+                if icon_name in self.IBLOCK_ICON_MAP:
+                    icon_char, icon_font_name = self.IBLOCK_ICON_MAP[icon_name]
+                    icon_font = font_cache.get_font(icon_font_name, size_to_test)
+                    icon_width, icon_height = self._get_text_box(icon_char, icon_font)
+
+                    # 计算图标的垂直偏移（与普通 arkham-icons 一致）
+                    icon_offset_y = 0
+                    if icon_font_name == 'arkham-icons' and self.font_manager.lang not in ['zh', 'zh-CHT']:
+                        icon_offset_y = -int(size_to_test * 0.112)
+
+                    # 推入图标
+                    icon_obj = TextObject(
+                        icon_char, icon_font, icon_font_name, icon_font.size,
+                        icon_height, icon_width, base_options.font_color,
+                        offset_y=icon_offset_y
+                    )
+                    success = virtual_text_box.push(icon_obj)
+
+                    # 第一行添加实际间距
+                    if gap > 0:
+                        success = success and virtual_text_box.add_horizontal_space(gap)
+
+                    # 设置悬挂缩进（图标宽度 + 间距）
+                    indent_width = icon_width + gap
+                    virtual_text_box.set_hanging_indent(indent_width)
+                else:
+                    # 未知图标名称，仅设置间距作为缩进（如果有）
+                    if gap > 0:
+                        virtual_text_box.set_hanging_indent(gap)
+                html_tag_stack.push("iblock")
 
             if not success:
                 return False, None

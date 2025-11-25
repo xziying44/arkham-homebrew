@@ -15,7 +15,7 @@ Provides rich text rendering for Arkham Horror DIY cards, turning HTML‑like an
   - `TextType` enum: `ENGLISH`, `NUMBER`, `PUNCTUATION`, `SPACE`, `OTHER`, `HTML_START`, `HTML_END`, `HTML_SELF_CLOSE`, `ENGLISH_BLOCK`.
   - `ParsedItem`: tag + type + attributes + content.
   - `RichTextParser`:
-    - Tag handling: supports `b`, `i`, `u`, `p`, `font`, `trait`, `flavor`, `em`, `br`, `hr`, `par`, `flex`, `nbsp`, `center`, `img`.
+    - Tag handling: supports `b`, `i`, `u`, `p`, `font`, `trait`, `flavor`, `em`, `br`, `hr`, `par`, `flex`, `nbsp`, `center`, `img`, `iblock`.
     - Attribute parsing (`name="value" | 'value' | value`).
     - Text splitting: per‑char classification in zh modes; compact block splitting for en modes; handles `&nbsp;`, hyphenated ranges, apostrophes, and newlines → `br`.
     - Balanced tag scanning with nested matching.
@@ -26,6 +26,7 @@ Provides rich text rendering for Arkham Horror DIY cards, turning HTML‑like an
     - Polygonal line bounds sampling; padding; paragraph spacing; line padding.
     - Wrapping rules for punctuation: `cannot_be_line_start` / `cannot_be_line_end`.
     - Line‑level behaviors: `set_line_center`/`cancel_line_center`, guide lines (`set_guide_lines`/`cancel_guide_lines`/`get_guide_line_segments`).
+    - Hanging indent: `set_hanging_indent(width)`/`cancel_hanging_indent()` for icon block indentation.
     - Flow control: `newline`, `new_paragraph`, `add_flex`, `get_render_list`, `get_remaining_vertical_distance`.
 
 - Rendering (`RichTextRenderer.py`)
@@ -67,6 +68,7 @@ Provides rich text rendering for Arkham Horror DIY cards, turning HTML‑like an
 - Text features
   - HTML‑like tags: `<b>`, `<i>`, `<trait>`, `<font name size color offset>`, `<par>`, `<br>`, `<hr>`, `<flex>`, `<img src width height offset>`.
   - Flavor blocks: `<flavor [align=center padding=15 guide]>…</flavor>` apply italic, optional centering, padding, and guide lines; adjacent equal‑attribute blocks are merged.
+  - Icon blocks: `<iblock icon="gua" gap="5">…</iblock>` renders a leading icon with hanging indent; subsequent wrapped lines auto‑indent to align with text start. Supported icons: faction (gua/see/rog/mys/sur/per), action (rea/act/fre), chaos tokens, stats, etc.
   - Icons: emojis/aliases map to `arkham-icons` glyphs; ensure that font is available via `FontManager`.
 
 ## Notes

@@ -116,6 +116,11 @@ class VirtualTextBox:
         self.line_padding: int = 0
         self.use_line_padding: bool = False
 
+        # --- 用于悬挂缩进状态的属性 ---
+        self._hanging_indent: int = 0
+        self._hanging_indent_active: bool = False
+        self._is_first_line_of_indent: bool = True
+
         self.cannot_be_line_start = {'。', '，', '！', '？', '；', '：', ':', ')', '）', '、',
                                      '}', '】', '>', '》', '.', '!', '?', ',', '”'}
         self.cannot_be_line_end = {'(', '（', '{', '【', '<', '《', '“'}
@@ -286,6 +291,10 @@ class VirtualTextBox:
             self.current_line_left = base_left
             self.current_line_right = base_right
 
+        # 应用悬挂缩进（仅对非首行生效）
+        if self._hanging_indent_active and not self._is_first_line_of_indent:
+            self.current_line_left += self._hanging_indent
+
     def _move_to_next_line(self, obj_height: int = 0, extra_spacing: int = 0) -> bool:
         """移动到下一行，返回是否成功"""
         # 在移动到下一行之前，检查是否需要居中当前行
@@ -312,6 +321,10 @@ class VirtualTextBox:
         self.cursor_y = next_y
         self.current_line_height = 0
 
+        # 换行后标记非首行，以便悬挂缩进生效
+        if self._hanging_indent_active:
+            self._is_first_line_of_indent = False
+
         self._update_line_bounds()
         self.cursor_x = self.current_line_left
         return True
@@ -334,6 +347,52 @@ class VirtualTextBox:
     def cancel_line_padding(self) -> None:
         self.use_line_padding = False
         self.line_padding = 0
+
+    # --- 悬挂缩进方法 ---
+    def set_hanging_indent(self, width: int) -> None:
+        """
+        设置悬挂缩进。
+
+        启用后，当文本换行时，后续行将自动在左侧添加指定宽度的缩进。
+        首行不受影响，仅换行后生效。
+
+        Args:
+            width: 缩进宽度（像素）
+        """
+        self._hanging_indent = width
+        self._hanging_indent_active = True
+        self._is_first_line_of_indent = True
+
+    def cancel_hanging_indent(self) -> None:
+        """
+        取消悬挂缩进。
+
+        重置所有悬挂缩进状态，并更新行边界。
+        """
+        self._hanging_indent = 0
+        self._hanging_indent_active = False
+        self._is_first_line_of_indent = True
+        self._update_line_bounds()
+
+    def add_horizontal_space(self, width: int) -> bool:
+        """
+        在当前行添加水平间距。
+
+        直接移动光标位置，不创建渲染对象。
+        如果间距超出当前行边界，则返回 False。
+
+        Args:
+            width: 间距宽度（像素）
+
+        Returns:
+            bool: 是否成功添加间距
+        """
+        if width <= 0:
+            return True
+        if self.cursor_x + width > self.current_line_right:
+            return False
+        self.cursor_x += width
+        return True
 
     def _can_fit_in_current_line(self, obj_width: int) -> bool:
         return self.cursor_x + obj_width <= self.current_line_right
@@ -414,6 +473,8 @@ class VirtualTextBox:
             'line_padding_value': self.line_padding if self.use_line_padding else 0,
             'is_line_centering': self._is_line_centering_enabled,
             'is_guide_lines_active': self._guide_lines_active,
+            'is_hanging_indent_active': self._hanging_indent_active,
+            'hanging_indent_value': self._hanging_indent if self._hanging_indent_active else 0,
         }
 
     def _handle_line_start_punctuation(self, obj: TextObject) -> bool:
