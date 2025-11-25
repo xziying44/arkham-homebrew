@@ -8,6 +8,7 @@
         class="class-button"
         :class="{ selected: isSelected(cls.value) }"
         :style="getButtonStyle(cls.value, isSelected(cls.value))"
+        type="button"
         @click="selectClass(cls.value)"
       >
         <span class="class-emoji">{{ cls.emoji }}</span>
@@ -50,6 +51,7 @@
             disabled: !isSubclassSelected(cls.value) && currentSubclasses.length >= maxSubclassCount
           }"
           :style="getSubclassStyle(cls.value)"
+          type="button"
           @click="toggleSubclass(cls.value)"
           :disabled="!isSubclassSelected(cls.value) && currentSubclasses.length >= maxSubclassCount"
         >
