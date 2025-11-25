@@ -122,6 +122,9 @@ class VirtualTextBox:
         self._hanging_indent_active: bool = False
         self._is_first_line_of_indent: bool = True
 
+        # --- 用于分栏布局状态的属性 ---
+        self._column_state: Optional[dict] = None
+
         self.cannot_be_line_start = {'。', '，', '！', '？', '；', '：', ':', ')', '）', '、',
                                      '}', '】', '>', '》', '.', '!', '?', ',', '”'}
         self.cannot_be_line_end = {'(', '（', '{', '【', '<', '《', '“'}
@@ -323,6 +326,17 @@ class VirtualTextBox:
             self.current_line_left = base_left
             self.current_line_right = base_right
 
+        # 在分栏模式下，限制行边界在当前列的范围内
+        if self._column_state is not None:
+            col_idx = self._column_state['current_column']
+            col_start_x = self._column_state['column_starts_x'][col_idx]
+            col_width = self._column_state['column_widths'][col_idx]
+            col_end_x = col_start_x + col_width
+
+            # 取交集：行边界与列边界的交集
+            self.current_line_left = max(self.current_line_left, col_start_x)
+            self.current_line_right = min(self.current_line_right, col_end_x)
+
         # 应用悬挂缩进（仅对非首行生效）
         if self._hanging_indent_active and not self._is_first_line_of_indent:
             self.current_line_left += self._hanging_indent
@@ -407,6 +421,171 @@ class VirtualTextBox:
         self._hanging_indent_active = False
         self._is_first_line_of_indent = True
         self._update_line_bounds()
+
+    # --- 分栏布局方法 ---
+    def start_column_layout(self, column_weights: list, gap: int) -> bool:
+        """
+        启动分栏布局。
+
+        根据权重比例计算各列宽度，初始化分栏状态，并设置第一列的行边界。
+
+        Args:
+            column_weights: 各列的权重列表，例如 [2, 3] 表示 2:3 的比例
+            gap: 列与列之间的间距（像素）
+
+        Returns:
+            bool: 是否成功启动分栏布局（如果列宽为负则返回 False）
+        """
+        if not column_weights or len(column_weights) < 1:
+            return False
+
+        num_columns = len(column_weights)
+        total_weight = sum(column_weights)
+
+        if total_weight <= 0:
+            return False
+
+        # 计算可用宽度（扣除列间距）
+        available_width = self.current_line_right - self.current_line_left - gap * (num_columns - 1)
+
+        if available_width <= 0:
+            return False
+
+        # 按权重比例分配宽度
+        column_widths = []
+        remaining_width = available_width
+        for i, weight in enumerate(column_weights):
+            if i == len(column_weights) - 1:
+                # 最后一列获取剩余宽度（处理余数）
+                col_width = remaining_width
+            else:
+                col_width = int(available_width * weight / total_weight)
+                remaining_width -= col_width
+            column_widths.append(col_width)
+
+        # 检查是否有负宽度
+        if any(w <= 0 for w in column_widths):
+            return False
+
+        # 计算各列的起始 X 坐标
+        column_starts_x = []
+        current_x = self.current_line_left
+        for i, width in enumerate(column_widths):
+            column_starts_x.append(current_x)
+            current_x += width + gap
+
+        # 保存分栏状态
+        self._column_state = {
+            'column_widths': column_widths,
+            'gap': gap,
+            'current_column': 0,
+            'column_starts_x': column_starts_x,
+            'column_max_y': [self.cursor_y] * num_columns,
+            'original_line_left': self.current_line_left,
+            'original_line_right': self.current_line_right,
+            'start_y': self.cursor_y
+        }
+
+        # 设置第一列的行边界
+        self.current_line_left = column_starts_x[0]
+        self.current_line_right = column_starts_x[0] + column_widths[0]
+        self.cursor_x = self.current_line_left
+
+        return True
+
+    def switch_to_next_column(self) -> bool:
+        """
+        切换到下一个分栏。
+
+        记录当前列的最大 Y 坐标，重置对齐状态，并切换到下一列。
+
+        Returns:
+            bool: 是否成功切换（如果已无更多列则返回 False）
+        """
+        if self._column_state is None:
+            return False
+
+        current_col = self._column_state['current_column']
+        num_columns = len(self._column_state['column_widths'])
+
+        # 记录当前列的最大 Y 坐标
+        current_max_y = max(self.cursor_y + self.current_line_height,
+                           self._column_state['column_max_y'][current_col])
+        self._column_state['column_max_y'][current_col] = current_max_y
+
+        # 重置对齐状态
+        if self._is_line_centering_enabled:
+            self.cancel_line_center()
+        if self._is_line_right_alignment_enabled:
+            self.cancel_line_right()
+        if self._hanging_indent_active:
+            self.cancel_hanging_indent()
+
+        # 检查是否还有下一列
+        next_col = current_col + 1
+        if next_col >= num_columns:
+            return False
+
+        # 切换到下一列
+        self._column_state['current_column'] = next_col
+
+        # 重置光标到新列起始位置（Y 回到 start_y）
+        self.cursor_y = self._column_state['start_y']
+        self.current_line_height = 0
+
+        # 更新行边界为新列的宽度范围
+        col_start_x = self._column_state['column_starts_x'][next_col]
+        col_width = self._column_state['column_widths'][next_col]
+        self.current_line_left = col_start_x
+        self.current_line_right = col_start_x + col_width
+        self.cursor_x = self.current_line_left
+
+        return True
+
+    def finalize_column_layout(self) -> bool:
+        """
+        结束分栏布局。
+
+        记录最后一列的最大 Y，计算所有列的最大 Y，
+        将光标移动到最大 Y 位置，并恢复原始行边界。
+
+        Returns:
+            bool: 是否成功结束分栏布局
+        """
+        if self._column_state is None:
+            return False
+
+        current_col = self._column_state['current_column']
+
+        # 记录最后一列的最大 Y
+        current_max_y = max(self.cursor_y + self.current_line_height,
+                           self._column_state['column_max_y'][current_col])
+        self._column_state['column_max_y'][current_col] = current_max_y
+
+        # 重置对齐状态
+        if self._is_line_centering_enabled:
+            self.cancel_line_center()
+        if self._is_line_right_alignment_enabled:
+            self.cancel_line_right()
+        if self._hanging_indent_active:
+            self.cancel_hanging_indent()
+
+        # 计算所有列的最大 Y
+        overall_max_y = max(self._column_state['column_max_y'])
+
+        # 恢复原始行边界
+        self.current_line_left = self._column_state['original_line_left']
+        self.current_line_right = self._column_state['original_line_right']
+
+        # 将光标移动到最大 Y 位置，并加上段落间距
+        self.cursor_y = overall_max_y + self.paragraph_spacing
+        self.cursor_x = self.current_line_left
+        self.current_line_height = 0
+
+        # 清空分栏状态
+        self._column_state = None
+
+        return True
 
     def add_horizontal_space(self, width: int) -> bool:
         """

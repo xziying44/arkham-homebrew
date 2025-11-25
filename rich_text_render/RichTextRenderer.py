@@ -711,6 +711,40 @@ class RichTextRenderer:
         # push缓存
         push_cache = []
 
+        # 分栏布局收集器
+        column_info = None
+        # 标志：是否忽略 /column 后紧跟的换行
+        skip_br_after_column = False
+
+        def scan_column_weights(start_index: int) -> list:
+            """
+            预扫描 column 标签内的 col 子标签，收集所有 weight 属性。
+
+            Args:
+                start_index: column 标签在 parsed_items 中的索引
+
+            Returns:
+                list: 各列的 weight 列表
+            """
+            weights = []
+            depth = 0
+            for j in range(start_index, len(parsed_items)):
+                tag = parsed_items[j].tag
+                if tag == 'column':
+                    depth += 1
+                elif tag == '/column':
+                    depth -= 1
+                    if depth == 0:
+                        break
+                elif tag == 'col' and depth == 1:
+                    # 只收集直接子 col 的 weight（depth == 1 表示在当前 column 内）
+                    try:
+                        weight = int(parsed_items[j].attributes.get('weight', '1'))
+                    except (ValueError, TypeError):
+                        weight = 1
+                    weights.append(weight)
+            return weights
+
         def pop_cache():
             """弹出缓存"""
             if len(push_cache) > 0:
@@ -719,8 +753,15 @@ class RichTextRenderer:
                 return _success
             return True
 
-        for item in parsed_items:
+        for item_index, item in enumerate(parsed_items):
             success = True
+
+            # 在 column 模式下但不在 col 内部时，忽略内容类标签（text, br, nbsp 等）
+            # 只处理结构类标签（col, /col, /column）
+            if column_info is not None and not column_info.get('in_col', False):
+                if item.tag not in ('col', '/col', '/column', 'column'):
+                    continue
+
             if item.tag == "text":
                 font = font_stack.get_top()
                 font_name = font_stack.get_top_font_name()
@@ -774,6 +815,23 @@ class RichTextRenderer:
                                          base_options.font_color)
                 push_cache.append(text_object)
             elif item.tag == "br":
+                # 忽略 /column 后紧跟的换行
+                if skip_br_after_column:
+                    skip_br_after_column = False
+                    continue
+
+                # 在 col 内部时，忽略开头和结尾的换行
+                if column_info is not None and column_info.get('in_col', False):
+                    # 忽略 col 开始后的第一个 br
+                    if column_info.get('skip_leading_br', False):
+                        column_info['skip_leading_br'] = False
+                        continue
+                    # 忽略 /col 前面的 br（预先检查下一个标签）
+                    if item_index + 1 < len(parsed_items):
+                        next_item = parsed_items[item_index + 1]
+                        if next_item.tag == '/col':
+                            continue
+
                 success = pop_cache()
                 if html_tag_stack.get_top() == 'body':
                     success = success and virtual_text_box.new_paragraph()
@@ -858,6 +916,22 @@ class RichTextRenderer:
                     success = pop_cache()
                     html_tag_stack.pop()
                     virtual_text_box.cancel_hanging_indent()
+                elif item.tag == "/column":
+                    # 结束分栏布局
+                    success = pop_cache()
+                    html_tag_stack.pop()
+                    success = success and virtual_text_box.finalize_column_layout()
+                    # 设置标志忽略 /column 后紧跟的换行
+                    skip_br_after_column = True
+                    column_info = None
+                    if not success:
+                        break
+                elif item.tag == "/col":
+                    # col 结束标签：弹出缓存，标记退出 col
+                    success = pop_cache()
+                    html_tag_stack.pop()
+                    if column_info is not None:
+                        column_info['in_col'] = False
             elif item.tag == "flex":
                 virtual_text_box.add_flex()
             elif item.tag == "iblock":
@@ -898,6 +972,49 @@ class RichTextRenderer:
                     if gap > 0:
                         virtual_text_box.set_hanging_indent(gap)
                 html_tag_stack.push("iblock")
+
+            elif item.tag == "column":
+                # 处理分栏布局标签：解析 gap 属性，预扫描收集 col 的 weight，启动分栏
+                try:
+                    column_gap = int(item.attributes.get('gap', '0'))
+                except (ValueError, TypeError):
+                    column_gap = 0
+
+                # 预扫描收集所有 col 的 weight
+                column_weights = scan_column_weights(item_index)
+                if not column_weights:
+                    # 没有找到 col 子标签，使用默认单列
+                    column_weights = [1]
+
+                # 启动分栏布局
+                success = virtual_text_box.start_column_layout(column_weights, column_gap)
+                if not success:
+                    break
+
+                # 初始化分栏收集器（记录当前列索引和是否在 col 内部）
+                column_info = {'current_col': 0, 'total_cols': len(column_weights), 'in_col': False}
+                html_tag_stack.push("column")
+
+            elif item.tag == "col":
+                # 处理分栏列标签：第一个 col 已在 column 中启动，后续 col 切换到下一列
+                if column_info is None:
+                    # col 标签出现在 column 外部，忽略
+                    continue
+
+                if column_info['current_col'] == 0:
+                    # 第一个 col：分栏已在 column 中启动，无需操作
+                    column_info['current_col'] = 1
+                else:
+                    # 后续 col：切换到下一列
+                    success = virtual_text_box.switch_to_next_column()
+                    column_info['current_col'] += 1
+                    if not success:
+                        break
+
+                # 标记进入 col 内部，并设置忽略开头换行的标志
+                column_info['in_col'] = True
+                column_info['skip_leading_br'] = True
+                html_tag_stack.push("col")
 
             if not success:
                 return False, None
