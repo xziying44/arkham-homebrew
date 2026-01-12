@@ -3748,16 +3748,15 @@ defineExpose({
 /* 移动端文件树滚动优化 */
 @media (max-width: 768px) {
   .file-tree-pane {
-    height: 100vh;
-    max-height: 100vh;
+    height: calc(80vh - 64px);
+    max-height: calc(80vh - 64px);
   }
 
   .file-tree-content {
     padding: 8px;
-    /* 确保移动端滚动容器占满可用空间 */
-    height: calc(100vh - 60px); /* 减去头部高度 */
-    min-height: calc(100vh - 60px);
-    /* 增强滚动体验 */
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
     overscroll-behavior: contain;
     touch-action: pan-y;
   }
