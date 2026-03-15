@@ -199,7 +199,8 @@ class ArkhamDBConverter:
         '07': {'name': '印斯茅斯的阴谋', 'year': 2020, 'font_text': '<font name="packicon_innsmouth">A</font>'},
         '08': {'name': '暗与地球之界', 'year': 2021, 'font_text': '<font name="packicon_edge">\uE900</font>',
                "icon_campaign": '<font name="packicon_edge">\uE901</font>'},
-        '09': {'name': '绯红密钥', 'year': 2022, 'font_text': '<font name="packicon_scarlet">\uE900</font>'},
+        '09': {'name': '绯红密钥', 'year': 2022, 'font_text': '<font name="packicon_scarlet">\uE900</font>',
+               'icon_campaign': '<font name="packicon_scarlet">\uE924</font>'},
         '10': {'name': '铁杉谷盛宴', 'year': 2024, 'font_text': '<font name="packicon_hemlock">\uE9B9</font>'},
         '50': {'name': '重返基础', 'year': 2017, 'font_text': '<font name="packicon_coreset">\uE90A</font>'},
         '51': {'name': '重返敦威治遗产', 'year': 2018, 'font_text': '<font name="packicon_dunwich">\uE91B</font>'},
@@ -265,9 +266,12 @@ class ArkhamDBConverter:
             return ""  # 如果找不到对应图标，返回空字符串
 
         formatted_text = re.sub(r'<span([^>]*)></span>', replace_span_icon, text)
+        # 加上 flags=re.DOTALL 让 . 可以匹配换行符
         formatted_text = re.sub(r'<blockquote><i>(.*?)</i></blockquote>',
                                 r'<flavor quote="true" padding="20" flavor align="left" flex="false">\1</flavor>',
-                                formatted_text)
+                                formatted_text,
+                                flags=re.DOTALL)
+
         # 1. 替换HTML粗体标签为【】
         formatted_text = re.sub(r'<b><i>(.*?)</i></b>', r'{\1}', formatted_text)
         formatted_text = re.sub(r'\[\[(.*?)]]', r'{\1}', formatted_text)
@@ -676,7 +680,7 @@ class ArkhamDBConverter:
             card_data["encounter_group_number"] = ""
             card_data["illustrator"] = ""
             card_data["card_number"] = ""
-        if card_code in ["08681"] and not is_back:
+        if card_code in ["08681", "09562", "09570"] and not is_back:
             card_data["type"] = "密谋卡-大画"
             card_data["footer_copyright"] = ""
             card_data["footer_icon_font"] = ""
@@ -692,6 +696,12 @@ class ArkhamDBConverter:
         if card_code == '07274':
             card_data["scenario_type"] = 1
             card_data["scenario_card"]['resource_name'] = '花费的钥匙'
+        if card_code == '09520':
+            card_data["scenario_type"] = 1
+            card_data["scenario_card"]['resource_name'] = '遇害的平民'
+        if card_code == '09545':
+            card_data["scenario_type"] = 1
+            card_data["scenario_card"]['resource_name'] = '目标'
 
         if card_code in ['04125a', '04126a', '04127', '04128a', '04129', '04130a', '04131',
                          '04132', '03278', '03279a', '03280', '03282'] and 'serial_number' in card_data:
