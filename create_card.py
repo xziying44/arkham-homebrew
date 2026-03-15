@@ -2028,7 +2028,7 @@ class CardCreator:
         # 画等级
         card.set_card_level(data.get('level', -1))
 
-        card.draw_centered_text((74, 134), self.font_manager.get_font_text("事件"), "卡牌类型字体", 22, (255, 255, 255),
+        card.draw_centered_text((74, 134), self.font_manager.get_font_text("技能"), "卡牌类型字体", 22, (255, 255, 255),
                                 max_length=None, debug_line=False)
 
         # 画内容
