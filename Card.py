@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageChops
 
 from ResourceManager import FontManager, ImageManager
 from rich_text_render.RichTextRenderer import RichTextRenderer, DrawOptions, TextAlignment
-from rich_text_render.VirtualTextBox import TextObject, RenderItem
+from rich_text_render.VirtualTextBox import TextObject, ImageObject, RenderItem
 
 
 def generate_random_braille(size, seed=None, dot_color=(0, 0, 0, 255)):
@@ -1763,5 +1763,16 @@ class Card:
                     "border_color": item.obj.border_color,
                     "opacity": item.obj.opacity,
                     "effects": item.obj.effects,
+                })
+            elif isinstance(item.obj, ImageObject):
+                text_layer_metadata.append({
+                    "type": "image",
+                    "image": item.obj.image,
+                    "x": item.x,
+                    "y": item.y,
+                    "offset_x": item.obj.offset_x,
+                    "offset_y": item.obj.offset_y,
+                    "width": item.obj.width,
+                    "height": item.obj.height,
                 })
         return text_layer_metadata

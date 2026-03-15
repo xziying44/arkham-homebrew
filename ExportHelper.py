@@ -438,9 +438,24 @@ class ExportHelper:
         # 性能优化：收集所有文本项后批量渲染
         enhanced_text_items = []  # [(position, text, font, fill, opacity, effects), ...]
         fast_text_items = []  # 无特效的快速路径 [(x, y, text, font, fill, border_width, border_color), ...]
+        image_items = []  # 图片项 [(x, y, image), ...]
 
         for text_info in text_layer:
             try:
+                # 判断是否为图片类型
+                if text_info.get('type') == 'image':
+                    img = text_info.get('image')
+                    if img is None:
+                        continue
+                    x = (text_info.get('x', 0) + text_info.get('offset_x', 0)) * dpi_scale_factor + bleed_offset_x
+                    y = (text_info.get('y', 0) + text_info.get('offset_y', 0)) * dpi_scale_factor + bleed_offset_y
+                    # 按DPI缩放图片尺寸
+                    new_width = max(1, int(text_info.get('width', img.size[0]) * dpi_scale_factor))
+                    new_height = max(1, int(text_info.get('height', img.size[1]) * dpi_scale_factor))
+                    resized_img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                    image_items.append((int(x), int(y), resized_img))
+                    continue
+
                 # 提取文字信息并应用DPI缩放
                 text = text_info.get('text', '')
                 x = (text_info.get('x', 0) + text_info.get('offset_x', 0)) * dpi_scale_factor + bleed_offset_x
@@ -516,6 +531,14 @@ class ExportHelper:
                     font=font,
                     fill=fill
                 )
+
+        # 渲染图片项
+        if image_items:
+            for x, y, img in image_items:
+                if img.mode == 'RGBA':
+                    card_map.paste(img, (x, y), img)
+                else:
+                    card_map.paste(img, (x, y))
 
         if self.bleed_mode == BleedMode.STRETCH:
             if self._is_horizontal(card_map):
