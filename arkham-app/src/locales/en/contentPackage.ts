@@ -265,6 +265,20 @@ export default {
     },
     dialog: {
       selectImageHost: 'Select Image Host Service',
+      steamMode: 'Steam Cloud',
+      steamModeDescription: 'No third-party host setup required. The app will generate local HTTP image URLs for TTS to load before uploading them into Steam Cloud.',
+      steamGuideTitle: 'Steam Cloud Upload Guide',
+      steamGuideWarning: 'The most important step is to save the object back into your saved objects after upload, otherwise you may lose it after closing the game.',
+      steamGuideStep1: 'Export with Steam Cloud mode first so the generated JSON uses local HTTP image URLs.',
+      steamGuideStep2: 'Place the exported JSON file into the TTS saved objects directory.',
+      steamGuideStep3: 'Open TTS, start an empty table, and load the exported object onto the table.',
+      steamGuideStep4: 'Open the top menu "MOD" and enter "Steam Cloud Manager".',
+      steamGuideStep5: 'Create a folder there so you can organize these uploaded assets.',
+      steamGuideStep6: 'Click "Upload All Loaded Files" and wait for the green success notice.',
+      steamGuideStep7: 'After upload succeeds, right-click the object on the table and save it back into your saved objects.',
+      steamGuideImage1Alt: 'Steam Cloud manager guide image 1',
+      steamGuideImage2Alt: 'Steam Cloud manager guide image 2',
+      ttsExportReady: 'After image upload completes, you can export the TTS object directly here without going back.',
       localMode: 'Local Test',
       localModeDescription: 'Local test mode: only export images to local, not upload to cloud, using file:/// format URLs',
       cloudinaryConfig: 'Cloudinary Configuration',
@@ -331,7 +345,7 @@ export default {
     },
     success: {
       configSaveSuccess: 'Configuration saved successfully',
-      localModeNoSave: 'Local test mode, no need to save configuration'
+      localModeNoSave: 'No configuration needs to be saved for the current mode'
     },
     status: {
       cloud: 'Cloud',

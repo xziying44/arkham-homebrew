@@ -6,8 +6,17 @@
       <n-radio-group :value="selectedHost" @update:value="handleHostChange" size="medium">
         <n-radio-button value="cloudinary">Cloudinary</n-radio-button>
         <n-radio-button value="imgbb">ImgBB</n-radio-button>
+        <n-radio-button value="steam">{{ $t('contentPackage.upload.dialog.steamMode') }}</n-radio-button>
         <n-radio-button value="local">{{ $t('contentPackage.upload.dialog.localMode') }}</n-radio-button>
       </n-radio-group>
+      <div v-if="selectedHost === 'steam'" class="steam-info">
+        <n-alert type="success" size="small">
+          <template #icon>
+            <n-icon :component="InformationCircleOutline" />
+          </template>
+          {{ $t('contentPackage.upload.dialog.steamModeDescription') }}
+        </n-alert>
+      </div>
       <div v-if="selectedHost === 'local'" class="local-info">
         <n-alert type="info" size="small">
           <template #icon>
@@ -198,6 +207,37 @@
       </div>
     </div>
 
+    <div v-if="selectedHost === 'steam'" class="upload-section">
+      <h4>{{ $t('contentPackage.upload.dialog.steamGuideTitle') }}</h4>
+      <n-alert type="warning" style="margin-bottom: 1rem;">
+        <template #icon>
+          <n-icon :component="InformationCircleOutline" />
+        </template>
+        {{ $t('contentPackage.upload.dialog.steamGuideWarning') }}
+      </n-alert>
+
+      <ol class="steam-guide-list">
+        <li>{{ $t('contentPackage.upload.dialog.steamGuideStep1') }}</li>
+        <li>{{ $t('contentPackage.upload.dialog.steamGuideStep2') }}</li>
+        <li>{{ $t('contentPackage.upload.dialog.steamGuideStep3') }}</li>
+        <li>{{ $t('contentPackage.upload.dialog.steamGuideStep4') }}</li>
+        <li>{{ $t('contentPackage.upload.dialog.steamGuideStep5') }}</li>
+        <li>{{ $t('contentPackage.upload.dialog.steamGuideStep6') }}</li>
+        <li>{{ $t('contentPackage.upload.dialog.steamGuideStep7') }}</li>
+      </ol>
+
+      <div class="steam-guide-images">
+        <figure class="steam-guide-image-card">
+          <img :src="steamCloudGuide01" :alt="$t('contentPackage.upload.dialog.steamGuideImage1Alt')" />
+          <figcaption>{{ $t('contentPackage.upload.dialog.steamGuideImage1Alt') }}</figcaption>
+        </figure>
+        <figure class="steam-guide-image-card">
+          <img :src="steamCloudGuide02" :alt="$t('contentPackage.upload.dialog.steamGuideImage2Alt')" />
+          <figcaption>{{ $t('contentPackage.upload.dialog.steamGuideImage2Alt') }}</figcaption>
+        </figure>
+      </div>
+    </div>
+
     <!-- 上传进度 -->
     <div v-if="isUploading" class="upload-section">
       <h4>{{ $t('contentPackage.upload.dialog.uploadProgress') }}</h4>
@@ -221,6 +261,19 @@
         </n-scrollbar>
       </div>
     </div>
+
+    <div v-if="uploadSucceeded && canRequestTtsExport" class="upload-section">
+      <h4>{{ $t('contentPackage.export.tts.title') }}</h4>
+      <n-alert type="success" style="margin-bottom: 1rem;">
+        <template #icon>
+          <n-icon :component="InformationCircleOutline" />
+        </template>
+        {{ $t('contentPackage.upload.dialog.ttsExportReady') }}
+      </n-alert>
+      <n-button type="primary" @click="handleRequestTtsExport" :loading="props.ttsExporting">
+        {{ $t('contentPackage.export.tts.exportTTSItems') }}
+      </n-button>
+    </div>
   </div>
 </template>
 
@@ -238,6 +291,8 @@ import type { ImageHostType } from '@/api/types';
 import type { ContentPackageCard, EncounterSet } from '@/types/content-package';
 import { useI18n } from 'vue-i18n';
 import { v4 as uuidv4 } from 'uuid';
+import steamCloudGuide01 from '@/assets/steam-cloud/01.png';
+import steamCloudGuide02 from '@/assets/steam-cloud/02.png';
 
 export type UploadType = 'banner' | 'card' | 'encounter';
 
@@ -247,12 +302,14 @@ interface Props {
   uploadItems?: any[]; // 批量上传时的项目列表
   config?: any;
   isBatch?: boolean;
+  ttsExporting?: boolean;
 }
 
 interface Emits {
   (e: 'confirm', updatedPackage: any): void;
   (e: 'cancel'): void;
   (e: 'fail', payload: { message: string; code?: number; host?: string; uploadType: UploadType; isBatch: boolean; itemName?: string }): void;
+  (e: 'request-export-tts'): void;
 }
 
 const props = defineProps<Props>();
@@ -311,6 +368,7 @@ const isUploading = ref(false);
 const uploadProgress = ref(0);
 const uploadStatus = ref('');
 const uploadLogs = ref<Array<{ message: string; type: 'info' | 'error' }>>([]);
+const uploadSucceeded = ref(false);
 
 // 配置数据
 const cloudinaryConfig = ref({
@@ -331,6 +389,7 @@ const footer_icon = ref('');
 const isBatch = computed(() => props.isBatch || !!props.uploadItems?.length);
 const uploadItems = computed(() => props.uploadItems || []);
 const currentItem = computed(() => props.currentItem);
+const canRequestTtsExport = computed(() => !!props.config?.path);
 
 // 计算当前配置
 const currentConfig = computed(() => {
@@ -426,6 +485,10 @@ const handleHostChange = (value: ImageHostType) => {
   userSelectedHost.value = true; // 标记为用户手动选择
 };
 
+const resetUploadState = () => {
+  uploadSucceeded.value = false;
+};
+
 // 添加日志
 const addLog = (message: string, type: 'info' | 'error' = 'info') => {
   uploadLogs.value.push({ message, type });
@@ -489,7 +552,7 @@ const loadConfig = async () => {
 const saveConfig = async () => {
   try {
     // 本地模式不需要保存配置
-    if (selectedHost.value === 'local') {
+    if (selectedHost.value === 'local' || selectedHost.value === 'steam') {
       addLog(tMessage('contentPackage.upload.success.localModeNoSave'), 'info');
       return;
     }
@@ -517,7 +580,7 @@ const saveConfig = async () => {
 
 // 验证配置
 const validateConfig = (): boolean => {
-  if (selectedHost.value === 'local') {
+  if (selectedHost.value === 'local' || selectedHost.value === 'steam') {
     return true; // 本地模式不需要验证配置
   } else if (selectedHost.value === 'cloudinary') {
     return !!(cloudinaryConfig.value.cloud_name &&
@@ -533,6 +596,7 @@ const uploadBanner = async () => {
   if (props.uploadType !== 'banner' || !currentItem.value) return;
 
   try {
+    resetUploadState();
     isUploading.value = true;
     uploadProgress.value = 0;
     uploadStatus.value = tMessage('contentPackage.upload.dialog.preparingUpload');
@@ -623,6 +687,7 @@ const uploadBanner = async () => {
 
     emit('confirm', updatedPackage);
     addLog('封面上传完成', 'info');
+    uploadSucceeded.value = true;
 
     uploadProgress.value = 100;
     uploadStatus.value = '上传成功';
@@ -638,6 +703,7 @@ const uploadBanner = async () => {
 // 上传单个项目
 const uploadSingleItem = async (item: any) => {
   try {
+    resetUploadState();
     isUploading.value = true;
     uploadProgress.value = 0;
     uploadStatus.value = tMessage('contentPackage.upload.dialog.preparingUpload');
@@ -918,6 +984,7 @@ const batchUpload = async () => {
   }
 
   isUploading.value = true;
+  resetUploadState();
   uploadProgress.value = 0;
   uploadStatus.value = '准备批量上传...';
   uploadLogs.value = [];
@@ -998,6 +1065,7 @@ const batchUpload = async () => {
     addLog(tMessage('contentPackage.upload.dialog.batchUploadComplete'), 'info');
 
     emit('confirm', updatedPackage);
+    uploadSucceeded.value = true;
 
     // 消息提示已移至PackageEditor的handleUploadConfirm方法中统一处理
 
@@ -1267,6 +1335,10 @@ const handleConfirm = () => {
   }
 };
 
+const handleRequestTtsExport = () => {
+  emit('request-export-tts');
+};
+
 // 暴露方法给父组件
 defineExpose({
   handleConfirm
@@ -1278,6 +1350,18 @@ watch(() => props.config, (newConfig) => {
     loadConfig();
   }
 }, { immediate: true });
+
+watch(() => props.currentItem, () => {
+  resetUploadState();
+});
+
+watch(() => props.uploadItems, () => {
+  resetUploadState();
+});
+
+watch(() => props.uploadType, () => {
+  resetUploadState();
+});
 
 // 组件挂载时加载配置
 onMounted(() => {
@@ -1311,6 +1395,42 @@ onMounted(() => {
 
 .local-info {
   margin-top: 0.5rem;
+}
+
+.steam-info {
+  margin-top: 0.5rem;
+}
+
+.steam-guide-list {
+  margin: 0 0 1rem 1.25rem;
+  padding: 0;
+  color: #3b4a5a;
+  line-height: 1.7;
+}
+
+.steam-guide-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.steam-guide-image-card {
+  margin: 0;
+  border: 1px solid #e6ebf2;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fbfdff;
+}
+
+.steam-guide-image-card img {
+  width: 100%;
+  display: block;
+}
+
+.steam-guide-image-card figcaption {
+  padding: 0.75rem 0.9rem;
+  font-size: 0.875rem;
+  color: #5a6573;
 }
 
 .quality-setting {

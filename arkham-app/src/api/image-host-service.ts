@@ -87,6 +87,17 @@ export class ImageHostService {
     });
   }
 
+  static async uploadToSteam(
+    imagePath: string,
+    onlineName?: string
+  ): Promise<ImageHostUploadResponse> {
+    return this.uploadImage({
+      image_path: imagePath,
+      host_type: ImageHostType.STEAM,
+      online_name: onlineName,
+    });
+  }
+
   /**
    * 检查Cloudinary中是否存在指定图片
    * @param onlineName 在线文件名

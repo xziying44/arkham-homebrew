@@ -162,6 +162,29 @@ def check_workspace():
     return None
 
 
+def build_steam_host_config(config: dict) -> dict:
+    """为 Steam 云本地 HTTP 图床补充运行时配置。"""
+    host_url = getattr(request, 'host_url', 'http://127.0.0.1:5000/')
+    steam_base_url = str(host_url).rstrip('/')
+    merged = config.copy()
+    merged['steam_base_url'] = steam_base_url
+    if current_workspace is not None:
+        merged['workspace_path'] = getattr(current_workspace, 'workspace_path', '')
+    return merged
+
+
+def is_allowed_steam_export_path(relative_path: str) -> bool:
+    """限制 Steam 静态资源只能访问导出目录。"""
+    if not isinstance(relative_path, str) or not relative_path:
+        return False
+
+    normalized = relative_path.replace('\\', '/')
+    while normalized.startswith('./'):
+        normalized = normalized[2:]
+    allowed_prefixes = ('.cards/', '.banner/', '.encounters/')
+    return any(normalized.startswith(prefix) for prefix in allowed_prefixes)
+
+
 def get_or_create_github_host():
     """获取或创建GitHub图床实例（改进版）"""
     global github_image_host, current_workspace
@@ -2373,10 +2396,10 @@ def upload_to_image_host():
     logger_manager.info(f"上传图片到图床: {image_path}, 类型: {host_type}")
 
     # 验证图床类型
-    if host_type not in ['cloudinary', 'imgbb']:
+    if host_type not in ['cloudinary', 'imgbb', 'steam']:
         return jsonify(create_response(
             code=13002,
-            msg="图床类型只支持 cloudinary 和 imgbb"
+            msg="图床类型只支持 cloudinary、imgbb 和 steam"
         )), 400
 
     # 获取配置
@@ -2420,6 +2443,8 @@ def upload_to_image_host():
     # 准备图床配置
     host_config = config.copy()
     host_config['image_host'] = host_type
+    if host_type == 'steam':
+        host_config = build_steam_host_config(host_config)
 
     # 创建图床上传器
     uploader = create_uploader(host_config)
@@ -2470,10 +2495,10 @@ def check_image_exists():
     logger_manager.debug(f"检查图片是否存在: {online_name}, 类型: {host_type}")
 
     # 验证图床类型
-    if host_type not in ['cloudinary', 'imgbb']:
+    if host_type not in ['cloudinary', 'imgbb', 'steam']:
         return jsonify(create_response(
             code=13010,
-            msg="图床类型只支持 cloudinary 和 imgbb"
+            msg="图床类型只支持 cloudinary、imgbb 和 steam"
         )), 400
 
     # 获取配置
@@ -2498,6 +2523,14 @@ def check_image_exists():
     # 准备图床配置
     host_config = config.copy()
     host_config['image_host'] = host_type
+    if host_type == 'steam':
+        host_config = build_steam_host_config(host_config)
+        if isinstance(online_name, str):
+            candidate_path = online_name
+            if current_workspace._is_path_in_workspace(candidate_path):
+                host_config['image_path_for_check'] = current_workspace._get_absolute_path(candidate_path)
+            elif os.path.isabs(candidate_path) and current_workspace._is_path_in_workspace(candidate_path):
+                host_config['image_path_for_check'] = candidate_path
 
     # 创建图床上传器
     uploader = create_uploader(host_config)
@@ -2515,6 +2548,38 @@ def check_image_exists():
             "online_name": online_name
         }
     ))
+
+
+@app.route('/api/image-host/steam/<path:relative_path>', methods=['GET'])
+@handle_api_error
+def serve_steam_cloud_image(relative_path: str):
+    """通过当前本地服务提供导出图片，供 TTS 加载后再上传到 Steam 云。"""
+    error_response = check_workspace()
+    if error_response:
+        return error_response
+
+    if not is_allowed_steam_export_path(relative_path):
+        return jsonify(create_response(
+            code=13013,
+            msg="Steam 云路径无效"
+        )), 400
+
+    if not current_workspace._is_path_in_workspace(relative_path):
+        return jsonify(create_response(
+            code=13014,
+            msg="Steam 云路径不在工作区内"
+        )), 403
+
+    abs_path = current_workspace._get_absolute_path(relative_path)
+    if not os.path.exists(abs_path):
+        return jsonify(create_response(
+            code=13015,
+            msg="Steam 云图片不存在"
+        )), 404
+
+    directory = os.path.dirname(abs_path)
+    filename = os.path.basename(abs_path)
+    return send_from_directory(directory, filename)
 
 
 # ================= 静态文件服务 =================

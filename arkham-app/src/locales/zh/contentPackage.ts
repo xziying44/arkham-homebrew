@@ -270,6 +270,20 @@ export default {
     },
     dialog: {
       selectImageHost: '选择图床服务',
+      steamMode: 'Steam 云',
+      steamModeDescription: '无需配置第三方图床。应用会生成本地 HTTP 图片地址，供 TTS 加载后再上传到 Steam 云。',
+      steamGuideTitle: 'Steam 云上传教程',
+      steamGuideWarning: '最关键的一步是上传完成后，要把桌上的物品重新保存到你的物品，否则关闭游戏后需要重新上传。',
+      steamGuideStep1: '先使用 Steam 云方式完成导出，得到带本地 HTTP 图片地址的 JSON 文件。',
+      steamGuideStep2: '将导出的 JSON 文件放到 TTS 的保存对象目录中。',
+      steamGuideStep3: '进入 TTS，打开一个空桌子，把刚刚导出的物品加载到桌面。',
+      steamGuideStep4: '点击顶部“MOD”，进入“Steam 云存储管理”。',
+      steamGuideStep5: '在 Steam 云存储管理里创建一个文件夹，用于分类保存这些资源。',
+      steamGuideStep6: '点击“上传所有载入文件”，等待出现绿色成功提示。',
+      steamGuideStep7: '上传成功后，重新右键保存桌上的物品到你的物品，避免关闭游戏后丢失。',
+      steamGuideImage1Alt: 'Steam 云存储管理界面示意图 1',
+      steamGuideImage2Alt: 'Steam 云存储管理界面示意图 2',
+      ttsExportReady: '图片上传完成后，可以直接在这里导出 TTS 物品，无需返回上一页重复操作。',
       localMode: '本地测试',
       localModeDescription: '本地测试模式：只导出图片到本地，不上传到云端，使用 file:/// 格式URL',
       cloudinaryConfig: 'Cloudinary 配置',
@@ -336,7 +350,7 @@ export default {
     },
     success: {
       configSaveSuccess: '配置保存成功',
-      localModeNoSave: '本地测试模式，无需保存配置'
+      localModeNoSave: '当前模式无需保存配置'
     },
     status: {
       cloud: '云端',

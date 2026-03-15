@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.1] - 2026-03-15
+
+### Added
+- **Steam Cloud Upload**: Added a new `Steam Cloud` upload mode alongside Cloudinary and ImgBB. It reuses the local HTTP service to generate TTS-loadable image URLs without requiring any third-party host configuration.
+- **Quick Export From Upload Page**: After uploads complete, you can export TTS items directly from the upload page without going back to the content package editor.
+- **Steam Cloud Guide**: Added an in-page Steam Cloud upload tutorial with built-in instructions and guide images.
+
+### Fixed
+- **Auto Numbering**: Fixed player-card auto-numbering rules with stable class order, investigator-signature grouping, bonded card adjacency, full-art card base-type sorting, and ignored investigator mini cards.
+- **Large Art Skill Cards**: Fixed the top-left type label on large art skill cards incorrectly showing as “Event”.
+
 ## [3.4.0] - 2025-11-24
 
 ### Added
