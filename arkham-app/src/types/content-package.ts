@@ -117,7 +117,7 @@ export const createDefaultMeta = (): ContentPackageMeta => ({
   types: [],
   status: 'final',
   date_updated: new Date().toISOString(),
-  generator: 'Arkham Card Maker v3.4'
+  generator: 'Arkham Card Maker v3.4.1'
 });
 
 /**

@@ -19,7 +19,9 @@
           :upload-items="currentUploadItems"
           :config="uploadConfigSnapshot || packageData"
           :is-batch="isCurrentUploadBatch"
+          :tts-exporting="exportingToTts"
           @confirm="handleUploadConfirm"
+          @request-export-tts="exportToTts"
           @fail="handleUploadFail"
           @cancel="closeUploadPage"
         />
@@ -938,7 +940,9 @@
         upload-type="banner"
         :current-item="{ banner_base64: (uploadConfigSnapshot || packageData).banner_base64, meta: (uploadConfigSnapshot || packageData).meta }"
         :config="uploadConfigSnapshot || packageData"
+        :tts-exporting="exportingToTts"
         @confirm="handleUploadBanner"
+        @request-export-tts="exportToTts"
         @fail="handleUploadFail"
         @cancel="showUploadBannerDialog = false" />
       <template #action>
@@ -958,7 +962,9 @@
         upload-type="card"
         :current-item="uploadingCard"
         :config="uploadConfigSnapshot || packageData"
+        :tts-exporting="exportingToTts"
         @confirm="handleUploadCard"
+        @request-export-tts="exportToTts"
         @fail="handleUploadFail"
         @cancel="showUploadCardDialog = false; uploadingCard = null" />
       <template #action>
@@ -980,7 +986,9 @@
         :upload-items="v2Cards"
         :config="uploadConfigSnapshot || packageData"
         :is-batch="true"
+        :tts-exporting="exportingToTts"
         @confirm="handleBatchUpload"
+        @request-export-tts="exportToTts"
         @fail="handleUploadFail"
         @cancel="showBatchUploadDialog = false" />
       <template #action>
@@ -1006,7 +1014,9 @@
         upload-type="encounter"
         :current-item="uploadingEncounter"
         :config="packageData"
+        :tts-exporting="exportingToTts"
         @confirm="handleUploadEncounter"
+        @request-export-tts="exportToTts"
         @fail="handleUploadFail"
         @cancel="showUploadEncounterDialog = false; uploadingEncounter = null" />
       <template #action>
@@ -1028,7 +1038,9 @@
         :upload-items="encounters"
         :config="packageData"
         :is-batch="true"
+        :tts-exporting="exportingToTts"
         @confirm="handleBatchEncounterUpload"
+        @request-export-tts="exportToTts"
         @fail="handleUploadFail"
         @cancel="showBatchEncounterUploadDialog = false" />
       <template #action>

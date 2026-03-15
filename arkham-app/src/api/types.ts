@@ -622,6 +622,7 @@ export enum ImageHostErrorCode {
 export enum ImageHostType {
   CLOUDINARY = 'cloudinary',
   IMGBB = 'imgbb',
+  STEAM = 'steam',
   LOCAL = 'local',
 }
 

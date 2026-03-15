@@ -34,6 +34,7 @@ class ImageUploaderPublicIdTests(unittest.TestCase):
     def setUp(self):
         self.module = _load_image_uploader_module()
         self.CloudinaryUploader = self.module.CloudinaryUploader
+        self.SteamCloudUploader = getattr(self.module, "SteamCloudUploader", None)
         self.uploader = self.CloudinaryUploader({
             "cloud_name": "demo",
             "api_key": "demo",
@@ -53,6 +54,29 @@ class ImageUploaderPublicIdTests(unittest.TestCase):
         public_id = self.uploader._build_public_id("weak_front", "/tmp/ws/.cards/星熊/weak_front.jpg")
 
         self.assertTrue(public_id.endswith("weak_front"))
+
+    def test_create_uploader_supports_steam_host(self):
+        uploader = self.module.create_uploader({
+            "image_host": "steam",
+            "steam_base_url": "http://127.0.0.1:5000",
+            "workspace_path": "/tmp/ws",
+        })
+
+        self.assertEqual(type(uploader).__name__, "SteamCloudUploader")
+
+    def test_steam_urls_keep_relative_path_to_avoid_name_collisions(self):
+        uploader = self.module.create_uploader({
+            "image_host": "steam",
+            "steam_base_url": "http://127.0.0.1:5000",
+            "workspace_path": "/tmp/ws",
+        })
+
+        star = uploader.upload_file("weak_front", "/tmp/ws/.cards/星熊/weak_front.jpg")
+        platinum = uploader.upload_file("weak_front", "/tmp/ws/.cards/白金/weak_front.jpg")
+
+        self.assertNotEqual(star, platinum)
+        self.assertIn(".cards/%E6%98%9F%E7%86%8A/weak_front.jpg", star)
+        self.assertIn(".cards/%E7%99%BD%E9%87%91/weak_front.jpg", platinum)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 """
 图床上传模块
-支持Cloudinary和ImgBB图床服务
+支持Cloudinary、ImgBB和Steam云本地HTTP图床服务
 """
 
 import os
@@ -11,6 +11,7 @@ import cloudinary.uploader
 import re
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any
+from urllib.parse import quote
 
 
 class ImageUploader(ABC):
@@ -167,12 +168,53 @@ class ImgBBUploader(ImageUploader):
             return None
 
 
+class SteamCloudUploader(ImageUploader):
+    """Steam 云上传器 - 不实际上传，只返回本地 HTTP URL。"""
+
+    def __init__(self, config: Dict[str, Any]):
+        super().__init__(config)
+        self.base_url = str(config.get("steam_base_url") or "http://127.0.0.1:5000").rstrip("/")
+        self.workspace_path = os.path.normpath(str(config.get("workspace_path") or ""))
+
+    def _build_relative_path(self, file_path: str) -> str:
+        """将工作区内绝对路径转换为稳定的相对路径。"""
+        normalized_file_path = os.path.normpath(str(file_path or ""))
+
+        if self.workspace_path and normalized_file_path.startswith(self.workspace_path):
+            relative_path = os.path.relpath(normalized_file_path, self.workspace_path)
+        else:
+            relative_path = os.path.basename(normalized_file_path)
+
+        return relative_path.replace(os.sep, "/")
+
+    def _build_steam_url(self, file_path: str) -> str:
+        """构造 Steam 云上传使用的本地 HTTP URL。"""
+        relative_path = self._build_relative_path(file_path)
+        encoded_relative_path = quote(relative_path, safe="/._-")
+        return f"{self.base_url}/api/image-host/steam/{encoded_relative_path}"
+
+    def check_file_exists(self, online_name: str) -> Optional[str]:
+        """若本地文件存在则返回其 Steam 本地 HTTP URL。"""
+        file_path = self.config.get("image_path_for_check")
+        if isinstance(file_path, str) and file_path and os.path.exists(file_path):
+            return self._build_steam_url(file_path)
+        return None
+
+    def upload_file(self, online_name: str, file_path: str) -> Optional[str]:
+        """返回本地 HTTP URL，而不进行真实上传。"""
+        if not isinstance(file_path, str) or not file_path:
+            return None
+        return self._build_steam_url(file_path)
+
+
 def create_uploader(config: Dict[str, Any]) -> ImageUploader:
     """根据配置创建相应的图床上传器"""
     image_host = config.get("image_host", "cloudinary").lower()
 
     if image_host == "imgbb":
         return ImgBBUploader(config)
+    elif image_host == "steam":
+        return SteamCloudUploader(config)
     elif image_host == "cloudinary":
         return CloudinaryUploader(config)
     else:
