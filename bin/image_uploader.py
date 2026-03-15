@@ -8,6 +8,7 @@ import base64
 import requests
 import cloudinary
 import cloudinary.uploader
+import re
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any
 
@@ -40,11 +41,39 @@ class CloudinaryUploader(ImageUploader):
             api_secret=config["api_secret"],
         )
 
+    def _sanitize_name(self, value: str) -> str:
+        """清理名称，保留 Cloudinary 可接受的稳定字符。"""
+        if not isinstance(value, str):
+            return ''
+        cleaned = value.replace('\\', '_').replace('/', '_').replace(':', '_')
+        cleaned = cleaned.replace('*', '_').replace('?', '_').replace('"', '_')
+        cleaned = cleaned.replace('<', '_').replace('>', '_').replace('|', '_')
+        cleaned = re.sub(r'_+', '_', cleaned).strip('._')
+        return cleaned
+
+    def _build_public_id(self, online_name: str, file_path: str) -> str:
+        """根据导出文件路径生成稳定且尽量唯一的 public_id。"""
+        clean_name = self._sanitize_name(online_name)
+        normalized_path = os.path.normpath(file_path or '')
+        path_parts = [part for part in normalized_path.split(os.sep) if part]
+
+        if '.cards' in path_parts:
+            cards_index = path_parts.index('.cards')
+            relative_parts = path_parts[cards_index + 1:]
+            if relative_parts:
+                stem_parts = relative_parts[:-1]
+                if stem_parts:
+                    prefix = self._sanitize_name('_'.join(stem_parts))
+                    if prefix:
+                        return f"{prefix}_{clean_name}"
+
+        return clean_name
+
     def check_file_exists(self, online_name: str) -> Optional[str]:
         """检查文件是否已上传到 Cloudinary"""
         try:
             # 清理文件名，确保与上传时使用的名称一致
-            clean_name = online_name.replace('\\', '_').replace('/', '_').replace(':', '_').replace('*', '_').replace('?', '_').replace('"', '_').replace('<', '_').replace('>', '_').replace('|', '_')
+            clean_name = self._sanitize_name(online_name)
 
             result = (
                 cloudinary.Search()
@@ -66,8 +95,7 @@ class CloudinaryUploader(ImageUploader):
             # 获取自定义文件夹配置
             folder = self.config.get("folder", "AH_LCG")
 
-            # 清理文件名，移除无效的路径分隔符
-            clean_name = online_name.replace('\\', '_').replace('/', '_').replace(':', '_').replace('*', '_').replace('?', '_').replace('"', '_').replace('<', '_').replace('>', '_').replace('|', '_')
+            clean_name = self._build_public_id(online_name, file_path)
 
             upload_options = {
                 "public_id": clean_name,

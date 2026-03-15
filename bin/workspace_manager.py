@@ -876,16 +876,51 @@ class WorkspaceManager:
         except Exception:
             return absolute_path
 
+    def _normalize_workspace_path(self, path: str) -> str:
+        """标准化工作区内路径，兼容不同平台的路径分隔符。"""
+        if not isinstance(path, str):
+            return path
+
+        normalized_path = path.strip()
+        if os.sep == '/':
+            normalized_path = normalized_path.replace('\\', '/')
+        else:
+            normalized_path = normalized_path.replace('/', '\\')
+
+        return os.path.normpath(normalized_path)
+
+    def _is_explicit_absolute_path(self, path: str) -> bool:
+        """识别当前平台和 Windows 风格的绝对路径。"""
+        if not isinstance(path, str) or not path:
+            return False
+
+        return (
+            os.path.isabs(path)
+            or bool(re.match(r'^[A-Za-z]:[\\/]', path))
+            or path.startswith('\\\\')
+        )
+
     def _get_absolute_path(self, relative_path: str) -> str:
         """将相对路径转换为绝对路径"""
-        if os.path.isabs(relative_path):
-            return relative_path
-        return os.path.join(self.workspace_path, relative_path)
+        normalized_path = self._normalize_workspace_path(relative_path)
+        if self._is_explicit_absolute_path(normalized_path):
+            return normalized_path
+        return os.path.normpath(os.path.join(self.workspace_path, normalized_path))
 
     def _is_path_in_workspace(self, path: str) -> bool:
         """检查路径是否在工作目录内"""
         abs_path = self._get_absolute_path(path)
-        return abs_path.startswith(self.workspace_path)
+
+        # 非 Windows 环境下，Windows 绝对路径应直接判定为不在工作区内。
+        if os.name != 'nt' and bool(re.match(r'^[A-Za-z]:[\\/]', abs_path)):
+            return False
+
+        try:
+            workspace_root = os.path.abspath(self.workspace_path)
+            target_path = os.path.abspath(abs_path)
+            return os.path.commonpath([workspace_root, target_path]) == workspace_root
+        except ValueError:
+            return False
 
     def _get_file_type(self, file_path: str) -> str:
         """根据文件扩展名确定文件类型"""
