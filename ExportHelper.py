@@ -410,8 +410,11 @@ class ExportHelper:
         :param card_map: 卡片图像
         :param text_layer: 文字层元数据列表
         """
+        # 注意：DPI 目标尺寸的缩放在本方法内进行。即使没有文字层（如玩家卡背/遭遇
+        # 卡背等纯图片卡），也必须执行缩放，否则卡背会停留在默认 300 DPI 尺寸，
+        # 在 DPI>300 时无法跟随正面尺寸。因此这里仅将空值归一化为列表，不再提前返回。
         if not text_layer:
-            return card_map
+            text_layer = []
         # 计算DPI缩放比例
         dpi_scale_factor = self.dpi / 300.0
         # 计算出血偏移量

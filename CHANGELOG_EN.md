@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.2] - 2026-06-27
+
+### Fixed
+- **Card Back Export Size**: Fixed image-only card backs (player back, encounter back, etc.) not scaling to the front size when the bleed DPI exceeds 300. The DPI target-size scaling lived inside the text-layer drawing step, so card backs without a text layer returned early and skipped scaling, staying at the 300 DPI size.
+
 ## [3.4.1] - 2026-03-15
 
 ### Added
